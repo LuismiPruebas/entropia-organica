@@ -220,7 +220,8 @@ function draw() {
     const K = KINDS[kind];
     const [x, y, w, h] = K.box(o, r);
     const sel = S.sel?.kind === kind && S.sel.index === i;
-    g.fillStyle = color + (kind === 'zones' || kind === 'fluids' ? '28' : '55');
+    // La marca de oculto no se rellena: debajo debe verse el objeto que esconde.
+    g.fillStyle = color + (kind === 'hidden' ? '00' : kind === 'zones' || kind === 'fluids' ? '28' : '55');
     g.fillRect(x * z, y * z, w * z, h * z);
     g.strokeStyle = sel ? '#ffd23f' : color; g.lineWidth = sel ? 3 : 1.5;
     g.strokeRect(x * z + 1, y * z + 1, w * z - 2, h * z - 2);

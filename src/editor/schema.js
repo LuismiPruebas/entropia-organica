@@ -61,7 +61,7 @@ export const KINDS = {
   },
   hidden: {
     label: 'Objeto oculto (marca)', color: '#ffffff',
-    make: (x, y) => [x, y], box: (o) => [...pt(o), 1, 1], move: (o, x, y) => { o[0] = x; o[1] = y; }, text: () => '?',
+    make: (x, y) => [x, y], box: (o) => [...pt(o), 1, 1], move: (o, x, y) => { o[0] = x; o[1] = y; }, text: () => 'oculto',
   },
   sacs: {
     label: 'Saco vitelino (hasta el jefe)', color: '#e0b040',
