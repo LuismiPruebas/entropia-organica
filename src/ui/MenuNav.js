@@ -51,6 +51,7 @@ export class MenuNav {
     for (const b of this.el.querySelectorAll('.nav-sel')) b.classList.remove('nav-sel');
     if (!item) return;
     item.classList.add('nav-sel');
+    item.scrollIntoView?.({ block: 'nearest' }); // en listas con desplazamiento, que se vea
     this.index = list.indexOf(item);
     if (notify) this.onSelect?.(item);
   }

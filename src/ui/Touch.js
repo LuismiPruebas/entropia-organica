@@ -204,6 +204,10 @@ export class Touch {
       this.#mouse('mousemove', e);
       this.#mouse('mousedown', e);
     });
+    // El navegador convierte cada toque en un clic sobre lo que haya debajo al levantar el
+    // dedo. Si un botón abre un menú (USAR abre el útero), al soltar ya está el menú
+    // debajo y el clic compraba una opción. Los controles cancelan ese clic.
+    root.addEventListener('touchend', (e) => { if (e.target.closest?.('svg')) e.preventDefault(); }, { passive: false });
     const loop = () => { this.#tick(); requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }

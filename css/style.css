@@ -194,12 +194,10 @@ body {
   image-rendering: pixelated;
   opacity: .85;
 }
-#node-menu button:hover:not(:disabled),
 #node-menu button.nav-sel {
   background: #13261a;
   box-shadow: inset 0 0 0 1px #7dff9a, inset 0 -2px 0 #0a1a10, 0 0 6px rgba(60, 255, 140, .25);
 }
-#node-menu button:hover:not(:disabled) .nm-icon,
 #node-menu button.nav-sel .nm-icon { opacity: 1; filter: drop-shadow(0 0 2px rgba(125, 255, 154, .7)); }
 #node-menu button:disabled { color: #5a4a4a; cursor: default; background: #120a0c; }
 #node-menu button:disabled .nm-icon { opacity: .35; filter: grayscale(.7); }
@@ -255,7 +253,7 @@ body {
   outline: 1px solid #1f4250;
   cursor: pointer;
 }
-#dev-menu button:hover, #dev-menu button.nav-sel { outline-color: #4ff0ff; }
+#dev-menu button.nav-sel { outline-color: #4ff0ff; }
 #dev-menu button.nav-sel { outline-width: 2px; }
 #dev-menu button.on { background: #0f4a3a; color: #7dff9a; outline-color: #7dff9a; }
 

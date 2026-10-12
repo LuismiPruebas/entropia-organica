@@ -120,6 +120,7 @@ export class NodeMenu {
 
   show() {
     this.open = true;
+    this.openedAt = performance.now();
     this.el.hidden = false;
     this.nav.index = 0;
     this.render();
@@ -233,6 +234,8 @@ export class NodeMenu {
       b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas>${i + 1}. ${o.label}${o.desc ? `<span class="desc">${o.desc}</span>` : ''}`;
       if (o.icon) this.icons.push({ g: b.querySelector('canvas').getContext('2d'), kind: o.icon[0], opts: o.icon[1] ?? {} });
       b.addEventListener('click', () => {
+        // Un clic justo al abrirse viene del gesto que lo abrió (un toque en USAR): se ignora.
+        if (performance.now() - this.openedAt < 350) return;
         o.run();
         if (this.open) this.render();
       });
