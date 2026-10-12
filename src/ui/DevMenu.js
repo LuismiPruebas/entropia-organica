@@ -11,6 +11,7 @@ export const DEV_TOOLS = true;
 const ITEMS = [
   ['biomass', 'Biomasa +8'], ['scrap', 'Hueso +3'], ['battery', 'Célula lumínica'],
   ['oxygen', 'Filtro O2'], ['cyst', 'Quiste'], ['tissue', 'Tejido sano'], ['thymus', 'Timo Necrótico'],
+  ['shield', 'Perla de Nácar'], ['regen', 'Célula Madre'],
 ];
 
 // Punto de entrada de cada sala: el spawn de cualquier salida que lleve a ella.

@@ -1,6 +1,6 @@
 import { getSprite, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { CELL_CHARGE } from '../state/State.js';
+import { CELL_CHARGE, ITEMS } from '../state/State.js';
 
 // 'ojo II', 'extremidades + torso III': de qué órgano es una secuencia, sin desvelarla.
 export const dnaTag = (id) => { const m = MUTATIONS[id]; return `${linesOf(m).map((l) => LINES[l].name.toLowerCase()).join(' + ')} ${ROMAN[m.level]}`; };
@@ -21,6 +21,17 @@ export const PICKUPS = {
       else st.light = Math.min(100, st.light + CELL_CHARGE);
     },
     text: (p, st) => p.stored ? `Célula lumínica guardada (${st.cells} en reserva): recargará tu ojo cuando se apague` : 'Célula lumínica: tu ojo la devora y vuelve a brillar',
+  },
+  // Consumibles raros: se guardan y se usan cuando quieras.
+  shield: {
+    sprite: 'pearl', sound: 'dna',
+    apply: (st) => { st.items.shield++; },
+    text: (p, st) => `Perla de Nácar (${st.items.shield}): úsala ${p.game.itemKey('shield')} y nada te herirá durante ${ITEMS.shield.time} s.`,
+  },
+  regen: {
+    sprite: 'stemcell', sound: 'dna',
+    apply: (st) => { st.items.regen++; },
+    text: (p, st) => `Célula Madre (${st.items.regen}): úsala ${p.game.itemKey('regen')} y tu tejido se regenerará durante ${ITEMS.regen.time} s.`,
   },
   scrap: { sprite: 'scrap', apply: (st) => { st.scrap += SCRAP_PER_PIECE; }, sound: 'pickup', text: `Esquirlas de hueso: +${SCRAP_PER_PIECE}` },
   oxygen: { sprite: 'oxygen', apply: (st) => { st.oxygen = Math.min(st.oxygenMax, st.oxygen + 40); }, sound: 'pickup', text: 'Filtro de oxígeno: +40 O2' },

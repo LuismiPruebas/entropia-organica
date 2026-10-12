@@ -4,6 +4,7 @@ import { CREATURES, tintCanvas } from './Creatures.js';
 import { stingTip } from './Moth.js';
 import { TILE, overlap } from '../core/Physics.js';
 import { SPRITES } from '../data/sprites.js';
+import { ITEM_DROP_CHANCE } from '../state/State.js';
 
 const GRAVITY = 900;
 // Matriarca: duración de la anticipación del picado.
@@ -1615,6 +1616,10 @@ export class Enemy {
     else if (this.def.drop?.biomass) g.dropPickup('biomass', this.cx, this.cy, this.def.drop.biomass);
     if (this.def.behavior === 'spore') this.#burst();
     this.#split();
+    // Consumibles raros: casi nunca los suelta una criatura; un jefe, siempre uno.
+    if (!this.minion && !this.offspring && (this.def.boss || Math.random() < ITEM_DROP_CHANCE)) {
+      g.dropPickup(Math.random() < 0.5 ? 'shield' : 'regen', this.cx + 6, this.cy - 4);
+    }
     if (this.def.boss) {
       g.onBossDefeated(this);
     } else if (!this.minion && !this.offspring && this.def.frag && Math.random() < (this.def.fragmentChance ?? 0.3)) {

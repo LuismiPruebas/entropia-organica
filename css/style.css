@@ -162,6 +162,7 @@ body {
 #node-menu .c-int { color: #ff5a6a; }
 #node-menu .c-bio { color: #e07a98; }
 #node-menu .c-lux { color: #ffd23f; }
+#node-menu .c-o2 { color: #4ff0ff; }
 #node-menu .c-rej { color: #c07bff; }
 #node-menu .c-scrap { color: #c8b8a0; }
 #node-menu .dim { color: #6a5a5a; }
@@ -734,7 +735,7 @@ body.touch { touch-action: none; overscroll-behavior: none; -webkit-user-select:
 .taim { position: fixed; display: none; width: 16px; height: 16px; margin: -8px 0 0 -8px; border: 2px solid rgba(255, 170, 190, 0.7); border-radius: 50%; pointer-events: none; box-shadow: 0 0 8px rgba(255, 90, 120, 0.6); }
 /* En la portada todo se juega tocando la pantalla; en los menús, solo cruceta, aceptar y salir. */
 #touch.title .tleft, #touch.title .tright, #touch.title .ttop { display: none; }
-#touch.menu [data-act="fire"], #touch.menu [data-act="dash"], #touch.menu [data-act="grapple"], #touch.menu [data-act="interact"], #touch.menu [data-act="light"], #touch.menu [data-act="weapon"] { display: none !important; }
+#touch.menu [data-act="fire"], #touch.menu [data-act="dash"], #touch.menu [data-act="grapple"], #touch.menu [data-act="interact"], #touch.menu [data-act="light"], #touch.menu [data-act="weapon"], #touch.menu [data-act="shield"], #touch.menu [data-act="regen"] { display: none !important; }
 #overlay .touch-help { display: none; }
 body.touch #overlay .touch-help { display: block; }
 body.touch #overlay .controls:not(.touch-help) { display: none; }

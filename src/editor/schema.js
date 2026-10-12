@@ -25,6 +25,8 @@ export const TILES = [
   { c: 'h', name: 'Tejido sano', color: '#ff9aa8', item: true },
   { c: 'g', name: 'Timo Necrótico', color: '#a0ffa0', item: true },
   { c: '*', name: 'Fragmento de ADN', color: '#ff60ff', item: true },
+  { c: 'P', name: 'Perla de Nácar (invulnerable)', color: '#4ff0ff', item: true },
+  { c: 'C', name: 'Célula Madre (regenera)', color: '#3ac060', item: true },
   { c: 'H', name: 'El Corazón (final)', color: '#ff2040', item: true },
   ...Object.entries(DNA_CHARS).map(([c, id]) => ({ c, name: `ADN: ${MUTATIONS[id].name}`, color: MUTATIONS[id].color ?? '#ffffff', item: true })),
 ];

@@ -365,6 +365,34 @@ export const SPRITES = {
     ] },
     glow: 'y',
   },
+  // Perla de Nácar (invulnerabilidad): una perla irisada que brilla en cian.
+  pearl: {
+    frames: { a: [
+      '..kkkk..',
+      '.kwwcck.',
+      'kwWwwcck',
+      'kwwwwwck',
+      'kcwwwwck',
+      'kccwwcck',
+      '.kcccck.',
+      '..kkkk..',
+    ] },
+    glow: 'c',
+  },
+  // Célula Madre (regeneración): una célula verde con el núcleo en cruz.
+  stemcell: {
+    frames: { a: [
+      '..kkkk..',
+      '.kGGGGk.',
+      'kGGwwGGk',
+      'kGwwwwGk',
+      'kGwwwwGk',
+      'kGGwwGGk',
+      '.kGGGGk.',
+      '..kkkk..',
+    ] },
+    glow: 'G',
+  },
   // Hueso: un hueso astillado (munición de las astillas y moneda de los úteros).
   scrap: {
     frames: { a: [

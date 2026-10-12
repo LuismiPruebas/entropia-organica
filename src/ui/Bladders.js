@@ -151,6 +151,17 @@ export function drawCellIcon(g, x, y, t, full) {
   CELL.forEach((row, r) => [...row].forEach((c, i) => { if (c !== '.') px(g, x + i, y + r, C[c]); }));
 }
 
+// Consumibles (6x6): la Perla de Nácar y la Célula Madre.
+const ITEM_ICON = {
+  shield: { rows: ['.KKKK.', 'KWWLCK', 'KWLLCK', 'KLLLCK', 'KCLCCK', '.KKKK.'], C: { K, W: '#ffffff', L: '#c8f4f8', C: '#4ff0ff' } },
+  regen: { rows: ['.KKKK.', 'KGWWGK', 'KWWWWK', 'KWWWWK', 'KGWWGK', '.KKKK.'], C: { K, G: '#3ac060', W: '#e8ffe8' } },
+};
+export function drawItemIcon(g, kind, x, y, t, active) {
+  const ic = ITEM_ICON[kind];
+  const blink = active && Math.sin(t * 10) > 0.6;
+  ic.rows.forEach((row, r) => [...row].forEach((c, i) => { if (c !== '.') px(g, x + i, y + r, blink && c !== 'K' ? '#ffffff' : ic.C[c]); }));
+}
+
 // ---------------------------------------------------------------------------
 // Placenta: una membrana ovalada que contiene las vejigas. Cada vejiga crece al
 // llenarse y se arruga al vaciarse, y entre todas se empujan y se recolocan dentro

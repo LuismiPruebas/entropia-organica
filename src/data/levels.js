@@ -7,6 +7,8 @@
 //  b  biomasa   B  batería   S  hueso   O  filtro de oxígeno
 //  Q  quiste (+20 biomasa máx)   h  tejido sano (recupera integridad corrupta)
 //  g  Timo Necrótico (el rechazo crece un 25% más despacio, permanente)
+//  P  Perla de Nácar (consumible: invulnerable unos segundos)
+//  C  Célula Madre (consumible: regeneras integridad unos segundos)
 //  2 4    muestras de ADN colocadas (llaves; ver data/mutations.js)   H  el Corazón (final)
 //  *  fragmento de ADN del bioma de la sala (3 completan una mutación de su reserva)
 //  f  membrana fotosensible: parece pared; se retrae si la alumbras con el ojo
@@ -184,9 +186,9 @@ export const LEVELS = {
       '#.............##',
       '######.........#',
       '######.........#',
-      '####........?..#',
+      '####...........#',
       '###............#',
-      '#.............##',
+      '#.........!...##',
       '#.......########',
       '#........#######',
       '#............###',
@@ -217,7 +219,7 @@ export const LEVELS = {
       { type: 'enjambre', x: 7, y: 40 },
     ],
     nodules: [[3, 63], [2, 12], [3, 49, 'luz'], [12, 8]],
-    hidden: [[4, 31], [12, 43]],
+    hidden: [[4, 31]],
     exits: [
       { side: 'right', at: [23, 24], to: 'A2', spawn: [3, 24] },
       { side: 'left', at: [37, 38], to: 'A5', spawn: [29, 10] },

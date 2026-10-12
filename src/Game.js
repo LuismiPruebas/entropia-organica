@@ -22,7 +22,7 @@ import { START } from './data/levels.js';
 import { MUTATIONS, FRAGMENTS, LINES } from './data/mutations.js';
 import { BIOMES } from './data/biomes.js';
 import { LEVELS } from './data/levels.js';
-import { FRAGMENTS_PER_SEQUENCE } from './state/State.js';
+import { FRAGMENTS_PER_SEQUENCE, ITEMS } from './state/State.js';
 
 const CONE_HALF = Math.PI / 6;
 // Alcance del haz del ojo: corto sin mutar; la línea del Ojo lo alarga (mod lightRange).
@@ -266,11 +266,37 @@ export class Game {
 
   say(text, seconds) { this.hud.say(text, seconds); }
 
+  // Tecla que usa cada consumible según con qué juegas.
+  itemKey(kind) {
+    if (this.pad.active) return kind === 'shield' ? '[R3]' : '[L3]';
+    if (this.touch.active) return 'con su botón';
+    return kind === 'shield' ? '[1]' : '[2]';
+  }
+
+  useItem(kind) {
+    const st = this.state, it = ITEMS[kind];
+    if (st.timers[kind] > 0) return this.say(`${it.name}: aún te dura.`, 1.2);
+    if (!st.useItem(kind)) return this.say(`No llevas ninguna ${it.name}.`, 1.2);
+    const p = this.player;
+    this.audio.play(kind === 'shield' ? 'reveal' : 'womb');
+    this.flash(p.cx, p.cy, 90, kind === 'shield' ? [0.4, 0.9, 1] : [0.3, 1, 0.45], 0.3);
+    this.say(kind === 'shield'
+      ? `Perla de Nácar: el nácar te recubre. Nada te hiere durante ${it.time} s.`
+      : `Célula Madre: tu tejido se regenera durante ${it.time} s.`, 2.5);
+  }
+
   // Daño de enemigos y peligros. La Piel (Quitina II/III) reduce el de los enemigos;
   // 'status' aplica un estado alterado (p. ej. la infección de los escupitajos).
   hurtPlayer(n, fromX, cause, status) {
     const p = this.player, st = this.state;
     if (p.invuln > 0 || st.dead) return;
+    // Con la Perla de Nácar los golpes resbalan: ni daño ni empujón.
+    if (st.timers.shield > 0) {
+      p.invuln = 0.3;
+      this.audio.play('click');
+      this.glowParticles.emit(p.cx, p.cy, { vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 60, life: 0.3, color: [0.5, 0.95, 1] });
+      return;
+    }
     const fromEnemy = cause !== 'espinas';
     st.damage(fromEnemy ? n * st.mod('damageTaken') : n, cause);
     if (status === 'infection' && st.applyStatus('infection', 3)) this.say('Infección: la herida empieza a pudrirse.', 1.8);
@@ -376,6 +402,11 @@ export class Game {
       } else {
         this.say('Tu ojo se ha apagado: necesita energía lumínica.', 1.5);
       }
+    }
+
+    // Consumibles: [1] Perla de Nácar · [2] Célula Madre.
+    for (const [code, kind] of [['Digit1', 'shield'], ['Digit2', 'regen']]) {
+      if (input.hit(code)) this.useItem(kind);
     }
 
     const node = this.room.nodes.find((n) => overlap(p, n));
@@ -851,6 +882,10 @@ export class Game {
     lights.push({ x: p.lampPos.x, y: p.y - 1, r: 12, color: this.eyeColor.map((c) => c * halo) }); // halo del ojo fotóforo
     if (st.weaponId === 'simbionte' || st.weaponId === 'escopeta') lights.push({ x: p.gunPos.x, y: p.gunPos.y, r: 14, color: [0.3, 0.05, 0.25] }); // cañón vivo
     if (st.mutations.has('alveolos')) lights.push({ x: p.cx, y: p.y + 8, r: 26, color: [0.08, 0.35, 0.14] });
+    // Consumibles activos: un halo de nácar cian o el verde de la regeneración, que late.
+    const pulse = 0.75 + 0.25 * Math.sin(this.time * 9);
+    if (st.timers.shield > 0) lights.push({ x: p.cx, y: p.cy, r: 34, color: [0.25 * pulse, 0.55 * pulse, 0.7 * pulse] });
+    if (st.timers.regen > 0) lights.push({ x: p.cx, y: p.cy, r: 30, color: [0.08, 0.5 * pulse, 0.18] });
     for (const pk of this.room.pickups) {
       if (pk.kind === 'heart') {
         const beat = 0.6 + Math.max(0, Math.sin(this.time * 6)) * 0.6;

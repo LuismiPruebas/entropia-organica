@@ -645,9 +645,10 @@ export class Player {
     }
     const weapon = st.weaponId;
 
-    // Sin cañón, el brazo es solo una culata.
-    if (!weapon) {
-      if (input.down('Mouse0')) this.#melee();
+    // Sin cañón, el brazo es solo una culata. Con él, si tienes una criatura pegada,
+    // también golpeas: a quemarropa el culatazo manda.
+    if (!weapon || (input.down('Mouse0') && this.#foeInReach())) {
+      if (input.down('Mouse0')) { this.burstLeft = 0; this.#melee(); }
       return;
     }
 
@@ -756,6 +757,17 @@ export class Player {
   // Sin munición, el mismo botón de disparo lanza un culatazo hacia delante: hiere,
   // aparta y aturde un instante a la criatura... pero hay que estar pegado a ella.
   // Al acertar arrancas carne (biomasa), a riesgo de infectarte.
+  // Caja del golpe cuerpo a cuerpo, delante de ti.
+  #meleeBox() {
+    return { x: this.facing > 0 ? this.x + this.w : this.x - MELEE_REACH, y: this.y + 2, w: MELEE_REACH, h: this.h - 4 };
+  }
+
+  // ¿Hay una criatura (o un blanco) al alcance del puño?
+  #foeInReach() {
+    const g = this.game, box = this.#meleeBox();
+    return g.room.enemies.some((e) => e.alive && e.overlaps(box)) || (g.room.targets ?? []).some((t) => t.alive && overlap(t, box));
+  }
+
   #melee() {
     const g = this.game, st = g.state;
     if (this.fireCd > 0) return;
@@ -763,10 +775,10 @@ export class Player {
     this.punch = MELEE_TIME;
     if (!st.seenMelee) {
       st.seenMelee = true;
-      g.say('Sin munición: golpeas cuerpo a cuerpo. Duele, aparta... y te obliga a estar cerca.', 3);
+      g.say('Cuerpo a cuerpo: sin munición, o con una criatura pegada, golpeas. Duele, aparta... y te obliga a estar cerca.', 3);
     }
     g.audio.play('swing', this);
-    const box = { x: this.facing > 0 ? this.x + this.w : this.x - MELEE_REACH, y: this.y + 2, w: MELEE_REACH, h: this.h - 4 };
+    const box = this.#meleeBox();
     let hit = false;
     for (const t of g.room.targets ?? []) if (t.alive && overlap(t, box)) { t.hit(); hit = true; }
     for (const e of g.room.enemies) {

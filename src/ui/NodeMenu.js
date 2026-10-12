@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { NODE_DOSES, NODE_HEAL, NODE_REGEN, CAPACITY_PER_EXTENDER } from '../state/State.js';
+import { NODE_DOSES, NODE_HEAL, NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS } from '../state/State.js';
 import { LEVELS } from '../data/levels.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { nodeOf } from '../data/nodes.js';
@@ -97,6 +97,21 @@ const ICON = {
     const ph = t * 3;
     for (let y = 0; y < 18; y += 2) { px(g, 16 + Math.round(Math.sin(ph + y * 0.6)), y, '#7dff9a'); px(g, 16 - Math.round(Math.sin(ph + y * 0.6)), y, '#c07bff'); }
   },
+  // Perla de Nácar: una perla irisada con el brillo que gira.
+  shield(g, t) {
+    blob(g, 9, 9, 6.5, 6.5, '#140c10');
+    blob(g, 9, 9, 5.5, 5.5, '#a8e8f0');
+    blob(g, 10, 10, 3.5, 3.5, '#e8fcff');
+    const a = t * 2.5;
+    px(g, 9 + Math.cos(a) * 3.5, 9 + Math.sin(a) * 3.5, '#4ff0ff', 2, 2);
+    px(g, 6, 6, '#ffffff');
+  },
+  // Célula Madre: una célula verde que late, con el núcleo en cruz.
+  regen(g, t) {
+    const k = 1 + Math.sin(t * 4) * 0.08;
+    part(g, 9, 9, 6.5 * k, 6.5 * k, '#3ac060', '#14501e', '#9affb0');
+    px(g, 8, 5, '#f0fff0', 2, 8); px(g, 5, 8, '#f0fff0', 8, 2);
+  },
   // Viaje: un remolino de carne con el Tercer Ojo en medio.
   travel(g, t) {
     for (let i = 0; i < 26; i++) { const a = i * 0.5 + t * 2, r = 1.5 + i * 0.27; px(g, 9 + Math.cos(a) * r, 9 + Math.sin(a) * r * 0.85, i % 3 ? '#8a4ad0' : '#d0a8ff'); }
@@ -179,6 +194,14 @@ export class NodeMenu {
         enabled: st.canPay(node.trade.give) && !(node.trade.get.bio && st.biomass >= st.biomassMax),
         run: () => { if (st.tradeAtNode(node.trade)) g.audio.play('womb'); },
       },
+      // Consumibles raros: el útero los cría, pero cuestan mucha carne.
+      ...Object.entries(ITEMS).map(([kind, it]) => ({
+        icon: [kind],
+        label: `${it.name} (llevas ${st.items[kind]})`,
+        desc: `${kind === 'shield' ? `<span class="c-o2">invulnerable ${it.time} s</span>` : `<span class="c-int">regeneras ${it.time} s</span>`} · ${price(it.price)}${why(!st.canPay(it.price) && 'no te alcanza')}`,
+        enabled: st.canPay(it.price),
+        run: () => { if (st.buyItem(kind)) { g.audio.play('womb'); g.say(`El útero cría una ${it.name}. Úsala ${g.itemKey(kind)}.`, 2.5); } },
+      })),
       ...[...st.dna].map((id) => {
         const m = MUTATIONS[id];
         const ready = st.canInstall(id);

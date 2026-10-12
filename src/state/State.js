@@ -18,6 +18,14 @@ const OXYGEN_REGEN = 6;        // por segundo (base, mejorable con mutaciones)
 const OXYGEN_REGEN_DELAY = 0.9; // segundos de descanso antes de recuperar
 export const LIGHT_DRAIN = 1.5;       // por segundo con el ojo encendido (era 1.0: las células ahora se acumulan en reserva)
 export const CELL_CHARGE = 100; // luz que devuelve cada célula lumínica de la reserva
+// Consumibles raros: se guardan y se usan cuando quieras (1 / 2, R3 / L3, botón táctil).
+// Apenas los sueltan las criaturas (los jefes, siempre uno); el útero los vende caros.
+export const ITEMS = {
+  shield: { name: 'Perla de Nácar', time: 6, price: { bio: 70 } }, // invulnerable
+  regen: { name: 'Célula Madre', time: 8, price: { bio: 60 } },    // regenera integridad
+};
+export const REGEN_RATE = 5;          // integridad por segundo con la Célula Madre
+export const ITEM_DROP_CHANCE = 0.02; // por criatura abatida (ni crías ni esbirros)
 const REJECTION_GROWTH = 0.03; // por segundo y por punto de carga genética
 const OVERLOAD_GROWTH = 0.08;  // por segundo y por punto de carga por encima de tu tolerancia
 const DISCORD_GROWTH = 0.05;   // por segundo y por nivel de choque entre órganos
@@ -56,6 +64,8 @@ export class GameState {
     this.weapon = null;          // arma del cañón elegida (WEAPONS); null = culata
     this.scrap = 12;
     this.cells = 0;              // células lumínicas en reserva: se gastan solas al apagarse el ojo
+    this.items = { shield: 0, regen: 0 }; // consumibles guardados (ITEMS)
+    this.timers = { shield: 0, regen: 0 }; // segundos que le quedan a cada efecto activo
     this.flashlightOn = true;
     this.mutations = new Set();   // instaladas
     this.dna = new Set();         // muestras recogidas sin instalar
@@ -158,7 +168,7 @@ export class GameState {
   }
 
   damage(n, cause) {
-    if (this.dead || n <= 0 || this.dev.god) return;
+    if (this.dead || n <= 0 || this.dev.god || this.timers.shield > 0) return;
     this.integrity = Math.max(0, this.integrity - n);
     this.emit('damage', { n, cause });
     if (this.integrity <= 0) {
@@ -170,12 +180,27 @@ export class GameState {
 
   // Estados alterados: la Dermis Nanocutánea los anula.
   applyStatus(kind, seconds) {
-    if (this.immune('status')) return false;
+    if (this.immune('status') || this.timers.shield > 0) return false;
     if (kind === 'infection') this.infection = Math.max(this.infection, seconds);
     return true;
   }
 
   heal(n) { this.integrity = Math.min(this.maxIntegrity, this.integrity + n); }
+
+  // Consumible: lo gasta y arranca su efecto. No se pisa con uno igual aún activo.
+  useItem(kind) {
+    if (this.dead || !this.items[kind] || this.timers[kind] > 0) return false;
+    this.items[kind]--;
+    this.timers[kind] = ITEMS[kind].time;
+    if (kind === 'shield') this.infection = 0;
+    return true;
+  }
+
+  buyItem(kind) {
+    if (!this.pay(ITEMS[kind].price)) return false;
+    this.items[kind]++;
+    return true;
+  }
   addBiomass(n) { this.biomass = Math.min(this.biomassMax, this.biomass + n); }
 
   // Gasta aliento para un movimiento especial; si no llega, el movimiento no sale.
@@ -205,6 +230,9 @@ export class GameState {
     } else if (this.oxygenRest <= 0) {
       this.oxygen = Math.min(this.oxygenMax, this.oxygen + OXYGEN_REGEN * this.mod('oxygenRegen') * dt);
     }
+    // Consumibles activos: la Célula Madre te va cerrando las heridas.
+    if (this.timers.regen > 0) this.heal(REGEN_RATE * dt);
+    for (const k in this.timers) this.timers[k] = Math.max(0, this.timers[k] - dt);
     if (this.flashlightOn) {
       this.light = Math.max(0, this.light - LIGHT_DRAIN * this.mod('lightDrain') * dt);
       if (this.light <= 0) { this.flashlightOn = false; this.eyeStarved = true; }
@@ -375,6 +403,7 @@ export class GameState {
 
   respawn() {
     this.dead = false;
+    this.timers = { shield: 0, regen: 0 };
     this.rest();
     this.integrity = Math.ceil(this.maxIntegrity * 0.5);
     this.oxygen = this.oxygenMax;
