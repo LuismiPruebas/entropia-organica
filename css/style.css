@@ -48,7 +48,7 @@ body {
   position: absolute;
   left: 3px;
   top: 2px;
-  width: 80px;
+  width: 92px;
   height: 40px;
 }
 #organs canvas { position: absolute; inset: 0; image-rendering: pixelated; }
@@ -351,7 +351,7 @@ body {
 
 #g-count { color: #c07bff; }
 #genome .g-res { display: flex; align-items: center; gap: 8px; }
-#g-scrap { width: 26px; height: 10px; image-rendering: pixelated; }
+#g-scrap { width: 46px; height: 10px; image-rendering: pixelated; }
 
 #genome .g-body {
   position: relative;

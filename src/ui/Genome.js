@@ -1,10 +1,10 @@
 import { MUTATIONS, LINES, LINE_ORDER, FRAGMENTS, SYNERGIES, CLASHES, ROMAN, linesOf } from '../data/mutations.js';
-import { WEAPONS } from '../state/State.js';
+import { WEAPONS, LIGHT_DRAIN } from '../state/State.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { PlayerBody, BODY_W, BODY_H } from '../entities/PlayerBody.js';
 import { caps } from './Hud.js';
 import { MenuNav } from './MenuNav.js';
-import { drawBladder, drawNumber, drawBoneIcon } from './Bladders.js';
+import { drawBladder, drawNumber, drawBoneIcon, drawCellIcon } from './Bladders.js';
 import { px, seg, part, blob } from '../entities/Rig.js';
 
 // Genoma del Huésped (tecla I): una ficha viva y gráfica del cuerpo.
@@ -146,7 +146,7 @@ export class Genome {
         ${VEINS.map((d) => `<path class="vein" d="${d}"/><path class="pulse" d="${d}"/>`).join('')}
       </svg>
       ${cells}
-      <header class="g-head"><h2>GENOMA DEL HUESPED</h2><span class="g-res"><canvas id="g-scrap" width="26" height="10"></canvas><span id="g-count"></span></span></header>
+      <header class="g-head"><h2>GENOMA DEL HUESPED</h2><span class="g-res"><canvas id="g-scrap" width="46" height="10"></canvas><span id="g-count"></span></span></header>
       <div class="g-body">
         <aside class="g-left">
           <div class="g-specimen">
@@ -351,8 +351,8 @@ export class Genome {
         'Sola al descansar · Nodo.'],
       lux: [`${n(st.light)} / 100`,
         'Revela lo oculto y fija tu arma en lo que alumbras.',
-        'Encendido gasta 1/s.',
-        'Células lumínicas · Nodo.'],
+        `Encendido gasta ${(LIGHT_DRAIN * st.mod('lightDrain')).toFixed(1).replace('.', ',')}/s. Al apagarse gasta una célula de la reserva (${st.cells}).`,
+        'Células lumínicas (al 95 % o más se guardan) · Nodo.'],
       rej: [`${n(st.rejection)} %`,
         'Tu cuerpo rechaza los injertos.',
         `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Al 100 % fallan y te dañan.`,
@@ -376,10 +376,12 @@ export class Genome {
     });
     this.ctx.clearRect(0, 0, BODY_W, BODY_H);
     this.ctx.drawImage(this.body.canvas, 0, 0);
-    // Hueso, arriba a la derecha: el icono del fémur y cuánto te queda.
-    this.scrap.clearRect(0, 0, 26, 10);
+    // Hueso y células lumínicas, arriba a la derecha: sus iconos y cuánto te queda.
+    this.scrap.clearRect(0, 0, 46, 10);
     drawBoneIcon(this.scrap, 1, 3, t);
     drawNumber(this.scrap, 12, 3, st.scrap, st.scrap === 0 ? '#ff5a5a' : '#e8dcc8');
+    drawCellIcon(this.scrap, 28, 1, t, st.cells > 0);
+    drawNumber(this.scrap, 34, 3, st.cells, st.cells === 0 ? '#6a6050' : '#ffd23f');
     // Constantes vitales: las mismas vejigas que el HUD, con su número debajo.
     const g = this.vitals;
     g.clearRect(0, 0, 104, 46);
