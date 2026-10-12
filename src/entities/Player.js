@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { MUTATIONS } from '../data/mutations.js';
 import { spriteMesh, placeMesh, setMap, canvasTexture } from '../core/Sprites.js';
-import { PlayerBody, BODY_W, BODY_H } from './PlayerBody.js';
+import { PlayerBody, BODY_W, BODY_H, CROUCH_DROP } from './PlayerBody.js';
 import { TILE, overlap } from '../core/Physics.js';
 import { OXYGEN_COST } from '../state/State.js';
 
@@ -44,6 +44,8 @@ const DASH_INPUT = 'doubleTap';
 const DOUBLE_TAP_WINDOW = 0.25; // segundos máximos entre los dos toques
 const BREATH_CYCLE = 1.5; // respiración algo agitada
 const HAND_Y = 8;          // altura del hombro (de donde sale el tendón) bajo el borde de la caja
+const STAND_H = 28;        // alto de la caja de pie
+const CROUCH_H = STAND_H - CROUCH_DROP - 1; // y agachado (esquiva lo que va a la altura del pecho)
 const WALL_SLIDE = 28;
 
 // Estrella de 9x9 px para el destello del ojo (blanca; se tiñe con el material).
@@ -146,7 +148,7 @@ export class Player {
     this.game = game;
     // Caja de colisión del cuerpo articulado (PlayerBody): cabe por huecos de 2 tiles.
     this.w = 12;
-    this.h = 28;
+    this.h = STAND_H;
     this.x = 0;
     this.y = 0;
     this.vx = 0;
@@ -251,6 +253,8 @@ export class Player {
   }
 
   spawnAt(tx, ty) {
+    this.crouching = false;
+    this.h = STAND_H;
     this.x = tx * TILE + (TILE - this.w) / 2;
     this.y = (ty + 1) * TILE - this.h;
     this.vx = this.vy = 0;
@@ -324,6 +328,7 @@ export class Player {
     // --- Movimiento ---
     const wasGround = this.onGround;
     const up = input.down('KeyW', 'ArrowUp', 'PadUp'), down = input.down('KeyS', 'ArrowDown', 'PadDown');
+    this.#crouch(down && this.jumpBuf <= 0);
     if (this.rope) {
       // Recoger o soltar cuerda; al engancharte, un tirón te recoge un tramo.
       const r = this.rope;
@@ -348,7 +353,7 @@ export class Player {
       // Tras un salto de pared, un instante sin control para separarse del muro.
       // Corrientes de aire (entities/Traps.js -> Wind): el aire arrastra; en el suelo, menos.
       const wind = (this.windX ?? 0) * (this.onGround ? 0.6 : 1);
-      const target = this.wallLock > 0 ? this.vx : dir * speed + wind;
+      const target = this.wallLock > 0 ? this.vx : (this.crouching ? 0 : dir * speed) + wind; // agachado no se anda
       // Tras soltarte del péndulo, el control en el aire apenas frena la inercia.
       this.flung = Math.max(0, (this.flung ?? 0) - dt);
       if (this.rope && !this.onGround) {
@@ -432,11 +437,29 @@ export class Player {
       this.coyote = COYOTE;
       this.airJumps = 1;
       if (!wasGround) { audio.play('land', this); this.landT = 0.14; }
-      if (!this.#onHazard()) this.lastSafe = { x: this.x, y: this.y };
+      if (!this.#onHazard()) this.lastSafe = { x: this.x, y: this.y + this.h - STAND_H }; // siempre de pie
     }
 
     this.#weapon(dt);
     this.#updateMesh(dt);
+  }
+
+  // Agacharse (abajo en el suelo): la caja encoge por arriba, los pies no se mueven.
+  // No anda pero gira, apunta y dispara. Al soltar se levanta si hay sitio encima;
+  // bajo un techo bajo sigue agachado hasta salir.
+  #crouch(want) {
+    const can = want && this.onGround && !this.rope && this.dash <= 0 && !this.clinging;
+    if (can && !this.crouching) {
+      this.crouching = true;
+      this.y += STAND_H - CROUCH_H;
+      this.h = CROUCH_H;
+    } else if (!can && this.crouching) {
+      const lift = STAND_H - CROUCH_H;
+      if (this.game.world.rectSolid(this.x, this.y - lift, this.w, lift)) return;
+      this.crouching = false;
+      this.y -= lift;
+      this.h = STAND_H;
+    }
   }
 
   // Garras contra la pared: al clavarlas, un golpe de esquirlas y el cuerpo se pega al
@@ -826,8 +849,10 @@ export class Player {
     const aim = Math.atan2(Math.sin(this.aim), Math.cos(this.aim) * this.facing);
     this.punch = Math.max(0, (this.punch ?? 0) - dt);
     this.landT = Math.max(0, (this.landT ?? 0) - dt);
+    // El gesto de agacharse o levantarse dura un instante (la caja cambia de golpe).
+    this.crouchK = Math.max(0, Math.min(1, (this.crouchK ?? 0) + (this.crouching ? 1 : -1) * dt * 14));
     this.body.render(st.mutations, {
-      t: this.anim, dt, aim, punch: this.punch / MELEE_TIME, land: this.landT / 0.14,
+      t: this.anim, dt, aim, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: this.crouchK,
       vx: this.vx * this.facing, vy: this.vy,
       onGround: this.onGround, clinging: !!this.clinging, rope, reach, charge: this.charge,
       weapon: st.weaponId, recoil: this.recoil ?? 0, armRaise: this.#armRaise(dt),

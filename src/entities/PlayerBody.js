@@ -51,6 +51,8 @@ export const BODY_W = 48;
 export const BODY_H = 44;
 const GROUND = BODY_H - 1;
 const CX = 24;
+// Cuánto baja la cadera al agacharse (Player.CROUCH_H encoge la caja en lo mismo, más 1).
+export const CROUCH_DROP = 8;
 
 const BASE = {
   armor: '#1e2538', armorM: '#34426a', armorL: '#6a80aa',
@@ -133,12 +135,15 @@ export class PlayerBody {
     // Colgado del tendón, el cuerpo se inclina hacia el anclaje y la cadera se queda atrás.
     const swingLag = hanging ? Math.max(-3, Math.min(3, -(pose.vx ?? 0) * 0.012)) : 0;
     const lean = (hanging ? pose.rope.x * 3 : moving ? 1.5 : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5;
-    const hip = [CX + swingLag, GROUND - 11 - bob + (has('pistones') ? -1 : 0)];
-    const sh = [CX + lean, hip[1] - 8 + (pose.onGround && !moving ? -breath * 0.6 : 0)];
+    // Agachado (pose.crouch 0..1): la cadera baja casi al suelo, el tronco se encoge y
+    // se echa hacia delante; las rodillas se doblan con un pie adelantado.
+    const crouch = pose.crouch ?? 0;
+    const hip = [CX + swingLag - crouch, GROUND - 11 - bob * (1 - crouch) + (has('pistones') ? -1 : 0) + crouch * CROUCH_DROP];
+    const sh = [CX + lean + crouch * 2, hip[1] - 8 + crouch + (pose.onGround && !moving ? -breath * 0.6 : 0)];
     const head = [sh[0] + 1, sh[1] - 6];
     const aim = pose.aim ?? 0;
     pose.strike = strike;
-    const ctx = { has, P, t, pose, moving, air, hanging, phase, breath, hip, sh, head, aim, n };
+    const ctx = { has, P, t, pose, moving, air, hanging, phase, breath, hip, sh, head, aim, n, crouch };
 
     const shows = (id) => has(id) || opts.ghost === id;
     const part = (id, fn, behind = false) => {
@@ -176,7 +181,7 @@ export class PlayerBody {
     this.#torso(g, gl, ctx);
     if (shows('pistones')) part('pistones', (tg) => this.#pistonLeg(tg, ctx, false));
     else this.#leg(g, ctx, false);
-    if (shows('garras') && !has('pistones')) part('garras', (tg) => this.#talons(tg, ctx));
+    if (shows('garras') && !has('pistones')) part('garras', (tg) => this.#talons(tg));
     this.#head(g, gl, ctx);
 
     // ---------- Piel, sacos y masa ----------
@@ -292,9 +297,11 @@ export class PlayerBody {
     if (moving) { fx = hx + Math.sin(ph) * 5; fy = GROUND - Math.max(0, Math.cos(ph)) * 3; }
     if (air) [fx, fy] = airFeet(hx, far, pose, c.hanging);
     if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 5 : 2); }
+    if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -4 : 4); fy = GROUND; } // agachado: un pie adelantado
     if (pose.land > 0 && !air) { fx = hx + (far ? -3 : 3); }            // pies abiertos al caer
     const [kx, ky] = ik(hx, hy, fx, fy - 1, 6, 6, -1);
     if (!far) this.knee = [kx, ky];
+    (this.feet ??= [])[far ? 1 : 0] = [fx, fy]; // los espolones de las Garras van en la bota
     const col = far ? P.armor : P.armorM;
     limb(g, hx, hy, kx, ky, 3, col, far ? null : P.armorL);
     limb(g, kx, ky, fx, fy - 1, 3, col, far ? null : P.armorL);
@@ -472,6 +479,7 @@ export class PlayerBody {
     if (moving) { fx = hx + Math.sin(ph) * 6; fy = GROUND - Math.max(0, Math.cos(ph)) * 4; }
     if (air) { [fx, fy] = airFeet(hx, far, pose, c.hanging); fy -= 1; }
     if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 6 : 3); }
+    if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -2 : 5); fy = GROUND; } // agachado sobre los talones
     const ax = fx - 3, ay = fy - 4;                                 // talón alzado
     const [kx, ky] = ik(hx, hy, ax, ay, 5, 5, -1);                  // rodilla adelante
     if (!far) this.knee = [kx, ky];
@@ -558,6 +566,8 @@ export class PlayerBody {
     if (c.air && !hanging) hand = pose.vy < -60 ? [s[0] + 1, s[1] - 10] : pose.vy > 60 ? [s[0] - 10, s[1] + 2] : [s[0] - 6, s[1] - 6];
     if (pose.clinging) hand = [s[0] + 10, s[1] - 4];
     if (hanging) hand = [s[0] + pose.rope.x * 12, s[1] + pose.rope.y * 12];
+    // Agachado, el brazo largo se apoya atrás con las garras clavadas en el suelo.
+    if (c.crouch > 0.3 && !c.air) hand = [s[0] - 6, Math.min(hand[1], GROUND - 5)];
     const el = ik(s[0], s[1], hand[0], hand[1], 6, 8, 1);
     limb(g, s[0], s[1], el[0], el[1], 2, P.muscleD);
     limb(g, el[0], el[1], hand[0], hand[1], 2, C.bone, '#fff4e0');
@@ -573,11 +583,11 @@ export class PlayerBody {
   }
 
   // Espolones de hueso que rompen la punta de las botas.
-  #talons(g, c) {
-    const kx = this.knee ? this.knee[0] : CX + 3;
-    for (const fx of [kx + 2, c.hip[0] - 1]) {
-      seg(g, fx + 2, GROUND - 1, fx + 5, GROUND - 3, K, 2);
-      seg(g, fx + 2, GROUND - 1, fx + 5, GROUND - 3, C.bone, 1);
+  // Siguen a cada bota (de pie, agachado, en el aire...).
+  #talons(g) {
+    for (const [fx, fy] of this.feet ?? []) {
+      seg(g, fx + 2, fy - 1, fx + 5, fy - 3, K, 2);
+      seg(g, fx + 2, fy - 1, fx + 5, fy - 3, C.bone, 1);
     }
   }
 
@@ -627,7 +637,7 @@ export class PlayerBody {
     const count = Math.min(spots.length, n + (opts.ghost ? 1 : 0));
     for (let i = 0; i < count; i++) {
       const r = Math.min(2.8, 1 + (n - i) * 0.35) + (i % 3 === 0 ? breath * 0.4 : 0);
-      const [x, y] = spots[i];
+      const x = spots[i][0], y = Math.min(spots[i][1], GROUND - 2); // agachado, no atraviesan el suelo
       g.globalAlpha = opts.ghost && i === count - 1 ? 0.4 : 1;
       blob(g, x, y, r + 0.8, r * 0.85 + 0.8, K);
       blob(g, x, y, r, r * 0.85, C.tumor, C.fleshD, C.tumorL);
