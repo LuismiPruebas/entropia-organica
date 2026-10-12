@@ -7,6 +7,8 @@ import { px, seg, part, OUTLINE } from './Rig.js';
 // `reveal`) y solo revientan si los pisas (o embistes) mientras están iluminados.
 // Sueltan hueso y, a veces, algo más. Vuelven a crecer al descansar en un Nodo.
 // Cada bioma tiene la suya (ver NODULES). En data/levels.js: nodules: [[col, fila], ...]
+// Con un tercer valor 'luz' es un nódulo lumínico: un fotóforo que brilla un poco a
+// oscuras (se intuye sin el ojo) y suelta una célula de luz, a veces también hueso.
 
 const W = 20, H = 16;
 const SWELL = 0.22; // segundos que tarda en reventar tras pisarla
@@ -17,6 +19,7 @@ const LOOT = {
   pulmonar: [['battery', 0.3], ['biomass', 0.35, 4]],
   digestivo: [['scrap', 0.45], ['biomass', 0.3, 5]],
   corazon: [['biomass', 0.6, 6]],
+  oseo: [['scrap', 0.5], ['biomass', 0.25, 4]],
 };
 
 // Dibujo de cada bioma. k = hinchazón (0..1); t = tiempo. Siempre asoman esquirlas
@@ -54,6 +57,15 @@ const NODULES = {
     px(g, 11, 15 + drip * 0.2, '#9be06a');
     px(gl, 11, 15, '#5aff4a');
   },
+  // Excrecencia de hueso: una bola de hueso poroso con tuétano rojo asomando.
+  oseo(g, gl, k, t) {
+    for (let i = 0; i < 3; i++) seg(g, 10, 14, 5 + i * 5, 16, '#3a2418');
+    part(g, 10, 10.5, 7 * (1 + k * 0.3), 5 * (1 + k * 0.3), '#c8b090', '#6a5038', '#f0e6d0');
+    for (const [x, y] of [[7, 9], [12, 8], [10, 12], [14, 11]]) px(g, x, y, '#5a1a14');
+    px(g, 9, 10, '#a02a1c', 2, 1);
+    seg(g, 15, 8, 18, 5, OUTLINE, 2); px(g, 18, 5, '#f4ecd8');
+    if (k > 0 || Math.sin(t * 2) > 0.7) px(gl, 10, 10, '#ff6a4a');
+  },
   // Coágulo: ampolla de sangre negra con venas que laten al ritmo del corazón.
   corazon(g, gl, k, t) {
     const beat = Math.max(0, Math.sin(t * 6)) * 0.12 + k * 0.4;
@@ -64,10 +76,22 @@ const NODULES = {
   },
 };
 
+// Nódulo lumínico: un fotóforo de carne translúcida con un núcleo de luz que late.
+function luxNodule(g, gl, k, t) {
+  const p = 0.5 + 0.5 * Math.sin(t * 2.2);
+  for (let i = 0; i < 3; i++) seg(g, 10, 14, 5 + i * 5, 16, '#2a2010');
+  part(g, 10, 10, 6.5 * (1 + k * 0.35), 5.5 * (1 + k * 0.35), '#6a5a2a', '#2a2010', '#d8c070');
+  part(g, 10, 10, 3.2 + k, 3 + k, '#ffe080', '#c09020', '#fffbe0');
+  px(g, 6, 8, '#e8dcc8'); px(g, 14, 12, '#b8a888'); // esquirlas de hueso
+  px(gl, 9, 9, `rgba(255,230,120,${0.45 + p * 0.45})`, 3, 3);
+  px(gl, 8, 10, `rgba(255,210,80,${0.2 + p * 0.25})`, 5, 2);
+}
+
 export class Nodule {
-  constructor(game, [tx, ty], biome, key) {
+  constructor(game, [tx, ty], biome, key, kind) {
     this.game = game;
     this.biome = NODULES[biome] ? biome : 'nervioso';
+    this.lux = kind === 'luz';
     this.key = key;
     this.w = 14;
     this.h = 10;
@@ -117,7 +141,7 @@ export class Nodule {
     g.state.nodules.add(this.key);
     g.audio.play('crunch', this);
     g.audio.play('acid', this);
-    const col = { nervioso: [0.6, 0.45, 0.9], pulmonar: [0.7, 0.8, 0.3], digestivo: [0.7, 0.4, 0.2], corazon: [0.7, 0.05, 0.1] }[this.biome];
+    const col = this.lux ? [1, 0.85, 0.35] : { nervioso: [0.6, 0.45, 0.9], pulmonar: [0.7, 0.8, 0.3], digestivo: [0.7, 0.4, 0.2], corazon: [0.7, 0.05, 0.1], oseo: [0.85, 0.75, 0.6] }[this.biome];
     for (let i = 0; i < 18; i++) {
       g.particles.emit(this.cx, this.cy, { vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 110, life: 0.8, gravity: 450, color: col });
     }
@@ -125,10 +149,16 @@ export class Nodule {
       g.particles.emit(this.cx, this.cy, { vx: (Math.random() - 0.5) * 100, vy: -60 - Math.random() * 80, life: 0.9, gravity: 500, color: [0.75, 0.75, 0.8] });
     }
     g.shake = Math.max(g.shake, 2);
-    // Siempre hueso; según el bioma, algo más.
-    g.dropPickup('scrap', this.cx - 3, this.y);
-    for (const [kind, chance, amount] of LOOT[this.biome]) {
-      if (Math.random() < chance) g.dropPickup(kind, this.cx + 4, this.y, amount);
+    if (this.lux) {
+      // Lumínico: siempre una célula de luz y, a veces, hueso.
+      g.dropPickup('battery', this.cx - 3, this.y);
+      if (Math.random() < 0.4) g.dropPickup('scrap', this.cx + 4, this.y);
+    } else {
+      // Siempre hueso; según el bioma, algo más.
+      g.dropPickup('scrap', this.cx - 3, this.y);
+      for (const [kind, chance, amount] of LOOT[this.biome]) {
+        if (Math.random() < chance) g.dropPickup(kind, this.cx + 4, this.y, amount);
+      }
     }
     this.dispose();
   }
@@ -139,11 +169,12 @@ export class Nodule {
     g.clearRect(0, 0, W, H);
     gl.clearRect(0, 0, W, H);
     const k = this.swell > 0 ? 1 - this.swell / SWELL : 0;
-    NODULES[this.biome](g, gl, k, this.t);
+    (this.lux ? luxNodule : NODULES[this.biome])(g, gl, k, this.t);
     this.tex.needsUpdate = true;
     this.glowTex.needsUpdate = true;
     const shake = k > 0 ? (Math.random() - 0.5) * 2 : 0;
-    const a = this.swell > 0 ? 1 : this.reveal;
+    // El lumínico se intuye a oscuras: su luz propia lo delata.
+    const a = this.swell > 0 ? 1 : this.lux ? Math.max(0.55, this.reveal) : this.reveal;
     this.mesh.visible = this.glowMesh.visible = a > 0.02;
     this.mesh.material.opacity = a;
     this.glowMesh.material.opacity = a;

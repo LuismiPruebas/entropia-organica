@@ -55,7 +55,7 @@ export const LEVELS = {
       { type: 'acechador', x: 18, y: 10 },
       { type: 'ojo', x: 32, y: 3 },
     ],
-    nodules: [[12, 10]],
+    nodules: [[12, 10], [29, 11, 'luz']],
     exits: [
       { side: 'top', at: [43, 44], to: 'A2', spawn: [41, 39] },
     ],
@@ -121,7 +121,7 @@ export const LEVELS = {
       { type: 'neurona', x: 24, y: 19 },
       { type: 'enjambre', x: 24, y: 14 },
     ],
-    nodules: [[14, 31], [30, 20], [30, 5]],
+    nodules: [[14, 31], [30, 20], [30, 5], [25, 39, 'luz'], [16, 16, 'luz'], [20, 24]],
     hints: [
       { x: 6, y: 38, r: 3, text: 'Restos de la cápsula médica: dentro late ADN. Cógelo y asimílalo en el útero de un Nodo (E): tu brazo aprenderá a disparar.' },
       { x: 22, y: 8, r: 3, text: 'Un ganglio arrancado de algo enorme. Todavía recuerda caminos.' },
@@ -216,7 +216,7 @@ export const LEVELS = {
       { type: 'neurona', x: 8, y: 15 },
       { type: 'enjambre', x: 7, y: 40 },
     ],
-    nodules: [[3, 63], [2, 12]],
+    nodules: [[3, 63], [2, 12], [3, 49, 'luz'], [12, 8]],
     hidden: [[4, 31], [12, 43]],
     exits: [
       { side: 'right', at: [23, 24], to: 'A2', spawn: [3, 24] },
@@ -277,7 +277,7 @@ export const LEVELS = {
       { type: 'gangliomadre', x: 18, y: 16 },
       { type: 'neurona', x: 32, y: 7 },
     ],
-    nodules: [[20, 25], [8, 25]],
+    nodules: [[20, 25], [8, 25], [15, 11, 'luz'], [35, 17, 'luz'], [6, 18]],
     exits: [
       { side: 'left', to: 'A3', spawn: [13, 67] },
       { side: 'right', to: 'B2', spawn: [1, 11] },
@@ -372,7 +372,7 @@ export const LEVELS = {
       { type: 'neurona', x: 72, y: 6 },
       { type: 'neurona', x: 88, y: 5 },
     ],
-    nodules: [[4, 10], [40, 10], [74, 8], [93, 10]],
+    nodules: [[4, 10], [40, 10], [74, 8], [93, 10], [60, 10, 'luz'], [21, 8, 'luz'], [54, 5]],
     hidden: [[14, 3], [30, 5]],
     exits: [
       { side: 'bottom', at: [7, 8], to: 'A3', spawn: [3, 3] },
@@ -430,7 +430,7 @@ export const LEVELS = {
       { type: 'ojo', x: 16, y: 10 },
       { type: 'enjambre', x: 33, y: 18 },
     ],
-    nodules: [[3, 11], [10, 25]],
+    nodules: [[3, 11], [10, 25], [26, 18, 'luz'], [44, 11, 'luz'], [15, 11]],
     hidden: [[20, 3]],
     gates: [{ id: 'reflejo', x: 43, y: 23, h: 3 }],
     pads: [{ x: 8, y: 11, hold: 1.2, opens: 'reflejo', time: 8 }],
@@ -565,7 +565,7 @@ export const LEVELS = {
     enemies: [
       { type: 'matriarca', x: 17, y: 11, crawl: [[27.5, 11.25], [1.75, 11.25], [1.75, 1.75], [30.25, 1.75], [30.25, 5.25]] },
     ],
-    nodules: [[29, 5], [7, 11], [23, 11]],
+    nodules: [[29, 5], [7, 11], [23, 11], [15, 3, 'luz']],
     exits: [
       { side: 'left', to: 'B2', spawn: [42, 11] },
       { side: 'right', to: 'B4', spawn: [1, 13] },
@@ -698,7 +698,7 @@ export const LEVELS = {
       { type: 'colonia', x: 15, y: 19 },
       { type: 'fauce', x: 25, y: 7 },
     ],
-    nodules: [[25, 14], [4, 9]],
+    nodules: [[25, 14], [4, 9], [3, 19, 'luz']],
     hidden: [[27, 5]],
     exits: [
       { side: 'bottom', to: 'B5', spawn: [44, 3] },
@@ -741,7 +741,7 @@ export const LEVELS = {
       { type: 'colonia', x: 63, y: 11 },
       { type: 'acechador', x: 66, y: 11 },
     ],
-    nodules: [[20, 11], [38, 11], [64, 11]],
+    nodules: [[20, 11], [38, 11], [64, 11], [11, 11, 'luz'], [47, 11]],
     winds: [
       { x: 37, y: 2, w: 4, h: 9, dir: 'up' },
     ],
@@ -785,7 +785,7 @@ export const LEVELS = {
       { type: 'espora', x: 6, y: 11 },
       { type: 'colonia', x: 21, y: 11 },
     ],
-    nodules: [[4, 11], [22, 11]],
+    nodules: [[4, 11], [22, 11], [13, 11, 'luz']],
     gates: [{ id: 'hilio', x: 34, y: 9, h: 3 }],
     pods: { opens: 'hilio', at: [[10, 2], [18, 3], [25, 2]], order: [1, 2, 0] },
     exits: [
@@ -822,6 +822,7 @@ export const LEVELS = {
       '####################################################',
     ],
     enemies: [{ type: 'quimera', x: 38, y: 13 }],
+    nodules: [[48, 13, 'luz']],
     exits: [{ side: 'top', at: [10, 11], to: 'T1', spawn: [58, 11] }],
     hints: [
       { x: 10, y: 5, r: 3, text: 'Huele a perro mojado. Y a algo más.' },
@@ -958,7 +959,7 @@ export const LEVELS = {
       { type: 'vestigio', x: 27, y: 12 },
       { type: 'acorazado', x: 8, y: 12 },
     ],
-    nodules: [[31, 12], [5, 12], [24, 8]],
+    nodules: [[31, 12], [5, 12], [24, 8], [11, 12, 'luz']],
     // El intestino se llena y se vacía: sube, aguanta, drena y queda seco.
     fluids: [{ x: [1, 34], top: 10, bottom: 12, period: 14, phase: 6 }],
     mouths: [
@@ -1004,7 +1005,7 @@ export const LEVELS = {
       { type: 'vestigio', x: 18, y: 11 },
       { type: 'ojo', x: 22, y: 1 },
     ],
-    nodules: [[24, 11], [5, 11], [17, 11]],
+    nodules: [[24, 11], [5, 11], [17, 11], [13, 6, 'luz']],
     // Se inunda hasta las repisas altas; los peldaños del medio quedan bajo el ácido.
     fluids: [{ x: [1, 32], top: 8, bottom: 11, period: 12, phase: 2 }],
     mouths: [
@@ -1059,7 +1060,7 @@ export const LEVELS = {
       { type: 'vestigio', x: 22, y: 17 },
       { type: 'ojo', x: 6, y: 1 },
     ],
-    nodules: [[19, 21], [24, 11]],
+    nodules: [[19, 21], [24, 11], [11, 8, 'luz']],
     fluids: [{ x: [1, 26], top: 7, bottom: 21, period: 22, phase: 4 }],
     mouths: [
       { x: 27, y: 9, dir: 'left', period: 4, duration: 1.1 },
@@ -1113,7 +1114,7 @@ export const LEVELS = {
       { type: 'anguila', x: 27, y: 18 },
       { type: 'vestigio', x: 17, y: 4 },
     ],
-    nodules: [[14, 4], [1, 6]],
+    nodules: [[14, 4], [1, 6], [9, 12, 'luz']],
     hidden: [[17, 10]],
     fluids: [{ x: [7, 30], top: 8, bottom: 16, period: 18, phase: 9 }],
     mouths: [
@@ -1160,7 +1161,7 @@ export const LEVELS = {
     enemies: [
       { type: 'ojo', x: 20, y: 1 },
     ],
-    nodules: [[3, 4]],
+    nodules: [[3, 4], [7, 14, 'luz']],
     fluids: [{ x: [7, 32], top: 6, bottom: 14, manual: true, start: 0 }],
     valves: [
       { x: 39, y: 3, dir: 'left', pool: 0, action: 'fill', time: 11 },
@@ -1250,6 +1251,7 @@ export const LEVELS = {
       '####..######################################',
     ],
     enemies: [{ type: 'coro', x: 32, y: 21 }],
+    nodules: [[40, 21, 'luz'], [23, 11]],
     exits: [{ side: 'bottom', at: [4, 5], to: 'C7', spawn: [3, 4] }],
     hints: [
       { x: 7, y: 21, r: 3, text: 'Se oye cantar. Muchas voces, ninguna en la misma nota.' },
@@ -1324,7 +1326,7 @@ export const LEVELS = {
       { type: 'vestigio', x: 9, y: 12 },
       { type: 'rinoceronte', x: 25, y: 12 },
     ],
-    nodules: [[5, 12]],
+    nodules: [[5, 12], [23, 12, 'luz']],
     traps: [
       { x: 19, y: 12, n: 2, dir: 'up' },
     ],
@@ -1390,7 +1392,7 @@ export const LEVELS = {
       { type: 'vestigio', x: 24, y: 26 },
       { type: 'acechador', x: 22, y: 14 },
     ],
-    nodules: [[25, 35]],
+    nodules: [[25, 35], [19, 14, 'luz'], [20, 25, 'luz'], [13, 31]],
     exits: [
       { side: 'bottom', at: [6, 7], to: 'O6', spawn: [51, 5] },
       { side: 'right', at: [25, 26], to: 'O1', spawn: [1, 12] },
@@ -1440,7 +1442,7 @@ export const LEVELS = {
       { type: 'rinoceronte', x: 41, y: 26 },
       { type: 'vestigio', x: 32, y: 9 },
     ],
-    nodules: [[10, 26]],
+    nodules: [[10, 26], [28, 9, 'luz'], [4, 17, 'luz'], [22, 26]],
     exits: [
       { side: 'left', at: [3, 4], to: 'O8', spawn: [28, 4] },
       { side: 'right', at: [8, 9], to: 'O2', spawn: [1, 9] },
@@ -1475,7 +1477,7 @@ export const LEVELS = {
       { type: 'vestigio', x: 30, y: 10 },
       { type: 'rinoceronte', x: 42, y: 10 },
     ],
-    nodules: [[25, 10]],
+    nodules: [[25, 10], [38, 8, 'luz']],
     traps: [
       { x: 17, y: 10, n: 2, dir: 'up', period: 3.2 },
       { x: 31, y: 10, n: 2, dir: 'up', period: 3.2, phase: 1.6 },
@@ -1547,7 +1549,7 @@ export const LEVELS = {
       { type: 'vestigio', x: 32, y: 11 },
       { type: 'rinoceronte', x: 24, y: 11 },
     ],
-    nodules: [[41, 11]],
+    nodules: [[41, 11], [25, 11, 'luz']],
     hidden: [[3, 11]],
     traps: [
       { x: 21, y: 11, n: 3, dir: 'up' },
@@ -1616,7 +1618,7 @@ export const LEVELS = {
       { type: 'rinoceronte', x: 24, y: 39 },
       { type: 'vestigio', x: 26, y: 6 },
     ],
-    nodules: [[20, 30]],
+    nodules: [[20, 30], [3, 39, 'luz'], [9, 27, 'luz'], [22, 6]],
     traps: [
       { x: 22, y: 10, n: 3, dir: 'down', len: 2 },
     ],
@@ -1671,6 +1673,7 @@ export const LEVELS = {
       { type: 'vestigio', x: 12, y: 16 },
     ],
     hidden: [[12, 10]],
+    nodules: [[18, 19, 'luz']],
     exits: [
       { side: 'right', at: [3, 4], to: 'O3', spawn: [4, 4] },
     ],

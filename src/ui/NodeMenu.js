@@ -102,14 +102,6 @@ const ICON = {
     for (let i = 0; i < 26; i++) { const a = i * 0.5 + t * 2, r = 1.5 + i * 0.27; px(g, 9 + Math.cos(a) * r, 9 + Math.sin(a) * r * 0.85, i % 3 ? '#8a4ad0' : '#d0a8ff'); }
     blob(g, 9, 9, 2.6, 1.8, '#140c10'); blob(g, 9, 9, 1.8, 1.2, '#ffd25a'); px(g, 9, 9, '#140c10');
   },
-  // Salir: un esfínter que se cierra y se abre despacio.
-  exit(g, t) {
-    const o = 2 + (Math.sin(t * 1.8) + 1) * 1.2;
-    blob(g, 9, 9, 7, 7, '#140c10');
-    blob(g, 9, 9, 6, 6, '#7a2436', '#4a1020');
-    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) seg(g, 9 + Math.cos(a) * 5, 9 + Math.sin(a) * 5, 9 + Math.cos(a + 0.5) * o, 9 + Math.sin(a + 0.5) * o, '#3a0c18');
-    blob(g, 9, 9, o * 0.6, o * 0.6, '#0a0406');
-  },
 };
 
 export class NodeMenu {
@@ -218,7 +210,6 @@ export class NodeMenu {
           g.say(`El útero te escupe en ${nodeOf(room).name}.`, 3);
         },
       })) : []),
-      { icon: ['exit'], label: 'Salir', desc: '', enabled: true, run: () => this.close() },
     ].filter(Boolean);
 
     this.el.innerHTML = `
@@ -226,12 +217,15 @@ export class NodeMenu {
         ${VEINS.map((d) => `<path class="vein" d="${d}"/><path class="pulse" d="${d}"/>`).join('')}
       </svg>
       <div class="nm-body">
+        <span class="nm-close" title="Cerrar">✕</span>
         <h2>NODO SEGURO <span class="nm-name">${node.name}</span></h2>
         <div class="nm-res"><span class="c-int">INT ${Math.ceil(st.integrity)}/${st.maxIntegrity}</span> <span class="c-bio">BIO ${Math.floor(st.biomass)}</span> <span class="c-lux">LUZ ${Math.floor(st.light)}</span> <span class="c-scrap">HUESO ${st.scrap}</span></div>
         <div class="nm-list"></div>
       </div>`;
     const list = this.el.querySelector('.nm-list');
     this.icons = [];
+    // Se cierra con la misma tecla que lo abre (E, △/Y, USAR), con Esc o con la aspa.
+    this.el.querySelector('.nm-close').addEventListener('click', () => this.close());
     options.forEach((o, i) => {
       const b = document.createElement('button');
       b.disabled = !o.enabled;

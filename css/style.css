@@ -143,6 +143,8 @@ body {
 }
 #node-menu .nm-body { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; max-height: 196px; }
 #node-menu .nm-list { overflow-y: auto; scrollbar-width: none; }
+#node-menu .nm-close { position: absolute; right: 0; top: -2px; padding: 0 2px; font-size: 7px; line-height: 1; color: #8a5a62; cursor: pointer; z-index: 1; }
+#node-menu .nm-close:hover { color: #ff7a8a; text-shadow: 0 0 4px rgba(255, 90, 110, .7); }
 #node-menu .nm-list::-webkit-scrollbar { display: none; }
 
 #node-menu h2 {

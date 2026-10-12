@@ -5,6 +5,7 @@
 //
 //   cruceta         mover · arriba/abajo trepan, recogen o sueltan el tendón (no saltan)
 //   SALTAR          saltar (y soltarse del tendón)
+//   tocar la pantalla  apunta hacia ese punto y dispara (mantener y mover: arrastra la mira)
 //   DISPARAR        tocar: dispara a lo que alumbra el ojo (auto-apuntado)
 //                   mantener y arrastrar: apunta a mano hacia donde arrastras
 //   EMBESTIDA       embestida (con Pistones)
@@ -193,8 +194,15 @@ export class Touch {
     addEventListener('pointerup', (e) => this.#up(e));
     addEventListener('pointercancel', (e) => this.#up(e));
     // Un toque en la pantalla de juego no debe convertirse en un clic de ratón (dispararía).
+    // Tocar la pantalla de juego: apunta hacia ese punto y dispara, como el ratón (y
+    // mantener el dedo y moverlo arrastra la mira). En los menús, el toque es un toque.
     document.getElementById('stage').addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch' && !this.#menuOpen()) e.preventDefault();
+      if (e.pointerType !== 'touch' || this.#menuOpen() || !this.game.room) return;
+      e.preventDefault();
+      this.lastTouch = performance.now();
+      this.pointers.set(e.pointerId, { kind: 'screen' });
+      this.#mouse('mousemove', e);
+      this.#mouse('mousedown', e);
     });
     const loop = () => { this.#tick(); requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
@@ -223,6 +231,7 @@ export class Touch {
     if (!p) return;
     this.lastTouch = performance.now();
     if (p.kind === 'pad') return this.#padAt(p, e);
+    if (p.kind === 'screen') return this.#mouse('mousemove', e);
     // Arrastrar desde DISPARAR o TENDÓN: apuntar a mano.
     if (p.act === 'fire' || p.act === 'grapple') {
       const dx = e.clientX - p.x0, dy = e.clientY - p.y0, m = Math.hypot(dx, dy);
@@ -240,7 +249,13 @@ export class Touch {
     if (!p) return;
     this.pointers.delete(e.pointerId);
     if (p.kind === 'pad') { p.dirs = new Set(); this.#sync(); return; }
+    if (p.kind === 'screen') return this.#mouse('mouseup', e);
     this.#release(p.act, p);
+  }
+
+  // Ratón simulado en el punto tocado (lo lee Input como el ratón de verdad).
+  #mouse(type, e) {
+    dispatchEvent(new MouseEvent(type, { clientX: e.clientX, clientY: e.clientY, button: 0 }));
   }
 
   // Cruceta: la dirección sale del vector desde el centro (vale deslizar el pulgar).
@@ -327,6 +342,7 @@ export class Touch {
   }
 
   #releaseAll() {
+    if ([...this.pointers.values()].some((q) => q.kind === 'screen')) dispatchEvent(new MouseEvent('mouseup', { button: 0 }));
     this.pointers.clear();
     for (const a of this.held) this.#emit(a, false);
     this.held = new Set();

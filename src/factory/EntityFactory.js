@@ -115,7 +115,7 @@ export class EntityFactory {
     // Nódulos óseos (vuelven a crecer al descansar en un Nodo).
     room.nodules = (def.nodules ?? [])
       .filter(([x, y]) => !g.state.nodules.has(`${id}:${x},${y}`))
-      .map(([x, y]) => new Nodule(g, [x, y], def.biome, `${id}:${x},${y}`));
+      .map(([x, y, kind]) => new Nodule(g, [x, y], def.biome, `${id}:${x},${y}`, kind));
     const pools = (def.fluids ?? []).map((d) => new FluidPool(g, d));
     // Mecanismos (entities/Puzzles.js): compuertas, ganglios, sacos en orden, válvulas
     // y balsas. room.targets: lo que se puede reventar a tiros o a golpes.

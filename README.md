@@ -97,7 +97,8 @@ traduce a la tecla que ya usa el juego.
 |---|---|
 | Cruceta | Mover (se puede deslizar el pulgar, también en diagonal). Arriba/abajo trepan y recogen o sueltan el tendón; no saltan |
 | SALTAR | Saltar y soltarse del tendón |
-| DISPARAR | **Tocar**: dispara a lo que alumbra el ojo (auto-apuntado). **Mantener y arrastrar**: apuntas tú hacia donde arrastras (una marca lo indica) |
+| Tocar la pantalla | **Apunta hacia ese punto y dispara**, como el ratón. Manteniendo el dedo y moviéndolo, la mira lo sigue (ráfagas del Cañón Simbionte) |
+| DISPARAR | Dispara a lo que alumbra el ojo (auto-apuntado). También se puede mantener y arrastrar para apuntar |
 | Embestida / Tendón | Aparecen al tener la mutación. El tendón se lanza al soltar: tocar lo lanza al frente; arrastrar y soltar, hacia ahí |
 | Fila de arriba | Ojo · arma (si tienes más de una) · genoma · mapa · ✕ (cerrar menús) |
 | USAR | Aparece latiendo sobre un Nodo Seguro |
@@ -548,19 +549,20 @@ Al lado, la bolsa de hueso con su número.
 una cada 75 s de juego: curar ya no es infinito. Además, **cada útero es distinto**
 (`data/nodes.js`): qué ofrece y con qué cobra depende de la zona, para compensar su
 escasez. En la zona nerviosa, llena de nódulos, se cobra en hueso; en la pulmonar,
-en biomasa. Algunos digieren un recurso en el otro.
+en biomasa. Algunos digieren un recurso en el otro. **Todos recargan el ojo.**
 
 | Nodo | Sanar | Ojo (+35 luz) | Supresor (-35 rechazo) | Intercambio |
 |---|---|---|---|---|
 | A · Útero joven | 15 bio | 4 hueso | — | — |
-| A3 · Útero medular | 8 hueso | — | 6 hueso | 6 hueso → +15 bio |
+| A3 · Útero medular | 8 hueso | 5 hueso | 6 hueso | 6 hueso → +15 bio |
 | B · Útero alveolar | 15 bio | 12 bio | 20 bio | — |
 | B2 · Útero bronquial | 12 bio | 3 hueso | — | 15 bio → +6 hueso |
 
-El menú es una membrana viva y cada opción lleva su icono animado en pixel art: tejido
+El menú se cierra con la misma tecla que lo abre (E, △/Y o USAR en el móvil), con Esc o
+con la aspa de la esquina. Es una membrana viva y cada opción lleva su icono animado en pixel art: tejido
 que late con un bulbo por cura del útero debajo (lleno, gastado o regenerándose), el ojo de
 luz, el vial del supresor, la vértebra del extensor, hueso que se vuelve carne, el órgano de
-cada ADN latente (en el color de su línea), el remolino del viaje y el esfínter de salida. Si una opción no se puede usar, dice por qué (integridad al
+cada ADN latente (en el color de su línea) y el remolino del viaje. Si una opción no se puede usar, dice por qué (integridad al
 máximo, útero vacío, no te alcanza...). Curas y regeneración en `NODE_*` de `state/State.js`.
 
 **Garras de Hueso:** el salto de pared empuja poco (`WALL_KICK`) y, si sigues empujando
@@ -599,9 +601,14 @@ la del sello hacia el Saco Alveolar (Tráquea, B5). `tools/skill-gates.html` com
 
 **Nódulos óseos:** protuberancias del suelo (`nodules` en levels.js,
 `entities/Nodule.js`), una por bioma: bulbo ganglionar, ampolla alveolar, quiste
-calcificado erizado de esquirlas, coágulo. Al pisarlos revientan y sueltan hueso
-(y, según el bioma, batería, oxígeno, más hueso o biomasa). Vuelven a crecer al
-descansar en un Nodo Seguro.
+calcificado erizado de esquirlas, coágulo, excrecencia de hueso poroso. Al pisarlos
+(alumbrados) revientan y sueltan hueso (y, según el bioma, batería, más hueso o
+biomasa). Vuelven a crecer al descansar en un Nodo Seguro.
+
+**Nódulos lumínicos** (`[col, fila, 'luz']` en `nodules`): fotóforos dorados que brillan un poco
+a oscuras (se intuyen sin el ojo) y sueltan siempre una célula de luz (+35) y a veces
+hueso. Hay uno en cada sala mediana y dos en las grandes (31 en total), repartidos lejos
+de los demás objetos; las grandes tienen además un nódulo óseo extra.
 ### Gore
 
 `entities/Gore.js`. Cada golpe saca un chorro de fluido hacia donde empuja el impacto;
