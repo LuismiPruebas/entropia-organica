@@ -5,18 +5,18 @@
 //
 //   precio      { bio: n } o { scrap: n }
 //   heal        +NODE_HEAL integridad (gasta una dosis del útero)
-//   light       +35 luz para el ojo
 //   suppressor  -35 rechazo
 //   trade       { give: precio, get: { bio | scrap: n } } intercambio
-// Sanar, recargar el ojo y mutar están en todos; lo demás, solo donde se indica.
+// Sanar, comprar células lumínicas (precio y tope en state/State.js) y mutar están en todos;
+// lo demás, solo donde se indica.
 export const NODES = {
-  A: { name: 'Útero joven', heal: { bio: 15 }, light: { scrap: 4 } },
-  A3: { name: 'Útero medular', heal: { scrap: 8 }, light: { scrap: 5 }, suppressor: { scrap: 6 }, trade: { give: { scrap: 6 }, get: { bio: 15 } } },
-  B: { name: 'Útero alveolar', heal: { bio: 15 }, light: { bio: 12 }, suppressor: { bio: 20 } },
-  B2: { name: 'Útero bronquial', heal: { bio: 12 }, light: { scrap: 3 }, trade: { give: { bio: 15 }, get: { scrap: 6 } } },
+  A: { name: 'Útero joven', heal: { bio: 15 } },
+  A3: { name: 'Útero medular', heal: { scrap: 8 }, suppressor: { scrap: 6 }, trade: { give: { scrap: 6 }, get: { bio: 15 } } },
+  B: { name: 'Útero alveolar', heal: { bio: 15 }, suppressor: { bio: 20 } },
+  B2: { name: 'Útero bronquial', heal: { bio: 12 }, trade: { give: { bio: 15 }, get: { scrap: 6 } } },
 };
 
 // Para Nodos nuevos sin carta propia.
-export const DEFAULT_NODE = { name: 'Útero', heal: { bio: 15 }, light: { scrap: 4 }, suppressor: { scrap: 6 } };
+export const DEFAULT_NODE = { name: 'Útero', heal: { bio: 15 }, suppressor: { scrap: 6 } };
 
 export const nodeOf = (roomId) => NODES[roomId] ?? DEFAULT_NODE;

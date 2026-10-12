@@ -1,6 +1,6 @@
 import { getSprite, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { CELL_CHARGE, ITEMS } from '../state/State.js';
+import { ITEMS } from '../state/State.js';
 
 // 'ojo II', 'extremidades + torso III': de qué órgano es una secuencia, sin desvelarla.
 export const dnaTag = (id) => { const m = MUTATIONS[id]; return `${linesOf(m).map((l) => LINES[l].name.toLowerCase()).join(' + ')} ${ROMAN[m.level]}`; };
@@ -15,11 +15,7 @@ export const PICKUPS = {
   battery: {
     sprite: 'battery',
     sound: 'pickup',
-    apply: (st, p) => {
-      p.stored = st.light >= 95;
-      if (p.stored) st.cells++;
-      else st.light = Math.min(100, st.light + CELL_CHARGE);
-    },
+    apply: (st, p) => { p.stored = st.gainCell(); },
     text: (p, st) => p.stored ? `Célula lumínica guardada (${st.cells} en reserva): recargará tu ojo cuando se apague` : 'Célula lumínica: tu ojo la devora y vuelve a brillar',
   },
   // Consumibles raros: se guardan y se usan cuando quieras.

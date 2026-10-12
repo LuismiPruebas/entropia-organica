@@ -8,7 +8,7 @@ import { px, seg, part, blob } from '../entities/Rig.js';
 import { ICONS as ORGANS } from './Genome.js';
 import { drawBoneIcon, drawCellIcon } from './Bladders.js';
 
-// Menú del Nodo Seguro: curar (con la reserva limitada del útero), recargar el ojo,
+// Menú del Nodo Seguro: curar (con la reserva limitada del útero), comprar células lumínicas,
 // fabricar supresores, comprar extensores de tolerancia, instalar mutaciones y, con
 // el Tercer Ojo, viajar a otro Nodo ya visitado. Flechas + Intro/Espacio, teclas 1..n o clic.
 // Cada opción lleva su icono animado en pixel art (ICON): el de sanar muestra las curas
@@ -57,13 +57,6 @@ const ICON = {
       blob(g, cx, 14.5, r + 0.6, r + 0.6, '#140c10');
       blob(g, cx, 14.5, r, r, full ? '#ff5a6a' : grow ? '#a02838' : '#3a1820');
     }
-  },
-  // Ojo con el iris de luz, que parpadea y brilla.
-  light(g, t) {
-    const blink = (t % 4.3) < 0.1 || (t % 4.3) > 2.1 && (t % 4.3) < 2.18;
-    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { const k = 6.5 + Math.sin(t * 4 + a) * 0.8; px(g, 9 + Math.cos(a) * k, 9 + Math.sin(a) * k * 0.8, '#ffd23f'); }
-    blob(g, 9, 9, 6, blink ? 1 : 4, '#140c10');
-    if (!blink) { blob(g, 9, 9, 5, 3, '#e8dcc8'); blob(g, 9, 9, 2.6, 2.6, '#ffd23f'); px(g, 9, 8, '#140c10', 1, 2); px(g, 7, 7, '#ffffff'); }
   },
   // Vial de supresor: cristal con líquido violeta que burbujea y su aguja.
   suppressor(g, t) {
@@ -171,20 +164,19 @@ export class NodeMenu {
         enabled: res.doses > 0 && st.canPay(node.heal) && st.integrity < st.maxIntegrity,
         run: () => { if (st.healAtNode(key, g.time, node.heal)) g.audio.play('womb'); },
       },
-      node.light && {
-        icon: ['light'],
-        label: 'Recargar el ojo',
-        desc: `<span class="c-lux">+35 luz</span> · ${price(node.light)}${why(st.light >= 100 && 'luz al máximo', !st.canPay(node.light) && 'no te alcanza')}`,
-        enabled: st.canPay(node.light) && st.light < 100,
-        run: () => { if (st.buyLight(node.light)) g.audio.play('reveal'); },
-      },
-      // Células para la reserva del ojo: cada útero solo cría unas pocas.
+      // Células lumínicas: como al encontrarlas, recargan el ojo si no está casi lleno
+      // (95%); si lo está, van a la reserva. Cada útero solo cría unas pocas.
       {
         icon: ['cell', { left: st.nodeCellsLeft(key), total: NODE_CELLS }],
         label: `Célula lumínica (quedan ${st.nodeCellsLeft(key)}/${NODE_CELLS})`,
-        desc: `<span class="c-lux">+1 a la reserva (llevas ${st.cells})</span> · ${price(CELL_PRICE)}${why(st.nodeCellsLeft(key) <= 0 && 'este útero ya no cría más', !st.canPay(CELL_PRICE) && 'no te alcanza')}`,
+        desc: `<span class="c-lux">${st.light >= 95 ? `a la reserva (llevas ${st.cells})` : 'recarga el ojo'}</span> · ${price(CELL_PRICE)}${why(st.nodeCellsLeft(key) <= 0 && 'este útero ya no cría más', !st.canPay(CELL_PRICE) && 'no te alcanza')}`,
         enabled: st.nodeCellsLeft(key) > 0 && st.canPay(CELL_PRICE),
-        run: () => { if (st.buyCell(key)) g.audio.play('reveal'); },
+        run: () => {
+          const r = st.buyCell(key);
+          if (!r) return;
+          g.audio.play('reveal');
+          g.say(r === 'used' ? 'Tu ojo devora la célula y vuelve a brillar.' : `Célula guardada: llevas ${st.cells} en reserva.`, 2);
+        },
       },
       node.suppressor && {
         icon: ['suppressor'],

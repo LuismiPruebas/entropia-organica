@@ -203,11 +203,11 @@ export class GameState {
   // Células que le quedan a la venta a un útero.
   nodeCellsLeft(key) { return NODE_CELLS - (this.nodeCells[key] ?? 0); }
 
+  // Compra una célula: actúa igual que encontrarla. Devuelve false, 'stored' o 'used'.
   buyCell(key) {
     if (this.nodeCellsLeft(key) <= 0 || !this.pay(CELL_PRICE)) return false;
     this.nodeCells[key] = (this.nodeCells[key] ?? 0) + 1;
-    this.cells++;
-    return true;
+    return this.gainCell() ? 'stored' : 'used';
   }
 
   buyItem(kind) {
@@ -393,11 +393,12 @@ export class GameState {
     return true;
   }
 
-  // El ojo se recarga con lo que el útero digiere (hueso o carne, según el Nodo).
-  buyLight(price) {
-    if (this.light >= 100 || !this.pay(price)) return false;
-    this.light = Math.min(100, this.light + 35);
-    return true;
+  // Una célula lumínica nueva (encontrada o comprada): con el ojo casi lleno (95% o
+  // más) va a la reserva; si no, se consume al momento. Devuelve true si se guardó.
+  gainCell() {
+    if (this.light >= 95) { this.cells++; return true; }
+    this.light = Math.min(100, this.light + CELL_CHARGE);
+    return false;
   }
 
   // El útero digiere un recurso y devuelve el otro.
