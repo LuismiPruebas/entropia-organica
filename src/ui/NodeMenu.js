@@ -1,12 +1,12 @@
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { NODE_DOSES, NODE_HEAL, NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS } from '../state/State.js';
+import { NODE_DOSES, NODE_HEAL, NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, CELL_PRICE, NODE_CELLS } from '../state/State.js';
 import { LEVELS } from '../data/levels.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { nodeOf } from '../data/nodes.js';
 import { MenuNav } from './MenuNav.js';
 import { px, seg, part, blob } from '../entities/Rig.js';
 import { ICONS as ORGANS } from './Genome.js';
-import { drawBoneIcon } from './Bladders.js';
+import { drawBoneIcon, drawCellIcon } from './Bladders.js';
 
 // Menú del Nodo Seguro: curar (con la reserva limitada del útero), recargar el ojo,
 // fabricar supresores, comprar extensores de tolerancia, instalar mutaciones y, con
@@ -20,7 +20,7 @@ const S = 18; // lado de los iconos
 const why = (...reasons) => { const r = reasons.find(Boolean); return r ? ` · <span class="dim">${r}</span>` : ''; };
 
 // Precio en su color: { bio } o { scrap }. sign '+' para lo que recibes.
-const price = (p, sign = '') => (p.bio ? `<span class="c-bio">${sign}${p.bio} biomasa</span>` : `<span class="c-scrap">${sign}${p.scrap} hueso</span>`);
+const price = (p, sign = '') => [p.bio && `<span class="c-bio">${sign}${p.bio} biomasa</span>`, p.scrap && `<span class="c-scrap">${sign}${p.scrap} hueso</span>`].filter(Boolean).join(' + ');
 const K = '#140c10';
 
 // Viaje entre úteros (Tercer Ojo): lo que cuesta y adónde se puede ir.
@@ -97,6 +97,11 @@ const ICON = {
     const ph = t * 3;
     for (let y = 0; y < 18; y += 2) { px(g, 16 + Math.round(Math.sin(ph + y * 0.6)), y, '#7dff9a'); px(g, 16 - Math.round(Math.sin(ph + y * 0.6)), y, '#c07bff'); }
   },
+  // Célula lumínica: la pila de la reserva y, al lado, las que le quedan al útero.
+  cell(g, t, o) {
+    g.save(); g.scale(2, 2); drawCellIcon(g, 1, 1, t, o.left > 0); g.restore();
+    for (let i = 0; i < o.total; i++) blob(g, 14, 4 + i * 5, 1.8, 1.8, i < o.left ? '#ffd23f' : '#3a3020');
+  },
   // Perla de Nácar: una perla irisada con el brillo que gira.
   shield(g, t) {
     blob(g, 9, 9, 6.5, 6.5, '#140c10');
@@ -172,6 +177,14 @@ export class NodeMenu {
         desc: `<span class="c-lux">+35 luz</span> · ${price(node.light)}${why(st.light >= 100 && 'luz al máximo', !st.canPay(node.light) && 'no te alcanza')}`,
         enabled: st.canPay(node.light) && st.light < 100,
         run: () => { if (st.buyLight(node.light)) g.audio.play('reveal'); },
+      },
+      // Células para la reserva del ojo: cada útero solo cría unas pocas.
+      {
+        icon: ['cell', { left: st.nodeCellsLeft(key), total: NODE_CELLS }],
+        label: `Célula lumínica (quedan ${st.nodeCellsLeft(key)}/${NODE_CELLS})`,
+        desc: `<span class="c-lux">+1 a la reserva (llevas ${st.cells})</span> · ${price(CELL_PRICE)}${why(st.nodeCellsLeft(key) <= 0 && 'este útero ya no cría más', !st.canPay(CELL_PRICE) && 'no te alcanza')}`,
+        enabled: st.nodeCellsLeft(key) > 0 && st.canPay(CELL_PRICE),
+        run: () => { if (st.buyCell(key)) g.audio.play('reveal'); },
       },
       node.suppressor && {
         icon: ['suppressor'],

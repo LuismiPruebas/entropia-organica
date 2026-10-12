@@ -26,6 +26,9 @@ export const ITEMS = {
 };
 export const REGEN_RATE = 5;          // integridad por segundo con la Célula Madre
 export const ITEM_DROP_CHANCE = 0.02; // por criatura abatida (ni crías ni esbirros)
+// Células lumínicas a la venta en cada útero: pocas, y no vuelven a crecer.
+export const NODE_CELLS = 2;
+export const CELL_PRICE = { bio: 15, scrap: 4 };
 const REJECTION_GROWTH = 0.03; // por segundo y por punto de carga genética
 const OVERLOAD_GROWTH = 0.08;  // por segundo y por punto de carga por encima de tu tolerancia
 const DISCORD_GROWTH = 0.05;   // por segundo y por nivel de choque entre órganos
@@ -81,6 +84,7 @@ export class GameState {
     this.slain = new Set();       // enemigos muertos "sala:índice": no vuelven hasta descansar
     this.nodules = new Set();     // nódulos óseos reventados "sala:x,y": vuelven a crecer al descansar
     this.nodeRes = {};            // reserva de curas de cada Nodo: { sala: { n, t } }
+    this.nodeCells = {};          // células lumínicas que ya has comprado en cada Nodo: { sala: n }
     this.checkpoint = null;
     this.dead = false;
     this.stats = { kills: 0, shots: 0, missed: 0, deaths: 0 };
@@ -193,6 +197,16 @@ export class GameState {
     this.items[kind]--;
     this.timers[kind] = ITEMS[kind].time;
     if (kind === 'shield') this.infection = 0;
+    return true;
+  }
+
+  // Células que le quedan a la venta a un útero.
+  nodeCellsLeft(key) { return NODE_CELLS - (this.nodeCells[key] ?? 0); }
+
+  buyCell(key) {
+    if (this.nodeCellsLeft(key) <= 0 || !this.pay(CELL_PRICE)) return false;
+    this.nodeCells[key] = (this.nodeCells[key] ?? 0) + 1;
+    this.cells++;
     return true;
   }
 
