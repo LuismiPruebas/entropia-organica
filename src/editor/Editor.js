@@ -78,6 +78,15 @@ function paintAt(x, y, c, size = S.brush, round = false) {
     if (round && dx * dx + dy * dy > (size / 2) * (size / 2) + 0.5) continue;
     setTile(x + dx, y + dy, c);
   }
+  // Borrar a aire también quita las marcas de objeto oculto de esas casillas:
+  // la marca va con el objeto que esconde.
+  const r = room();
+  if (c === '.' && r.hidden) {
+    r.hidden = r.hidden.filter(([hx, hy]) => hx - x < -R || hx - x > size - 1 - R || hy - y < -R || hy - y > size - 1 - R
+      || (round && (hx - x) ** 2 + (hy - y) ** 2 > (size / 2) * (size / 2) + 0.5));
+    if (!r.hidden.length) delete r.hidden;
+    if (S.sel?.kind === 'hidden') S.sel = null;
+  }
 }
 function floodFill(x, y, c) {
   const from = getTile(x, y);
