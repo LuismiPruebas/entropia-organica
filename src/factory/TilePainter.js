@@ -90,7 +90,7 @@ const MATERIALS = {
   fibrous: {
     base: ['#7a2a62', '#8a3472', '#6a2256'], groove: '#3e1438', deep: '#2e1030',
     myelin: '#c070b0', light: '#f0a8e0', outline: '#2a0c28',
-    pulse: 'rgba(140,210,255,0.85)',
+    pulse: null, // sin venas que laten: su azul se confundía con los impulsos de las neuronas del fondo
   },
   // Cavidad Pulmonar (turquesa y coral): tejido esponjoso cuajado de alvéolos.
   spongy: {
@@ -435,6 +435,7 @@ function organicPass(g, pl, world) {
       if (air(-1, 0) && r() < 0.5) bulge(g, ox - 1, oy + 3 + Math.floor(r() * 9), -1, r, m);
       if (air(1, 0) && r() < 0.5) bulge(g, ox + 16, oy + 3 + Math.floor(r() * 9), 1, r, m);
       // Capa de pulso: venas cortas pegadas a la superficie que laten al ritmo del bioma.
+      if (!m.pulse) continue;
       if (air(0, -1) && r() < 0.3) {
         let x = ox + 2 + Math.floor(r() * 10), y = oy + 2;
         for (let i = 0; i < 5; i++) { px(pl, x, y, m.pulse); x += 1; if (r() < 0.4) y += r() < 0.5 ? -1 : 1; y = Math.max(oy + 1, Math.min(oy + 4, y)); }
