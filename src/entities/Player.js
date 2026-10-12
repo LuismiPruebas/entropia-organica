@@ -713,7 +713,7 @@ export class Player {
         audio.play('acid', this);
       }
     }
-    this.#shoot(pos, { speed: 560, damage: 7 * dmg, kind: 'spine', w: 7, h: 2, color: '#ff4ad8', glow: [0.8, 0.2, 0.7], spread: (Math.random() - 0.5) * 0.09, breaks: true });
+    this.#shoot(pos, { speed: 560, damage: 8 * dmg, kind: 'spine', w: 7, h: 2, color: '#ff4ad8', glow: [0.8, 0.2, 0.7], spread: (Math.random() - 0.5) * 0.09, breaks: true });
     audio.play('spine', this);
     this.burstLeft--;
     this.fireCd = this.burstLeft > 0 ? BURST_GAP : BURST_REST * cooldown;

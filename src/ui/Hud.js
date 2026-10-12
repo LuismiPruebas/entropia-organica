@@ -23,15 +23,17 @@ export class Hud {
     this.msgTime = seconds;
   }
 
-  // Barra de vida del jefe de zona (null = ocultar).
-  setBoss(e) {
+  // Jefe de zona (null = ocultar): su nombre siempre; su vida, solo si sabes leerla
+  // (Cerebro I u Ojo II).
+  setBoss(e, showHp) {
     const el = $('boss-bar');
     el.hidden = !e;
     if (!e) return;
-    const k = `${e.def.name}:${Math.ceil(e.hp)}`;
+    const k = `${e.def.name}:${Math.ceil(e.hp)}:${showHp}`;
     if (this.cache.boss === k) return;
     this.cache.boss = k;
     el.querySelector('span').textContent = caps(e.def.name);
+    el.querySelector('.bar').hidden = !showHp;
     el.querySelector('.fill').style.width = `${Math.max(0, e.hp / e.def.hp) * 100}%`;
   }
 

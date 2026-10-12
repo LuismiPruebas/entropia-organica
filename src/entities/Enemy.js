@@ -1554,6 +1554,8 @@ export class Enemy {
     }
     const before = this.hp;
     if (this.exposed && this.def.exposedBonus) n *= this.def.exposedBonus;
+    // Debilidades por tipo de golpe (p. ej. el Ganglio Madre ante las espinas del simbionte).
+    n *= this.def.weakTo?.[kind] ?? 1;
     this.hp -= n;
     // El enjambre pierde células al ser herido: cada una sigue viva por su cuenta.
     if (this.def.sheds && this.hp > 0 && (this.gen ?? 0) === 0) {
