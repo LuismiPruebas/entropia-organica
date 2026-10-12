@@ -24,7 +24,7 @@ export class Hud {
   }
 
   // Jefe de zona (null = ocultar): su nombre siempre; su vida, solo si sabes leerla
-  // (Cerebro I u Ojo II).
+  // (Cerebro I u Ojo I).
   setBoss(e, showHp) {
     const el = $('boss-bar');
     el.hidden = !e;
