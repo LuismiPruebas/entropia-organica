@@ -1,0 +1,67 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Voces y ambientes</title>
+<!-- Herramienta: escucha las voces de cada criatura (llamadas, alerta, dolor, ataque,
+     muerte) y el paisaje sonoro de cada bioma. Con el servidor:
+     http://localhost:8080/tools/voices.html -->
+<style>
+  body { background: #141014; color: #d8ccc0; font: 13px monospace; margin: 16px; }
+  h1 { font-size: 16px; color: #e8dcc0; }
+  h2 { font-size: 13px; margin: 18px 0 6px; color: #c8a878; }
+  .row { margin: 4px 0; }
+  .name { display: inline-block; width: 220px; color: #e8dcc0; }
+  button { background: #2a2028; color: #e8dcc0; border: 1px solid #5a4848; margin: 2px; padding: 3px 8px; font: inherit; cursor: pointer; }
+  button:hover { background: #3a2a34; }
+  button.on { background: #6a3a2a; }
+  .dim { color: #8a7a70; }
+</style></head><body>
+<h1>Voces de las criaturas y paisajes sonoros</h1>
+<p class="dim">Haz clic en cualquier botón (el navegador necesita un clic para sonar). Cada criatura repite su llamada con variaciones: escúchala varias veces.</p>
+<h2>Biomas (paisaje continuo)</h2>
+<div id="biomes"></div>
+<h2>Criaturas</h2>
+<div id="creatures"></div>
+<h2>Trampas y corrientes</h2>
+<div id="misc"></div>
+<script type="module">
+import { AudioSys } from '../src/core/Audio.js';
+import { ENEMIES } from '../src/data/enemies.js';
+import { BIOMES } from '../src/data/biomes.js';
+
+const a = new AudioSys();
+let started = false;
+const start = async () => {
+  if (started) return;
+  a.init();
+  await a.ctx.resume();
+  a.startDrone();
+  a.setBiome({ drone: 40, filter: 200, lfo: 0.1, level: 0, bed: { level: 0 } }); // en silencio hasta elegir bioma
+  started = true;
+};
+const btn = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = async () => { await start(); fn(b); }; return b; };
+
+const bio = document.getElementById('biomes');
+for (const [id, b] of Object.entries(BIOMES)) {
+  bio.append(btn(b.name, (el) => {
+    document.querySelectorAll('#biomes button').forEach((x) => x.classList.remove('on'));
+    el.classList.add('on');
+    a.biomeSound = null;
+    a.setBiome(b.sound);
+  }));
+}
+bio.append(btn('Silencio', () => { a.biomeSound = null; a.setBiome({ drone: 40, filter: 200, lfo: 0.1, level: 0, bed: { level: 0 } }); document.querySelectorAll('#biomes button').forEach((x) => x.classList.remove('on')); }));
+
+const list = document.getElementById('creatures');
+for (const [id, d] of Object.entries(ENEMIES)) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const n = document.createElement('span');
+  n.className = 'name';
+  n.textContent = d.name;
+  row.append(n);
+  for (const v of [...new Set(d.voice ?? [])]) row.append(btn(`llamada: ${v}`, () => { a.lastPlayed.clear(); a.play(v); }));
+  for (const [k, v] of Object.entries(d.sounds ?? {})) row.append(btn(`${k}: ${v}`, () => { a.lastPlayed.clear(); a.play(v); }));
+  list.append(row);
+}
+const misc = document.getElementById('misc');
+for (const v of ['boneCreak', 'stakes', 'gust', 'hit']) misc.append(btn(v, () => { a.lastPlayed.clear(); a.play(v); }));
+</script></body></html>

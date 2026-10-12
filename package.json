@@ -1,0 +1,11 @@
+{
+  "name": "entropia-organica",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Metroidvania de terror biológico en 16 bits (Three.js, sin motor)",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs 8080",
+    "check": "node tools/check-data.mjs"
+  }
+}

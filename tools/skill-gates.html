@@ -1,0 +1,87 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Pasos de habilidad</title>
+<!-- Comprueba que los pasos que exigen la honda del Tendón (balancearse, soltarse
+     en lo alto del arco y rematar con el doble salto) son posibles con la física
+     real. Con el servidor: http://localhost:8080/tools/skill-gates.html --></head>
+<body><pre id="out">...</pre>
+<script>
+// Para cada caso: engancharse al anclaje, bombear el balanceo, soltarse en distintos
+// momentos (con o sin doble salto después) y ver si se aterriza en la repisa.
+const CASES = [
+  { room: 'B5', spawn: [40, 11], anchor: [36, 3], ledge: { x0: 42, x1: 46, row: 4 } },
+  { room: 'B4', spawn: [27, 13], anchor: [26, 7], ledge: { x0: 30, x1: 34, row: 4 } },
+];
+const out = document.getElementById('out');
+const results = [];
+let ci = 0;
+function next() {
+  if (ci >= CASES.length) { out.textContent = results.join('\n'); document.title = 'listo'; return; }
+  const c = CASES[ci++];
+  const f = document.createElement('iframe');
+  f.style.cssText = 'width:384px;height:216px;border:0';
+  f.src = `../index.html?room=${c.room}&spawn=${c.spawn}&mut=alveolos,pistones,tendon&light=100`;
+  f.onload = () => setTimeout(() => { run(f.contentWindow.game, c); f.remove(); next(); }, 500);
+  document.body.append(f);
+}
+function run(g, c) {
+  const p = g.player, inp = g.input, TILE = 16;
+  g.state.dev.god = true;
+  g.room.enemies.forEach((e) => { e.alive = false; e.dispose(); });
+  g.room.enemies = [];
+  const ax = c.anchor[0] * TILE + 8, ay = c.anchor[1] * TILE + 8;
+  const press = (k) => { inp.keys.add(k); inp.pressed.add(k); };
+  const release = (k) => { inp.keys.delete(k); inp.released.add(k); };
+  const step = () => { g.update(1 / 60); };
+  let ok = 0, tried = 0, best = null, hooked = 0, apex = { feet: 1e9 };
+  for (const pumpSwings of [2, 3, 4, 5, 6])
+    for (const minVx of [10, 20, 30, 40, 50, 60, 70, 80])
+      for (const dbl of [false, true])
+        for (const reel of [0, 10, 25]) {
+          tried++;
+          // Reinicio.
+          p.spawnAt(c.spawn[0], c.spawn[1]);
+          p.rope = null; p.vx = p.vy = 0; p.aimMode = 'mouse';
+          for (let i = 0; i < 10; i++) step();
+          inp.mouse.x = ax - g.visual.cam.x; inp.mouse.y = ay - g.visual.cam.y;
+          step();
+          press('KeyQ'); step(); release('KeyQ');
+          if (!p.rope) continue;
+          hooked++;
+          // Recoge algo de cuerda y bombea con el movimiento.
+          for (let i = 0; i < reel; i++) { inp.keys.add('KeyW'); step(); }
+          release('KeyW');
+          let swings = 0, lastSign = 0, released = false, landed = false;
+          for (let i = 0; i < 900 && !landed; i++) {
+            const s = Math.sign(p.vx) || 1;
+            if (s !== lastSign) { swings++; lastSign = s; }
+            const dir = s > 0 ? 'KeyD' : 'KeyA';
+            inp.keys.delete('KeyA'); inp.keys.delete('KeyD');
+            inp.keys.add(released ? 'KeyD' : dir); // tras soltarse, dirige el vuelo hacia la repisa
+            // Suelta subiendo hacia la repisa, tras unas cuantas oscilaciones.
+            // Ángulo respecto a la vertical del anclaje (positivo a la derecha), en grados.
+            const ang = Math.atan2(p.cx - ax, p.y + 8 - ay) * 180 / Math.PI;
+            if (!released && swings >= pumpSwings && p.vx > 0 && ang > minVx) {
+              inp.mouse.x = (c.ledge.x0 + 1) * TILE - g.visual.cam.x;
+              press('Space'); step(); release('Space');
+              released = true;
+              inp.keys.add('KeyD');
+              // Doble salto en la cima del vuelo, como haría un jugador.
+              if (dbl) { for (let k = 0; k < 60 && p.vy < -20; k++) step(); press('Space'); step(); release('Space'); }
+              continue;
+            }
+            step();
+            if (released && p.y + p.h < apex.feet) apex = { feet: p.y + p.h, x: p.cx, ang: minVx, swings: pumpSwings };
+            if (released && p.onGround) {
+              const col = Math.floor(p.cx / TILE), row = Math.floor((p.y + p.h) / TILE);
+              landed = row === c.ledge.row && col >= c.ledge.x0 && col <= c.ledge.x1;
+              if (released) break;
+            }
+          }
+          inp.keys.clear();
+          if (landed) { ok++; best ??= `oscilaciones ${pumpSwings}, soltar a ${minVx}º, recoger ${reel}, doble salto ${dbl}`; }
+        }
+  results.push(`${c.room}: enganchado ${hooked}/${tried}; punto más alto tras soltarse: pies en y=${apex.feet?.toFixed(0)} (repisa en y=${c.ledge.row * 16}), x=${apex.x?.toFixed(0)} (repisa x ${c.ledge.x0 * 16}-${(c.ledge.x1 + 1) * 16})`);
+  results.push(`${c.room}: ${ok} de ${tried} combinaciones aterrizan en la repisa. Ejemplo: ${best ?? '-'}`);
+}
+next();
+</script></body></html>

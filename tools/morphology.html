@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Morfología del huésped</title>
+<!-- Hoja de desarrollo: el cuerpo del protagonista (entities/PlayerBody.js) en cada
+     etapa de mutación y en reposo, caminando y saltando. Con el servidor en marcha:
+     http://localhost:8080/tools/morphology.html -->
+<style>body{margin:0;background:#120a0e;color:#cbb;font:12px monospace;padding:10px}.row{display:flex;gap:10px;align-items:flex-end;margin-bottom:8px}.c{text-align:center}canvas{image-rendering:pixelated;width:168px;height:154px;background:#1c1218}</style></head>
+<body><div id="r"></div>
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.js" } }</script>
+<script type="module">
+import { PlayerBody } from '../src/entities/PlayerBody.js';
+const stages = [
+  ['Humano', []],
+    ['+ Pistones', ['alveolos', 'pistones']],
+  ['+ Tendón', ['alveolos', 'pistones', 'tendon']],
+    ['+ Quitina I-II', ['alveolos', 'pistones', 'tendon', 'garras', 'quitina', 'quitina2']],
+  ['Todas', ['alveolos', 'pistones', 'tendon', 'garras', 'quitina', 'quitina2', 'nanocutis', 'simbionte', 'cartografo', 'ecolocacion', 'percepcion']],
+];
+const poses = [
+  ['idle', { vx: 0, vy: 0, onGround: true }],
+  ['camina', { vx: 90, vy: 0, onGround: true }],
+  ['sube', { vx: 60, vy: -220, onGround: false, aim: -0.5 }],
+  ['cae', { vx: 60, vy: 220, onGround: false }],
+  ['columpio', { vx: 260, vy: -40, onGround: false, rope: { x: 0.45, y: -0.9 } }],
+  ['aterriza', { vx: 0, vy: 0, onGround: true, land: 0.8 }],
+];
+const solo = [['Garras solas', ['garras']], ['Simbionte', ['simbionte']], ['Tercer Ojo', ['cartografo', 'ecolocacion', 'ojo1', 'ojo2', 'percepcion']], ['Nanocutis', ['quitina', 'quitina2', 'nanocutis']]];
+const root = document.getElementById('r');
+function show(title, muts, pose, t) {
+  const b = new PlayerBody();
+  // Deja que el tentáculo se asiente con unos pasos de simulación.
+  for (let i = 0; i < 60; i++) b.render(new Set(muts), { ...pose, t: t + i / 60, dt: 1 / 60 });
+  const c = document.createElement('canvas'); c.width = 48; c.height = 44;
+  const g = c.getContext('2d'); g.drawImage(b.canvas, 0, 0); g.globalCompositeOperation = 'lighter'; g.drawImage(b.glow, 0, 0);
+  const d = document.createElement('div'); d.className = 'c'; d.append(c, document.createElement('br'), title);
+  return d;
+}
+for (const [pn, pose] of poses) {
+  const row = document.createElement('div'); row.className = 'row';
+  for (const [n, m] of stages) row.append(show(`${n} · ${pn}`, m, pose, 1.2));
+  root.append(row);
+}
+const row = document.createElement('div'); row.className = 'row';
+for (const [n, m] of solo) row.append(show(n, m, poses[0][1], 1.2));
+root.append(row);
+document.title = 'listo';
+</script></body></html>

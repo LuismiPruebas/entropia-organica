@@ -1,0 +1,318 @@
+// Fondo lejano de cada bioma (parallax 0.3): una textura de tejido que se repite sin
+// costuras, pintada píxel a píxel. Cada bioma tiene su familia de color (sin negros ni
+// grises: el tono más hondo sigue siendo un color) y sus motivos:
+//   nervioso   tejido violeta con neuronas estrelladas, glía y axones mielinizados
+//   pulmonar   parénquima turquesa cuajado de alvéolos con capilares coral
+//   digestivo  mucosa ámbar con un bosque de vellosidades, criptas y gotas de bilis
+//   corazon    músculo carmesí estriado, con discos intercalares y capilares
+// Todo lo que se repite usa coordenadas envueltas (módulo del tamaño), así los bordes
+// encajan. Ver Visual.setBiome (fondo lejano) y core/Scenery.js (plano medio).
+
+const S = 256;
+
+const hexRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+function hash(x, y, s) {
+  let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => ((a = (a * 1664525 + 1013904223) >>> 0) / 4294967296);
+}
+
+// Ruido de valor que se repite cada `per` celdas (para texturas sin costura).
+function tnoise(x, y, per, seed) {
+  const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+  const w = (v) => ((v % per) + per) % per;
+  const s = (t) => t * t * (3 - 2 * t);
+  const a = hash(w(xi), w(yi), seed), b = hash(w(xi + 1), w(yi), seed), c = hash(w(xi), w(yi + 1), seed), d = hash(w(xi + 1), w(yi + 1), seed);
+  const u = s(fx), v = s(fy);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+// fbm sin costura sobre la textura de S px: f = celdas por lado de la primera octava.
+function tfbm(x, y, f, seed) {
+  return tnoise((x / S) * f, (y / S) * f, f, seed) * 0.55
+    + tnoise((x / S) * f * 2, (y / S) * f * 2, f * 2, seed + 1) * 0.3
+    + tnoise((x / S) * f * 4, (y / S) * f * 4, f * 4, seed + 2) * 0.15;
+}
+// Voronoi sin costura: n celdas por lado. Devuelve [d1, d2, id, cx, cy] (en px).
+function cells(x, y, n, seed) {
+  const cs = S / n, gx = Math.floor(x / cs), gy = Math.floor(y / cs);
+  let d1 = 1e9, d2 = 1e9, id = 0, bx = 0, by = 0;
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const cx = gx + i, cy = gy + j, wx = ((cx % n) + n) % n, wy = ((cy % n) + n) % n;
+    const fx = (cx + 0.15 + hash(wx, wy, seed) * 0.7) * cs, fy = (cy + 0.15 + hash(wx, wy, seed + 9) * 0.7) * cs;
+    const d = Math.hypot(x - fx, y - fy);
+    if (d < d1) { d2 = d1; d1 = d; id = hash(wx, wy, seed + 5); bx = fx; by = fy; } else if (d < d2) d2 = d;
+  }
+  return [d1, d2, id, bx, by];
+}
+
+// Lienzo de trabajo en floats; al final se vuelca a un canvas.
+function surface() {
+  const buf = new Float32Array(S * S * 3);
+  const idx = (x, y) => ((((y | 0) % S) + S) % S) * S + ((((x | 0) % S) + S) % S);
+  return {
+    buf,
+    get(x, y) { const i = idx(x, y) * 3; return [buf[i], buf[i + 1], buf[i + 2]]; },
+    set(x, y, c) { const i = idx(x, y) * 3; buf[i] = c[0]; buf[i + 1] = c[1]; buf[i + 2] = c[2]; },
+    blend(x, y, c, k) { const i = idx(x, y) * 3; buf[i] += (c[0] - buf[i]) * k; buf[i + 1] += (c[1] - buf[i + 1]) * k; buf[i + 2] += (c[2] - buf[i + 2]) * k; },
+    canvas() {
+      const c = document.createElement('canvas');
+      c.width = c.height = S;
+      const g = c.getContext('2d'), img = g.createImageData(S, S);
+      for (let i = 0; i < S * S; i++) {
+        img.data[i * 4] = buf[i * 3]; img.data[i * 4 + 1] = buf[i * 3 + 1]; img.data[i * 4 + 2] = buf[i * 3 + 2]; img.data[i * 4 + 3] = 255;
+      }
+      g.putImageData(img, 0, 0);
+      return c;
+    },
+  };
+}
+
+// Tejido base: un degradado entre tres tonos de la familia guiado por fbm.
+function tissue(sf, P, seed, f = 4) {
+  const lo = hexRgb(P.lo), mid = hexRgb(P.mid), hi = hexRgb(P.hi);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const n = tfbm(x, y, f, seed);
+    sf.set(x, y, n < 0.5 ? mix(lo, mid, n * 2) : mix(mid, hi, (n - 0.5) * 2));
+  }
+}
+
+// Células abombadas (lóbulos) con membrana, núcleo y brillo húmedo.
+function lobules(sf, n, seed, P, { strength = 1, nucleus = true, membrane = 0.18 } = {}) {
+  const mem = hexRgb(P.membrane), body = hexRgb(P.cell), shine = hexRgb(P.shine), nuc = hexRgb(P.nucleus);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const [d1, d2, id, cx, cy] = cells(x, y, n, seed);
+    const cs = S / n, edge = (d2 - d1) / cs;
+    if (edge < membrane * 0.35) { sf.blend(x, y, mem, 0.75 * strength); continue; }
+    const r = d1 / (cs * 0.55);
+    const dome = clamp01(1 - r * r);
+    // Luz desde arriba a la izquierda sobre la cúpula.
+    const lit = clamp01(((cx - x) * 0.7 + (cy - y)) / (cs * 0.6) * 0.5 + 0.5) * dome;
+    sf.blend(x, y, body, (0.25 + dome * 0.45) * strength * (0.7 + id * 0.3));
+    if (lit > 0.75 && dome > 0.5) sf.blend(x, y, shine, (lit - 0.75) * 2.4 * strength);
+    if (nucleus && id > 0.55 && d1 < cs * 0.12) sf.blend(x, y, nuc, 0.7 * strength);
+  }
+}
+
+// Vasos: caminos aleatorios envueltos, con ramas, de grosor decreciente.
+function vessels(sf, count, seed, col, colLight, { len = 220, thick = 2, branch = 0.02 } = {}) {
+  const r = rng(seed), c = hexRgb(col), cl = hexRgb(colLight);
+  const walk = (x, y, a, n, w) => {
+    for (let i = 0; i < n; i++) {
+      for (let k = 0; k < w; k++) sf.blend(x - Math.sin(a) * k, y + Math.cos(a) * k, c, 0.8);
+      if (i % 3 === 0) sf.blend(x, y, cl, 0.5);
+      a += (r() - 0.5) * 0.35;
+      x += Math.cos(a); y += Math.sin(a);
+      if (w > 1 && r() < branch) walk(x, y, a + (r() < 0.5 ? -1 : 1) * (0.6 + r() * 0.5), n * 0.4, w - 1);
+    }
+  };
+  for (let v = 0; v < count; v++) walk(r() * S, r() * S, r() * Math.PI * 2, len, thick);
+}
+
+// Disco sombreado (soma, glía, gota, alvéolo...).
+function disc(sf, x0, y0, rad, col, light, dark, { k = 1, rim = null } = {}) {
+  const c = hexRgb(col), l = hexRgb(light), d = hexRgb(dark), rm = rim && hexRgb(rim);
+  for (let y = -rad - 1; y <= rad + 1; y++) for (let x = -rad - 1; x <= rad + 1; x++) {
+    const q = Math.hypot(x, y) / rad;
+    if (q > 1.05) continue;
+    if (q > 0.86 && rm) { sf.blend(x0 + x, y0 + y, rm, 0.85 * k); continue; }
+    const lit = clamp01((-x - y) / (rad * 1.4) * 0.5 + 0.5);
+    sf.blend(x0 + x, y0 + y, lit > 0.7 ? l : lit < 0.3 ? d : c, 0.9 * k);
+  }
+}
+
+// ----------------------------------------------------------------------------------
+const BACKDROPS = {
+  // Sistema Nervioso: violeta y magenta. Neuronas estrelladas, glía y axones.
+  nervioso() {
+    const sf = surface();
+    const P = { lo: '#2a1238', mid: '#43205c', hi: '#5e2c78', membrane: '#28102e', cell: '#4e2668', shine: '#8a5ab0', nucleus: '#7a3a6a' };
+    tissue(sf, P, 11, 4);
+    lobules(sf, 12, 3, P, { strength: 0.55, membrane: 0.12 });
+    vessels(sf, 6, 5, '#6a2050', '#a04078', { len: 260, thick: 2, branch: 0.015 });
+    const r = rng(7);
+    // Axones mielinizados: cadenas de vainas claras.
+    for (let k = 0; k < 4; k++) {
+      let x = r() * S, y = r() * S, a = r() * Math.PI * 2;
+      for (let i = 0; i < 200; i++) {
+        if (i % 10 < 7) disc(sf, x, y, 2.2, '#8a5ab8', '#b88ae0', '#5a3080', { k: 0.85 });
+        a += (r() - 0.5) * 0.12; x += Math.cos(a) * 1.2; y += Math.sin(a) * 1.2;
+      }
+    }
+    // Neuronas: soma con núcleo y dendritas que se ramifican.
+    const dendrite = (x, y, a, len, w, depth) => {
+      for (let i = 0; i < len; i++) {
+        for (let k = 0; k < w; k++) sf.blend(x - Math.sin(a) * k, y + Math.cos(a) * k, hexRgb('#9a5ac8'), 0.85);
+        a += (r() - 0.5) * 0.3; x += Math.cos(a); y += Math.sin(a);
+      }
+      if (depth > 0) for (const s of [-1, 1]) dendrite(x, y, a + s * (0.45 + r() * 0.3), len * 0.6, Math.max(1, w - 1), depth - 1);
+      else if (r() < 0.4) disc(sf, x, y, 1.5, '#ffb070', '#ffe0a0', '#c06030'); // sinapsis encendida
+    };
+    for (let n = 0; n < 9; n++) {
+      const x = r() * S, y = r() * S, big = r() < 0.4;
+      const arms = 5 + Math.floor(r() * 3);
+      for (let a = 0; a < arms; a++) dendrite(x, y, (a / arms) * Math.PI * 2 + r() * 0.5, big ? 14 : 9, big ? 3 : 2, 2);
+      disc(sf, x, y, big ? 7 : 5, '#9a5ac8', '#d8a8f8', '#5a2a80');
+      disc(sf, x, y, big ? 3 : 2, '#4a2060', '#b080d0', '#2a1040');
+    }
+    // Glía: células redondas granate con núcleo.
+    for (let n = 0; n < 26; n++) {
+      const x = r() * S, y = r() * S, rad = 3 + r() * 4;
+      disc(sf, x, y, rad, '#8a2a5a', '#c85a8a', '#5a1838');
+      disc(sf, x - 1, y - 1, rad * 0.35, '#5a1838', '#a04070', '#3a1028');
+    }
+    return sf.canvas();
+  },
+
+  // Cavidad Pulmonar: turquesa y verde agua, con alvéolos y capilares coral.
+  pulmonar() {
+    const sf = surface();
+    const P = { lo: '#123c44', mid: '#1e5a5e', hi: '#2e7a74', membrane: '#c8606a', cell: '#3a948a', shine: '#a8f0dc', nucleus: '#1a4a50' };
+    tissue(sf, P, 21, 4);
+    // Alvéolos: racimos de sacos abombados (como uvas), con pared coral y el fondo del
+    // saco más hondo abajo a la derecha.
+    const mem = hexRgb('#c85a68'), wall = hexRgb('#58b8a8'), shine = hexRgb('#d0fff0'), shade = hexRgb('#14444a');
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const [d1, d2, id, cx, cy] = cells(x, y, 9, 4);
+      const cs = S / 9, edge = (d2 - d1) / cs;
+      if (edge < 0.05) { sf.blend(x, y, mem, 0.85); continue; }
+      const r = Math.min(1, d1 / (cs * 0.62));
+      const lx = (x - cx) / (cs * 0.6), ly = (y - cy) / (cs * 0.6);
+      const lit = clamp01(0.5 - lx * 0.5 - ly * 0.6);
+      sf.blend(x, y, wall, 0.35 + (1 - r) * 0.3 * (0.6 + id * 0.4));
+      if (lit > 0.6) sf.blend(x, y, shine, (lit - 0.6) * 0.9 * (1 - r));
+      if (lit < 0.3) sf.blend(x, y, shade, (0.3 - lit) * 1.2);
+      if (r > 0.82) sf.blend(x, y, mem, (r - 0.82) * 2.5); // el saco se cierra en coral
+    }
+    vessels(sf, 10, 6, '#e0707a', '#ffa8a8', { len: 160, thick: 1, branch: 0.03 });
+    const r = rng(9);
+    // Secciones de bronquiolos: anillos de cartílago claro.
+    for (let n = 0; n < 6; n++) {
+      const x = r() * S, y = r() * S, rad = 6 + r() * 6;
+      for (let a = 0; a < Math.PI * 2; a += 0.04) for (let k = 0; k < 3; k++) {
+        sf.blend(x + Math.cos(a) * (rad + k), y + Math.sin(a) * (rad + k), hexRgb(k === 0 ? '#e8fff4' : '#8ad8c4'), 0.8);
+      }
+      disc(sf, x, y, rad - 1, '#1e5a5e', '#3a8a84', '#164a50', { k: 0.8 });
+    }
+    // Esporas suspendidas: motas violáceas con halo.
+    for (let n = 0; n < 30; n++) disc(sf, r() * S, r() * S, 1.5 + r() * 1.5, '#8a6ac8', '#c8b0ff', '#4a3a80', { k: 0.8 });
+    return sf.canvas();
+  },
+
+  // Digestivo: ámbar, mostaza y oliva. Vellosidades, criptas y gotas de bilis.
+  digestivo() {
+    const sf = surface();
+    const P = { lo: '#4a2a0c', mid: '#7a4a18', hi: '#a06a24', membrane: '#5a3010', cell: '#b07a2a', shine: '#f0c868', nucleus: '#6a3a10' };
+    tissue(sf, P, 31, 3);
+    lobules(sf, 10, 6, P, { strength: 0.4, nucleus: false, membrane: 0.1 });
+    const r = rng(13);
+    // Bosque de vellosidades: dedos de mucosa que se afinan hacia una punta en bulbo,
+    // ladeados y ondulados, cilíndricos (luz a la izquierda, sombra a la derecha). Las
+    // filas de atrás son más hondas y apagadas; las de delante, más claras.
+    const rows = 5;
+    for (let row = 0; row < rows; row++) {
+      const back = 1 - row / (rows - 1); // 1 = la fila más lejana
+      const shade = (hex) => mix(hexRgb(hex), hexRgb('#5a3410'), back * 0.45);
+      const L = shade('#ffd27a'), M = shade('#d09838'), D = shade('#8a5418'), T = shade('#fff0b0'), O = shade('#4a2808');
+      for (let i = 0; i < 10; i++) {
+        const fx = i * (S / 10) + (row % 2) * 13 + r() * 9, base = row * (S / rows) + S / rows + r() * 8;
+        const h = 30 + r() * 26, w0 = 5 + r() * 2.5, lean = (r() - 0.5) * 0.5, ph = r() * 6;
+        for (let y = 0; y < h; y++) {
+          const t = y / h;
+          const half = w0 * (1 - t * 0.45) + (t > 0.82 ? Math.sin(((t - 0.82) / 0.18) * Math.PI) * 1.8 : 0);
+          const cxo = lean * y + Math.sin(y * 0.11 + ph) * 1.6;
+          for (let x = -Math.ceil(half) - 1; x <= Math.ceil(half) + 1; x++) {
+            const ax = Math.abs(x);
+            const px0 = fx + x + cxo, py0 = base - y;
+            if (ax > half + 0.6) continue;
+            if (ax > half - 0.4) { sf.blend(px0, py0, O, 0.85); continue; }
+            const u = x / half;
+            const col = t > 0.9 ? T : u < -0.5 ? L : u > 0.45 ? D : M;
+            sf.blend(px0, py0, col, 0.95);
+          }
+        }
+      }
+    }
+    // Criptas: hoyos ámbar hondo (no negros).
+    for (let n = 0; n < 22; n++) disc(sf, r() * S, r() * S, 2 + r() * 2, '#5a3008', '#7a4a14', '#3e2006');
+    vessels(sf, 6, 8, '#8a3a5a', '#c06a80', { len: 140, thick: 1 });
+    // Gotas de bilis verde-amarilla, brillantes.
+    for (let n = 0; n < 18; n++) disc(sf, r() * S, r() * S, 2 + r() * 3, '#a8c030', '#f0ff90', '#6a8018');
+    return sf.canvas();
+  },
+
+  // El Corazón: carmesí y escarlata. Miocardio estriado con discos intercalares.
+  corazon() {
+    const sf = surface();
+    const P = { lo: '#5a0a18', mid: '#7a1424', hi: '#9a2030', membrane: '#4a0812', cell: '#a02838', shine: '#e86070', nucleus: '#5a0c1a' };
+    tissue(sf, P, 41, 4);
+    // Fibras musculares: bandas onduladas horizontales con estrías y discos claros.
+    const band = hexRgb('#c43a4c'), stria = hexRgb('#681020'), disk = hexRgb('#f08a90');
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const wave = Math.sin((x / S) * Math.PI * 4 + tfbm(x, y, 3, 7) * 3) * 6;
+      const fy = (y + wave) / 9;
+      const fib = fy - Math.floor(fy);
+      if (fib < 0.14) { sf.blend(x, y, stria, 0.75); continue; }
+      sf.blend(x, y, band, 0.6 * Math.sin(fib * Math.PI));
+      if (fib > 0.3 && fib < 0.42) sf.blend(x, y, hexRgb('#e8707c'), 0.35); // brillo de la fibra
+      if (x % 3 === 0 && fib > 0.3 && fib < 0.8) sf.blend(x, y, stria, 0.25); // estrías finas
+      if ((Math.floor(x / 22) + Math.floor(fy)) % 3 === 0 && x % 22 === 0) sf.blend(x, y, disk, 0.8); // discos intercalares
+    }
+    vessels(sf, 4, 11, '#d84858', '#ff9aa0', { len: 160, thick: 1, branch: 0.02 });
+    const r = rng(17);
+    for (let n = 0; n < 14; n++) disc(sf, r() * S, r() * S, 2 + r() * 2, '#e8a070', '#fff0c0', '#a86030'); // grasa
+    return sf.canvas();
+  },
+
+  // Territorio del Hueso: sepia, marfil y sangre seca. Hueso esponjoso con poros,
+  // costillas que asoman, un campo de espolones y vetas de sangre reseca.
+  oseo() {
+    const sf = surface();
+    const P = { lo: '#2e1a14', mid: '#4a2e22', hi: '#64402e', membrane: '#3a1a14', cell: '#5a3828', shine: '#a8866a', nucleus: '#6a2a1e' };
+    tissue(sf, P, 51, 4);
+    vessels(sf, 7, 13, '#6a1e16', '#9a3a2a', { len: 200, thick: 2, branch: 0.02 }); // sangre reseca
+    const r = rng(19);
+    const bone = (hex) => hexRgb(hex);
+    // Discos de hueso esponjoso: marfil con poros hondos y borde sombreado.
+    for (let n = 0; n < 7; n++) {
+      const x0 = r() * S, y0 = r() * S, rad = 10 + r() * 12;
+      disc(sf, x0, y0, rad, '#b8a080', '#e8dcc0', '#7a604a', { k: 0.95 });
+      for (let k = 0; k < 9 + rad / 2; k++) {
+        const a = r() * Math.PI * 2, d = Math.sqrt(r()) * rad * 0.75;
+        disc(sf, x0 + Math.cos(a) * d, y0 + Math.sin(a) * d, 1.5 + r() * 2.2, '#4a2e22', '#6a4a36', '#2e1a14', { rim: '#8a6e54' });
+      }
+    }
+    // Costillas: arcos de marfil que entran y salen del tejido.
+    for (let n = 0; n < 6; n++) {
+      const cx = r() * S, cy = r() * S, rad = 26 + r() * 30, a0 = r() * Math.PI * 2, span = 1 + r() * 1.2;
+      for (let a = a0; a < a0 + span; a += 0.012) {
+        const x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad * 0.7;
+        for (let k = -3; k <= 3; k++) {
+          const c = k < -1 ? '#f0e4cc' : k > 1 ? '#7a604a' : '#c8b494';
+          sf.blend(x + Math.cos(a) * k, y + Math.sin(a) * k * 0.7, bone(c), 0.92);
+        }
+        if (Math.floor(a * 40) % 9 === 0) for (let k = -3; k <= 3; k++) sf.blend(x + Math.cos(a) * k, y + Math.sin(a) * k * 0.7, bone('#5a4030'), 0.6); // grietas
+      }
+    }
+    // Campo de espolones: pinchos de hueso pequeños que brotan del tejido.
+    for (let n = 0; n < 60; n++) {
+      const x = r() * S, y = r() * S, h = 3 + r() * 6;
+      for (let i = 0; i < h; i++) {
+        const w = Math.max(0, Math.round((1 - i / h) * 2));
+        for (let k = -w; k <= w; k++) sf.blend(x + k, y - i, bone(k < 0 ? '#f0e4cc' : k > 0 ? '#8a7058' : '#c8b494'), 0.9);
+      }
+      sf.blend(x, y + 1, bone('#2e1a14'), 0.5);
+    }
+    return sf.canvas();
+  },
+};
+
+export function paintBackdrop(biomeId) {
+  return (BACKDROPS[biomeId] ?? BACKDROPS.nervioso)();
+}
+export const BACKDROP_SIZE = S;

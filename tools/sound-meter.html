@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Medidor de sonidos</title>
+<!-- Herramienta: reproduce cada receta de src/core/Audio.js y mide en tiempo real su
+     pico y su energía (RMS, en dB) a la salida. Sirve para equilibrar volúmenes.
+     Con el servidor: http://localhost:8080/tools/sound-meter.html?n=nail,growl,... -->
+<style>body{background:#111;color:#cfc;font:12px monospace;padding:8px}</style>
+</head><body><pre id="out">midiendo...</pre>
+<script type="module">
+import { AudioSys } from '../src/core/Audio.js';
+
+const NAMES = (new URLSearchParams(location.search).get('n') ?? '').split(',').filter(Boolean);
+const a = new AudioSys();
+a.init();
+const an = a.ctx.createAnalyser();
+an.fftSize = 2048;
+a.master.connect(an);
+const buf = new Float32Array(an.fftSize);
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const db = (x) => (20 * Math.log10(Math.max(1e-6, x))).toFixed(1);
+const rows = [];
+if (a.ctx.state !== 'running') {
+  document.getElementById('out').textContent = 'Haz clic en la página para empezar a medir...';
+  await new Promise((r) => addEventListener('click', r, { once: true }));
+  await a.ctx.resume();
+  document.getElementById('out').textContent = 'midiendo...';
+}
+for (const n of NAMES) {
+  a.lastPlayed.clear();
+  a.play(n);
+  let peak = 0, sum = 0, cnt = 0, start = performance.now();
+  while (performance.now() - start < 1800) {
+    an.getFloatTimeDomainData(buf);
+    let s = 0, p = 0;
+    for (const v of buf) { s += v * v; p = Math.max(p, Math.abs(v)); }
+    const r = Math.sqrt(s / buf.length);
+    if (r > 0.003) { sum += r * r; cnt++; }
+    peak = Math.max(peak, p);
+    await wait(20);
+  }
+  rows.push(`${n.padEnd(15)} pico ${db(peak).padStart(6)} dB   RMS ${db(Math.sqrt(sum / Math.max(1, cnt))).padStart(6)} dB`);
+  await wait(300);
+}
+document.getElementById('out').textContent = 'RES\n' + rows.join('\n');
+</script></body></html>

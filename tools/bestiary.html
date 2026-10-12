@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bestiario · Entropía Orgánica</title>
+<!--
+  Bestiario: dibuja cada enemigo con su criatura procedural real (entities/Creatures.js)
+  y su lore (data/enemies.js). Sirve el proyecto (npm start) y abre
+  http://localhost:8080/tools/bestiary.html
+    ?only=<id>   una sola ficha grande (para exportar una imagen por enemigo)
+    ?t=<seg>     instante de la animación que se congela (por defecto, animada)
+-->
+<style>
+  :root { --bg: #0b0608; --card: #150c10; --line: #3a1a22; --ink: #e8dcc8; --dim: #9a8a80; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 "Courier New", monospace; padding: 24px 16px; }
+  h1 { margin: 0 0 4px; letter-spacing: 6px; font-size: 22px; color: #ff5a4a; }
+  .sub { color: var(--dim); margin-bottom: 24px; }
+  h2 { margin: 28px 0 12px; font-size: 15px; letter-spacing: 4px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); padding: 12px; }
+  .stage { height: 220px; display: flex; align-items: center; justify-content: center; background: radial-gradient(#22121a, #0b0608 70%); margin-bottom: 10px; }
+  canvas { image-rendering: pixelated; }
+  .name { font-size: 16px; font-weight: bold; letter-spacing: 2px; }
+  .meta { color: var(--dim); font-size: 12px; margin: 2px 0 8px; }
+  .boss { color: #ff5a4a; }
+  .lore { margin: 0; }
+  .habits { margin: 8px 0 0; color: #e8b46a; font-size: 12px; }
+  body.only { padding: 0; }
+  body.only .card { border: 0; width: 720px; height: 580px; padding: 20px 28px; }
+  body.only .stage { height: 340px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.js" } }</script>
+<script type="module">
+import { CREATURES } from '../src/entities/Creatures.js';
+import { ENEMIES } from '../src/data/enemies.js';
+import { BIOMES } from '../src/data/biomes.js';
+
+const q = new URLSearchParams(location.search);
+const only = q.get('only');
+const frozen = q.has('t') ? Number(q.get('t')) : null;
+
+// Entidad de mentira con lo que leen los dibujos: posición, movimiento, fase...
+function fakeEntity(id, def) {
+  const e = {
+    type: id, def, x: 0, y: 0, w: def.w, h: def.h, vx: 26, vy: 0, dir: 1, t: 0, seed: 2.3,
+    hp: def.hp, armored: !!def.armored, exposed: true, armed: false, swing: 0,
+    frame: 'open', phase: 'shake', home: 0, dropLen: 64,
+    get cx() { return this.x + this.w / 2; },
+    get cy() { return this.y + this.h / 2; },
+  };
+  if (def.behavior === 'pod') { e.dropLen = 26; e.y = 10; }
+  // La glándula cuelga de un techo (ceilY) con los tubos a la vista.
+  if (def.behavior === 'bossGland') Object.assign(e, { ceilY: 0, home: { x: 0, y: 22 }, y: 26, mouthOpen: 0.25, swell: 0.2, lash: 0, face: 1, exposed: false, gs: 'idle' });
+  if (def.behavior === 'centaur') Object.assign(e, { state: 'walk', vx: 14 });
+  if (def.behavior === 'rhino') Object.assign(e, { state: 'walk', vx: 12 });
+  if (def.behavior === 'bossMoth') Object.assign(e, { pose: 'fly', rot: 0, face: 1, glowK: 0 });
+  e.onGround = true;
+  if (q.get('pose') === 'accion') {
+    Object.assign(e, ({
+      stalker: { state: 'pounce', vx: 150, vy: -100, onGround: false },
+      centaur: { state: 'rear', timer: 0.3, vx: 0 },
+      bossMoth: { pose: 'aim', glowK: 1 },
+      bossGland: { y: 80, mouthOpen: 1, swell: 0.5, lash: 1, exposed: true, gs: 'dipHold' },
+      darter: { state: 'windup' },
+      shambler: { swing: 0.5 },
+      ceilingEye: { charging: true },
+      golem: { state: 'punch', vx: 0 },
+      rhino: { state: 'charge', vx: 165 },
+    })[def.behavior] ?? {});
+  }
+  return e;
+}
+
+function update(e, t) {
+  e.t = t;
+  if (e.def.behavior === 'shambler') e.swing = Math.max(0, Math.sin(t * 1.4)) * 0.4;
+}
+
+const biomeName = (b) => BIOMES[b]?.name ?? b;
+const order = ['nervioso', 'pulmonar', 'digestivo', 'oseo', 'corazon'];
+const ids = Object.keys(ENEMIES).filter((id) => ENEMIES[id].creature && (!only || id === only));
+ids.sort((a, b) => order.indexOf(ENEMIES[a].biome) - order.indexOf(ENEMIES[b].biome) || !!ENEMIES[a].boss - !!ENEMIES[b].boss);
+
+const root = document.getElementById('root');
+if (only) document.body.classList.add('only');
+else root.innerHTML = '<h1>BESTIARIO</h1><div class="sub">Entropía Orgánica · criaturas de cada sistema del organismo</div>';
+
+const items = [];
+let section = null;
+for (const id of ids) {
+  const def = ENEMIES[id], cr = CREATURES[def.creature];
+  if (!only && def.biome !== section) {
+    section = def.biome;
+    root.insertAdjacentHTML('beforeend', `<h2>${biomeName(section).toUpperCase()}</h2><div class="grid" data-b="${section}"></div>`);
+  }
+  const e = fakeEntity(id, def);
+  update(e, 1.3);
+  const [W, H] = cr.size(e);
+  // Recorte al contenido (algunos lienzos dejan mucho margen para moverse dentro).
+  const c = document.createElement('canvas'), gc = document.createElement('canvas');
+  c.width = gc.width = W;
+  c.height = gc.height = H;
+  cr.draw(c.getContext('2d'), gc.getContext('2d'), e, 1.3, { time: 1.3, player: { cx: e.cx + 80, cy: e.cy + 10 } });
+  const px = c.getContext('2d').getImageData(0, 0, W, H).data;
+  let x0 = W, y0 = H, x1 = 0, y1 = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (px[(y * W + x) * 4 + 3]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const pad = 6;
+  const crop = x1 < x0 ? [0, 0, W, H] : [Math.max(0, x0 - pad), Math.max(0, y0 - pad), Math.min(W, x1 + pad + 1) - Math.max(0, x0 - pad), Math.min(H, y1 + pad + 1) - Math.max(0, y0 - pad)];
+  const [w, h] = [crop[2], crop[3]];
+  const maxW = only ? 660 : 300, maxH = only ? 330 : 210;
+  const scale = Math.max(1, Math.floor(Math.min(maxW / w, maxH / h)));
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `<div class="stage"></div>
+    <div class="name ${def.boss ? 'boss' : ''}">${def.name.toUpperCase()}${def.boss ? ' · JEFE' : ''}</div>
+    <div class="meta">${biomeName(def.biome)} · ${id}</div>
+    <p class="lore">${def.lore}</p>
+    ${def.habits ? `<p class="habits">▸ ${def.habits}</p>` : ''}`;
+  const view = document.createElement('canvas');
+  view.width = w * scale;
+  view.height = h * scale;
+  card.querySelector('.stage').append(view);
+  (only ? root : root.querySelector(`[data-b="${def.biome}"]`)).append(card);
+  items.push({ e, cr, c, gc, view, scale, W, H, crop });
+}
+
+function draw(t) {
+  for (const it of items) {
+    const { e, cr, c, gc, view, scale, W, H, crop } = it;
+    update(e, t);
+    const g = c.getContext('2d'), gl = gc.getContext('2d'), v = view.getContext('2d');
+    g.clearRect(0, 0, W, H);
+    gl.clearRect(0, 0, W, H);
+    const game = { time: t, player: { cx: e.cx + 80, cy: e.cy + 10 } };
+    cr.draw(g, gl, e, t, game);
+    v.imageSmoothingEnabled = false;
+    v.clearRect(0, 0, view.width, view.height);
+    v.drawImage(c, ...crop, 0, 0, view.width, view.height);
+    // El brillo propio, sumado encima con un halo suave.
+    v.globalCompositeOperation = 'lighter';
+    v.filter = `blur(${scale}px)`;
+    v.drawImage(gc, ...crop, 0, 0, view.width, view.height);
+    v.filter = 'none';
+    v.drawImage(gc, ...crop, 0, 0, view.width, view.height);
+    v.globalCompositeOperation = 'source-over';
+  }
+}
+
+if (frozen !== null) draw(frozen);
+else {
+  const loop = (ms) => { draw(ms / 1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+window.BESTIARY_IDS = ids;
+</script>
+</body>
+</html>

@@ -1,0 +1,699 @@
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  color: #d8c8b8;
+  user-select: none;
+}
+
+/* Todo vive en un lienzo lógico de 384x216 que se escala con transform (píxel duro). */
+#stage {
+  position: relative;
+  flex: none;
+  width: 384px;
+  height: 216px;
+  transform-origin: center center;
+  cursor: crosshair;
+}
+
+#game {
+  position: absolute;
+  inset: 0;
+  width: 384px;
+  height: 216px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-size: 5px;
+  line-height: 1;
+}
+
+/* HUD orgánico: vejigas de fluido (ui/Bladders.js) */
+#organs {
+  position: absolute;
+  left: 3px;
+  top: 2px;
+  width: 80px;
+  height: 40px;
+}
+#organs canvas { position: absolute; inset: 0; image-rendering: pixelated; }
+#organs-glow { filter: blur(2px); mix-blend-mode: screen; opacity: 0.9; }
+
+#boss-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  width: 180px;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 5px;
+  color: #ff5a6a;
+  text-shadow: 1px 1px 0 #000;
+}
+#boss-bar .bar { width: 180px; height: 3px; margin-top: 2px; }
+#boss-bar .fill { background: #c0283a; transition: width .2s; }
+
+#message {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 14px;
+  text-align: center;
+  font-size: 5px;
+  line-height: 1.7;
+  color: #e8dcc8;
+  text-shadow: 1px 1px 0 #000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+#message.show { opacity: 1; }
+
+#prompt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 34px;
+  text-align: center;
+  font-size: 5px;
+  color: #7dff9a;
+  text-shadow: 1px 1px 0 #000;
+  pointer-events: none;
+}
+
+/* ---------- Menú del Nodo Seguro ---------- */
+/* Nodo Seguro: una membrana viva. A la izquierda el útero (pixel art, NodeMenu.js),
+   a la derecha las opciones como tejido; la elegida late con su núcleo. */
+#node-menu {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 262px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px 10px 8px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse at 14% 55%, rgba(30, 110, 60, .35), transparent 55%),
+    radial-gradient(ellipse at 85% 20%, rgba(110, 20, 40, .35), transparent 60%),
+    #0a0507;
+  border-radius: 22px 12px 26px 14px / 14px 24px 12px 22px;
+  box-shadow: 0 0 0 1px #000, 0 0 0 2px #2c5a3a, 0 0 0 3px #000, 0 0 22px rgba(60, 255, 140, .18);
+  font-size: 5px;
+  line-height: 1.6;
+  animation: nm-breathe 2.6s ease-in-out infinite;
+}
+#node-menu[hidden] { display: none; }
+@keyframes nm-breathe {
+  50% { box-shadow: 0 0 0 1px #000, 0 0 0 2px #3f8a55, 0 0 0 3px #000, 0 0 30px rgba(60, 255, 140, .28); }
+}
+#node-menu .nm-veins {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+#node-menu .nm-veins .vein { fill: none; stroke: #3a0c18; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+#node-menu .nm-veins .pulse {
+  fill: none;
+  stroke: #c02a44;
+  stroke-width: 1;
+  stroke-dasharray: 6 90;
+  vector-effect: non-scaling-stroke;
+  animation: bloodflow 2.2s linear infinite;
+}
+#node-menu .nm-womb { position: relative; flex: none; align-self: center; }
+#node-menu .nm-womb canvas { display: block; width: 56px; height: 72px; image-rendering: pixelated; }
+#node-menu .nm-body { position: relative; flex: 1; min-width: 0; }
+
+#node-menu h2 {
+  margin: 0 0 1px;
+  font-size: 7px;
+  color: #7dff9a;
+  font-weight: normal;
+  text-shadow: 0 0 4px rgba(60, 255, 140, .5);
+  animation: nm-title 2.6s ease-in-out infinite;
+}
+@keyframes nm-title { 50% { text-shadow: 0 0 8px rgba(60, 255, 140, .8); } }
+#node-menu .nm-res { margin-bottom: 5px; font-size: 3.5px; letter-spacing: .5px; }
+#node-menu .nm-res span { margin-right: 4px; }
+
+#node-menu .c-int { color: #ff5a6a; }
+#node-menu .c-bio { color: #e07a98; }
+#node-menu .c-lux { color: #ffd23f; }
+#node-menu .c-rej { color: #c07bff; }
+#node-menu .c-scrap { color: #c8b8a0; }
+#node-menu .dim { color: #6a5a5a; }
+
+#node-menu button {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0 0 3px;
+  padding: 3px 5px 3px 10px;
+  background: #1a0b10;
+  color: #e8dcc8;
+  border: 0;
+  border-radius: 7px 3px 8px 4px / 4px 8px 3px 7px;
+  box-shadow: inset 0 0 0 1px #3a1822, inset 0 -2px 0 #12070a;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+#node-menu button.mut { background: #160d1c; box-shadow: inset 0 0 0 1px #3a2050, inset 0 -2px 0 #0c0610; }
+#node-menu button .nucleus {
+  position: absolute;
+  left: 3px;
+  top: 5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 1px;
+  background: #4a2028;
+}
+#node-menu button:hover:not(:disabled),
+#node-menu button.nav-sel {
+  background: #13261a;
+  box-shadow: inset 0 0 0 1px #7dff9a, inset 0 -2px 0 #0a1a10, 0 0 6px rgba(60, 255, 140, .25);
+}
+#node-menu button:hover:not(:disabled) .nucleus,
+#node-menu button.nav-sel .nucleus { background: #7dff9a; animation: nm-nucleus .9s steps(2) infinite; }
+@keyframes nm-nucleus { 50% { background: #2a8a4a; } }
+#node-menu button:disabled { color: #5a4a4a; cursor: default; background: #120a0c; }
+#node-menu button:disabled .nucleus { background: #2a1418; }
+
+#node-menu .desc {
+  display: block;
+  color: #8a7a6a;
+}
+
+/* ---------- Mapa interno (M) ---------- */
+/* Minimapa del HUD (tecla M) */
+#minimap {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  outline: 1px solid #4a3a1a;
+  box-shadow: 0 0 0 1px #000;
+}
+#minimap canvas { display: block; width: 104px; height: 52px; image-rendering: pixelated; }
+#minimap span {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  font-size: 3px;
+  color: #c8b070;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* ---------- Menú de desarrollo (F9 / º) ---------- */
+#dev-menu {
+  position: absolute;
+  inset: 6px;
+  padding: 8px 10px;
+  overflow-y: auto;
+  background: rgba(4, 10, 14, .96);
+  outline: 1px solid #2a6a7a;
+  font-size: 5px;
+  line-height: 1.6;
+  color: #b8d8e0;
+  scrollbar-width: thin;
+}
+#dev-menu h2 { margin: 0 0 4px; font-size: 7px; font-weight: normal; color: #4ff0ff; }
+#dev-menu h2 span { font-size: 4px; color: #4a7a8a; margin-left: 6px; }
+#dev-menu h3 { margin: 6px 0 3px; font-size: 5px; font-weight: normal; color: #7a9aa8; }
+#dev-menu .dev-stats { color: #ffd23f; }
+#dev-menu button {
+  margin: 0 3px 3px 0;
+  padding: 2px 4px;
+  font: inherit;
+  color: #b8d8e0;
+  background: #0c1a20;
+  border: 0;
+  outline: 1px solid #1f4250;
+  cursor: pointer;
+}
+#dev-menu button:hover, #dev-menu button.nav-sel { outline-color: #4ff0ff; }
+#dev-menu button.nav-sel { outline-width: 2px; }
+#dev-menu button.on { background: #0f4a3a; color: #7dff9a; outline-color: #7dff9a; }
+
+/* ---------- Genoma del Huésped (tecla I) ---------- */
+#genome {
+  --beat: 1s;
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 22% 50%, rgba(90, 10, 24, .55), transparent 60%),
+    radial-gradient(ellipse at 80% 30%, rgba(30, 40, 70, .45), transparent 65%),
+    #060306;
+  font-size: 5px;
+  line-height: 1.6;
+  animation: membrane 6s ease-in-out infinite;
+}
+
+#genome[hidden] { display: none; }
+
+@keyframes membrane {
+  50% { background-position: 4px 2px, -3px 3px, 0 0; filter: saturate(1.25); }
+}
+
+#genome .veins {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#genome .vein {
+  fill: none;
+  stroke: #3a0a14;
+  stroke-width: 2.5;
+}
+
+#genome .pulse {
+  fill: none;
+  stroke: #e0304a;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 6 90;
+  animation: bloodflow calc(var(--beat) * 3) linear infinite;
+  filter: drop-shadow(0 0 2px #ff2040);
+}
+
+@keyframes bloodflow { to { stroke-dashoffset: -96; } }
+
+/* Células del fondo: pixel art plano (dibujadas en Genome.js), a saltos de píxel */
+#genome .cell {
+  position: absolute;
+  image-rendering: pixelated;
+  opacity: 0.75;
+  animation: drift 9s steps(18) infinite;
+  pointer-events: none;
+}
+
+@keyframes drift {
+  25% { transform: translate(6px, -4px); }
+  50% { transform: translate(2px, -9px); }
+  75% { transform: translate(-5px, -3px); }
+}
+
+#genome .g-head {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #4a1020;
+}
+
+#genome h2 {
+  margin: 0;
+  font-size: 8px;
+  font-weight: normal;
+  color: #ff5a6a;
+  text-shadow: 0 0 6px #a0102a;
+  letter-spacing: 1px;
+  animation: throb var(--beat) ease-in-out infinite;
+}
+
+@keyframes throb {
+  10% { text-shadow: 0 0 10px #ff2040, 1px 0 0 #00e0ff; }
+  20% { text-shadow: 0 0 4px #a0102a; }
+}
+
+#g-count { color: #c07bff; }
+#genome .g-res { display: flex; align-items: center; gap: 8px; }
+#g-scrap { width: 26px; height: 10px; image-rendering: pixelated; }
+
+#genome .g-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  min-height: 0;
+}
+
+#genome .g-left {
+  flex: 0 0 104px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+#genome .g-specimen {
+  position: relative;
+  flex: none;
+  height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #2a3a3a;
+  background:
+    repeating-linear-gradient(0deg, rgba(79, 240, 255, .05) 0 1px, transparent 1px 4px),
+    radial-gradient(circle, #10201e, #050808 75%);
+  overflow: hidden;
+}
+
+#genome .g-aura {
+  position: absolute;
+  width: 60px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(200, 30, 60, .35), transparent 70%);
+  animation: aura var(--beat) ease-in-out infinite;
+}
+
+@keyframes aura {
+  10% { transform: scale(1.25); opacity: 1; }
+  30% { transform: scale(1); opacity: .6; }
+}
+
+#g-canvas {
+  position: relative;
+  width: 64px;
+  height: 60px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 2px rgba(79, 240, 255, .35));
+  animation: breathe calc(var(--beat) * 3) ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+@keyframes breathe {
+  50% { transform: scale(1.03, 1.05); }
+}
+
+#genome .g-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #4ff0ff;
+  box-shadow: 0 0 6px 1px rgba(79, 240, 255, .6);
+  opacity: .7;
+  animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+  from { top: 0; }
+  to { top: 100%; }
+}
+
+#g-organ {
+  position: absolute;
+  left: 3px;
+  bottom: 2px;
+  color: #4ff0ff;
+}
+
+#genome .g-ecg {
+  flex: none;
+  width: 100%;
+  height: 12px;
+  border: 1px solid #1a2a20;
+  background: #030806;
+  overflow: hidden;
+}
+
+#genome .g-ecg polyline {
+  fill: none;
+  stroke: #7dff9a;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 1px #7dff9a);
+  animation: ecg calc(var(--beat) * 2) linear infinite;
+}
+
+#genome.critical .g-ecg polyline { stroke: #ff3b2f; filter: drop-shadow(0 0 1px #ff3b2f); }
+
+@keyframes ecg { to { transform: translateX(-100px); } }
+
+/* Genoma gráfico: constantes en vejigas, árbol de órganos y panel breve */
+#g-vitals { width: 104px; height: 46px; image-rendering: pixelated; }
+
+#genome .g-tree {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+#genome .g-links {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+#genome .g-links line {
+  stroke: #6a1a2a;
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 3 2;
+  animation: bloodflow calc(var(--beat) * 4) linear infinite;
+}
+#genome .g-col {
+  position: absolute;
+  top: 0;
+  transform: translate(-50%, -130%);
+  font-size: 3px;
+  color: #6a4a4a;
+  white-space: nowrap;
+}
+#genome .g-node {
+  position: absolute;
+  width: 19px;
+  height: 19px;
+  transform: translate(-50%, 0);
+  border-radius: 50% 45% 50% 42%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 40% 35%, #2a1418, #0c0608 75%);
+  outline: 1px solid #2a1418;
+  cursor: pointer;
+  transition: transform .15s;
+}
+#genome .g-node canvas { width: 15px; height: 15px; image-rendering: pixelated; }
+#genome .g-node.active {
+  outline-color: var(--c);
+  box-shadow: 0 0 6px var(--c), inset 0 0 6px rgba(0, 0, 0, .8);
+  animation: organ var(--beat) ease-in-out infinite;
+}
+#genome .g-node.latent {
+  outline: 1px dashed #a08a9a;
+  animation: latent 1.2s steps(2) infinite;
+}
+#genome .g-node.unknown { opacity: .6; }
+#genome .g-node.focus { transform: translate(-50%, 0) scale(1.18); outline-width: 2px; z-index: 2; }
+@keyframes organ { 15% { box-shadow: 0 0 10px var(--c), inset 0 0 4px rgba(0, 0, 0, .8); } }
+@keyframes latent { 50% { box-shadow: 0 0 6px #a08a9a; } }
+
+#genome .g-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2px 4px;
+}
+#genome .g-frag { display: inline-flex; gap: 1px; margin-right: 5px; }
+#genome .g-frag i {
+  width: 3px;
+  height: 7px;
+  background: #1e1418;
+  outline: 1px solid #000;
+  border-radius: 1px;
+}
+#genome .g-frag i.on { background: var(--c); box-shadow: 0 0 3px var(--c); }
+#genome .g-memory.nav-sel { outline: 2px solid #ffd23f; z-index: 2; }
+#genome .g-memory {
+  display: inline-block;
+  width: 6px;
+  height: 7px;
+  margin-left: 2px;
+  background: radial-gradient(circle at 40% 35%, #f0e4d0, #8a6a5a 70%);
+  border-radius: 40% 40% 50% 50%;
+  outline: 1px solid #000;
+  cursor: pointer;
+}
+
+#genome .g-info {
+  flex: 0 0 96px;
+  padding: 4px 5px;
+  border-left: 1px solid #3a1420;
+  font-size: 4px;
+  line-height: 1.55;
+  color: #a89888;
+  overflow: hidden;
+}
+#genome .i-name { display: block; font-size: 5px; font-weight: normal; }
+#genome .i-tag { display: block; margin-bottom: 3px; font-size: 3.5px; color: #6a5a5a; letter-spacing: 1px; }
+#genome .g-info p { margin: 0 0 3px; }
+#genome .i-fx { color: #e8dcc8; }
+#genome .i-dw { color: #ff7a6a; }
+#genome .i-lore { color: #8a6a6a; font-style: italic; }
+#genome .i-dim { color: #6a5a5a; }
+#genome .i-cost .c-int { color: #ff5a6a; }
+#genome .i-cost .c-rej { color: #c07bff; margin-left: 3px; }
+
+#genome .g-foot {
+  position: relative;
+  margin-top: 5px;
+  text-align: center;
+  font-size: 4px;
+  color: #6a5a5a;
+}
+
+/* ---------- Pantallas ---------- */
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 45%, #2a0a10 0%, #000 70%);
+  text-align: center;
+  cursor: pointer;
+}
+
+#overlay[hidden] { display: none; }
+
+#overlay h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: normal;
+  color: #c0283a;
+  text-shadow: 2px 2px 0 #000, 0 0 12px #6a0d18;
+  letter-spacing: 1px;
+}
+
+#overlay .sub {
+  margin: 6px 0 14px;
+  font-size: 6px;
+  color: #8a6a6a;
+}
+
+#overlay .controls {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  font-size: 5px;
+  line-height: 2;
+  color: #a89888;
+}
+
+#overlay .blink {
+  font-size: 6px;
+  color: #7dff9a;
+  animation: blink 1s steps(1) infinite;
+}
+
+#boot-error {
+  max-width: 300px;
+  margin: 10px 0 0;
+  font-size: 5px;
+  line-height: 1.8;
+  color: #ff5a4a;
+}
+
+/* Fuera del escenario escalado: tamaño real de pantalla. */
+#fullscreen {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #3a2a2a;
+  background: rgba(10, 6, 8, .7);
+  color: #8a6a6a;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .5;
+}
+
+#fullscreen:hover { opacity: 1; color: #7dff9a; }
+:fullscreen #fullscreen { display: none; }
+
+#fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes blink {
+  50% { opacity: .25; }
+}
+
+/* Genoma: vejigas señalables y su ficha debajo */
+#g-vitals { display: block; }
+#genome .g-vitals { position: relative; width: 104px; height: 52px; flex: none; }
+#genome .g-vital {
+  position: absolute;
+  top: 0;
+  width: 17px;
+  height: 52px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+#genome .g-vital span {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 3.5px;
+  color: var(--c);
+  opacity: 0.7;
+}
+#genome .g-vital.focus, #genome .g-vital.nav-sel { box-shadow: inset 0 0 0 1px var(--c); background: rgba(255, 255, 255, 0.04); }
+#genome .g-vital.focus span { opacity: 1; }
+#genome .g-vinfo { flex: 1; min-height: 0; overflow: hidden; font-size: 3px; line-height: 1.4; }
+#genome .g-vinfo p { margin: 0 0 1px; }
+#genome .g-vinfo .i-name { font-size: 4px; margin-bottom: 1px; }
+#genome .i-amount { color: #e8dcc8; font-size: 3px; margin-left: 2px; }
+#genome .i-up { color: #9ad8a0; }
+#node-menu h2 .nm-name { font-size: 4px; color: #4a9a62; margin-left: 3px; letter-spacing: .5px; text-shadow: none; }
+
+/* Genoma: carga genética, sinergias y choques, fusiones */
+.g-links line.fusion { stroke: #d040ff; stroke-dasharray: 2 1.5; }
+#g-load { display: flex; align-items: center; gap: 3px; font-size: 3.5px; letter-spacing: 1px; color: #c07bff; }
+#g-load .over { color: #ff4a6a; }
+.g-loadbar { display: inline-flex; gap: 1px; }
+.g-loadbar i { width: 3px; height: 4px; background: #2a1830; display: inline-block; }
+.g-loadbar i.on { background: #a040d8; }
+.g-loadbar i.over { background: #ff4a6a; }
+.g-ext { color: #e8dcc8; }
+#g-pairs { display: flex; flex-wrap: wrap; gap: 1px 4px; font-size: 3px; flex: 1 1 100%; order: -1; }
+.g-pair.syn { color: #6aff9a; }
+.g-pair.clash { color: #ff6a7a; }
+#genome .i-pairs { font-size: 3px; margin-top: 2px; line-height: 1.5; }
