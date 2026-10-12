@@ -31,7 +31,8 @@ export const VOICES = {
     for (let i = 0; i < 3; i++) a.knock(o, { f: rnd(3500, 5000), q: 6, dur: 0.03, vol: 0.06, delay: rnd(0, 0.35) });
   },
   neuronAlert: (a, o) => a.voice(o, { pitch: [[0, 600], [0.7, 1900], [1, 1700]], dur: 0.4, vol: 0.4, wave: 'triangle', vib: 24, vibDepth: 0.04, formants: [[1600, 2, 1]], attack: 0.02 }),
-  neuronHurt: (a, o) => a.voice(o, { pitch: [[0, 1500], [0.3, 2200], [1, 700]], dur: 0.2, vol: 0.4, wave: 'triangle', growl: 0.7, growlRate: 70, growlWave: 'square', formants: [[1800, 2, 1]], attack: 0.005 }),
+  // Dolor: un gemido agudo que tiembla, con una chispa que se le escapa (no un pitido).
+  neuronHurt: (a, o) => { a.voice(o, { pitch: [[0, rnd(820, 900)], [0.22, rnd(1080, 1180)], [1, 600]], dur: 0.24, vol: 0.45, breath: 0.35, growl: 0.3, growlRate: 38, vib: 9, vibDepth: 0.03, formants: F('e', 1.3), attack: 0.02 }); a.knock(o, { f: rnd(3200, 4200), q: 8, dur: 0.04, vol: 0.04, delay: 0.03 }); },
 
   // ---------------------------------------------------------------- Enjambre
   // Firma: un coro de gargantas que zumban como alas y se hinchan juntas.
@@ -39,7 +40,7 @@ export const VOICES = {
     for (let i = 0; i < 4; i++) a.voice(o, { f0: rnd(170, 260), f1: rnd(180, 280), dur: 0.9, vol: 0.22, growl: 0.8, growlRate: rnd(18, 26), breath: 0.2, formants: [[rnd(900, 1300), 3, 1]], attack: 0.25, release: 0.5, delay: i * 0.05 });
   },
   swarmAlert: (a, o) => { for (let i = 0; i < 3; i++) a.voice(o, { pitch: [[0, rnd(300, 380)], [1, rnd(900, 1100)]], dur: 0.45, vol: 0.25, growl: 0.6, growlRate: 24, formants: F('e', 1.5), delay: i * 0.04 }); },
-  swarmHurt: (a, o) => { for (let i = 0; i < 3; i++) a.voice(o, { pitch: [[0, rnd(800, 1000)], [1, rnd(1300, 1600)]], dur: 0.1, vol: 0.3, wave: 'triangle', formants: [[1600, 3, 1]], attack: 0.005, delay: i * rnd(0.04, 0.07) }); },
+  swarmHurt: (a, o) => { for (let i = 0; i < 3; i++) a.voice(o, { pitch: [[0, rnd(600, 750)], [0.3, rnd(900, 1050)], [1, rnd(480, 580)]], dur: 0.17, vol: 0.32, breath: 0.3, growl: 0.2, growlRate: 30, vib: 8, formants: F('e', 1.25), attack: 0.02, delay: i * rnd(0.05, 0.08) }); },
 
   // ---------------------------------------------------------------- Célula
   // Firma: "piu-piu", pitidos de pájaro enfermo.
@@ -47,7 +48,8 @@ export const VOICES = {
     const n = 2 + Math.floor(Math.random() * 2);
     for (let i = 0; i < n; i++) a.voice(o, { pitch: [[0, 2300], [0.3, 2900], [1, 1800]], dur: 0.07, vol: 0.45, wave: 'triangle', vibDepth: 0, formants: [[2600, 3, 1]], attack: 0.005, delay: i * 0.09 });
   },
-  cellHurt: (a, o) => a.voice(o, { pitch: [[0, 3000], [1, 3900]], dur: 0.06, vol: 0.45, wave: 'triangle', formants: [[3200, 3, 1]], attack: 0.004 }),
+  // Dolor: un gritito diminuto, como un ratón (aire y garganta, no un pitido).
+  cellHurt: (a, o) => a.voice(o, { pitch: [[0, rnd(1300, 1450)], [0.3, rnd(1650, 1800)], [1, 1100]], dur: 0.11, vol: 0.4, breath: 0.3, vib: 12, vibDepth: 0.02, formants: [[1500, 4, 1], [3000, 6, 0.25]], attack: 0.012 }),
 
   // ---------------------------------------------------------------- Ojo de Techo
   // Firma: un parpadeo húmedo y un "mmm" grave de atención, con la boca cerrada.
@@ -153,9 +155,9 @@ export const VOICES = {
 
 // Ganancia (×) de cada voz: igualadas midiendo con tools/sound-meter.html.
 export const VOICE_GAIN = {
-  neuronWarble: 1.6, neuronAlert: 0.8, neuronHurt: 0.82,
-  swarmBuzz: 4.1, swarmAlert: 2.5, swarmHurt: 1.55,
-  cellChirp: 0.52, cellHurt: 0.5,
+  neuronWarble: 1.6, neuronAlert: 0.8, neuronHurt: 3,
+  swarmBuzz: 4.1, swarmAlert: 2.5, swarmHurt: 2.75,
+  cellChirp: 0.52, cellHurt: 0.75,
   eyeSquelch: 3.3, eyeAlert: 1.7, eyeHurt: 1.95,
   sacInhale: 2.75, sacHurt: 4,
   podChatter: 4.4, podHurt: 1.85,
