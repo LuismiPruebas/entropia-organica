@@ -52,8 +52,8 @@ export class Hud {
     this.gl ??= $('organs-glow').getContext('2d');
     this.placenta ??= new Placenta(34, 20, 26, 17);
     const g = this.g, gl = this.gl;
-    g.clearRect(0, 0, 92, 40);
-    gl.clearRect(0, 0, 92, 40);
+    g.clearRect(0, 0, 110, 40);
+    gl.clearRect(0, 0, 110, 40);
     const lux = '#' + eye.map((c) => Math.round(Math.min(1, c) * 255).toString(16).padStart(2, '0')).join('');
     const hp = st.integrity / 100, infected = st.infection > 0, bio = st.biomass / st.biomassMax;
     const items = [
@@ -66,11 +66,12 @@ export class Hud {
     ];
     this.placenta.update(items, dt, t);
     this.placenta.draw(g, gl, t);
-    // Hueso: el icono del fémur y cuánto te queda (munición de las astillas).
+    // En fila: icono del hueso y su valor (munición de las astillas), luego la célula y el suyo.
     drawBoneIcon(g, 64, 15, t);
-    drawNumber(g, 63 + (st.scrap < 10 ? 2 : 0), 22, st.scrap, st.scrap === 0 ? '#ff5a5a' : '#e8dcc8');
-    // Al lado, las células lumínicas en reserva: recargan el ojo solas cuando se apaga.
-    drawCellIcon(g, 79, 14, t, st.cells > 0);
-    drawNumber(g, 79 + (st.cells < 10 ? 0 : -2), 22, st.cells, st.cells === 0 ? '#6a6050' : '#ffd23f');
+    drawNumber(g, 75, 15, st.scrap, st.scrap === 0 ? '#ff5a5a' : '#e8dcc8');
+    // Células lumínicas en reserva: recargan el ojo solas cuando se apaga.
+    const cx = 75 + String(st.scrap).length * 4 + 4;
+    drawCellIcon(g, cx, 13, t, st.cells > 0);
+    drawNumber(g, cx + 6, 15, st.cells, st.cells === 0 ? '#6a6050' : '#ffd23f');
   }
 }

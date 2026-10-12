@@ -380,8 +380,9 @@ export class Genome {
     this.scrap.clearRect(0, 0, 46, 10);
     drawBoneIcon(this.scrap, 1, 3, t);
     drawNumber(this.scrap, 12, 3, st.scrap, st.scrap === 0 ? '#ff5a5a' : '#e8dcc8');
-    drawCellIcon(this.scrap, 28, 1, t, st.cells > 0);
-    drawNumber(this.scrap, 34, 3, st.cells, st.cells === 0 ? '#6a6050' : '#ffd23f');
+    const cx = 12 + String(st.scrap).length * 4 + 4;
+    drawCellIcon(this.scrap, cx, 1, t, st.cells > 0);
+    drawNumber(this.scrap, cx + 6, 3, st.cells, st.cells === 0 ? '#6a6050' : '#ffd23f');
     // Constantes vitales: las mismas vejigas que el HUD, con su número debajo.
     const g = this.vitals;
     g.clearRect(0, 0, 104, 46);
