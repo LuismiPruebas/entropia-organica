@@ -134,6 +134,23 @@ export function drawBoneIcon(g, x, y, t) {
   px(g, x + 7, y - 3, K, 2, 1); px(g, x + 8, y - 4, '#e0d4b8'); // astilla
 }
 
+// Icono de la célula lumínica (reserva del ojo): una pila de metal con la carga
+// amarilla que late; apagada y gris si no te queda ninguna.
+const CELL = [
+  '.KK.',
+  'KEEK',
+  'KYYK',
+  'KYYK',
+  'KYYK',
+  'KEEK',
+  '.KK.',
+];
+export function drawCellIcon(g, x, y, t, full) {
+  const pulse = full && Math.sin(t * 4) > 0.3;
+  const C = { K, E: full ? '#9a9a9a' : '#5a5a5a', Y: full ? (pulse ? '#fff2a0' : '#ffd23f') : '#4a4436' };
+  CELL.forEach((row, r) => [...row].forEach((c, i) => { if (c !== '.') px(g, x + i, y + r, C[c]); }));
+}
+
 // ---------------------------------------------------------------------------
 // Placenta: una membrana ovalada que contiene las vejigas. Cada vejiga crece al
 // llenarse y se arruga al vaciarse, y entre todas se empujan y se recolocan dentro

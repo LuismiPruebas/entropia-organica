@@ -16,7 +16,8 @@ export const NODE_HEAL = 15;      // integridad por cura
 export const OXYGEN_COST = { doubleJump: 18, dash: 25, wallKick: 8 };
 const OXYGEN_REGEN = 6;        // por segundo (base, mejorable con mutaciones)
 const OXYGEN_REGEN_DELAY = 0.9; // segundos de descanso antes de recuperar
-const LIGHT_DRAIN = 1.0;       // por segundo con la linterna encendida (era 0.7: el auto-apuntado la hace más valiosa)
+const LIGHT_DRAIN = 1.5;       // por segundo con el ojo encendido (era 1.0: las células ahora se acumulan en reserva)
+export const CELL_CHARGE = 100; // luz que devuelve cada célula lumínica de la reserva
 const REJECTION_GROWTH = 0.03; // por segundo y por punto de carga genética
 const OVERLOAD_GROWTH = 0.08;  // por segundo y por punto de carga por encima de tu tolerancia
 const DISCORD_GROWTH = 0.05;   // por segundo y por nivel de choque entre órganos
@@ -54,6 +55,7 @@ export class GameState {
     this.extendersBought = 0;    // los comprados en el útero (fijan el precio del siguiente)
     this.weapon = null;          // arma del cañón elegida (WEAPONS); null = culata
     this.scrap = 12;
+    this.cells = 0;              // células lumínicas en reserva: se gastan solas al apagarse el ojo
     this.flashlightOn = true;
     this.mutations = new Set();   // instaladas
     this.dna = new Set();         // muestras recogidas sin instalar
@@ -206,7 +208,14 @@ export class GameState {
     if (this.flashlightOn) {
       this.light = Math.max(0, this.light - LIGHT_DRAIN * this.mod('lightDrain') * dt);
       if (this.light <= 0) { this.flashlightOn = false; this.eyeStarved = true; }
-    } else if (this.eyeStarved && this.light > 0) {
+    }
+    // Ojo sin luz y células en reserva: se gasta una y el ojo se recarga entero.
+    if (this.light <= 0 && this.cells > 0) {
+      this.cells--;
+      this.light = CELL_CHARGE;
+      this.emit('cellUsed', this.cells);
+    }
+    if (!this.flashlightOn && this.eyeStarved && this.light > 0) {
       // Se apagó por quedarse sin luz: en cuanto recibe energía (célula, Nodo,
       // muerte...) se vuelve a encender solo. Si lo apagaste tú, sigue apagado.
       this.flashlightOn = true;

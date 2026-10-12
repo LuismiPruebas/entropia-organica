@@ -125,7 +125,11 @@ export class Game {
       this.audio.play('dna');
       this.say(`Secuencia completa de tu ${dnaTag(id)}. Asimílala en el útero de un Nodo Seguro para saber qué te hace.`, 4);
     });
-    st.on('sequenceSpare', () => this.say('Secuencia redundante: esa línea ya está completa. El tejido sobrante amplía tu reserva de biomasa (+5).', 3));
+    st.on('cellUsed', (left) => {
+      this.audio.play('flicker');
+      this.say(`Tu ojo devora una célula lumínica y vuelve a brillar. ${left ? `Quedan ${left} en reserva.` : 'No te quedan más.'}`, 2.5);
+    });
+    st.on('sequenceSpare',() => this.say('Secuencia redundante: esa línea ya está completa. El tejido sobrante amplía tu reserva de biomasa (+5).', 3));
     st.on('mutated', (id) => {
       const m = MUTATIONS[id];
       this.say(m.unlockHint ? `Tu cuerpo cede: ${m.name}. ${m.unlockHint}` : `Tu cuerpo cede. ${m.name} asimilado. [I] para ver cómo usarlo.`, 6);

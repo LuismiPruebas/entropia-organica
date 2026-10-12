@@ -10,7 +10,7 @@ export const SCRAP_PER_PIECE = 12;
 // Qué hace cada recurso al recogerlo. Añadir un tipo = añadir una entrada.
 export const PICKUPS = {
   biomass: { sprite: 'biomass', apply: (st, p) => st.addBiomass(p.amount ?? 8), sound: 'pickup' },
-  battery: { sprite: 'battery', apply: (st) => { st.light = Math.min(100, st.light + 35); }, sound: 'pickup', text: 'Célula lumínica: +35 de luz para tu ojo' },
+  battery: { sprite: 'battery', apply: (st) => { st.cells++; }, sound: 'pickup', text: (p, st) => `Célula lumínica (${st.cells} en reserva): recargará tu ojo cuando se apague` },
   scrap: { sprite: 'scrap', apply: (st) => { st.scrap += SCRAP_PER_PIECE; }, sound: 'pickup', text: `Esquirlas de hueso: +${SCRAP_PER_PIECE}` },
   oxygen: { sprite: 'oxygen', apply: (st) => { st.oxygen = Math.min(st.oxygenMax, st.oxygen + 40); }, sound: 'pickup', text: 'Filtro de oxígeno: +40 O2' },
   cyst: {
@@ -99,7 +99,7 @@ export class Pickup {
     const g = this.game;
     this.def.apply(g.state, this);
     g.audio.play(this.def.sound, this);
-    const text = typeof this.def.text === 'function' ? this.def.text(this) : this.def.text;
+    const text = typeof this.def.text === 'function' ? this.def.text(this, g.state) : this.def.text;
     if (text) g.say(text, 2.5);
     if (this.key) g.state.collected.add(this.key);
     this.alive = false;

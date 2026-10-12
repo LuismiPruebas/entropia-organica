@@ -1,4 +1,4 @@
-import { Placenta, drawNumber, drawBoneIcon } from './Bladders.js';
+import { Placenta, drawNumber, drawBoneIcon, drawCellIcon } from './Bladders.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -69,5 +69,8 @@ export class Hud {
     // Hueso: el icono del fémur y cuánto te queda (munición de las astillas).
     drawBoneIcon(g, 64, 15, t);
     drawNumber(g, 63 + (st.scrap < 10 ? 2 : 0), 22, st.scrap, st.scrap === 0 ? '#ff5a5a' : '#e8dcc8');
+    // Células lumínicas en reserva: recargan el ojo solas cuando se apaga.
+    drawCellIcon(g, 63, 30, t, st.cells > 0);
+    drawNumber(g, 68, 31, st.cells, st.cells === 0 ? '#6a6050' : '#ffd23f');
   }
 }
