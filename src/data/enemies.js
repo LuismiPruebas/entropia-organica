@@ -253,6 +253,7 @@ export const ENEMIES = {
     light: { color: [0.18, 0.2, 0.45], r: 130 },
     hp: 100, w: 30, h: 28, // era 120
     weakTo: { spine: 1.25, acid: 1.25 }, // las espinas del simbionte le hieren un poco más
+    music: 'ganglio',
     speed: 26,
     contactDamage: 10,
     drop: { biomass: 20, dna: 'pistones' },

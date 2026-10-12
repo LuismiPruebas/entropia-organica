@@ -7,6 +7,7 @@
 //
 //   quimera  re menor, 88 ppm: Rem - Sib - Solm - La; motivo sobre el semitono La-Sib
 //   coro     mi menor con giros frigios, 76 ppm: Mim - Do - Lam - Si; un suspiro que baja
+//   ganglio  do menor, 100 ppm: Dom - Dom(b5) - Lab - Sol; bajo ostinato que no para
 //
 // Todo se programa con antelación (planificador cada 100 ms, a semicorcheas).
 
@@ -129,6 +130,31 @@ export function startBossMusic(audio, theme) {
         if (i % 4 === 2) hat(t);
       },
     },
+    // El Ganglio Madre: do menor, eléctrico y nervioso. Un bajo que no para (corcheas
+    // con un Reb que roza el Do, como un nervio que vibra), el chip disparando impulsos
+    // todo el rato y una melodía escasa que sube a tirones y se queda sin resolver.
+    ganglio: {
+      bpm: 100,
+      roots: [36, 36, 32, 31],                       // Do, Do, Lab, Sol
+      chords: [[60, 63, 67], [60, 63, 66], [56, 60, 63], [55, 59, 62]],
+      ostinato: [0, 0, 12, 0, 1, 0, 12, 0],          // semitonos sobre la raíz, a corcheas
+      melody: [
+        [[72, 6], [0, 2], [71, 4], [72, 4]],
+        [[75, 6], [74, 2], [72, 8]],
+        [[68, 4], [67, 4], [68, 4], [71, 4]],
+        [[72, 4], [73, 4], [74, 8]],
+      ],
+      lead: { ratio: 3, index: 1.3, decay: 0.5, vol: 0.06, vib: 0.012, attack: 0.01 },
+      bass: { ratio: 1, index: 2.2, decay: 0.12, vol: 0.11 },
+      arpBars: [0, 1, 2, 3],
+      drums(t, s, st) {
+        const i = s % 16;
+        if (i === 0 || i === 10) kick(t, i === 0 ? 0.42 : 0.26);
+        if (i === 8) snare(t, 0.08);
+        hat(t);                                                      // tic-tic de sinapsis
+        if (i === 14 && st.bar % 4 === 3) noise(t, 0.25, 0.05, 'bandpass', 5200, 12); // chispazo
+      },
+    },
     // El Coro: mi menor con giros frigios; un suspiro que baja (Si-Do-Si-Sol-Fa#) y
     // sube hasta un Re# que no resuelve.
     coro: {
@@ -161,7 +187,9 @@ export function startBossMusic(audio, theme) {
     const i = st.s % 16;
     const bar = st.bar % 4;
     // Bajo FM: notas largas, casi un pedal.
-    if (i === 0 || i === 8) fm(th.roots[bar] + th.bassPat[i / 2], t, step * 7, th.bass);
+    // Con ostinato, el bajo late a corcheas sin parar (más tensión).
+    if (th.ostinato) { if (i % 2 === 0) fm(th.roots[bar] + th.ostinato[i / 2], t, step * 1.6, th.bass); }
+    else if (i === 0 || i === 8) fm(th.roots[bar] + th.bassPat[i / 2], t, step * 7, th.bass);
     // Coro FM sostenido (acorde por compás, ataque lento).
     if (th.pad && i === 0) for (const n of th.chords[bar]) fm(n - 12, t, step * 15, { ratio: 1, index: 0.5, decay: 2, vol: 0.026, attack: 0.4, vib: 0.006 });
     // Arpegio PSG, apenas audible, solo en los compases marcados.
