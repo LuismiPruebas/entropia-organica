@@ -78,13 +78,24 @@ const NODULES = {
 
 // Nódulo lumínico: un fotóforo de carne translúcida con un núcleo de luz que late.
 function luxNodule(g, gl, k, t) {
-  const p = 0.5 + 0.5 * Math.sin(t * 2.2);
-  for (let i = 0; i < 3; i++) seg(g, 10, 14, 5 + i * 5, 16, '#2a2010');
-  part(g, 10, 10, 6.5 * (1 + k * 0.35), 5.5 * (1 + k * 0.35), '#6a5a2a', '#2a2010', '#d8c070');
-  part(g, 10, 10, 3.2 + k, 3 + k, '#ffe080', '#c09020', '#fffbe0');
+  const p = 0.5 + 0.5 * Math.sin(t * 2.2); // pulso de la luz
+  const br = 1 + Math.sin(t * 1.3) * 0.05 + k * 0.35; // respira despacio
+  // Raíces que se mecen.
+  for (let i = 0; i < 3; i++) seg(g, 10, 14, 5 + i * 5 + Math.sin(t * 1.7 + i * 2) * 0.8, 16, '#2a2010');
+  part(g, 10, 10, 6.5 * br, 5.5 * br, '#6a5a2a', '#2a2010', '#d8c070');
+  // El núcleo flota dentro de la membrana y un destello lo recorre.
+  const nx = 10 + Math.sin(t * 0.9) * 0.8, ny = 10 + Math.cos(t * 0.7) * 0.6;
+  part(g, nx, ny, 3.2 + k + p * 0.25, 3 + k + p * 0.25, '#ffe080', '#c09020');
+  const sh = Math.floor((t * 2.5) % 6);
+  if (sh < 3) px(g, nx - 1 + sh, ny - 2 + sh * 0.5, '#fffbe0');
   px(g, 6, 8, '#e8dcc8'); px(g, 14, 12, '#b8a888'); // esquirlas de hueso
-  px(gl, 9, 9, `rgba(255,230,120,${0.45 + p * 0.45})`, 3, 3);
-  px(gl, 8, 10, `rgba(255,210,80,${0.2 + p * 0.25})`, 5, 2);
+  px(gl, nx - 1, ny - 1, `rgba(255,230,120,${0.45 + p * 0.45})`, 3, 3);
+  px(gl, nx - 2, ny, `rgba(255,210,80,${0.2 + p * 0.25})`, 5, 2);
+  // Motas de luz que suben de vez en cuando.
+  for (let i = 0; i < 2; i++) {
+    const u = (t * 0.35 + i * 0.5) % 1;
+    if (u < 0.7) px(gl, 10 + Math.sin(t * 2 + i * 3) * 3 + (i ? 2 : -2), 7 - u * 7, `rgba(255,235,150,${(0.7 - u) * 0.8})`);
+  }
 }
 
 export class Nodule {
