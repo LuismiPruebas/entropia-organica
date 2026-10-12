@@ -314,7 +314,7 @@ export class Genome {
         <p class="i-fx">${w ? w.controls : 'Sin cañón solo golpeas cuerpo a cuerpo. Busca el ADN del Cañón de Astillas.'}</p>
         ${st.weapons.length > 1 ? '<p class="i-dim">[R] / R2 cambia de arma · Intro sobre un cañón activo lo empuña.</p>' : ''}
         <b class="i-name" style="color:#ff5a5a">OJO FOTÓFORO [F]</b>
-        <p class="i-fx">${st.has('eye2') ? 'Revela lo oculto, disuelve el tejido fotosensible y ahuyenta a los lucífugos.' : st.has('eye1') ? 'Intuye lo oculto y delata las paredes falsas.' : 'Sin mutar, solo un halo alrededor de tu cuerpo: el haz llega con el Ojo I.'}</p>
+        <p class="i-fx">${st.has('eye2') ? 'Revela lo oculto, disuelve el tejido fotosensible y ahuyenta a los lucífugos.' : st.has('eye1') ? 'Disuelve las paredes falsas, fija el arma en lo que alumbras y presiente la vida de los jefes.' : 'Sin mutar, solo un halo alrededor de tu cuerpo: el haz llega con el Ojo I.'}</p>
         <p class="i-dim">Señala una secuencia del árbol.</p>`;
       return;
     }
