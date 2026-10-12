@@ -87,6 +87,25 @@ fijado: toca apuntar a mano. Mover el stick derecho o el ratón te devuelve el c
 Como la luz ahora vale más, se gasta antes: 1 por segundo encendida (`LIGHT_DRAIN` en
 `state/State.js`, antes 0,7), unos 100 s con el ojo lleno.
 
+### Móvil y tableta (táctil)
+
+Se activa solo en pantallas táctiles (`src/ui/Touch.js`): una cruceta de carne translúcida
+abajo a la izquierda y botones orgánicos a la derecha. Como el mando, cada botón se
+traduce a la tecla que ya usa el juego.
+
+| Control | Qué hace |
+|---|---|
+| Cruceta | Mover (se puede deslizar el pulgar, también en diagonal). Arriba/abajo trepan y recogen o sueltan el tendón; no saltan |
+| SALTAR | Saltar y soltarse del tendón |
+| DISPARAR | **Tocar**: dispara a lo que alumbra el ojo (auto-apuntado). **Mantener y arrastrar**: apuntas tú hacia donde arrastras (una marca lo indica) |
+| Embestida / Tendón | Aparecen al tener la mutación. El tendón se lanza al soltar: tocar lo lanza al frente; arrastrar y soltar, hacia ahí |
+| Fila de arriba | Ojo · arma (si tienes más de una) · genoma · mapa · ✕ (cerrar menús) |
+| USAR | Aparece latiendo sobre un Nodo Seguro |
+
+En los menús las opciones se tocan directamente (o se eligen con la cruceta; SALTAR
+acepta y ✕ sale). En vertical pide girar el móvil. Si se usa el teclado o el ratón, la
+capa táctil se aparta y vuelve con el siguiente toque.
+
 ### Mando
 
 Cualquier mando que reconozca el navegador (DualSense, DualShock, Xbox, genéricos con

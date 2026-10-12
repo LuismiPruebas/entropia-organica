@@ -54,13 +54,15 @@ function advance() {
     if (!document.fullscreenElement) toggleFullscreen();
     game.audio.init();
     game.audio.startTitleMusic();
-    callToAction.textContent = 'HAZ CLIC PARA DESCENDER';
+    callToAction.textContent = document.body.classList.contains('touch') ? 'TOCA PARA DESCENDER' : 'HAZ CLIC PARA DESCENDER';
   } else if (phase === 'title') {
     phase = 'play';
     game.start();
   }
 }
 overlay.addEventListener('click', advance);
+// En pantallas táctiles, la portada lo dice con sus palabras.
+if (matchMedia?.('(hover: none) and (pointer: coarse)').matches) callToAction.textContent = 'TOCA PARA DESPERTAR';
 addEventListener('keydown', (e) => {
   if ((e.code === 'Enter' || e.code === 'Space') && phase !== 'play' && !overlay.hidden) advance();
 });

@@ -1,6 +1,7 @@
 import { Visual, VIEW_W, VIEW_H } from './core/Visual.js';
 import { Input } from './core/Input.js';
 import { Gamepad } from './core/Gamepad.js';
+import { Touch } from './ui/Touch.js';
 import { Loop } from './core/Loop.js';
 import { AudioSys } from './core/Audio.js';
 import { Particles } from './core/Particles.js';
@@ -79,6 +80,7 @@ export class Game {
     this.genome = new Genome(this);
     this.devMenu = new DevMenu(this);
     this.pad = new Gamepad(this);
+    this.touch = new Touch(this);
     this.mapView = new MapView(this);
     this.particles = new Particles(this.visual.world, { capacity: 1400 });
     this.glowParticles = new Particles(this.visual.glow, { additive: true });
@@ -361,7 +363,7 @@ export class Game {
         st.flashlightOn = !st.flashlightOn;
         st.eyeStarved = false;
         this.audio.play('flicker');
-        if (!st.flashlightOn) this.say(`Cierras el ojo fotóforo. ${this.pad.active ? '[CUADRADO/X]' : '[F]'} para abrirlo.`, 1.5);
+        if (!st.flashlightOn) this.say(`Cierras el ojo fotóforo. ${this.pad.active ? '[CUADRADO/X]' : this.touch.active ? '[OJO]' : '[F]'} para abrirlo.`, 1.5);
       } else {
         this.say('Tu ojo se ha apagado: necesita energía lumínica.', 1.5);
       }
@@ -374,7 +376,7 @@ export class Game {
         st.checkpoint = { room: this.room.id, spawn: [node.cx, node.cy] };
         this.say('Nodo Seguro: punto de control. Aquí recuperas el aliento al instante.', 3);
       }
-      const key = this.pad.active ? '[TRIANGULO/Y]' : '[E]';
+      const key = this.pad.active ? '[TRIANGULO/Y]' : this.touch.active ? '[USAR]' : '[E]';
       this.hud.setPrompt(st.dna.size ? `${key} ASIMILAR EL ADN EN EL UTERO` : `${key} USAR NODO SEGURO`);
       if (input.hit('KeyE')) return this.openNode();
     } else {
