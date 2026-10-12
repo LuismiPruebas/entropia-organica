@@ -352,6 +352,17 @@ body {
 #g-count { color: #c07bff; }
 #genome .g-res { display: flex; align-items: center; gap: 8px; }
 #g-scrap { width: 46px; height: 10px; image-rendering: pixelated; }
+#g-quit {
+  font: inherit;
+  font-size: 6px;
+  padding: 3px 5px;
+  color: #ff8a9a;
+  background: #2a0a14;
+  border: 1px solid #7a1a30;
+  cursor: pointer;
+}
+#g-quit[hidden] { display: none; }
+#g-quit.armed { color: #fff; background: #8a1028; border-color: #ff5a6a; }
 
 #genome .g-body {
   position: relative;

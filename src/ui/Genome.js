@@ -146,7 +146,7 @@ export class Genome {
         ${VEINS.map((d) => `<path class="vein" d="${d}"/><path class="pulse" d="${d}"/>`).join('')}
       </svg>
       ${cells}
-      <header class="g-head"><h2>GENOMA DEL HUESPED</h2><span class="g-res"><canvas id="g-scrap" width="46" height="10"></canvas><span id="g-count"></span></span></header>
+      <header class="g-head"><h2>GENOMA DEL HUESPED</h2><span class="g-res"><canvas id="g-scrap" width="46" height="10"></canvas><span id="g-count"></span><button id="g-quit" type="button" hidden>SALIR</button></span></header>
       <div class="g-body">
         <aside class="g-left">
           <div class="g-specimen">
@@ -174,6 +174,20 @@ export class Genome {
     this.vitals = this.el.querySelector('#g-vitals').getContext('2d');
     this.scrap = this.el.querySelector('#g-scrap').getContext('2d');
     for (const c of this.el.querySelectorAll('canvas.cell')) drawCell(c, Number(c.dataset.r));
+    // Salir del juego (solo en móvil, donde no hay teclado ni pestaña a mano). El
+    // primer toque pide confirmación; el segundo vuelve a la pantalla de título.
+    this.quit = this.el.querySelector('#g-quit');
+    this.quit.addEventListener('click', () => {
+      if (!this.quit.classList.contains('armed')) {
+        this.quit.classList.add('armed');
+        this.quit.textContent = '¿SALIR? SE PIERDE LA PARTIDA';
+        clearTimeout(this.quitTimer);
+        this.quitTimer = setTimeout(() => this.#disarmQuit(), 3000);
+        return;
+      }
+      if (document.fullscreenElement) document.exitFullscreen?.();
+      location.reload();
+    });
     this.info = this.el.querySelector('#g-info');
     this.vinfo = this.el.querySelector('#g-vinfo');
     this.el.querySelector('.g-body').addEventListener('click', (e) => {
@@ -201,9 +215,16 @@ export class Genome {
     this.#render();
   }
 
+  #disarmQuit() {
+    this.quit.classList.remove('armed');
+    this.quit.textContent = 'SALIR';
+  }
+
   show() {
     this.open = true;
     this.el.hidden = false;
+    this.quit.hidden = !this.game.touch?.active;
+    this.#disarmQuit();
     const st = this.game.state;
     // Empieza señalando lo pendiente de asimilar, o lo último activo.
     this.focus = [...st.dna][0] ?? [...st.mutations][0] ?? null;
