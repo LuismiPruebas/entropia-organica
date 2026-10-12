@@ -1,5 +1,6 @@
 import { getSprite, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
+import { CELL_CHARGE } from '../state/State.js';
 
 // 'ojo II', 'extremidades + torso III': de qué órgano es una secuencia, sin desvelarla.
 export const dnaTag = (id) => { const m = MUTATIONS[id]; return `${linesOf(m).map((l) => LINES[l].name.toLowerCase()).join(' + ')} ${ROMAN[m.level]}`; };
@@ -10,7 +11,17 @@ export const SCRAP_PER_PIECE = 12;
 // Qué hace cada recurso al recogerlo. Añadir un tipo = añadir una entrada.
 export const PICKUPS = {
   biomass: { sprite: 'biomass', apply: (st, p) => st.addBiomass(p.amount ?? 8), sound: 'pickup' },
-  battery: { sprite: 'battery', apply: (st) => { st.cells++; }, sound: 'pickup', text: (p, st) => `Célula lumínica (${st.cells} en reserva): recargará tu ojo cuando se apague` },
+  // Con el ojo casi lleno (95% o más) la célula se guarda en la reserva; si no, se consume al momento.
+  battery: {
+    sprite: 'battery',
+    sound: 'pickup',
+    apply: (st, p) => {
+      p.stored = st.light >= 95;
+      if (p.stored) st.cells++;
+      else st.light = Math.min(100, st.light + CELL_CHARGE);
+    },
+    text: (p, st) => p.stored ? `Célula lumínica guardada (${st.cells} en reserva): recargará tu ojo cuando se apague` : 'Célula lumínica: tu ojo la devora y vuelve a brillar',
+  },
   scrap: { sprite: 'scrap', apply: (st) => { st.scrap += SCRAP_PER_PIECE; }, sound: 'pickup', text: `Esquirlas de hueso: +${SCRAP_PER_PIECE}` },
   oxygen: { sprite: 'oxygen', apply: (st) => { st.oxygen = Math.min(st.oxygenMax, st.oxygen + 40); }, sound: 'pickup', text: 'Filtro de oxígeno: +40 O2' },
   cyst: {
