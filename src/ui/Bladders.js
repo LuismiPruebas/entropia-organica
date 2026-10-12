@@ -2,6 +2,8 @@
 // Cada parámetro es un saco de carne translúcida lleno de un fluido de color que
 // chapotea, burbujea y late. Todo en píxeles sobre un lienzo 2D.
 
+import { PixBuf, parseColor, pack } from '../core/PixBuf.js';
+
 const K = '#140c10';
 
 function px(g, x, y, c, w = 1, h = 1) {
@@ -14,6 +16,9 @@ const shade = (hex, k) => {
   const ch = (s) => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * k)));
   return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
 };
+
+// Sombreado numérico de un color base (como shade(), sin construir cadenas).
+const shadeN = ([r, g, b], k) => pack(Math.max(0, Math.min(255, Math.round(r * k))), Math.max(0, Math.min(255, Math.round(g * k))), Math.max(0, Math.min(255, Math.round(b * k))));
 
 // Perfil del saco: cuello estrecho arriba, panza abajo. Devuelve la media anchura de
 // la fila `y` (0 = arriba, h-1 = abajo) para un saco de ancho w.
@@ -191,8 +196,14 @@ export class Placenta {
     }
   }
 
-  draw(g, gl, t) {
+  draw(ctx, glCtx, t) {
     const { cx, cy, a, b } = this;
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    if (this.B?.w !== W || this.B?.h !== H) { this.B = new PixBuf(W, H); this.GL = new PixBuf(W, H); }
+    const B = this.B;
+    B.clear(); this.GL.clear();
+    const px = (_, x, y, c, w, h) => B.px(x, y, c, w, h);
+    const g = null;
     // Cordón umbilical que entra por la izquierda, desde el borde de la pantalla.
     for (let x = cx - a + 2; x >= 0; x--) { const y = cy + 4 + (cx - a - x) * 0.6 + Math.sin(x * 0.9 + t * 3) * 0.6; px(g, x, y - 1, K, 1, 4); px(g, x, y, x % 3 ? '#7a2a3a' : '#a03a4a', 1, 2); }
     // Membrana: borde oscuro, carne y venas que laten.
@@ -212,10 +223,15 @@ export class Placenta {
       }
     }
     // Vejigas, de la más grande a la más pequeña.
-    for (const s of [...this.sacs.values()].sort((p, q) => q.r - p.r)) this.#sac(g, gl, s, t);
+    for (const s of [...this.sacs.values()].sort((p, q) => q.r - p.r)) this.#sac(B, s, t);
+    B.flush(ctx);
+    if (glCtx) this.GL.flush(glCtx);
   }
 
-  #sac(g, gl, s, t) {
+  #sac(B, s, t) {
+    const px = (_, x, y, c, w, h) => B.px(x, y, c, w, h);
+    const g = null;
+    const base = parseColor(s.color), glowC = s.glow ? shadeN(base, 0.55) : 0;
     const r = s.r, full = (r - s.rMin) / Math.max(0.01, s.rMax - s.rMin);
     const beat = s.low ? Math.max(0, Math.sin(t * 9)) * 0.6 : 0;
     const R = r + beat;
@@ -230,8 +246,8 @@ export class Placenta {
       else if (s.dead) c = (x + y) % 2 ? '#3a2a30' : '#2a1c22';
       else {
         const shadeK = 1.15 - ((y + R) / (2 * R)) * 0.5;
-        c = shade(s.color, shadeK);
-        if (s.glow && gl) { gl.fillStyle = shade(s.color, 0.55); gl.fillRect(Math.round(s.x + x), Math.round(s.y + y), 1, 1); }
+        c = shadeN(base, shadeK);
+        if (glowC) this.GL.px(s.x + x, s.y + y, glowC);
       }
       px(g, s.x + x, s.y + y, c);
     }
@@ -242,7 +258,7 @@ export class Placenta {
     const nB = 1 + Math.round((s.boil ?? 0.2) * 3);
     for (let i = 0; i < nB; i++) {
       const by = s.y + R - 1 - ((t * (5 + (s.boil ?? 0.2) * 12) + i * 4) % Math.max(1, R * 2 - 2));
-      px(g, s.x + Math.sin(i * 2.1 + t) * R * 0.4, by, shade(s.color, 1.6));
+      px(g, s.x + Math.sin(i * 2.1 + t) * R * 0.4, by, shadeN(base, 1.6));
     }
   }
 }

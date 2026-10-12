@@ -289,9 +289,8 @@ function paintMasses(g, world) {
   const D = wallDepth(world);
   const W = world.w * TILE, H = world.h * TILE;
   // Profundidad continua: la máscara de paredes desenfocada (lejos del borde, más alta).
-  const mask = new Float32Array(W * H);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) mask[y * W + x] = isWallChar(world.get(Math.floor(x / TILE), Math.floor(y / TILE))) ? 1 : 0;
-  const deep = blurField(mask, W, H, 14);
+  // Campo suave y amplio: se calcula a 1/4 de resolución y se amplía (no se nota).
+  const deep = blurField(tileMask(world, isWallChar, 4), W / 4, H / 4, 14 / 4, 4);
   const img = g.getImageData(0, 0, W, H), d = img.data;
   for (let cy = 0; cy < world.h; cy++) for (let cx = 0; cx < world.w; cx++) {
     const c = world.get(cx, cy);
@@ -325,26 +324,51 @@ function paintMasses(g, world) {
 // se repinta el contorno a lo largo del borde nuevo.
 const SIGMA = 5.5; // px: cuánto se redondea (más = curvas más amplias, más desajuste)
 
-function blurField(src, W, H, sigma) {
+// Máscara de la sala (1 donde fn(tile) es cierto), a TILE/div píxeles por casilla.
+function tileMask(world, fn, div) {
+  const T = TILE / div, W = world.w * T, H = world.h * T;
+  const mask = new Float32Array(W * H);
+  for (let cy = 0; cy < world.h; cy++) for (let cx = 0; cx < world.w; cx++) {
+    if (!fn(world.get(cx, cy))) continue;
+    for (let y = cy * T; y < (cy + 1) * T; y++) mask.fill(1, y * W + cx * T, y * W + (cx + 1) * T);
+  }
+  return mask;
+}
+
+// Desenfoque gaussiano separable. Fuera de la sala cuenta como carne (las paredes
+// continúan): cada fila o columna se copia a un búfer con margen relleno a 1, así el
+// bucle interior no comprueba bordes. Con up > 1, el campo se calcula a baja
+// resolución y se amplía con interpolación bilineal.
+function blurField(src, W, H, sigma, up = 1) {
   const R = Math.ceil(sigma * 2.5);
-  const k = [];
+  const k = new Float32Array(2 * R + 1);
   let sum = 0;
-  for (let i = -R; i <= R; i++) { const v = Math.exp(-(i * i) / (2 * sigma * sigma)); k.push(v); sum += v; }
+  for (let i = -R; i <= R; i++) { const v = Math.exp(-(i * i) / (2 * sigma * sigma)); k[i + R] = v; sum += v; }
   for (let i = 0; i < k.length; i++) k[i] /= sum;
+  const n = k.length;
   const tmp = new Float32Array(W * H), out = new Float32Array(W * H);
-  // Fuera de la sala cuenta como carne (las paredes continúan).
-  const at = (a, x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 1 : a[y * W + x]);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    let s = 0;
-    for (let i = -R; i <= R; i++) s += at(src, x + i, y) * k[i + R];
-    tmp[y * W + x] = s;
+  const row = new Float32Array(W + 2 * R).fill(1);
+  for (let y = 0; y < H; y++) {
+    row.set(src.subarray(y * W, y * W + W), R);
+    for (let x = 0; x < W; x++) { let s = 0; for (let i = 0; i < n; i++) s += row[x + i] * k[i]; tmp[y * W + x] = s; }
   }
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    let s = 0;
-    for (let i = -R; i <= R; i++) s += at(tmp, x, y + i) * k[i + R];
-    out[y * W + x] = s;
+  const col = new Float32Array(H + 2 * R).fill(1);
+  for (let x = 0; x < W; x++) {
+    for (let y = 0; y < H; y++) col[y + R] = tmp[y * W + x];
+    for (let y = 0; y < H; y++) { let s = 0; for (let i = 0; i < n; i++) s += col[y + i] * k[i]; out[y * W + x] = s; }
   }
-  return out;
+  if (up === 1) return out;
+  const W2 = W * up, H2 = H * up, big = new Float32Array(W2 * H2);
+  for (let y = 0; y < H2; y++) {
+    const fy = Math.min(H - 1, Math.max(0, (y + 0.5) / up - 0.5)), y0 = Math.floor(fy), y1 = Math.min(H - 1, y0 + 1), ty = fy - y0;
+    for (let x = 0; x < W2; x++) {
+      const fx = Math.min(W - 1, Math.max(0, (x + 0.5) / up - 0.5)), x0 = Math.floor(fx), x1 = Math.min(W - 1, x0 + 1), tx = fx - x0;
+      const a = out[y0 * W + x0] + (out[y0 * W + x1] - out[y0 * W + x0]) * tx;
+      const c = out[y1 * W + x0] + (out[y1 * W + x1] - out[y1 * W + x0]) * tx;
+      big[y * W2 + x] = a + (c - a) * ty;
+    }
+  }
+  return big;
 }
 
 function organicSilhouette(g, world) {
@@ -355,9 +379,7 @@ function organicSilhouette(g, world) {
   // pero no se recorta ni se pinta encima: tiene su propio dibujo.
   const body = (c) => c === '#' || c === 'm';
   const solidish = (c) => isWallChar(c) || c === 'D';
-  const mask = new Float32Array(W * H);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) mask[y * W + x] = solidish(world.get(Math.floor(x / TILE), Math.floor(y / TILE))) ? 1 : 0;
-  const f = blurField(mask, W, H, SIGMA);
+  const f = blurField(tileMask(world, solidish, 1), W, H, SIGMA);
   const img = g.getImageData(0, 0, W, H), d = img.data;
   const src = new Uint8ClampedArray(d); // copia: de aquí se toma el color de la carne
   const inside = (x, y) => f[y * W + x] >= 0.5;
@@ -519,24 +541,6 @@ function bulge(g, x, y, dir, r, m) {
     const w = i === 0 || i === h - 1 ? 1 : 2;
     px(g, dir < 0 ? x - w + 1 : x, y + i, col, w, 1);
   }
-}
-
-function paintMembrane(g, cx, cy, ox, oy) {
-  const r = rng(hash(cx, cy, 2));
-  for (let y = 0; y < 16; y++) {
-    for (let x = 0; x < 16; x++) px(g, ox + x, oy + y, C.membrane[Math.floor(r() * 3)]);
-  }
-  // Grietas.
-  for (let k = 0; k < 3; k++) {
-    let x = Math.floor(r() * 16), y = 0;
-    while (y < 16) {
-      px(g, ox + x, oy + y, C.crack);
-      y++;
-      x = Math.max(0, Math.min(15, x + Math.floor(r() * 3) - 1));
-    }
-  }
-  px(g, ox, oy, C.fleshDark, 1, 16);
-  px(g, ox + 15, oy, C.fleshDark, 1, 16);
 }
 
 // Membrana agrietada viva: tejido esponjoso con poros, venas y grietas brillantes

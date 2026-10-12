@@ -1696,12 +1696,20 @@ export class Enemy {
   #renderCreature() {
     const c = this.creature, g = this.ctx, gl = this.gctx;
     const w = this.canvas.width, h = this.canvas.height;
-    g.clearRect(0, 0, w, h);
-    gl.clearRect(0, 0, w, h);
-    c.draw(g, gl, this, this.game.time, this.game);
-    tintCanvas(g, w, h, this.flash > 0 ? 'flash' : this.revealed || this.sensed ? null : 'camo', this.game.room?.biome?.camo);
-    this.mesh.material.map.needsUpdate = true;
-    this.glowMesh.material.map.needsUpdate = true;
+    // La animación interna se redibuja a 30 fps (la posición se mueve a 60): la mitad
+    // de dibujo y de subida de texturas. Un destello o un cambio de camuflaje, al momento.
+    const tint = this.flash > 0 ? 'flash' : this.revealed || this.sensed ? null : 'camo';
+    const now = this.game.time;
+    if (this.drawnAt === undefined || now - this.drawnAt >= 1 / 30 - 1e-4 || now < this.drawnAt || tint !== this.drawnTint) {
+      this.drawnAt = now;
+      this.drawnTint = tint;
+      g.clearRect(0, 0, w, h);
+      gl.clearRect(0, 0, w, h);
+      c.draw(g, gl, this, now, this.game);
+      tintCanvas(g, w, h, tint, this.game.room?.biome?.camo);
+      this.mesh.material.map.needsUpdate = true;
+      this.glowMesh.material.map.needsUpdate = true;
+    }
     const [ox, oy] = c.origin(this);
     const sx = ox + (this.shakeX ?? 0);
     placeMesh(this.mesh, sx, oy, w, h);

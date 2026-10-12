@@ -189,5 +189,3 @@ export class Gamepad {
 
 }
 
-// Texto del botón para los avisos en pantalla, según lo último que se haya usado.
-export const padLabel = (game, key, button) => (game.pad?.active ? button : key);

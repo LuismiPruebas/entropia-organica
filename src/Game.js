@@ -2,6 +2,7 @@ import { Visual, VIEW_W, VIEW_H } from './core/Visual.js';
 import { Input } from './core/Input.js';
 import { Gamepad } from './core/Gamepad.js';
 import { Touch } from './ui/Touch.js';
+import { sweepGPU } from './core/Gpu.js';
 import { Loop } from './core/Loop.js';
 import { AudioSys } from './core/Audio.js';
 import { Particles } from './core/Particles.js';
@@ -160,6 +161,7 @@ export class Game {
     this.glowParticles.clear();
     const prevBiome = this.room?.biome;
     this.room = this.factory.buildRoom(id);
+    sweepGPU(); // libera en la GPU lo de la sala anterior
     this.room.hintsShown = new Set();
     this.world = this.room.world;
     this.gore.reset(this.world);
@@ -329,6 +331,9 @@ export class Game {
 
   // ---------- Bucle ----------
   update(dt) {
+    // Cada pocos segundos se libera en la GPU lo que ya no está en escena (core/Gpu.js).
+    this.gpuSweep = (this.gpuSweep ?? 0) + dt;
+    if (this.gpuSweep > 6) { this.gpuSweep = 0; sweepGPU(); }
     this.time += dt;
     if (this.mode === 'transition') this.#updateTransition(dt);
     else if (this.mode === 'dead') this.#updateDeath(dt);

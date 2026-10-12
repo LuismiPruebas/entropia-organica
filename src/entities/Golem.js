@@ -12,26 +12,34 @@
 // saltan y cada grumo en pulpa que corretea (e.gen: 0 coloso, 1 grumo, 2 pulpa). La
 // IA es el comportamiento `golem` de entities/Enemy.js.
 import { ik } from './Rig.js';
+import { PixBuf, parseColor, pack } from '../core/PixBuf.js';
 
-const P = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
+// Se pinta en un búfer de píxeles (core/PixBuf.js) que se vuelca de una vez: la piel
+// de células se calcula píxel a píxel y con fillRect costaba demasiado.
+const P = (g, x, y, c, w = 1, h = 1) => g.px(x, y, c, w, h);
 const hash = (x, y, k = 0) => { const s = Math.sin(x * 127.1 + y * 311.7 + k * 74.7) * 43758.5453; return s - Math.floor(s); };
+// Núcleos de las células precalculados (256x256 celdas, se repiten): sin Math.sin por píxel.
+const CX = new Float32Array(65536), CY = new Float32Array(65536), CID = new Float32Array(65536);
+for (let i = 0; i < 256; i++) for (let j = 0; j < 256; j++) { const k = (i << 8) | j; CX[k] = 0.15 + hash(i, j, 1) * 0.7; CY[k] = 0.15 + hash(i, j, 2) * 0.7; CID[k] = hash(i, j, 3); }
 
 // Rampa de verdes: de la sombra más honda al brillo húmedo.
 const RAMP = ['#16240a', '#26400e', '#3a5e14', '#54801c', '#6e9e26', '#8cba32', '#acd444', '#d0ec70', '#f0ffb0'];
-const shade = (v) => RAMP[Math.max(0, Math.min(RAMP.length - 1, Math.round(v * (RAMP.length - 1))))];
+// La rampa ya empaquetada para el búfer (sin buscar el color en cada píxel).
+const RAMP_N = RAMP.map((c) => pack(...parseColor(c)));
+const shade = (v) => RAMP_N[Math.max(0, Math.min(RAMP_N.length - 1, Math.round(v * (RAMP_N.length - 1))))];
 
 // Textura de células (Voronoi): distancia al núcleo más cercano y al borde con la
 // vecina. Devuelve [d1, borde] en unidades de celda.
 function cells(u, v, size) {
   const x = u / size, y = v / size, xi = Math.floor(x), yi = Math.floor(y);
-  let d1 = 9, d2 = 9, id = 0;
+  let d1 = 81, d2 = 81, id = 0;
   for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-    const cx = xi + i, cy = yi + j;
-    const fx = cx + 0.15 + hash(cx, cy, 1) * 0.7, fy = cy + 0.15 + hash(cx, cy, 2) * 0.7;
-    const d = Math.hypot(x - fx, y - fy);
-    if (d < d1) { d2 = d1; d1 = d; id = hash(cx, cy, 3); } else if (d < d2) d2 = d;
+    const cx = xi + i, cy = yi + j, k = ((cx & 255) << 8) | (cy & 255);
+    const dx = x - cx - CX[k], dy = y - cy - CY[k], d = dx * dx + dy * dy;
+    if (d < d1) { d2 = d1; d1 = d; id = CID[k]; } else if (d < d2) d2 = d;
   }
-  return [d1, d2 - d1, id];
+  d1 = Math.sqrt(d1);
+  return [d1, Math.sqrt(d2) - d1, id];
 }
 
 // Pinta un píxel de "carne celular": sombreado de volumen (nz, luz) + células.
@@ -61,7 +69,7 @@ function capsule(g, ax, ay, bx, by, r0, r1, seed, size = 3.2, dark = 0) {
     const cx = px - tx * t * len, cy = py - ty * t * len;
     const r = r0 + (r1 - r0) * t, d = Math.hypot(cx, cy);
     if (d > r) continue;
-    if (d > r - 0.9) { P(g, x, y, RAMP[0]); continue; }
+    if (d > r - 0.9) { P(g, x, y, RAMP_N[0]); continue; }
     const nx = cx / r, ny = cy / r, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
     cellPx(g, x, y, t * len + seed * 17, (px * -ty + py * tx) + seed * 5, nx, ny, nz, size, dark);
   }
@@ -72,7 +80,7 @@ function mass(g, cx, cy, rx, ry, seed, size = 3.6, dark = 0, holes = null) {
   for (let y = Math.floor(cy - ry - 1); y <= Math.ceil(cy + ry + 1); y++) for (let x = Math.floor(cx - rx - 1); x <= Math.ceil(cx + rx + 1); x++) {
     const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry, d = nx * nx + ny * ny;
     if (d > 1) continue;
-    if (d > 0.86) { P(g, x, y, RAMP[0]); continue; }
+    if (d > 0.86) { P(g, x, y, RAMP_N[0]); continue; }
     if (holes?.some(([hx, hy, hr]) => Math.hypot(x - hx, y - hy) < hr)) { P(g, x, y, Math.hypot(x - holes[0][0], y - holes[0][1]) % 2 < 1 ? '#0e1606' : '#1e2e0a'); continue; }
     cellPx(g, x, y, x - cx + seed * 23, y - cy + seed * 7, nx, ny, Math.sqrt(Math.max(0, 1 - d)), size, dark);
   }
@@ -102,7 +110,18 @@ function drip(g, gl, x, y, t, i, maxLen = 6) {
 export const GOLEM = {
   size: () => [64, 58],
   origin: (e) => [e.cx - 32, e.y + e.h - 58],
-  draw(g, gl, e, t, game) {
+  draw(ctx, glCtx, e, t, game) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    if (e.pix?.[0].w !== W || e.pix[0].h !== H) e.pix = [new PixBuf(W, H), new PixBuf(W, H)];
+    const [g, gl] = e.pix;
+    g.clear(); gl.clear();
+    drawGolem(g, gl, e, t, game);
+    g.flush(ctx); gl.flush(glCtx);
+  },
+};
+
+function drawGolem(g, gl, e, t, game) {
+  {
     const gen = e.gen ?? 0;
     const G = 57; // suelo del lienzo
     const eye = game?.beamColor ?? [1, 0.3, 0.2];
@@ -166,7 +185,7 @@ export const GOLEM = {
       capsule(g, kx, ky, fx, fy, 4.5, 4, far ? 13 : 14, 3, dk);
       // pie ancho con dedos planos
       mass(g, fx + 2, fy + 1, 5.5, 2.2, far ? 15 : 16, 2.4, dk);
-      for (let d = 0; d < 3; d++) { P(g, fx + 5 + d * 1.6, fy + 2, RAMP[far ? 1 : 2]); P(g, fx + 4.6 + d * 1.6, fy + 1, RAMP[far ? 3 : 5]); }
+      for (let d = 0; d < 3; d++) { P(g, fx + 5 + d * 1.6, fy + 2, RAMP_N[far ? 1 : 2]); P(g, fx + 4.6 + d * 1.6, fy + 1, RAMP_N[far ? 3 : 5]); }
     };
     drawLeg(legs[0]);
 
@@ -249,5 +268,5 @@ export const GOLEM = {
       if (throwK > 0.8) P(gl, hxp + 1, hyp - r, '#aaff70');
     }
     if (hit) for (let i = 0; i < 4; i++) P(gl, hxp + 4 + i * 2, hyp - 2 + (i % 2) * 4, '#aaff70');
-  },
-};
+  }
+}

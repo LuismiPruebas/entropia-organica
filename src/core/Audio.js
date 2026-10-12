@@ -20,7 +20,7 @@ const GAIN = {
   hit: 2.5, screech: 10, growl: 7, click: 7, crackle: 5, bubble: 3.5, hiss: 4.2, moan: 8.5,
   spit: 3, stalkerWindup: 10, stalkerLunge: 2,
   stalkerChitter: 9, neuronWarble: 4, swarmBuzz: 8, cellChirp: 2.5, eyeSquelch: 2.5, sacInhale: 6.5,
-  podChatter: 3, colonySquirm: 12, isopodScuttle: 10, vestigioBreath: 5.4, eelGurgle: 2.5,
+  podChatter: 3, colonySquirm: 12, vestigioBreath: 5.4, eelGurgle: 2.5,
   gangAura: 4.5, matBreath: 3.2, glandRumble: 5.6,
   chimAura: 4, chimHowl: 2.2, chimBark: 2, choirSing: 3, choirMoan: 4, choirScream: 2.5, headScream: 3,
 };
@@ -335,11 +335,7 @@ const SOUNDS = {
     for (let i = 0; i < 5; i++) a.noise(o, { dur: 0.07, vol: 0.3, type: 'bandpass', f0: rnd(500, 900), f1: 250, q: 5, delay: i * 0.09 });
     a.creature(o, { f0: rnd(1200, 1500), f1: rnd(1700, 2000), dur: 0.15, vol: 0.07, formant: 2200, q: 5, rough: 0.6, vib: 30, delay: 0.25 });
   },
-  // Isópodo: decenas de patitas repiqueteando y el roce metálico de las placas.
-  isopodScuttle: (a, o) => {
-    for (let i = 0; i < 16; i++) a.noise(o, { dur: 0.008, vol: 0.3, type: 'bandpass', f0: rnd(3500, 5000), q: 6, delay: i * rnd(0.02, 0.035) });
-    a.noise(o, { dur: 0.4, vol: 0.18, type: 'bandpass', f0: 2600, f1: 1800, q: 10, delay: 0.1 });
-  },
+
   // Vestigio: respiración rota, casi humana: inspira entrecortado y espira con un quejido.
   vestigioBreath: (a, o) => {
     for (let i = 0; i < 3; i++) a.noise(o, { dur: 0.12, vol: 0.25, type: 'bandpass', f0: 1000, f1: 1300, q: 2, delay: i * 0.15 });

@@ -148,6 +148,9 @@ src/
 │   ├── shaders.js             Linterna con sombras, color 15 bits, latido
 │   ├── Sprites.js             Pixel art indexado -> texturas
 │   ├── Particles.js           Partículas de 1px
+│   ├── PixBuf.js              Búfer de píxeles en memoria (HUD, colonia): se vuelca de una vez
+│   ├── Gpu.js                 Libera en la GPU lo que sale de escena (sin fugas al cambiar de sala)
+│   ├── Voices.js              Voces de las criaturas (garganta sintetizada)
 │   ├── Physics.js          3. Colisión AABB contra tiles, línea de visión
 │   └── Audio.js               Sonido procedimental WebAudio con paneo
 ├── state/State.js          4. Estado global: recursos, mutaciones, rechazo
