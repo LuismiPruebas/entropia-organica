@@ -1,5 +1,4 @@
-import { Placenta, drawNumber, drawBoneIcon, drawCellIcon, drawItemIcon } from './Bladders.js';
-import { ITEMS } from '../state/State.js';
+import { Placenta, drawNumber, drawBoneIcon, drawCellIcon } from './Bladders.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -76,15 +75,5 @@ export class Hud {
     const cx = 75 + String(st.scrap).length * 4 + 4;
     drawCellIcon(g, cx, 13, t, st.cells > 0);
     drawNumber(g, cx + 6, 15, st.cells, st.cells === 0 ? '#6a6050' : '#ffd23f');
-    // Debajo, los consumibles que lleves (o el que esté activo, con lo que le queda).
-    let ix = 64;
-    for (const kind of ['shield', 'regen']) {
-      const n = st.items[kind], left = st.timers[kind];
-      if (!n && !left) continue;
-      drawItemIcon(g, kind, ix, 25, t, left > 0);
-      drawNumber(g, ix + 8, 26, n, kind === 'shield' ? '#4ff0ff' : '#7dff9a');
-      if (left > 0) { g.fillStyle = kind === 'shield' ? '#4ff0ff' : '#7dff9a'; g.fillRect(ix, 32, Math.ceil((6 * left) / ITEMS[kind].time), 1); }
-      ix += 8 + String(n).length * 4 + 5;
-    }
   }
 }

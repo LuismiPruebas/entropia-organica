@@ -12,8 +12,7 @@
 //   R1 / RB               disparar (mantener = cargado)
 //   X / A                 saltar (y soltarse del tendón) · aceptar en menús
 //   L2 / LT               tendón
-//   L1 / LB               embestida
-//   R3 · L3               Perla de Nácar · Célula Madre (consumibles)
+//   L1 / LB · L3          embestida
 //   R2 / RT               libre
 //   △ / Y                 usar el Nodo Seguro
 //   ○ / B                 salir de los menús
@@ -28,7 +27,7 @@
 export const BUTTONS = {
   0: 'jump', 1: 'back', 2: 'light', 3: 'interact',
   4: 'dash', 5: 'fire', 6: 'grapple', 7: 'weapon',
-  8: 'map', 9: 'genome', 10: 'regen', 11: 'shield', 12: 'up', 13: 'down', 14: 'left', 15: 'right',
+  8: 'map', 9: 'genome', 10: 'dash', 12: 'up', 13: 'down', 14: 'left', 15: 'right',
 };
 
 // acción → tecla del juego (evento de teclado) o código propio de Input (Pad*/Mouse*)
@@ -43,8 +42,6 @@ const KEYS = {
   genome: { key: 'KeyI' },
   map: { key: 'KeyM' },
   weapon: { key: 'KeyR' },
-  shield: { key: 'Digit1' },
-  regen: { key: 'Digit2' },
   left: { key: 'ArrowLeft' },
   right: { key: 'ArrowRight' },
   up: { input: 'PadUp' },

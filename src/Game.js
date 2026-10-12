@@ -266,11 +266,9 @@ export class Game {
 
   say(text, seconds) { this.hud.say(text, seconds); }
 
-  // Tecla que usa cada consumible según con qué juegas.
-  itemKey(kind) {
-    if (this.pad.active) return kind === 'shield' ? '[R3]' : '[L3]';
-    if (this.touch.active) return 'con su botón';
-    return kind === 'shield' ? '[1]' : '[2]';
+  // Dónde se usan los consumibles: en el Genoma, con su tecla según con qué juegas.
+  itemKey() {
+    return `desde el Genoma ${this.pad.active ? '(Options)' : this.touch.active ? '(botón del ADN)' : '[I]'}`;
   }
 
   useItem(kind) {
@@ -292,7 +290,8 @@ export class Game {
     if (p.invuln > 0 || st.dead) return;
     // Con la Perla de Nácar los golpes resbalan: ni daño ni empujón.
     if (st.timers.shield > 0) {
-      p.invuln = 0.3;
+      if ((p.shieldTick ?? 0) > this.time) return; // un tintineo por golpe, no uno por fotograma
+      p.shieldTick = this.time + 0.3;
       this.audio.play('click');
       this.glowParticles.emit(p.cx, p.cy, { vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 60, life: 0.3, color: [0.5, 0.95, 1] });
       return;
@@ -402,11 +401,6 @@ export class Game {
       } else {
         this.say('Tu ojo se ha apagado: necesita energía lumínica.', 1.5);
       }
-    }
-
-    // Consumibles: [1] Perla de Nácar · [2] Célula Madre.
-    for (const [code, kind] of [['Digit1', 'shield'], ['Digit2', 'regen']]) {
-      if (input.hit(code)) this.useItem(kind);
     }
 
     const node = this.room.nodes.find((n) => overlap(p, n));
@@ -884,8 +878,9 @@ export class Game {
     if (st.mutations.has('alveolos')) lights.push({ x: p.cx, y: p.y + 8, r: 26, color: [0.08, 0.35, 0.14] });
     // Consumibles activos: un halo de nácar cian o el verde de la regeneración, que late.
     const pulse = 0.75 + 0.25 * Math.sin(this.time * 9);
-    if (st.timers.shield > 0) lights.push({ x: p.cx, y: p.cy, r: 34, color: [0.25 * pulse, 0.55 * pulse, 0.7 * pulse] });
-    if (st.timers.regen > 0) lights.push({ x: p.cx, y: p.cy, r: 30, color: [0.08, 0.5 * pulse, 0.18] });
+    const fading = (left) => left < 2 && Math.floor(left * 8) % 2 === 0; // titila al acabarse
+    if (st.timers.shield > 0 && !fading(st.timers.shield)) lights.push({ x: p.cx, y: p.cy, r: 34, color: [0.25 * pulse, 0.55 * pulse, 0.7 * pulse] });
+    if (st.timers.regen > 0 && !fading(st.timers.regen)) lights.push({ x: p.cx, y: p.cy, r: 30, color: [0.08, 0.5 * pulse, 0.18] });
     for (const pk of this.room.pickups) {
       if (pk.kind === 'heart') {
         const beat = 0.6 + Math.max(0, Math.sin(this.time * 6)) * 0.6;

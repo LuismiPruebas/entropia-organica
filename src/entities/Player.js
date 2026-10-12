@@ -444,6 +444,45 @@ export class Player {
     this.#updateMesh(dt);
   }
 
+  // Consumibles activos, sin iconos en el HUD: se ven en el propio cuerpo.
+  //   Perla de Nácar  la silueta brilla en cian nacarado y la rodean destellos
+  //   Célula Madre    la silueta late en verde y le suben motas verdes
+  // Los dos últimos segundos el brillo titila (aviso) y al acabar estalla y se apaga.
+  #itemFx(dt) {
+    const g = this.game, T = g.state.timers;
+    const warn = (left) => left < 2 && Math.floor(left * 8) % 2 === 0;
+    let r = 0.235, gr = 0.235, b = 0.29; // autoiluminación normal (#3c3c4a)
+    if (T.shield > 0) {
+      const k = warn(T.shield) ? 0.1 : 0.55 + 0.25 * Math.sin(this.anim * 8);
+      r += 0.25 * k; gr += 0.85 * k; b += 1 * k;
+      if (Math.random() < dt * 22) {
+        const a = Math.random() * Math.PI * 2;
+        g.glowParticles.emit(this.cx + Math.cos(a) * 11, this.cy + Math.sin(a) * 15, { vx: -Math.sin(a) * 35, vy: Math.cos(a) * 35, life: 0.35, color: [0.55, 0.95, 1] });
+      }
+    }
+    if (T.regen > 0) {
+      const k = warn(T.regen) ? 0.08 : 0.35 + 0.35 * Math.max(0, Math.sin(this.anim * 5));
+      r += 0.1 * k; gr += 0.9 * k; b += 0.25 * k;
+      if (Math.random() < dt * 16) {
+        g.glowParticles.emit(this.x + Math.random() * this.w, this.y + this.h * (0.4 + Math.random() * 0.6), { vx: (Math.random() - 0.5) * 10, vy: -25 - Math.random() * 25, life: 0.7, color: [0.3, 1, 0.45] });
+      }
+    }
+    this.selfMesh.material.color.setRGB(r, gr, b);
+    // Se acabó: un estallido del color del efecto y un aviso.
+    for (const kind of ['shield', 'regen']) {
+      if ((this.fxPrev?.[kind] ?? 0) > 0 && T[kind] <= 0) {
+        const col = kind === 'shield' ? [0.55, 0.95, 1] : [0.3, 1, 0.45];
+        for (let i = 0; i < 18; i++) {
+          const a = Math.random() * Math.PI * 2, s = 40 + Math.random() * 70;
+          g.glowParticles.emit(this.cx, this.cy, { vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5, color: col });
+        }
+        g.audio.play(kind === 'shield' ? 'ricochet' : 'flicker', this);
+        g.say(kind === 'shield' ? 'El nácar se resquebraja: vuelves a ser vulnerable.' : 'La Célula Madre se agota.', 2);
+      }
+    }
+    this.fxPrev = { ...T };
+  }
+
   // Agacharse (abajo en el suelo): la caja encoge por arriba, los pies no se mueven.
   // No anda pero gira, apunta y dispara. Al soltar se levanta si hay sitio encima;
   // bajo un techo bajo sigue agachado hasta salir.
@@ -898,6 +937,7 @@ export class Player {
     } else this.lastLock = null;
     const blink = this.invuln > 0 && Math.floor(this.invuln * 20) % 2 === 0;
     this.mesh.visible = this.selfMesh.visible = !blink;
+    this.#itemFx(dt);
 
     // Destello del ojo fotóforo: toma el color de la energía lumínica y late al respirar.
     const on = st.flashlightOn && st.light > 0;
