@@ -21,8 +21,8 @@ export const CELL_CHARGE = 100; // luz que devuelve cada célula lumínica de la
 // Consumibles raros: se guardan y se usan cuando quieras (1 / 2, R3 / L3, botón táctil).
 // Apenas los sueltan las criaturas (los jefes, siempre uno); el útero los vende caros.
 export const ITEMS = {
-  shield: { name: 'Perla de Nácar', time: 10, price: { bio: 150 } }, // invulnerable
-  regen: { name: 'Célula Madre', time: 10, price: { bio: 150 } },   // regenera integridad
+  shield: { name: 'Perla de Nácar', time: 10, price: { bio: 130 } }, // invulnerable
+  regen: { name: 'Célula Madre', time: 10, price: { bio: 130 } },   // regenera integridad
 };
 export const REGEN_RATE = 5;          // integridad por segundo con la Célula Madre
 export const ITEM_DROP_CHANCE = 0.02; // por criatura abatida (ni crías ni esbirros)

@@ -198,7 +198,7 @@ export class NodeMenu {
       ...Object.entries(ITEMS).map(([kind, it]) => ({
         icon: [kind],
         label: `${it.name} (llevas ${st.items[kind]})`,
-        desc: `${kind === 'shield' ? `<span class="c-o2">invulnerable ${it.time} s</span>` : `<span class="c-int">regeneras ${it.time} s</span>`} · ${price(it.price)}${why(!st.canPay(it.price) && 'no te alcanza')}`,
+        desc: `${kind === 'shield' ? `<span class="c-o2">invulnerable ${it.time} s</span>` : `<span class="c-int">regeneras ${it.time} s</span>`} · ${price(it.price)}${why(it.price.bio > st.biomassMax && 'amplía tu reserva de biomasa (quistes)', !st.canPay(it.price) && 'no te alcanza')}`,
         enabled: st.canPay(it.price),
         run: () => { if (st.buyItem(kind)) { g.audio.play('womb'); g.say(`El útero cría una ${it.name}. Úsala ${g.itemKey(kind)}.`, 2.5); } },
       })),
