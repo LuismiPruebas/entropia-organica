@@ -284,8 +284,8 @@ export const BEHAVIORS = {
       const a = Math.atan2(dy, dx);
       for (const off of enraged ? [-0.35, 0, 0.35] : [-0.2, 0.2]) {
         g.spawnProjectile({
-          x: e.cx - 2, y: e.cy - 2, w: 5, h: 5, vx: Math.cos(a + off) * 120, vy: Math.sin(a + off) * 120,
-          damage: 8, kind: 'orb', owner: 'enemy', color: '#ffd25a', glow: [1, 0.8, 0.3], life: 2.5,
+          x: e.cx - 2, y: e.cy - 2, w: 5, h: 5, vx: Math.cos(a + off) * 90, vy: Math.sin(a + off) * 90, // era 120
+          damage: 8, kind: 'orb', owner: 'enemy', color: '#ffd25a', glow: [1, 0.8, 0.3], life: 3.3, // más lentas, mismo alcance
         });
       }
       g.audio.play(d.sounds?.attack ?? 'spit', e);
