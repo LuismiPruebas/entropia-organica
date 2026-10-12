@@ -106,9 +106,10 @@ export class Gamepad {
 
     // Stick derecho: la mira analógica.
     const m = Math.hypot(rx, ry), aim = this.input.padAim;
-    aim.active = m > DEAD;
-    if (aim.active) { aim.x = rx / m; aim.y = ry / m; }
-    if (want.size || aim.active) this.active = true;
+    // Solo toca la mira cuando apunta el stick (la mira táctil también la usa).
+    if (m > DEAD) { aim.active = true; aim.x = rx / m; aim.y = ry / m; this.aiming = true; }
+    else if (this.aiming) { aim.active = false; this.aiming = false; }
+    if (want.size || this.aiming) this.active = true;
     this.#rumble(pad);
   }
 
