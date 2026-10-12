@@ -7,7 +7,7 @@
 //
 //   quimera  re menor, 88 ppm: Rem - Sib - Solm - La; motivo sobre el semitono La-Sib
 //   coro     mi menor con giros frigios, 76 ppm: Mim - Do - Lam - Si; un suspiro que baja
-//   ganglio  do menor, 100 ppm: Dom - Dom(b5) - Lab - Sol; bajo ostinato que no para
+//   ganglio  techno minimalista en do menor, 124 ppm: bajo a semicorcheas y arpegio simple
 //
 // Todo se programa con antelación (planificador cada 100 ms, a semicorcheas).
 
@@ -130,28 +130,27 @@ export function startBossMusic(audio, theme) {
         if (i % 4 === 2) hat(t);
       },
     },
-    // El Ganglio Madre: do menor, eléctrico y nervioso. Un bajo que no para (corcheas
-    // con un Reb que roza el Do, como un nervio que vibra), el chip disparando impulsos
-    // todo el rato y una melodía escasa que sube a tirones y se queda sin resolver.
+    // El Ganglio Madre: techno minimalista en do menor. Bombo a negras sin parar, un
+    // bajo continuo a semicorcheas (con la octava a contratiempo) y un arpegio simple
+    // del chip que sube y baja por el acorde. Casi sin melodía: solo el pulso.
     ganglio: {
-      bpm: 100,
-      roots: [36, 36, 32, 31],                       // Do, Do, Lab, Sol
-      chords: [[60, 63, 67], [60, 63, 66], [56, 60, 63], [55, 59, 62]],
-      ostinato: [0, 0, 12, 0, 1, 0, 12, 0],          // semitonos sobre la raíz, a corcheas
-      melody: [
-        [[72, 6], [0, 2], [71, 4], [72, 4]],
-        [[75, 6], [74, 2], [72, 8]],
-        [[68, 4], [67, 4], [68, 4], [71, 4]],
-        [[72, 4], [73, 4], [74, 8]],
-      ],
-      lead: { ratio: 3, index: 1.3, decay: 0.5, vol: 0.06, vib: 0.012, attack: 0.01 },
-      bass: { ratio: 1, index: 2.2, decay: 0.12, vol: 0.11 },
-      arpBars: [0, 1, 2, 3],
+      bpm: 124,
+      roots: [36, 36, 36, 39],                       // Do, Do, Do, Mib
+      chords: [[60, 63, 67], [60, 63, 67], [60, 63, 70], [63, 67, 70]],
+      ostinato: [0, 0, 12, 0, 0, 0, 12, 0, 0, 0, 12, 0, 0, 12, 0, 7], // semicorcheas
+      melody: [[], [], [], [[79, 8], [0, 8]]],       // un único pitido largo cada cuatro compases
+      lead: { ratio: 2, index: 0.8, decay: 0.6, vol: 0.04, vib: 0.01, attack: 0.02 },
+      bass: { ratio: 1, index: 2.4, decay: 0.07, vol: 0.12 },
+      arpPat: [0, 1, 2, 1],                          // sube y baja: do-mib-sol-mib
+      arpEvery: 2,
+      arpVol: 0.022,
+      arpBars: [],
       drums(t, s, st) {
         const i = s % 16;
-        if (i === 0 || i === 10) kick(t, i === 0 ? 0.42 : 0.26);
-        if (i === 8) snare(t, 0.08);
-        hat(t);                                                      // tic-tic de sinapsis
+        if (i % 4 === 0) kick(t, 0.42);                              // cuatro al suelo
+        if (i % 4 === 2) hat(t, true);                               // abierto a contratiempo
+        else if (i % 2 === 1) hat(t);                                // tic suave entre medias
+        if (i === 4 || i === 12) snare(t, 0.06);                     // palmada seca
         if (i === 14 && st.bar % 4 === 3) noise(t, 0.25, 0.05, 'bandpass', 5200, 12); // chispazo
       },
     },
@@ -187,13 +186,18 @@ export function startBossMusic(audio, theme) {
     const i = st.s % 16;
     const bar = st.bar % 4;
     // Bajo FM: notas largas, casi un pedal.
-    // Con ostinato, el bajo late a corcheas sin parar (más tensión).
-    if (th.ostinato) { if (i % 2 === 0) fm(th.roots[bar] + th.ostinato[i / 2], t, step * 1.6, th.bass); }
+    // Con ostinato, el bajo late sin parar; su largo marca el ritmo (8 = corcheas, 16 = semicorcheas).
+    const every = th.ostinato ? 16 / th.ostinato.length : 0;
+    if (th.ostinato) { if (i % every === 0) fm(th.roots[bar] + th.ostinato[i / every], t, step * every * 0.8, th.bass); }
     else if (i === 0 || i === 8) fm(th.roots[bar] + th.bassPat[i / 2], t, step * 7, th.bass);
     // Coro FM sostenido (acorde por compás, ataque lento).
     if (th.pad && i === 0) for (const n of th.chords[bar]) fm(n - 12, t, step * 15, { ratio: 1, index: 0.5, decay: 2, vol: 0.026, attack: 0.4, vib: 0.006 });
     // Arpegio PSG, apenas audible, solo en los compases marcados.
-    if (th.arpBars.includes(bar) && i % 2 === 0) psg(th.chords[bar][(i / 2) % 3] + 12, t, step * 1.5, 0.014);
+    if (th.arpPat) {
+      // Arpegio propio del tema: notas del acorde en el orden de arpPat, cada arpEvery pasos.
+      const e = th.arpEvery ?? 2;
+      if (i % e === 0) psg(th.chords[bar][th.arpPat[(i / e) % th.arpPat.length]] + 12, t, step * e * 0.8, th.arpVol ?? 0.014);
+    } else if (th.arpBars.includes(bar) && i % 2 === 0) psg(th.chords[bar][(i / 2) % 3] + 12, t, step * 1.5, 0.014);
     // Melodía: siempre la misma frase (que se quede); lo errático, en detalles raros.
     let acc = 0;
     for (const [n, len] of th.melody[bar]) {
