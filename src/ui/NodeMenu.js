@@ -244,7 +244,7 @@ export class NodeMenu {
         <span class="nm-close" title="Cerrar">✕</span>
         <h2>NODO SEGURO <span class="nm-name">${node.name}</span></h2>
         <div class="nm-res"><span class="c-int">INT ${Math.ceil(st.integrity)}/${st.maxIntegrity}</span> <span class="c-bio">BIO ${Math.floor(st.biomass)}</span> <span class="c-lux">LUZ ${Math.floor(st.light)}</span> <span class="c-scrap">HUESO ${st.scrap}</span></div>
-        <div class="nm-list"></div>
+        <div class="nm-scroll"><div class="nm-list"></div><div class="nm-bar" hidden><i></i></div></div>
       </div>`;
     const list = this.el.querySelector('.nm-list');
     this.icons = [];
@@ -265,7 +265,38 @@ export class NodeMenu {
       list.appendChild(b);
     });
     this.nav.restore();
+    this.#scrollBar(list);
     this.#drawIcons(performance.now() / 1000);
+  }
+
+  // Barra vertical de la lista: solo aparece si no cabe todo, sigue al desplazamiento
+  // (rueda, flechas, dedo) y su asa se puede arrastrar.
+  #scrollBar(list) {
+    const bar = this.el.querySelector('.nm-bar'), thumb = bar.firstElementChild;
+    const update = () => {
+      const { scrollHeight: sh, clientHeight: ch, scrollTop: top } = list;
+      bar.hidden = sh <= ch + 1;
+      if (bar.hidden) return;
+      const h = Math.max(12, (ch / sh) * bar.clientHeight);
+      thumb.style.height = `${h}px`;
+      thumb.style.top = `${(top / (sh - ch)) * (bar.clientHeight - h)}px`;
+    };
+    list.addEventListener('scroll', update, { passive: true });
+    thumb.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const y0 = e.clientY, top0 = list.scrollTop;
+      // La escala del escenario (transform) cambia los píxeles de pantalla por píxel lógico.
+      const scale = bar.getBoundingClientRect().height / bar.clientHeight || 1;
+      const move = (ev) => {
+        const free = bar.clientHeight - thumb.offsetHeight;
+        list.scrollTop = top0 + ((ev.clientY - y0) / scale / free) * (list.scrollHeight - list.clientHeight);
+      };
+      const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+      addEventListener('pointermove', move);
+      addEventListener('pointerup', up);
+    });
+    update();
   }
 
   #drawIcons(t) {
