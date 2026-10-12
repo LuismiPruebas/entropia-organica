@@ -4,14 +4,17 @@ import { LEVELS } from '../data/levels.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { nodeOf } from '../data/nodes.js';
 import { MenuNav } from './MenuNav.js';
-import { px } from '../entities/Rig.js';
+import { px, seg, part, blob } from '../entities/Rig.js';
+import { ICONS as ORGANS } from './Genome.js';
+import { drawBoneIcon } from './Bladders.js';
 
 // Menú del Nodo Seguro: curar (con la reserva limitada del útero), recargar el ojo,
 // fabricar supresores, comprar extensores de tolerancia, instalar mutaciones y, con
 // el Tercer Ojo, viajar a otro Nodo ya visitado. Flechas + Intro/Espacio, teclas 1..n o clic.
-// A la izquierda late el útero: un bulbo por cura (lleno, gastado o regenerándose).
+// Cada opción lleva su icono animado en pixel art (ICON): el de sanar muestra las curas
+// que le quedan al útero (un bulbo por cura: lleno, gastado o regenerándose).
 
-const W = 56, H = 72; // lienzo del útero
+const S = 18; // lado de los iconos
 
 // El primer motivo por el que una opción está apagada, en gris.
 const why = (...reasons) => { const r = reasons.find(Boolean); return r ? ` · <span class="dim">${r}</span>` : ''; };
@@ -39,6 +42,76 @@ const VEINS = [
   'M246,0 C250,35 240,70 247,95 S243,112 246,120',
 ];
 
+// ---------------------------------------------------------------- iconos (18x18)
+const ICON = {
+  // Tejido que late, cosido; debajo, las curas del útero.
+  heal(g, t, o) {
+    const beat = (t * 1.1) % 1 < 0.12 ? 1 : 0;
+    part(g, 9, 6.5, 5.5 + beat * 0.5, 4.6 + beat * 0.4, '#c0283a', '#6a1020', '#ff9aa8');
+    for (const x of [6, 9, 12]) { px(g, x, 4, '#2a0810'); px(g, x, 8, '#2a0810'); px(g, x, 5, '#f0d8c8', 1, 3); }
+    const { doses, total, fill } = o;
+    const w = Math.min(4, 16 / total);
+    for (let i = 0; i < total; i++) {
+      const cx = 9 + (i - (total - 1) / 2) * w, full = i < doses, grow = !full && i === doses && fill > 0;
+      const r = full ? 1.7 : grow ? 0.8 + fill : 1;
+      blob(g, cx, 14.5, r + 0.6, r + 0.6, '#140c10');
+      blob(g, cx, 14.5, r, r, full ? '#ff5a6a' : grow ? '#a02838' : '#3a1820');
+    }
+  },
+  // Ojo con el iris de luz, que parpadea y brilla.
+  light(g, t) {
+    const blink = (t % 4.3) < 0.1 || (t % 4.3) > 2.1 && (t % 4.3) < 2.18;
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) { const k = 6.5 + Math.sin(t * 4 + a) * 0.8; px(g, 9 + Math.cos(a) * k, 9 + Math.sin(a) * k * 0.8, '#ffd23f'); }
+    blob(g, 9, 9, 6, blink ? 1 : 4, '#140c10');
+    if (!blink) { blob(g, 9, 9, 5, 3, '#e8dcc8'); blob(g, 9, 9, 2.6, 2.6, '#ffd23f'); px(g, 9, 8, '#140c10', 1, 2); px(g, 7, 7, '#ffffff'); }
+  },
+  // Vial de supresor: cristal con líquido violeta que burbujea y su aguja.
+  suppressor(g, t) {
+    seg(g, 4, 14, 12, 4, '#140c10', 6);
+    seg(g, 4, 14, 12, 4, '#3a3048', 4);
+    seg(g, 5, 13, 9, 8, '#c07bff', 3);
+    const k = Math.floor((t * 6) % 3);
+    px(g, 6 + k, 11 - k, '#f0d8ff');
+    seg(g, 12, 4, 15, 1, '#e8dcc8', 1);
+    px(g, 3, 15, '#7a6a8a', 3, 2);
+  },
+  // Extensor: una vértebra violeta que crece, con un "+".
+  extender(g, t) {
+    const k = 1 + Math.sin(t * 2.4) * 0.06;
+    part(g, 9, 9, 6.5 * k, 4.5 * k, '#7a4aa0', '#3a1a50', '#d0a8ff');
+    blob(g, 9, 9, 2, 2, '#1a0c24');
+    for (const d of [-1, 1]) { seg(g, 9 + d * 6, 6, 9 + d * 8, 3, '#140c10', 3); seg(g, 9 + d * 6, 6, 9 + d * 8, 3, '#b08ad0', 1); }
+    px(g, 13, 12, '#7dff9a', 3, 1); px(g, 14, 11, '#7dff9a', 1, 3);
+  },
+  // Trueque: hueso que se vuelve carne (digerir) o carne que se calcifica.
+  trade(g, t, o) {
+    const flesh = (x, y) => part(g, x, y, 2.6, 2.6, '#e07a98', '#6a1a34', '#ffd0dc');
+    const k = (t * 1.5) % 1;
+    if (o.toBio) { drawBoneIcon(g, 1, 3, t); flesh(13, 13); } else { flesh(4, 5); drawBoneIcon(g, 6, 12, t); }
+    for (let i = 0; i < 3; i++) px(g, 7 + i * 1.5 + k * 1.5, 8 + i * 1.5 + k * 1.5, i === 2 ? '#e8dcc8' : '#8a6a5a');
+  },
+  // ADN latente: el órgano de la mutación, en el color de su línea, y una hélice.
+  dna(g, t, o) {
+    const m = MUTATIONS[o.id];
+    ORGANS[o.id]?.(g, LINES[m.line].color);
+    const ph = t * 3;
+    for (let y = 0; y < 18; y += 2) { px(g, 16 + Math.round(Math.sin(ph + y * 0.6)), y, '#7dff9a'); px(g, 16 - Math.round(Math.sin(ph + y * 0.6)), y, '#c07bff'); }
+  },
+  // Viaje: un remolino de carne con el Tercer Ojo en medio.
+  travel(g, t) {
+    for (let i = 0; i < 26; i++) { const a = i * 0.5 + t * 2, r = 1.5 + i * 0.27; px(g, 9 + Math.cos(a) * r, 9 + Math.sin(a) * r * 0.85, i % 3 ? '#8a4ad0' : '#d0a8ff'); }
+    blob(g, 9, 9, 2.6, 1.8, '#140c10'); blob(g, 9, 9, 1.8, 1.2, '#ffd25a'); px(g, 9, 9, '#140c10');
+  },
+  // Salir: un esfínter que se cierra y se abre despacio.
+  exit(g, t) {
+    const o = 2 + (Math.sin(t * 1.8) + 1) * 1.2;
+    blob(g, 9, 9, 7, 7, '#140c10');
+    blob(g, 9, 9, 6, 6, '#7a2436', '#4a1020');
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) seg(g, 9 + Math.cos(a) * 5, 9 + Math.sin(a) * 5, 9 + Math.cos(a + 0.5) * o, 9 + Math.sin(a + 0.5) * o, '#3a0c18');
+    blob(g, 9, 9, o * 0.6, o * 0.6, '#0a0406');
+  },
+};
+
 export class NodeMenu {
   constructor(game) {
     this.game = game;
@@ -60,7 +133,7 @@ export class NodeMenu {
     this.render();
     const loop = (ms) => {
       if (!this.open) return;
-      this.#drawWomb(ms / 1000);
+      this.#drawIcons(ms / 1000);
       this.raf = requestAnimationFrame(loop);
     };
     this.raf = requestAnimationFrame(loop);
@@ -79,30 +152,35 @@ export class NodeMenu {
     const node = nodeOf(key); // cada útero ofrece y cobra distinto (data/nodes.js)
     const options = [
       {
+        icon: ['heal', { doses: res.doses, total: NODE_DOSES, fill: res.next ? 1 - res.next / NODE_REGEN : 0 }],
         label: 'Sanar tejido',
         desc: `<span class="c-int">+${NODE_HEAL} integridad</span> · ${price(node.heal)}${why(!res.doses && 'útero vacío', st.integrity >= st.maxIntegrity && 'integridad al máximo', !st.canPay(node.heal) && 'no te alcanza')}${res.next ? ` <span class="dim">(+1 en ${res.next}s)</span>` : ''}`,
         enabled: res.doses > 0 && st.canPay(node.heal) && st.integrity < st.maxIntegrity,
         run: () => { if (st.healAtNode(key, g.time, node.heal)) g.audio.play('womb'); },
       },
       node.light && {
+        icon: ['light'],
         label: 'Recargar el ojo',
         desc: `<span class="c-lux">+35 luz</span> · ${price(node.light)}${why(st.light >= 100 && 'luz al máximo', !st.canPay(node.light) && 'no te alcanza')}`,
         enabled: st.canPay(node.light) && st.light < 100,
         run: () => { if (st.buyLight(node.light)) g.audio.play('reveal'); },
       },
       node.suppressor && {
+        icon: ['suppressor'],
         label: 'Supresor de rechazo',
         desc: `<span class="c-rej">-35 rechazo</span> · ${price(node.suppressor)}${why(st.rejection <= 0 && 'sin rechazo', !st.canPay(node.suppressor) && 'no te alcanza')}`,
         enabled: st.canPay(node.suppressor) && st.rejection > 0,
         run: () => { if (st.craftSuppressor(node.suppressor)) g.audio.play('womb'); },
       },
       {
+        icon: ['extender'],
         label: 'Extensor de tolerancia',
         desc: `<span class="c-rej">+${CAPACITY_PER_EXTENDER} carga genética</span> (${st.load}/${st.capacity}) · ${price(st.extenderPrice)}${why(!st.canPay(st.extenderPrice) && 'no te alcanza')}`,
         enabled: st.canPay(st.extenderPrice),
         run: () => { if (st.buyExtender()) { g.audio.play('mutate'); g.say('El útero te injerta un extensor: tu cuerpo tolera más carga genética.', 3); } },
       },
       node.trade && {
+        icon: ['trade', { toBio: !!node.trade.get.bio }],
         label: node.trade.get.bio ? 'Digerir hueso' : 'Calcificar carne',
         desc: `${price(node.trade.give)} → ${price(node.trade.get, '+')}${why(node.trade.get.bio && st.biomass >= st.biomassMax && 'biomasa al máximo', !st.canPay(node.trade.give) && 'no te alcanza')}`,
         enabled: st.canPay(node.trade.give) && !(node.trade.get.bio && st.biomass >= st.biomassMax),
@@ -114,6 +192,7 @@ export class NodeMenu {
         const cost = st.installCost(id);
         const tag = linesOf(m).map((l) => LINES[l].name).join(' + ');
         return {
+          icon: ['dna', { id }],
           label: `Asimilar ADN latente · ${tag} ${ROMAN[m.level]}`,
           desc: ready
             ? `<span class="c-int">-${cost.integrity} integridad máx</span> · <span class="c-rej">+${cost.rejection} rechazo</span>${cost.overload ? ` · <span class="c-rej">supera tu tolerancia (${st.load + (m.load ?? 1)}/${st.capacity})</span>` : ''}`
@@ -125,6 +204,7 @@ export class NodeMenu {
       }),
       // Tercer Ojo: el organismo te escupe en otro útero que ya conozcas.
       ...(st.has('eye3') ? travelTargets(st, key).map(([room, spawn]) => ({
+        icon: ['travel'],
         label: `Viajar: ${nodeOf(room).name}`,
         desc: `<span class="c-lux">-${TRAVEL.light} luz</span> · ${price({ bio: TRAVEL.bio })}${why(st.light < TRAVEL.light && 'sin luz', !st.canPay({ bio: TRAVEL.bio }) && 'no te alcanza')}`,
         enabled: st.light >= TRAVEL.light && st.canPay({ bio: TRAVEL.bio }),
@@ -138,26 +218,26 @@ export class NodeMenu {
           g.say(`El útero te escupe en ${nodeOf(room).name}.`, 3);
         },
       })) : []),
-      { label: 'Salir', desc: '', enabled: true, run: () => this.close() },
+      { icon: ['exit'], label: 'Salir', desc: '', enabled: true, run: () => this.close() },
     ].filter(Boolean);
 
     this.el.innerHTML = `
       <svg class="nm-veins" viewBox="0 0 250 120" preserveAspectRatio="none">
         ${VEINS.map((d) => `<path class="vein" d="${d}"/><path class="pulse" d="${d}"/>`).join('')}
       </svg>
-      <div class="nm-womb"><canvas width="${W}" height="${H}"></canvas></div>
       <div class="nm-body">
         <h2>NODO SEGURO <span class="nm-name">${node.name}</span></h2>
         <div class="nm-res"><span class="c-int">INT ${Math.ceil(st.integrity)}/${st.maxIntegrity}</span> <span class="c-bio">BIO ${Math.floor(st.biomass)}</span> <span class="c-lux">LUZ ${Math.floor(st.light)}</span> <span class="c-scrap">HUESO ${st.scrap}</span></div>
         <div class="nm-list"></div>
       </div>`;
-    this.canvas = this.el.querySelector('.nm-womb canvas').getContext('2d');
     const list = this.el.querySelector('.nm-list');
+    this.icons = [];
     options.forEach((o, i) => {
       const b = document.createElement('button');
       b.disabled = !o.enabled;
       if (o.mutation) b.classList.add('mut');
-      b.innerHTML = `<i class="nucleus"></i>${i + 1}. ${o.label}${o.desc ? `<span class="desc">${o.desc}</span>` : ''}`;
+      b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas>${i + 1}. ${o.label}${o.desc ? `<span class="desc">${o.desc}</span>` : ''}`;
+      if (o.icon) this.icons.push({ g: b.querySelector('canvas').getContext('2d'), kind: o.icon[0], opts: o.icon[1] ?? {} });
       b.addEventListener('click', () => {
         o.run();
         if (this.open) this.render();
@@ -165,69 +245,13 @@ export class NodeMenu {
       list.appendChild(b);
     });
     this.nav.restore();
-    this.#drawWomb(performance.now() / 1000);
+    this.#drawIcons(performance.now() / 1000);
   }
 
-  // El útero del nodo, en pixel art: una bolsa de carne que late, colgada de un cordón,
-  // con líquido amniótico verde y un bulbo por cura dentro.
-  #drawWomb(t) {
-    const g = this.canvas, game = this.game;
-    if (!g) return;
-    const res = game.state.nodeReserve(game.room.id, game.time);
-    const beatT = (t * 1.1) % 1;
-    const beat = beatT < 0.12 ? 1 : 0;
-    g.clearRect(0, 0, W, H);
-    const cx = W / 2, cy = 42, rx = 22 + beat, ry = 26 + beat;
-    // Cordón y venas que la sujetan desde arriba.
-    for (let y = 0; y < cy - ry + 3; y++) {
-      const x = cx + Math.round(Math.sin(y * 0.5 + t * 2) * 1.2);
-      px(g, x - 2, y, K, 5, 1);
-      px(g, x - 1, y, y % 3 ? '#7a2a3a' : '#a03a4a', 3, 1);
-    }
-    for (const s of [-1, 1]) for (let i = 0; i < 12; i++) px(g, cx + s * (4 + i * 1.3), cy - ry + 4 - i * 0.9 + Math.sin(i) * 0.6, '#4a1424');
-    // Pared del útero; dentro, líquido amniótico con su superficie ondulando.
-    for (let y = -ry - 1; y <= ry + 1; y++) for (let x = -rx - 1; x <= rx + 1; x++) {
-      const wob = Math.sin(Math.atan2(y, x) * 5 + t * 1.5) * 0.04;
-      const d = (x * x) / (rx * rx) + (y * y) / (ry * ry) + wob;
-      if (d > 1.1) continue;
-      let c;
-      if (d > 0.98) c = K;
-      else if (d > 0.72) c = (x * 3 + y * 7) % 9 ? '#7a2436' : '#902c40';
-      else c = y > -ry * 0.55 + Math.sin(x * 0.4 + t * 2) * 1.5 ? ((x + y) % 4 ? '#163a24' : '#1a4429') : '#0e1c14';
-      px(g, cx + x, cy + y, c);
-    }
-    // Venas de la pared que se encienden con el latido.
-    for (let k = 0; k < 6; k++) {
-      const a = (k / 6) * Math.PI * 2 + 0.4;
-      for (let i = 0; i < 4; i++) {
-        const f = 0.95 - i * 0.07;
-        px(g, cx + Math.cos(a + i * 0.08) * rx * f, cy + Math.sin(a + i * 0.08) * ry * f, beat ? '#e0506a' : '#b03850');
-      }
-    }
-    // Bulbos de cura: los llenos brillan y laten, los gastados se arrugan y el
-    // siguiente se va llenando mientras se regenera.
-    const fill = res.next ? 1 - res.next / NODE_REGEN : 0;
-    for (let i = 0; i < NODE_DOSES; i++) {
-      const cols = Math.min(2, NODE_DOSES), rows = Math.ceil(NODE_DOSES / cols);
-      const bx = cx + ((i % cols) - (cols - 1) / 2) * 14, by = cy + 4 + (Math.floor(i / cols) - (rows - 1) / 2) * 12 + Math.sin(t * 1.3 + i * 2) * 1.2;
-      const full = i < res.doses, growing = !full && i === res.doses && res.next;
-      const r = full ? 5 + beat * 0.6 : growing ? 2.5 + fill * 2.5 : 2.5;
-      for (let y = -6; y <= 6; y++) for (let x = -6; x <= 6; x++) {
-        const d = Math.hypot(x / 0.85, y);
-        if (d > r + 0.4) continue;
-        let c;
-        if (d > r - 0.7) c = K;
-        else if (full) c = y < -r * 0.3 ? '#ff7a8a' : '#c0283a';
-        else if (growing && y > r - 1 - fill * r * 2) c = '#a02838';
-        else c = (x + y) % 2 ? '#3a1820' : '#2a1218';
-        px(g, bx + x, by + y, c);
-      }
-      if (full) px(g, bx - 2, by - 2, '#ffd0d8');
-    }
-    // Burbujas que suben por el líquido.
-    for (let i = 0; i < 4; i++) {
-      const y = cy + ry - 4 - ((t * 8 + i * 9) % (ry * 1.2));
-      px(g, cx - 12 + i * 8 + Math.sin(t * 2 + i) * 1.5, y, '#5ad88a');
+  #drawIcons(t) {
+    for (const ic of this.icons ?? []) {
+      ic.g.clearRect(0, 0, S, S);
+      ICON[ic.kind]?.(ic.g, t, ic.opts);
     }
   }
 }

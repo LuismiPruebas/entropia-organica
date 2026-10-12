@@ -38,7 +38,7 @@ const SHORT = { cerebro: 'CEREBRO', ojo: 'OJO', dermis: 'DERMIS', extremidades: 
 const COLUMNS = LINE_ORDER.map((l) => [SHORT[l], COL_X[l]]);
 
 // Iconos de órgano, 18x18 en píxeles.
-const ICONS = {
+export const ICONS = {
   alveolos(g, c) { for (const [x, y, r] of [[6, 7, 3.2], [11, 6, 3], [8, 11, 3.4], [12, 11, 2.6]]) part(g, x, y, r, r, c, '#1a3a24', '#d8ffe0'); seg(g, 9, 1, 9, 5, '#a87a7a', 2); },
   pistones(g, c) { seg(g, 5, 2, 9, 9, '#c98a5e', 3); seg(g, 9, 9, 6, 16, '#9a9aa2', 2); seg(g, 11, 8, 8, 15, c, 1); part(g, 9, 9, 1.5, 1.5, '#55555e'); px(g, 4, 16, '#140c10', 6, 1); },
   tendon(g, c) { let x = 4, y = 3; for (let i = 0; i < 9; i++) { const nx = 9 + Math.sin(i * 0.9) * 5, ny = 3 + i * 1.6; seg(g, x, y, nx, ny, i % 2 ? c : '#9a3a4a', i < 4 ? 3 : 2); x = nx; y = ny; } px(g, x, y + 1, '#e8dcc8', 2, 2); },

@@ -557,8 +557,10 @@ en biomasa. Algunos digieren un recurso en el otro.
 | B · Útero alveolar | 15 bio | 12 bio | 20 bio | — |
 | B2 · Útero bronquial | 12 bio | 3 hueso | — | 15 bio → +6 hueso |
 
-El menú es una membrana viva: a la izquierda late el útero con un bulbo por cura (lleno,
-gastado o regenerándose). Si una opción no se puede usar, dice por qué (integridad al
+El menú es una membrana viva y cada opción lleva su icono animado en pixel art: tejido
+que late con un bulbo por cura del útero debajo (lleno, gastado o regenerándose), el ojo de
+luz, el vial del supresor, la vértebra del extensor, hueso que se vuelve carne, el órgano de
+cada ADN latente (en el color de su línea), el remolino del viaje y el esfínter de salida. Si una opción no se puede usar, dice por qué (integridad al
 máximo, útero vacío, no te alcanza...). Curas y regeneración en `NODE_*` de `state/State.js`.
 
 **Garras de Hueso:** el salto de pared empuja poco (`WALL_KICK`) y, si sigues empujando
