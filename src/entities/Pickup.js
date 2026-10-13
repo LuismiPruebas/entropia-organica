@@ -11,12 +11,12 @@ export const SCRAP_PER_PIECE = 12;
 // Qué hace cada recurso al recogerlo. Añadir un tipo = añadir una entrada.
 export const PICKUPS = {
   biomass: { sprite: 'biomass', apply: (st, p) => st.addBiomass(p.amount ?? 8), sound: 'pickup' },
-  // Con el ojo por debajo de la mitad (State.CELL_USE_BELOW) la célula se consume; si no, a la reserva.
+  // Siempre recarga el ojo al 100 %; con el ojo a State.CELL_STORE_FROM o más, además se guarda.
   battery: {
     sprite: 'battery',
     sound: 'pickup',
     apply: (st, p) => { p.stored = st.gainCell(); },
-    text: (p, st) => p.stored ? `Célula lumínica guardada (${st.cells} en reserva): recargará tu ojo cuando se apague` : 'Célula lumínica: tu ojo la devora y vuelve a brillar',
+    text: (p, st) => p.stored ? `Célula lumínica: tu ojo vuelve a brillar y guardas una (${st.cells} en reserva)` : 'Célula lumínica: tu ojo la devora y vuelve a brillar',
   },
   // Consumibles raros: se guardan y se usan cuando quieras.
   shield: {
