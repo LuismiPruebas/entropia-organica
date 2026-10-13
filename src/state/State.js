@@ -1,4 +1,6 @@
 import { MUTATIONS, LINES, FRAGMENTS, SYNERGIES, CLASHES, linesOf } from '../data/mutations.js';
+import { LEVELS } from '../data/levels.js';
+import { ENEMIES } from '../data/enemies.js';
 
 // Fragmentos que pide cada nivel de una línea: el primero se encuentra pronto,
 // mejorarlo cuesta un poco más. Con la línea completa, el sobrante va de 3 en 3.
@@ -53,14 +55,24 @@ const REJECTION_CRITICAL = 100;
 // Rechazo gradual: por debajo de failFrom (40 %, más con los timos) no pasa nada; desde ahí las
 // mutaciones fallan cada vez más (hasta REJECTION_FAIL_MAX al 100 %); al 100 % además
 // el cuerpo se daña. Tramos de aviso (mensajes y señales en el cuerpo): 40, 70, 100.
-export const REJECTION_FAIL_FROM = 40; // sin timos (ver THYMUS_STEPS)
+export const REJECTION_FAIL_FROM = 40; // sin timos (ver countThymus)
 const REJECTION_FAIL_MAX = 0.35;
-// Timos Necróticos: tu sistema inmune olvida pelear. Hay ocho en el organismo; cada
-// uno es un paso permanente de tolerancia: el rechazo sube un 10 % más despacio y los
-// fallos empiezan 4 puntos más tarde por timo. El octavo lo anula por completo (ni
-// sube, ni falla, ni daña).
-export const THYMUS_MAX = 8;
-const THYMUS_STEPS = Array.from({ length: THYMUS_MAX }, (_, n) => ({ rate: 1 - 0.1 * n, failFrom: REJECTION_FAIL_FROM + 4 * n }));
+// Timos Necróticos: tu sistema inmune olvida pelear. Cada uno es un paso permanente de
+// tolerancia y los pasos se reparten según cuántos haya en el mundo (mapa, sacos y lo
+// que sueltan los jefes): pongas los que pongas, el rechazo se frena poco a poco hasta
+// un 70 % y los fallos se retrasan hasta 28 puntos con el penúltimo; el último lo anula
+// por completo (ni sube, ni falla, ni daña).
+const THYMUS_RATE_CUT = 0.7;   // cuánto se frena el rechazo con el penúltimo timo
+const THYMUS_FAIL_DELAY = 28;  // cuántos puntos se retrasan los fallos con el penúltimo
+export function countThymus() {
+  let n = 0;
+  for (const r of Object.values(LEVELS)) {
+    for (const row of r.grid) for (const c of row) if (c === 'g') n++;
+    for (const s of r.sacs ?? []) if (s.item === 'g') n++;
+  }
+  for (const e of Object.values(ENEMIES)) n += (e.drop?.items ?? []).filter((k) => k === 'thymus').length;
+  return Math.max(1, n);
+}
 export const REJECTION_TIERS = [40, 70, 100];
 const HUNGER_FLOOR = 10;          // el hambre de las mutaciones no baja tu biomasa de aquí
 const REJECTION_ESCALATION = 0.15; // cada mutación instalada encarece un 15% el rechazo de la siguiente
@@ -81,7 +93,8 @@ export class GameState {
     this.infection = 0;          // segundos restantes del estado alterado 'infección'
     this.light = 100;
     this.rejection = 0;
-    this.thymus = 0;             // Timos Necróticos asimilados (THYMUS_MAX anula el rechazo)
+    this.thymus = 0;             // Timos Necróticos asimilados
+    this.thymusMax = countThymus(); // cuántos hay en el mundo: el último anula el rechazo
     this.extenders = 0;          // extensores de tolerancia (amplían la carga genética)
     this.extendersBought = 0;    // los comprados en el útero (fijan el precio del siguiente)
     this.weapon = null;          // arma del cañón elegida (WEAPONS); null = culata
@@ -158,9 +171,11 @@ export class GameState {
     return Math.max(0.01, r) * this.tolerance;
   }
   // Pasos de tolerancia de los timos: cuánto se frena el rechazo y desde dónde falla.
-  get tolerance() { return this.immuneRejection ? 0 : THYMUS_STEPS[this.thymus].rate; }
-  get failFrom() { return THYMUS_STEPS[Math.min(this.thymus, THYMUS_STEPS.length - 1)].failFrom; }
-  get immuneRejection() { return this.thymus >= THYMUS_MAX; }
+  // Fracción del camino recorrido hasta el penúltimo timo (0 sin timos, 1 con el penúltimo).
+  get thymusK() { return Math.min(1, this.thymus / Math.max(1, this.thymusMax - 1)); }
+  get tolerance() { return this.immuneRejection ? 0 : 1 - THYMUS_RATE_CUT * this.thymusK; }
+  get failFrom() { return Math.round(REJECTION_FAIL_FROM + THYMUS_FAIL_DELAY * this.thymusK); }
+  get immuneRejection() { return this.thymus >= this.thymusMax; }
   // ¿Se puede terminar el juego? Todas las líneas a nivel I (lo exige el Corazón).
   get complete() { return Object.keys(LINES).every((l) => this.lineLevel(l) > 0); }
   get critical() { return !this.immuneRejection && this.rejection >= REJECTION_CRITICAL; }
@@ -228,7 +243,7 @@ export class GameState {
   // Un Timo Necrótico: un paso más de tolerancia (el tercero anula el rechazo).
   // Devuelve cuántos llevas. Con los tres, los que encuentres de más no hacen nada.
   addThymus() {
-    if (this.thymus >= THYMUS_MAX) return this.thymus;
+    if (this.thymus >= this.thymusMax) return this.thymus;
     this.thymus++;
     if (this.immuneRejection) this.rejection = 0;
     return this.thymus;

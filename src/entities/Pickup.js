@@ -1,6 +1,6 @@
 import { getSprite, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { ITEMS, THYMUS_MAX } from '../state/State.js';
+import { ITEMS } from '../state/State.js';
 
 // 'ojo II', 'extremidades + torso III': de qué órgano es una secuencia, sin desvelarla.
 export const dnaTag = (id) => { const m = MUTATIONS[id]; return `${linesOf(m).map((l) => LINES[l].name.toLowerCase()).join(' + ')} ${ROMAN[m.level]}`; };
@@ -46,11 +46,11 @@ export const PICKUPS = {
     sprite: 'thymus',
     sound: 'dna',
     apply: (st, p) => { p.had = st.thymus; st.addThymus(); },
-    text: (p, st) => (p.had >= THYMUS_MAX
+    text: (p, st) => (p.had >= st.thymusMax
       ? 'Timo Necrótico: tu cuerpo ya no rechaza nada; este se deshace sin efecto.'
-      : st.thymus >= THYMUS_MAX
-        ? `Timo Necrótico (${THYMUS_MAX}/${THYMUS_MAX}): tu sistema inmune calla para siempre. El rechazo ya no existe.`
-        : `Timo Necrótico (${st.thymus}/${THYMUS_MAX}): tu sistema inmune olvida pelear un poco más. El rechazo crece más despacio y tarda más en hacerte fallar.`),
+      : st.thymus >= st.thymusMax
+        ? `Timo Necrótico (${st.thymusMax}/${st.thymusMax}): tu sistema inmune calla para siempre. El rechazo ya no existe.`
+        : `Timo Necrótico (${st.thymus}/${st.thymusMax}): tu sistema inmune olvida pelear un poco más. El rechazo crece más despacio y tarda más en hacerte fallar.`),
   },
   tissue: {
     sprite: 'tissue',
