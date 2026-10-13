@@ -183,7 +183,9 @@ export class Touch {
     root.append(this.aimMark);
     const rot = document.createElement('div');
     rot.id = 'rotate';
-    rot.innerHTML = '<p>Gira el móvil</p><p class="dim">El cuerpo necesita espacio: juega en horizontal.</p>';
+    rot.innerHTML = '<p>Gira el móvil</p><p class="dim">El cuerpo necesita espacio: juega en horizontal.<br>¿No gira? Quita el bloqueo de rotación en el Centro de control.</p><p class="dim">Toca aquí para jugar igualmente en vertical.</p>';
+    // Con la rotación bloqueada el aviso no se iría nunca: un toque lo descarta.
+    rot.addEventListener('pointerup', () => { this.portraitOk = true; document.body.classList.remove('portrait'); });
     document.body.append(root, rot);
 
     // Cruceta.
@@ -208,7 +210,15 @@ export class Touch {
     // dedo. Si un botón abre un menú (USAR abre el útero), al soltar ya está el menú
     // debajo y el clic compraba una opción. Los controles cancelan ese clic.
     root.addEventListener('touchend', (e) => { if (e.target.closest?.('svg')) e.preventDefault(); }, { passive: false });
-    const loop = () => { this.#tick(); requestAnimationFrame(loop); };
+    // El aviso de girar el móvil va aparte y antes: si algo del bucle fallara, no se
+    // quedaría pegado. Y el bucle nunca muere por un error suelto.
+    const orient = () => document.body.classList.toggle('portrait', !this.portraitOk && innerHeight > innerWidth);
+    for (const ev of ['resize', 'orientationchange']) addEventListener(ev, orient);
+    const loop = () => {
+      orient();
+      try { this.#tick(); } catch (err) { console.error(err); }
+      requestAnimationFrame(loop);
+    };
     requestAnimationFrame(loop);
   }
 
@@ -390,6 +400,5 @@ export class Touch {
       for (const d of this.menuDirs) this.#tap(MENU_KEYS[d]);
       this.repeatAt = performance.now() + REPEAT;
     }
-    document.body.classList.toggle('portrait', innerHeight > innerWidth);
   }
 }
