@@ -183,9 +183,7 @@ export class Touch {
     root.append(this.aimMark);
     const rot = document.createElement('div');
     rot.id = 'rotate';
-    rot.innerHTML = '<p>Gira el móvil</p><p class="dim">El cuerpo necesita espacio: juega en horizontal.<br>¿No gira? Quita el bloqueo de rotación en el Centro de control.</p><p class="dim">Toca aquí para jugar igualmente en vertical.</p>';
-    // Con la rotación bloqueada el aviso no se iría nunca: un toque lo descarta.
-    rot.addEventListener('pointerup', () => { this.portraitOk = true; document.body.classList.remove('portrait'); });
+    rot.innerHTML = '<p>Gira el móvil: se juega mejor en horizontal</p><p class="dim">¿No gira? Quita el bloqueo de rotación en el Centro de control.</p>';
     document.body.append(root, rot);
 
     // Cruceta.
@@ -212,7 +210,18 @@ export class Touch {
     root.addEventListener('touchend', (e) => { if (e.target.closest?.('svg')) e.preventDefault(); }, { passive: false });
     // El aviso de girar el móvil va aparte y antes: si algo del bucle fallara, no se
     // quedaría pegado. Y el bucle nunca muere por un error suelto.
-    const orient = () => document.body.classList.toggle('portrait', !this.portraitOk && innerHeight > innerWidth);
+    // Aviso temporal (no bloquea): al entrar en vertical sale unos segundos y se va.
+    // El navegador no sabe si el giro está bloqueado, así que el aviso lo menciona.
+    const orient = () => {
+      const portrait = innerHeight > innerWidth;
+      document.body.classList.toggle('portrait', portrait);
+      if (portrait && !this.wasPortrait) {
+        rot.classList.add('show');
+        clearTimeout(this.rotTimer);
+        this.rotTimer = setTimeout(() => rot.classList.remove('show'), 6000);
+      } else if (!portrait) rot.classList.remove('show');
+      this.wasPortrait = portrait;
+    };
     for (const ev of ['resize', 'orientationchange']) addEventListener(ev, orient);
     const loop = () => {
       orient();

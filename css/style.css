@@ -752,9 +752,11 @@ body.touch { touch-action: none; overscroll-behavior: none; -webkit-user-select:
 #overlay .touch-help { display: none; }
 body.touch #overlay .touch-help { display: block; }
 body.touch #overlay .controls:not(.touch-help) { display: none; }
-#rotate { cursor: pointer; display: none; position: fixed; inset: 0; z-index: 100; background: #0a0608; color: #e8dcc0; font: 14px 'Press Start 2P', monospace; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 20px; }
-#rotate .dim { font-size: 9px; color: #8a6a6a; line-height: 1.6; }
-body.touch.portrait #rotate { display: flex; }
+/* Aviso de girar el móvil: temporal, arriba, sin bloquear el juego (Touch.js). */
+#rotate { position: fixed; left: 50%; top: max(12px, env(safe-area-inset-top)); transform: translateX(-50%); width: min(92vw, 520px); box-sizing: border-box; z-index: 100; padding: 10px 14px; border-radius: 6px; background: rgba(10, 6, 8, 0.88); box-shadow: 0 0 0 1px #4a1020, 0 4px 18px rgba(0, 0, 0, 0.6); color: #e8dcc0; font: 11px 'Press Start 2P', monospace; text-align: center; line-height: 1.5; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
+#rotate p { margin: 0 0 6px; }
+#rotate .dim { margin: 0; font-size: 8px; color: #a08080; }
+body.touch #rotate.show { opacity: 1; }
 #touch.menu svg { opacity: 0.2; }
 #touch.menu svg.on { opacity: 0.5; }
 body.touch #fullscreen { top: 6px; bottom: auto; right: 6px; opacity: 0.5; }
