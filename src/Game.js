@@ -603,7 +603,7 @@ export class Game {
   // Lo que la luz desvela: enemigos camuflados, objetos ocultos y membranas fotosensibles.
   #reveal(dt) {
     const st = this.state, lp = this.player.lampPos;
-    const ambR = st.light > 0 ? 42 : 20;
+    const ambR = st.light <= 0 ? 20 : st.flashlightOn ? HALO_R : 42; // el halo no encoge con el ojo
     const eye1 = st.has('eye1'), eye2 = st.has('eye2');
     for (const e of this.room.enemies) {
       const beam = this.#inBeam(e.cx, e.cy);
@@ -659,9 +659,10 @@ export class Game {
       }
     }
 
-    // Nódulos óseos: solo existen bajo el haz.
+    // Nódulos óseos: solo existen bajo el haz del ojo despierto (sin el Ojo I, el halo no
+    // los revela: era más eficiente que el haz porque alumbra en todas direcciones).
     for (const n of this.room.nodules) {
-      const lit = this.#inBeam(n.cx, n.cy - 3).lit;
+      const lit = eye1 && this.#inBeam(n.cx, n.cy - 3).lit;
       n.reveal = lit ? Math.min(1, n.reveal + dt * 3) : Math.max(0, n.reveal - dt * 0.7);
       if (lit && n.reveal > 0.6 && !st.seenNodule) {
         st.seenNodule = true;
@@ -872,7 +873,7 @@ export class Game {
       // es algo mayor; sin energía, apenas un resplandor.
       flashOn: st.flashlightOn && st.light > 0 && st.has('eye1'),
       lightLevel: st.light > 0 ? (0.6 + 0.4 * (st.light / 100)) * this.flicker : 0,
-      ambR: st.light <= 0 ? 20 : !st.has('eye1') && st.flashlightOn ? HALO_R : 42,
+      ambR: st.light <= 0 ? 20 : st.flashlightOn ? HALO_R : 42, // mismo halo con o sin Ojo I
       // Sin energía en el ojo, la penumbra se cierra: la carne apenas se intuye.
       range: LIGHT_RANGE * st.mod('lightRange'),
       ambient: st.light > 0 ? this.room.ambient : this.room.ambient.map((v) => v * 0.5),
