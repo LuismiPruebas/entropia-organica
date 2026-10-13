@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, LINE_ORDER, FRAGMENTS, SYNERGIES, CLASHES, ROMAN, linesOf } from '../data/mutations.js';
-import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW } from '../state/State.js';
+import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW, THYMUS_MAX } from '../state/State.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { PlayerBody, BODY_W, BODY_H } from '../entities/PlayerBody.js';
 import { caps } from './Hud.js';
@@ -407,8 +407,8 @@ export class Genome {
         `Células lumínicas, halladas o del útero: recargan el ojo y, con él al ${CELL_STORE_FROM} % o más, además se guardan.`],
       rej: [`${n(st.rejection)} %`,
         st.immuneRejection ? 'Tu sistema inmune calla: ya no rechaza nada.' : 'Tu cuerpo rechaza los injertos.',
-        st.immuneRejection ? 'Tres timos asimilados: el rechazo no sube, no falla, no daña.' : `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde ${st.failFrom} % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
-        `Supresor del útero · extensores · Timos Necróticos ${st.thymus}/3.`],
+        st.immuneRejection ? 'Ocho timos asimilados: el rechazo no sube, no falla, no daña.' : `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde ${st.failFrom} % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
+        `Supresor del útero · extensores · Timos Necróticos ${st.thymus}/${THYMUS_MAX}.`],
     }[id];
     this.vinfo.innerHTML = `
       <b class="i-name" style="color:${color}">${name} <span class="i-amount">${amount}</span></b>

@@ -55,16 +55,12 @@ const REJECTION_CRITICAL = 100;
 // el cuerpo se daña. Tramos de aviso (mensajes y señales en el cuerpo): 40, 70, 100.
 export const REJECTION_FAIL_FROM = 40; // sin timos (ver THYMUS_STEPS)
 const REJECTION_FAIL_MAX = 0.35;
-// Timos Necróticos: tu sistema inmune olvida pelear. Hay que encontrar tres (son
-// raros: jefes, salas custodiadas, algún útero muy caro). Cada uno es un paso
-// permanente de tolerancia: el rechazo sube más despacio y los fallos empiezan más
-// tarde. El tercero lo anula por completo (ni sube, ni falla, ni daña).
-export const THYMUS_MAX = 3;
-const THYMUS_STEPS = [
-  { rate: 1, failFrom: 40 },
-  { rate: 0.75, failFrom: 50 },
-  { rate: 0.5, failFrom: 60 },
-];
+// Timos Necróticos: tu sistema inmune olvida pelear. Hay ocho en el organismo; cada
+// uno es un paso permanente de tolerancia: el rechazo sube un 10 % más despacio y los
+// fallos empiezan 4 puntos más tarde por timo. El octavo lo anula por completo (ni
+// sube, ni falla, ni daña).
+export const THYMUS_MAX = 8;
+const THYMUS_STEPS = Array.from({ length: THYMUS_MAX }, (_, n) => ({ rate: 1 - 0.1 * n, failFrom: REJECTION_FAIL_FROM + 4 * n }));
 export const REJECTION_TIERS = [40, 70, 100];
 const HUNGER_FLOOR = 10;          // el hambre de las mutaciones no baja tu biomasa de aquí
 const REJECTION_ESCALATION = 0.15; // cada mutación instalada encarece un 15% el rechazo de la siguiente

@@ -48,12 +48,9 @@ export const PICKUPS = {
     apply: (st, p) => { p.had = st.thymus; st.addThymus(); },
     text: (p, st) => (p.had >= THYMUS_MAX
       ? 'Timo Necrótico: tu cuerpo ya no rechaza nada; este se deshace sin efecto.'
-      : [
-        '',
-        'Timo Necrótico (1/3): tu sistema inmune olvida pelear. El rechazo crece más despacio y tarda más en hacerte fallar.',
-        'Timo Necrótico (2/3): tu cuerpo acepta mejor la carne ajena. El rechazo se arrastra.',
-        'Timo Necrótico (3/3): tu sistema inmune calla para siempre. El rechazo ya no existe.',
-      ][st.thymus]),
+      : st.thymus >= THYMUS_MAX
+        ? `Timo Necrótico (${THYMUS_MAX}/${THYMUS_MAX}): tu sistema inmune calla para siempre. El rechazo ya no existe.`
+        : `Timo Necrótico (${st.thymus}/${THYMUS_MAX}): tu sistema inmune olvida pelear un poco más. El rechazo crece más despacio y tarda más en hacerte fallar.`),
   },
   tissue: {
     sprite: 'tissue',
