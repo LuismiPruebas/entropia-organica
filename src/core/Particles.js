@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.min.js'; // ruta directa: Safari de iOS < 16.4 no entiende import maps
 
 // Partículas de 1px en un único THREE.Points (sangre, gas, chispas).
 export class Particles {

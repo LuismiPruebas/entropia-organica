@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.min.js'; // ruta directa: Safari de iOS < 16.4 no entiende import maps
 import { getSprite, spriteMesh, placeMesh, setMap, canvasTexture } from '../core/Sprites.js';
 import { CREATURES, tintCanvas } from './Creatures.js';
 import { stingTip } from './Moth.js';
@@ -1017,7 +1017,7 @@ export const BEHAVIORS = {
           for (let k = 0; k < n; k++) {
             if (g.room.enemies.filter((m) => m.minion && m.alive).length >= 5) break;
             g.spawnMinion('larva', h.x, h.y);
-            const m = g.room.enemies.at(-1);
+            const m = g.room.enemies[g.room.enemies.length - 1];
             m.vx = toward * (80 + k * 40); m.vy = -150 - k * 30; m.state = 'pounce';
           }
           g.audio.play(d.sounds.vomit, e);

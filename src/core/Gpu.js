@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.min.js'; // ruta directa: Safari de iOS < 16.4 no entiende import maps
 
 // Recogida de recursos de la GPU. Las mallas que se quitan de la escena (enemigos que
 // mueren, proyectiles, objetos recogidos, las piezas de una sala al salir de ella) se

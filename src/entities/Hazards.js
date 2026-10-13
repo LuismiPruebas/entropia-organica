@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.min.js'; // ruta directa: Safari de iOS < 16.4 no entiende import maps
 import { TILE } from '../core/Physics.js';
 import { canvasTexture } from '../core/Sprites.js';
 

@@ -603,6 +603,11 @@ export class AudioSys {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     this.ctx = new AC();
+    // Safari (iPhone) crea el audio en pausa y lo vuelve a pausar al cambiar de app:
+    // cualquier toque o tecla lo despierta.
+    const wake = () => { if (this.ctx.state !== 'running') this.ctx.resume?.(); };
+    wake();
+    for (const ev of ['touchend', 'pointerdown', 'keydown']) addEventListener(ev, wake, { passive: true });
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.55;
     this.master.connect(this.ctx.destination);

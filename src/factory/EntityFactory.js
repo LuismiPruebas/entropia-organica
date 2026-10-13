@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.min.js'; // ruta directa: Safari de iOS < 16.4 no entiende import maps
 import { LEVELS, START } from '../data/levels.js';
 import { BIOMES } from '../data/biomes.js';
 import { ENEMIES } from '../data/enemies.js';

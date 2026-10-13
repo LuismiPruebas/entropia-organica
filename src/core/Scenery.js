@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.min.js'; // ruta directa: Safari de iOS < 16.4 no entiende import maps
 import { canvasTexture } from './Sprites.js';
 
 // Planos de profundidad vivos por bioma:
