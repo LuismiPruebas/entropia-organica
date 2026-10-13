@@ -1,6 +1,6 @@
 import { getSprite, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { ITEMS } from '../state/State.js';
+import { ITEMS, THYMUS_MAX } from '../state/State.js';
 
 // 'ojo II', 'extremidades + torso III': de qué órgano es una secuencia, sin desvelarla.
 export const dnaTag = (id) => { const m = MUTATIONS[id]; return `${linesOf(m).map((l) => LINES[l].name.toLowerCase()).join(' + ')} ${ROMAN[m.level]}`; };
@@ -45,8 +45,15 @@ export const PICKUPS = {
   thymus: {
     sprite: 'thymus',
     sound: 'dna',
-    apply: (st) => { st.extenders++; },
-    text: 'Timo Necrótico: tu sistema inmune olvida pelear. Un extensor gratis: toleras más carga genética (+1).',
+    apply: (st, p) => { p.had = st.thymus; st.addThymus(); },
+    text: (p, st) => (p.had >= THYMUS_MAX
+      ? 'Timo Necrótico: tu cuerpo ya no rechaza nada; este se deshace sin efecto.'
+      : [
+        '',
+        'Timo Necrótico (1/3): tu sistema inmune olvida pelear. El rechazo crece más despacio y tarda más en hacerte fallar.',
+        'Timo Necrótico (2/3): tu cuerpo acepta mejor la carne ajena. El rechazo se arrastra.',
+        'Timo Necrótico (3/3): tu sistema inmune calla para siempre. El rechazo ya no existe.',
+      ][st.thymus]),
   },
   tissue: {
     sprite: 'tissue',

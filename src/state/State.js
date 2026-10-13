@@ -50,11 +50,21 @@ export const EXTENDER_PRICES = [30, 45, 65, 90, 120, 155, 195, 240, 290, 345, 40
 // Armas del cañón, en orden de su línea.
 export const WEAPONS = ['astillas', 'simbionte', 'escopeta'];
 const REJECTION_CRITICAL = 100;
-// Rechazo gradual: por debajo de REJECTION_FAIL_FROM no pasa nada; desde ahí las
+// Rechazo gradual: por debajo de failFrom (40 %, más con los timos) no pasa nada; desde ahí las
 // mutaciones fallan cada vez más (hasta REJECTION_FAIL_MAX al 100 %); al 100 % además
 // el cuerpo se daña. Tramos de aviso (mensajes y señales en el cuerpo): 40, 70, 100.
-export const REJECTION_FAIL_FROM = 40;
+export const REJECTION_FAIL_FROM = 40; // sin timos (ver THYMUS_STEPS)
 const REJECTION_FAIL_MAX = 0.35;
+// Timos Necróticos: tu sistema inmune olvida pelear. Hay que encontrar tres (son
+// raros: jefes, salas custodiadas, algún útero muy caro). Cada uno es un paso
+// permanente de tolerancia: el rechazo sube más despacio y los fallos empiezan más
+// tarde. El tercero lo anula por completo (ni sube, ni falla, ni daña).
+export const THYMUS_MAX = 3;
+const THYMUS_STEPS = [
+  { rate: 1, failFrom: 40 },
+  { rate: 0.75, failFrom: 50 },
+  { rate: 0.5, failFrom: 60 },
+];
 export const REJECTION_TIERS = [40, 70, 100];
 const HUNGER_FLOOR = 10;          // el hambre de las mutaciones no baja tu biomasa de aquí
 const REJECTION_ESCALATION = 0.15; // cada mutación instalada encarece un 15% el rechazo de la siguiente
@@ -75,7 +85,7 @@ export class GameState {
     this.infection = 0;          // segundos restantes del estado alterado 'infección'
     this.light = 100;
     this.rejection = 0;
-    this.tolerance = 1;          // multiplica el ritmo de rechazo
+    this.thymus = 0;             // Timos Necróticos asimilados (THYMUS_MAX anula el rechazo)
     this.extenders = 0;          // extensores de tolerancia (amplían la carga genética)
     this.extendersBought = 0;    // los comprados en el útero (fijan el precio del siguiente)
     this.weapon = null;          // arma del cañón elegida (WEAPONS); null = culata
@@ -151,9 +161,13 @@ export class GameState {
     const r = REJECTION_GROWTH * this.load + OVERLOAD_GROWTH * this.overload + DISCORD_GROWTH * this.discord - HARMONY_RELIEF * this.synergies.length;
     return Math.max(0.01, r) * this.tolerance;
   }
+  // Pasos de tolerancia de los timos: cuánto se frena el rechazo y desde dónde falla.
+  get tolerance() { return this.immuneRejection ? 0 : THYMUS_STEPS[this.thymus].rate; }
+  get failFrom() { return THYMUS_STEPS[Math.min(this.thymus, THYMUS_STEPS.length - 1)].failFrom; }
+  get immuneRejection() { return this.thymus >= THYMUS_MAX; }
   // ¿Se puede terminar el juego? Todas las líneas a nivel I (lo exige el Corazón).
   get complete() { return Object.keys(LINES).every((l) => this.lineLevel(l) > 0); }
-  get critical() { return this.rejection >= REJECTION_CRITICAL; }
+  get critical() { return !this.immuneRejection && this.rejection >= REJECTION_CRITICAL; }
 
   has(ability) {
     for (const id of this.mutations) {
@@ -178,12 +192,13 @@ export class GameState {
 
   // Probabilidad de que una mutación no responda: crece del 0 (al 40 %) al 35 % (al 100 %).
   get failChance() {
-    const k = (this.rejection - REJECTION_FAIL_FROM) / (REJECTION_CRITICAL - REJECTION_FAIL_FROM);
+    if (this.immuneRejection) return 0;
+    const k = (this.rejection - this.failFrom) / (REJECTION_CRITICAL - this.failFrom);
     return Math.max(0, Math.min(1, k)) * REJECTION_FAIL_MAX;
   }
 
   // Tramo de rechazo (0 sano, 1 inflamado, 2 rechazo, 3 crisis), para los avisos.
-  get rejectionTier() { return REJECTION_TIERS.filter((t) => this.rejection >= t).length; }
+  get rejectionTier() { return this.immuneRejection ? 0 : [this.failFrom, 70, 100].filter((t) => this.rejection >= t).length; }
 
   // Con el rechazo alto, las mutaciones fallan a veces (cada vez más).
   abilityWorks(ability) {
@@ -213,6 +228,15 @@ export class GameState {
   }
 
   heal(n) { this.integrity = Math.min(this.maxIntegrity, this.integrity + n); }
+
+  // Un Timo Necrótico: un paso más de tolerancia (el tercero anula el rechazo).
+  // Devuelve cuántos llevas. Con los tres, los que encuentres de más no hacen nada.
+  addThymus() {
+    if (this.thymus >= THYMUS_MAX) return this.thymus;
+    this.thymus++;
+    if (this.immuneRejection) this.rejection = 0;
+    return this.thymus;
+  }
 
   // Consumible: lo gasta y arranca su efecto. No se pisa con uno igual aún activo.
   useItem(kind) {
@@ -366,7 +390,7 @@ export class GameState {
     const m = MUTATIONS[id];
     const over = Math.max(0, this.load + (m.load ?? 1) - this.capacity);
     const scale = 1 + REJECTION_ESCALATION * this.mutations.size + 0.25 * over;
-    return { integrity: m.integrityCost, rejection: Math.round(m.rejection * scale), overload: over };
+    return { integrity: m.integrityCost, rejection: this.immuneRejection ? 0 : Math.round(m.rejection * scale), overload: over };
   }
 
   // Lo que le falta para poder asimilarse (mutaciones previas sin instalar).

@@ -48,7 +48,7 @@ const VEINS = [
 const CATS = {
   heal: { c: '#ff5a6a', info: 'El útero guarda pocas curas; se regeneran con el tiempo.' },
   cell: { c: '#ffd23f', info: `Al ${CELL_STORE_FROM} % o más, además se guarda; las guardadas se gastan solas bajo el ${CELL_AUTO_BELOW} %.` },
-  suppressor: { c: '#c07bff', info: 'Desde el 40 % de rechazo las mutaciones fallan; al 100 % te dañan.' },
+  suppressor: { c: '#c07bff', info: 'Con el rechazo alto tus mutaciones fallan; al 100 % te dañan. Solo alivia un rato.' },
   extender: { c: '#b48cff', info: 'Llevas más mutaciones sin que el rechazo se dispare. Cada uno cuesta más.' },
   trade: { c: '#c8b8a0', info: 'El útero digiere un recurso y te devuelve el otro.' },
   shield: { c: '#4ff0ff', info: 'Se guarda; úsala cuando quieras desde el Genoma.' },

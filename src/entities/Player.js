@@ -3,7 +3,7 @@ import { MUTATIONS } from '../data/mutations.js';
 import { spriteMesh, placeMesh, setMap, canvasTexture } from '../core/Sprites.js';
 import { PlayerBody, BODY_W, BODY_H, CROUCH_DROP } from './PlayerBody.js';
 import { TILE, overlap } from '../core/Physics.js';
-import { OXYGEN_COST, REJECTION_FAIL_FROM } from '../state/State.js';
+import { OXYGEN_COST } from '../state/State.js';
 
 export const GRAVITY = 900;
 const JUMP_V = 320;
@@ -500,7 +500,7 @@ export class Player {
   // Devuelve el desplazamiento horizontal del cuerpo en este fotograma.
   #rejectFx(dt) {
     const g = this.game, st = g.state;
-    const k = Math.max(0, Math.min(1, (st.rejection - REJECTION_FAIL_FROM) / (100 - REJECTION_FAIL_FROM)));
+    const k = st.immuneRejection ? 0 : Math.max(0, Math.min(1, (st.rejection - st.failFrom) / (100 - st.failFrom)));
     this.spasm = Math.max(0, (this.spasm ?? 0) - dt * 3);
     this.rejPhase = (this.rejPhase ?? 0) + dt * (2 + k * 6); // el latido se acelera
     const beat = Math.pow(Math.max(0, Math.sin(this.rejPhase * Math.PI)), 6);

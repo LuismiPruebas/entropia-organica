@@ -406,9 +406,9 @@ export class Genome {
         `Encendido gasta ${(LIGHT_DRAIN * st.mod('lightDrain')).toFixed(1).replace('.', ',')}/s. Bajo el ${CELL_AUTO_BELOW} % gasta sola una célula de la reserva (${st.cells}).`,
         `Células lumínicas, halladas o del útero: recargan el ojo y, con él al ${CELL_STORE_FROM} % o más, además se guardan.`],
       rej: [`${n(st.rejection)} %`,
-        'Tu cuerpo rechaza los injertos.',
-        `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde 40 % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
-        'Supresor · extensores del útero · Timo.'],
+        st.immuneRejection ? 'Tu sistema inmune calla: ya no rechaza nada.' : 'Tu cuerpo rechaza los injertos.',
+        st.immuneRejection ? 'Tres timos asimilados: el rechazo no sube, no falla, no daña.' : `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde ${st.failFrom} % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
+        `Supresor del útero · extensores · Timos Necróticos ${st.thymus}/3.`],
     }[id];
     this.vinfo.innerHTML = `
       <b class="i-name" style="color:${color}">${name} <span class="i-amount">${amount}</span></b>
