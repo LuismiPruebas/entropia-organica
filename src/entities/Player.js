@@ -1002,7 +1002,7 @@ export class Player {
     const x = this.cx - BODY_W / 2 + press + jolt, y = this.y + this.h - BODY_H;
     for (const m of [this.mesh, this.selfMesh, this.glowMesh]) {
       placeMesh(m, x, y, BODY_W, BODY_H);
-      m.scale.x = this.facing;
+      m.scale.x = this.facing * (1 + 0.14 * (this.dashK ?? 0)); // al lanzarse, la silueta se estira hacia delante
     }
     // Arco del golpe: aparece al salir el brazo y se desvanece, siempre por delante.
     const pk = this.punch / MELEE_TIME; // 1 al empezar, 0 al acabar
