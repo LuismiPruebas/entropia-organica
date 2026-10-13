@@ -58,7 +58,7 @@ export const PICKUPS = {
     sprite: 'dna',
     sound: 'dna',
     apply: (st, p) => st.dna.add(p.mutation),
-    text: (p) => `ADN latente de tu ${dnaTag(p.mutation)}. Aún no es tuyo: no sabrás qué te hace hasta asimilarlo en el útero de un Nodo Seguro (E).`,
+    text: (p) => `ADN latente: ${MUTATIONS[p.mutation].name} (${dnaTag(p.mutation)}). Asimílalo en el útero de un Nodo Seguro.`,
   },
   heart: { sprite: 'heart', size: 2, apply: () => {}, sound: 'node' },
 };

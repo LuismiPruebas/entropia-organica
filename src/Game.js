@@ -145,7 +145,7 @@ export class Game {
     });
     st.on('sequence', (id) => {
       this.audio.play('dna');
-      this.say(`Secuencia completa de tu ${dnaTag(id)}. Asimílala en el útero de un Nodo Seguro para saber qué te hace.`, 4);
+      this.say(`Secuencia completa: ${MUTATIONS[id].name} (${dnaTag(id)}). Asimílala en el útero de un Nodo Seguro.`, 4);
     });
     st.on('cellUsed', (left) => {
       this.audio.play('flicker');

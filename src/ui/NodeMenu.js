@@ -237,14 +237,14 @@ export class NodeMenu {
         const tag = linesOf(m).map((l) => LINES[l].name).join(' + ');
         return {
           icon: ['dna', { id }],
-          label: `Asimilar · ${tag} ${ROMAN[m.level]}`,
+          label: `${m.name} <span class="nm-line">${tag} ${ROMAN[m.level]}</span>`,
           cost: ready
             ? `<span class="c-int">-${cost.integrity} integridad máx</span> · <span class="c-rej">+${cost.rejection} rechazo</span>${cost.overload ? ` · <span class="c-rej">supera tu tolerancia</span>` : ''}`
             : `<span class="dim">antes necesitas ${st.missing(id).map(dnaTag).join(' y ')}</span>`,
           effect: cost.overload ? `<span class="c-rej">supera tu tolerancia (${st.load + (m.load ?? 1)}/${st.capacity}): el rechazo subirá más deprisa</span>` : '',
           enabled: ready,
           mutation: true,
-          cat: { c: LINES[m.line].color, info: 'Se instala para siempre. Qué hace, solo lo sabrás al asimilarla.' },
+          cat: { c: LINES[m.line].color, info: m.brief ?? m.desc },
           run: () => { st.install(id); g.audio.play('mutate'); },
         };
       }),

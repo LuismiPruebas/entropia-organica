@@ -225,6 +225,22 @@ body {
 #node-menu button:disabled .nm-label { color: #6a5a5a; }
 #node-menu button[style*="--c"]:disabled { background: #120a0c; box-shadow: inset 2px 0 0 #3a2a2a; }
 #node-menu button:disabled .nm-icon { opacity: .35; filter: grayscale(.7); }
+/* Mutaciones: lo más importante del útero. Ficha más alta, nombre mayor, icono más
+   grande y un latido de brillo en el color de su órgano. */
+#node-menu button.mut[style*="--c"] {
+  min-height: 27px;
+  padding-left: 31px;
+  background: linear-gradient(90deg, var(--tint) 0%, #1c0c1e 70%);
+  animation: nm-mut 1.6s ease-in-out infinite;
+}
+#node-menu button.mut .nm-label { font-size: 6px; }
+#node-menu button.mut .nm-line { font-size: 3.5px; color: #c8b8a8; margin-left: 3px; }
+#node-menu button.mut .nm-icon { left: 3px; width: 25px; height: 25px; margin-top: -12.5px; }
+@keyframes nm-mut {
+  50% { box-shadow: inset 3px 0 0 var(--c), inset 0 0 0 1px var(--tint), 0 0 8px var(--tint); }
+}
+#node-menu button.mut[style*="--c"]:disabled { animation: none; }
+#node-menu .nm-info .nm-line { color: #a89888; font-size: 3px; margin-left: 2px; }
 /* Panel de información: qué hace la opción señalada (con su nombre en su color). */
 #node-menu .nm-info .nm-info-t { color: var(--c); font-weight: normal; }
 #node-menu .nm-info {

@@ -11,7 +11,7 @@ import { px, seg, part, blob } from '../entities/Rig.js';
 //   izquierda  el espécimen (tu cuerpo, con sus mutaciones) y tus constantes en vejigas
 //   centro     el árbol genético: seis líneas de órganos (I→III), unidas por venas;
 //              las fusiones (Tendón, Tercer Ojo) beben de dos líneas. Activa = brilla,
-//              ADN latente = silueta que late (no sabes qué hará hasta asimilarlo en el
+//              ADN latente = silueta que late (su ficha ya dice qué hará; se asimila en el
 //              útero), desconocida = silueta apagada. Debajo, la carga genética, las
 //              sinergias y los choques entre órganos, los fragmentos y las memorias.
 //   derecha    lo que señalas, en pocas líneas: efecto, contrapartida, coste.
@@ -361,10 +361,10 @@ export class Genome {
         <p class="i-pairs">${pairs}</p>`;
       return;
     }
-    // ADN recogido pero sin asimilar: no sabes qué te hará hasta que el útero lo injerte.
+    // ADN recogido pero sin asimilar: sabes qué te hará (para decidir), pero aún no es tuyo.
     if (s === 'latent') {
-      this.info.innerHTML = `<b class="i-name" style="color:#a08a9a">ADN LATENTE</b><span class="i-tag">${tag}</span>
-        <p class="i-dim">Una secuencia que aún no forma parte de ti. No sabrás qué te hace hasta que el útero la injerte.</p>
+      this.info.innerHTML = `<b class="i-name" style="color:${m.color}">${m.name}</b><span class="i-tag">ADN LATENTE · ${tag}</span>
+        <p class="i-fx">▶ ${m.brief ?? m.desc}</p>
         <p class="i-cost"><span class="c-int">-${cost.integrity} integridad</span> <span class="c-rej">+${cost.rejection} rechazo</span> <span class="c-rej">carga +${m.load ?? 1}</span></p>
         <p class="i-dim">${st.canInstall(f) ? 'Asimílala en el útero de un Nodo Seguro.' : `Aún no puedes asimilarla: antes necesitas ${st.missing(f).map(dnaTag).join(' y ')}.`}</p>
         <p class="i-pairs">${pairs}</p>`;
