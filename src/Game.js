@@ -467,9 +467,8 @@ export class Game {
         pk.collect();
         if (pk.kind === 'heart') return this.#win();
       } else if (overlap(p, pk) && this.time - (this.lastCantTake ?? -9) > 3) {
-        // Tocas algo que aún no puedes coger: que se entienda por qué (no es un fallo).
+        // Un saco sellado: que se entienda por qué no se coge (lo oculto ya lo dice su fantasma).
         if (pk.locked) { this.lastCantTake = this.time; this.say('El saco vitelino está sellado: se abrirá cuando caiga el señor de esta sala.', 2.5); }
-        else if (pk.glimmerSeen) { this.lastCantTake = this.time; this.say('Lo notas latir ahí, pero tu ojo aún no puede darle forma: necesita el Ojo Pineal.', 2.5); }
       }
     }
     this.room.pickups = this.room.pickups.filter((pk) => pk.alive);
@@ -621,7 +620,6 @@ export class Game {
     for (const pk of this.room.pickups) {
       if (!pk.hidden || pk.revealed) continue;
       const lit = eye1 && this.#inBeam(pk.cx, pk.cy).lit;
-      if (lit) pk.glimmerSeen = true; // ya lo has visto titilar: si lo tocas, se te explica
       pk.glimmer = lit && !eye2 ? Math.min(0.35, (pk.glimmer ?? 0) + dt) : Math.max(0, (pk.glimmer ?? 0) - dt);
       if (lit && !eye2 && !st.seenGlimmer) { st.seenGlimmer = true; this.say('Algo late en la oscuridad... tu ojo aún no lo ve del todo (Ojo Pineal).', 3); }
       if (lit && eye2) pk.reveal += dt * 2;
