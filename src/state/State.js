@@ -1,6 +1,9 @@
 import { MUTATIONS, LINES, FRAGMENTS, SYNERGIES, CLASHES, linesOf } from '../data/mutations.js';
 
-export const FRAGMENTS_PER_SEQUENCE = 3;
+// Fragmentos que pide cada nivel de una línea: el primero se encuentra pronto,
+// mejorarlo cuesta un poco más. Con la línea completa, el sobrante va de 3 en 3.
+export const FRAGMENTS_BY_LEVEL = { 1: 3, 2: 4, 3: 5 };
+export const FRAGMENTS_SPARE = 3;
 
 // Gestor de Estado Global: la "hoja de personaje". El resto del juego solo le
 // dice qué ha pasado (damage, spendBiomass...) y él aplica las reglas.
@@ -287,21 +290,32 @@ export class GameState {
   }
 
   // --- Acciones del Nodo Seguro ---
-  // Un fragmento de ADN de un órgano (neural, ocular, dérmico, óseo). Cada 3 se
-  // completa la siguiente secuencia de su línea (la de nivel más bajo que aún no
-  // tengas); si la línea ya está completa, el tejido sobrante amplía tu biomasa.
+  // Fragmentos de ADN de un órgano (neural, ocular, dérmico, óseo). Al reunir los que
+  // pide el nivel (FRAGMENTS_BY_LEVEL: 3, 4, 5) se completa la siguiente secuencia de
+  // su línea (la de nivel más bajo que aún no tengas); si la línea ya está completa,
+  // cada 3 de tejido sobrante amplían tu biomasa.
+  nextSequence(kind) {
+    const line = FRAGMENTS[kind].line;
+    return Object.entries(MUTATIONS)
+      .filter(([id, m]) => m.source === 'fragment' && linesOf(m).includes(line) && !this.mutations.has(id) && !this.dna.has(id))
+      .sort((a, b) => a[1].level - b[1].level)[0]?.[0] ?? null;
+  }
+
+  fragmentsNeeded(kind) {
+    const next = this.nextSequence(kind);
+    return next ? FRAGMENTS_BY_LEVEL[MUTATIONS[next].level] ?? FRAGMENTS_SPARE : FRAGMENTS_SPARE;
+  }
+
   addFragment(kind) {
     if (!FRAGMENTS[kind]) kind = 'neural';
     this.fragments[kind] = (this.fragments[kind] ?? 0) + 1;
-    if (this.fragments[kind] < FRAGMENTS_PER_SEQUENCE) {
-      this.emit('fragment', { kind, count: this.fragments[kind] });
+    const need = this.fragmentsNeeded(kind);
+    if (this.fragments[kind] < need) {
+      this.emit('fragment', { kind, count: this.fragments[kind], need });
       return;
     }
-    this.fragments[kind] -= FRAGMENTS_PER_SEQUENCE;
-    const line = FRAGMENTS[kind].line;
-    const next = Object.entries(MUTATIONS)
-      .filter(([id, m]) => m.source === 'fragment' && linesOf(m).includes(line) && !this.mutations.has(id) && !this.dna.has(id))
-      .sort((a, b) => a[1].level - b[1].level)[0]?.[0];
+    this.fragments[kind] -= need;
+    const next = this.nextSequence(kind);
     if (next) {
       this.dna.add(next);
       this.emit('sequence', next);

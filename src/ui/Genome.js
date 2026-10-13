@@ -289,10 +289,10 @@ export class Genome {
         g.globalCompositeOperation = 'source-over';
       }
     }
-    // Fragmentos: tres hélices por tipo de órgano.
+    // Fragmentos: una hélice por cada uno que pide el siguiente nivel de la línea (3, 4 o 5).
     this.el.querySelector('#g-frags').innerHTML = Object.entries(FRAGMENTS).map(([id, fr]) => {
       const n = st.fragments[id] ?? 0;
-      return `<span class="g-frag" style="--c:${fr.color}" title="Fragmentos ${fr.name}: hacen crecer tu ${LINES[fr.line].name.toLowerCase()}">${[0, 1, 2].map((i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
+      return `<span class="g-frag" style="--c:${fr.color}" title="Fragmentos ${fr.name}: hacen crecer tu ${LINES[fr.line].name.toLowerCase()}">${Array.from({ length: st.fragmentsNeeded(id) }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
     }).join('');
     // Carga genética: lo que ocupan las mutaciones frente a lo que toleras.
     const over = st.load > st.capacity;

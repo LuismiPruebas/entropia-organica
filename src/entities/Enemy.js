@@ -5,6 +5,9 @@ import { stingTip } from './Moth.js';
 import { TILE, overlap } from '../core/Physics.js';
 import { SPRITES } from '../data/sprites.js';
 import { ITEM_DROP_CHANCE } from '../state/State.js';
+// Probabilidad de que una criatura suelte su fragmento de ADN (era 0.3): el mapa y sus
+// secretos son la fuente principal; matar solo ayuda.
+const FRAGMENT_CHANCE = 0.18;
 
 const GRAVITY = 900;
 // Matriarca: duración de la anticipación del picado.
@@ -1624,7 +1627,7 @@ export class Enemy {
     }
     if (this.def.boss) {
       g.onBossDefeated(this);
-    } else if (!this.minion && !this.offspring && this.def.frag && Math.random() < (this.def.fragmentChance ?? 0.3)) {
+    } else if (!this.minion && !this.offspring && this.def.frag && Math.random() < (this.def.fragmentChance ?? FRAGMENT_CHANCE)) {
       // Fragmento de ADN de lo que era: un ojo deja tejido ocular, una neurona, neural...
       g.dropPickup('fragment', this.cx, this.cy - 4, undefined, { frag: this.def.frag });
     }

@@ -10,7 +10,7 @@
 //  P  Perla de Nácar (consumible: invulnerable unos segundos)
 //  C  Célula Madre (consumible: regeneras integridad unos segundos)
 //  2 4    muestras de ADN colocadas (llaves; ver data/mutations.js)   H  el Corazón (final)
-//  *  fragmento de ADN del bioma de la sala (3 completan una mutación de su reserva)
+//  *  fragmento de ADN del bioma de la sala (3, 4 y 5 completan los niveles I, II y III de su línea)
 //  f  membrana fotosensible: parece pared; se retrae si la alumbras con el ojo
 //  Y  esfínter sellado: pared de músculo; el Tendón lo desgarra y queda abierto
 //  z  pared falsa: parece roca pero no lo es; la luz la atraviesa y la delata

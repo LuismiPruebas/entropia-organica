@@ -22,7 +22,7 @@ import { START } from './data/levels.js';
 import { MUTATIONS, FRAGMENTS, LINES } from './data/mutations.js';
 import { BIOMES } from './data/biomes.js';
 import { LEVELS } from './data/levels.js';
-import { FRAGMENTS_PER_SEQUENCE, ITEMS } from './state/State.js';
+import { ITEMS } from './state/State.js';
 
 const CONE_HALF = Math.PI / 6;
 // Alcance del haz del ojo: corto sin mutar; la línea del Ojo lo alarga (mod lightRange).
@@ -117,9 +117,9 @@ export class Game {
       this.audio.play('empty');
       this.say('Sin aliento: deja de forzar el cuerpo y el O2 volverá.', 1.8);
     });
-    st.on('fragment', ({ kind, count }) => {
+    st.on('fragment', ({ kind, count, need }) => {
       const fr = FRAGMENTS[kind], line = LINES[fr.line];
-      this.say(`Fragmento de ADN ${fr.name} ${count}/${FRAGMENTS_PER_SEQUENCE} · hace crecer tu ${line.name.toLowerCase()}`, 2.2);
+      this.say(`Fragmento de ADN ${fr.name} ${count}/${need} · hace crecer tu ${line.name.toLowerCase()}`, 2.2);
     });
     st.on('sequence', (id) => {
       this.audio.play('dna');

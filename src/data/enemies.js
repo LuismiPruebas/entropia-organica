@@ -3,7 +3,7 @@
 // Añadir un monstruo nuevo con una IA y un dibujo existentes = solo una entrada aquí.
 //
 // Fragmentos de ADN: al morir, cada enemigo normal puede soltar un fragmento del
-// bioma de su sala (`fragmentChance`, 0.3 por defecto). Los jefes (`boss`) no
+// bioma de su sala (`fragmentChance`, 0.18 por defecto: Enemy.js FRAGMENT_CHANCE). Los jefes (`boss`) no
 // reaparecen nunca y dan su `reward` (ver Game.onBossDefeated).
 //
 // `biome` y `lore` alimentan el bestiario (tools/bestiary.html -> referencias/).
@@ -221,7 +221,7 @@ export const ENEMIES = {
   // ===================== TERRITORIO DEL HUESO =====================
   rinoceronte: {
     frag: 'dermal', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
-    fragmentChance: 0.5, // conoce la quitina: suelta tejido dérmico más a menudo
+    fragmentChance: 0.3, // conoce la quitina: suelta tejido dérmico más a menudo (era 0.5)
     name: 'Escarabajo Rinoceronte',
     biome: 'oseo',
     creature: 'rhino',
