@@ -222,7 +222,13 @@ export class Game {
 
   spawnProjectile(o) { this.projectiles.push(new Projectile(this, o)); }
 
-  dropPickup(kind, x, y, amount, extra = {}) { this.room.pickups.push(new Pickup(this, kind, x, y, { amount, falling: true, ...extra })); }
+  // Lo soltado salta en un arco y tarda un instante en poder cogerse: así se ve qué ha
+  // caído (si no, al estar encima se recogía en el acto y parecía que no daba nada).
+  dropPickup(kind, x, y, amount, extra = {}) {
+    this.room.pickups.push(new Pickup(this, kind, x, y, {
+      amount, falling: true, vx: (Math.random() - 0.5) * 70, vy: -120 - Math.random() * 50, noTake: 0.45, ...extra,
+    }));
+  }
 
   // Esbirros que invocan los jefes: no dejan fragmentos ni cuentan como muertes de sala.
   spawnMinion(type, x, y) {
@@ -463,10 +469,10 @@ export class Game {
     for (const pk of this.room.pickups) {
       pk.update(dt);
       // Lo oculto no existe para ti hasta que tu ojo lo revela.
-      if (overlap(p, pk) && (!pk.hidden || pk.revealed) && !pk.locked) {
+      if (overlap(p, pk) && (!pk.hidden || pk.revealed) && !pk.locked && !(pk.noTake > 0)) {
         pk.collect();
         if (pk.kind === 'heart') return this.#win();
-      } else if (overlap(p, pk) && this.time - (this.lastCantTake ?? -9) > 3) {
+      } else if (pk.locked && overlap(p, pk) && this.time - (this.lastCantTake ?? -9) > 3) {
         // Un saco sellado: que se entienda por qué no se coge (lo oculto ya lo dice su fantasma).
         if (pk.locked) { this.lastCantTake = this.time; this.say('El saco vitelino está sellado: se abrirá cuando caiga el señor de esta sala.', 2.5); }
       }

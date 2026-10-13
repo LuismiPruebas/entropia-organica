@@ -107,13 +107,16 @@ export class Pickup {
 
   update(dt) {
     this.t += dt;
-    // Lo que sueltan los enemigos cae hasta el suelo antes de quedarse flotando.
+    if (this.noTake > 0) this.noTake -= dt;
+    // Lo que sueltan enemigos y nódulos salta en un arco y cae hasta el suelo antes de
+    // quedarse flotando.
     if (this.falling) {
-      this.vx = 0;
+      this.vx = (this.vx ?? 0) * (1 - Math.min(1, dt * 2));
       this.vy = Math.min(300, (this.vy ?? 0) + 600 * dt);
       this.game.world.move(this, dt);
       if (this.onGround) {
         this.falling = false;
+        this.vx = 0;
         this.baseY = this.y - 3;
       }
       return;
