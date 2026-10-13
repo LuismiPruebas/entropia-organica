@@ -125,10 +125,13 @@ export class PlayerBody {
     const moving = pose.onGround && Math.abs(pose.vx) > 10;
     const air = !pose.onGround && !pose.clinging;
     const hanging = !!pose.rope && air;
-    const phase = t * (has('pistones') ? 12 : 10);
+    // Con los Pistones se corre de puntillas, como un ninja: pasos cortos y rápidos,
+    // casi sin rebote y el cuerpo algo más echado hacia delante.
+    const ninja = has('pistones');
+    const phase = t * (ninja ? 17 : 10);
     const breath = 0.5 + 0.5 * Math.sin((t / 1.5) * Math.PI * 2);
     // Al aterrizar, el cuerpo se agacha un instante (amortigua la caída).
-    const bob = (moving ? Math.abs(Math.sin(phase)) * (has('pistones') ? 2.2 : 1) : (pose.onGround ? breath * 0.8 : 0)) + (pose.land ?? 0) * 3;
+    const bob = (moving ? Math.abs(Math.sin(phase)) * (ninja ? 0.7 : 1) : (pose.onGround ? breath * 0.8 : 0)) + (pose.land ?? 0) * 3;
     // Golpe: 0 → 1 rápido (30% del gesto) y vuelta lenta.
     const pt = 1 - Math.min(1, pose.punch ?? 0);
     const strike = (pose.punch ?? 0) > 0 ? (pt < 0.3 ? pt / 0.3 : 1 - (pt - 0.3) / 0.7) : 0;
@@ -136,7 +139,7 @@ export class PlayerBody {
     const swingLag = hanging ? Math.max(-3, Math.min(3, -(pose.vx ?? 0) * 0.012)) : 0;
     // Embestida (pose.dash 0..1): el cuerpo se echa hacia delante como en una zancada.
     const dashK = pose.dash ?? 0;
-    const lean = (hanging ? pose.rope.x * 3 : moving ? 1.5 : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 5; // se abalanza: el torso casi en horizontal
+    const lean = (hanging ? pose.rope.x * 3 : moving ? (ninja ? 2.5 : 1.5) : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 5; // se abalanza: el torso casi en horizontal
     // Agachado (pose.crouch 0..1): la cadera baja casi al suelo, el tronco se encoge y
     // se echa hacia delante; las rodillas se doblan con un pie adelantado.
     const crouch = pose.crouch ?? 0;
@@ -479,7 +482,7 @@ export class PlayerBody {
     const hx = hip[0] + (far ? -1 : 1), hy = hip[1] + 1;
     const ph = phase + (far ? Math.PI : 0);
     let fx = hx + (far ? -2 : 3), fy = GROUND;
-    if (moving) { fx = hx + Math.sin(ph) * 6; fy = GROUND - Math.max(0, Math.cos(ph)) * 4; }
+    if (moving) { fx = hx + Math.sin(ph) * 4.5; fy = GROUND - Math.max(0, Math.cos(ph)) * 2.5; } // zancada corta y rápida
     if (air) { [fx, fy] = airFeet(hx, far, pose, c.hanging); fy -= 1; }
     if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 6 : 3); }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -2 : 5); fy = GROUND; } // agachado sobre los talones

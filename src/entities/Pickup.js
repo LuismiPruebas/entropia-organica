@@ -92,6 +92,14 @@ export class Pickup {
       this.glowMesh.material.map = s.glowTex;
       game.visual.glow.add(this.glowMesh);
     }
+    // Oculto: con el Ojo I se intuye como un fantasma (silueta translúcida y pálida que
+    // ondula); aún no se puede coger. Solo el Ojo Pineal lo materializa.
+    if (this.hidden) {
+      this.ghostMesh = spriteMesh(this.sw, this.sh, { glow: true, color: '#7f9cd8' });
+      this.ghostMesh.material.map = s.tex;
+      this.ghostMesh.visible = false;
+      game.visual.glow.add(this.ghostMesh);
+    }
   }
 
   get cx() { return this.x + this.w / 2; }
@@ -125,8 +133,17 @@ export class Pickup {
   }
 
   render() {
-    // Mientras se revela, parpadea como una interferencia; después queda fijo.
-    const shown = this.revealed || Math.random() < Math.max(this.reveal, this.glimmer ?? 0);
+    // Fantasma (Ojo I): translúcido, respira y ondula; nunca sólido.
+    const ghost = !this.revealed && (this.glimmer ?? 0) > 0.01 && this.reveal < 0.05;
+    if (this.ghostMesh) {
+      this.ghostMesh.visible = ghost;
+      if (ghost) {
+        placeMesh(this.ghostMesh, this.x + Math.round(Math.sin(this.t * 5) * 1), this.y, this.sw, this.sh);
+        this.ghostMesh.material.opacity = (this.glimmer / 0.35) * (0.28 + 0.14 * Math.sin(this.t * 3));
+      }
+    }
+    // Mientras el Ojo Pineal lo revela, parpadea como una interferencia; después queda fijo.
+    const shown = this.revealed || (!ghost && Math.random() < this.reveal);
     this.mesh.visible = shown;
     placeMesh(this.mesh, this.x, this.y, this.sw, this.sh);
     if (this.glowMesh) {
@@ -139,5 +156,6 @@ export class Pickup {
   dispose() {
     this.mesh.removeFromParent();
     this.glowMesh?.removeFromParent();
+    this.ghostMesh?.removeFromParent();
   }
 }
