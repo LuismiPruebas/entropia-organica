@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { NODE_DOSES, NODE_HEAL, NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, CELL_PRICE, NODE_CELLS, CELL_STORE_FROM } from '../state/State.js';
+import { NODE_DOSES, NODE_HEAL, NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, CELL_PRICE, NODE_CELLS, CELL_STORE_FROM, CELL_AUTO_BELOW } from '../state/State.js';
 import { LEVELS } from '../data/levels.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { nodeOf } from '../data/nodes.js';
@@ -41,6 +41,21 @@ const VEINS = [
   'M4,0 C0,30 9,60 3,90 S7,110 4,120',
   'M246,0 C250,35 240,70 247,95 S243,112 246,120',
 ];
+
+// Tipos de opción: cada uno destaca con su color y su etiqueta, y explica qué hace en
+// el panel de abajo al señalarlo (ratón, flechas o mando). Las mutaciones toman el
+// color de su órgano.
+const CATS = {
+  heal: { c: '#ff5a6a', tag: 'CURA', info: 'El útero cierra tus heridas con su propia carne. Guarda pocas curas, y se regeneran poco a poco con el tiempo.' },
+  cell: { c: '#ffd23f', tag: 'LUZ', info: `Recarga tu ojo al 100 %. Si ya estabas al ${CELL_STORE_FROM} % o más, además la guardas: las de la reserva se gastan solas cuando la luz baja del ${CELL_AUTO_BELOW} %.` },
+  suppressor: { c: '#c07bff', tag: 'RECHAZO', info: 'Calma el rechazo de tus injertos. Desde el 40 % las mutaciones empiezan a fallar, y al 100 % te dañan.' },
+  extender: { c: '#b48cff', tag: 'CARGA', info: 'Amplía la carga genética que tu cuerpo tolera: más mutaciones sin que el rechazo se dispare. Cada extensor cuesta más que el anterior.' },
+  trade: { c: '#c8b8a0', tag: 'TRUEQUE', info: 'El útero digiere un recurso y te devuelve el otro. Útil cuando te sobra uno y te falta el otro.' },
+  shield: { c: '#4ff0ff', tag: 'CONSUMIBLE', info: `Perla de Nácar: se guarda y la usas cuando quieras desde el Genoma. Nada te hiere durante ${ITEMS.shield.time} s.` },
+  regen: { c: '#7dff9a', tag: 'CONSUMIBLE', info: `Célula Madre: se guarda y la usas cuando quieras desde el Genoma. Regeneras integridad durante ${ITEMS.regen.time} s.` },
+  travel: { c: '#d0a8ff', tag: 'VIAJE', info: 'El Tercer Ojo te arrastra por el nervio del organismo hasta otro útero que ya conozcas.' },
+};
+const HINT = 'Señala una opción para saber qué hace.';
 
 // ---------------------------------------------------------------- iconos (18x18)
 const ICON = {
@@ -122,7 +137,7 @@ export class NodeMenu {
     this.game = game;
     this.el = document.getElementById('node-menu');
     this.open = false;
-    this.nav = new MenuNav(this.el, 'button', { isOpen: () => this.open, onSelect: () => game.audio.play('flicker') });
+    this.nav = new MenuNav(this.el, 'button', { isOpen: () => this.open, onSelect: (b) => { game.audio.play('flicker'); this.#showInfo(b); } });
     addEventListener('keydown', (e) => {
       if (!this.open) return;
       if (e.code === 'Escape' || e.code === 'KeyE') this.close();
@@ -220,6 +235,7 @@ export class NodeMenu {
             : `Aún no: antes necesitas ${st.missing(id).map(dnaTag).join(' y ')}`,
           enabled: ready,
           mutation: true,
+          cat: { c: LINES[m.line].color, tag: 'MUTACION', info: `Instala para siempre una mutación de tu ${tag.toLowerCase()}. Cuesta integridad máxima y sube el rechazo. Qué hace exactamente, solo lo sabrás al asimilarla.` },
           run: () => { st.install(id); g.audio.play('mutate'); },
         };
       }),
@@ -250,6 +266,7 @@ export class NodeMenu {
         <h2>NODO SEGURO <span class="nm-name">${node.name}</span></h2>
         <div class="nm-res"><span class="c-int">INT ${Math.ceil(st.integrity)}/${st.maxIntegrity}</span> <span class="c-bio">BIO ${Math.floor(st.biomass)}</span> <span class="c-lux">LUZ ${Math.floor(st.light)}</span> <span class="c-scrap">HUESO ${st.scrap}</span></div>
         <div class="nm-scroll"><div class="nm-list"></div><div class="nm-bar" hidden><i></i></div></div>
+        <div class="nm-info"></div>
       </div>`;
     const list = this.el.querySelector('.nm-list');
     this.icons = [];
@@ -259,7 +276,14 @@ export class NodeMenu {
       const b = document.createElement('button');
       b.disabled = !o.enabled;
       if (o.mutation) b.classList.add('mut');
-      b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas>${i + 1}. ${o.label}${o.desc ? `<span class="desc">${o.desc}</span>` : ''}`;
+      // Cada tipo destaca a su manera: su color en la franja, el fondo, el título y el
+      // brillo del icono, con su etiqueta a la derecha. Al señalarla, explica qué hace.
+      const cat = o.cat ?? CATS[o.icon?.[0]] ?? { c: '#e8dcc8', tag: '', info: '' };
+      b.style.setProperty('--c', cat.c);
+      b.style.setProperty('--tint', `${cat.c}26`);
+      b.dataset.info = cat.info;
+      b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas><span class="nm-tag">${cat.tag}</span><span class="nm-label">${i + 1}. ${o.label}</span>${o.desc ? `<span class="desc">${o.desc}</span>` : ''}`;
+      b.addEventListener('mouseenter', () => this.#showInfo(b));
       if (o.icon) this.icons.push({ g: b.querySelector('canvas').getContext('2d'), kind: o.icon[0], opts: o.icon[1] ?? {} });
       b.addEventListener('click', () => {
         // Un clic justo al abrirse viene del gesto que lo abrió (un toque en USAR): se ignora.
@@ -270,6 +294,7 @@ export class NodeMenu {
       list.appendChild(b);
     });
     this.nav.restore();
+    this.#showInfo(list.querySelector('.nav-sel'));
     this.#scrollBar(list);
     this.#drawIcons(performance.now() / 1000);
   }
@@ -302,6 +327,14 @@ export class NodeMenu {
       addEventListener('pointerup', up);
     });
     update();
+  }
+
+  // Panel de abajo: qué hace la opción señalada, en su color.
+  #showInfo(b) {
+    const box = this.el.querySelector('.nm-info');
+    if (!box) return;
+    box.textContent = b?.dataset.info || HINT;
+    box.style.setProperty('--c', b?.style.getPropertyValue('--c') || '#6a5a5a');
   }
 
   #drawIcons(t) {

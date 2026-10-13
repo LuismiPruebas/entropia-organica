@@ -209,6 +209,47 @@ body {
 #node-menu button:disabled { color: #5a4a4a; cursor: default; background: #120a0c; }
 #node-menu button:disabled .nm-icon { opacity: .35; filter: grayscale(.7); }
 
+/* Cada opción destaca por su tipo (--c, del JS): franja lateral, fondo teñido, título
+   y brillo del icono en su color, y una etiqueta a la derecha. */
+#node-menu button[style*="--c"] {
+  background: linear-gradient(90deg, var(--tint) 0%, #1a0b10 55%);
+  box-shadow: inset 2px 0 0 var(--c), inset 0 -2px 0 #0c0608;
+}
+#node-menu button .nm-label { color: var(--c, #e8dcc8); text-shadow: 0 0 3px rgba(0, 0, 0, .8); }
+#node-menu button .nm-icon { filter: drop-shadow(0 0 1.5px var(--c, transparent)); }
+#node-menu button .nm-tag {
+  float: right;
+  margin: 0 0 0 4px;
+  padding: 0 2px;
+  font-size: 3px;
+  letter-spacing: .5px;
+  color: #0a0507;
+  background: var(--c, #6a5a5a);
+  border-radius: 1px;
+  opacity: .85;
+}
+#node-menu button[style*="--c"].nav-sel {
+  background: linear-gradient(90deg, var(--tint) 0%, #241018 70%);
+  box-shadow: inset 2px 0 0 var(--c), inset 0 0 0 1px var(--c), 0 0 7px var(--tint);
+}
+#node-menu button.nav-sel .nm-icon { filter: drop-shadow(0 0 2.5px var(--c, #7dff9a)); }
+#node-menu button:disabled .nm-label { color: #6a5a5a; }
+#node-menu button:disabled .nm-tag { background: #3a2a2a; }
+#node-menu button[style*="--c"]:disabled { background: #120a0c; box-shadow: inset 2px 0 0 #3a2a2a; }
+#node-menu button:disabled .nm-icon { opacity: .35; filter: grayscale(.7); }
+/* Panel de información: qué hace la opción señalada. */
+#node-menu .nm-info {
+  flex: none;
+  min-height: 15px;
+  margin-top: 3px;
+  padding: 2px 4px;
+  font-size: 3.5px;
+  line-height: 1.5;
+  color: #d8c8b8;
+  background: rgba(0, 0, 0, .35);
+  border-left: 2px solid var(--c, #6a5a5a);
+  border-radius: 2px;
+}
 #node-menu .desc {
   display: block;
   color: #8a7a6a;
