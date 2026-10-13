@@ -13,6 +13,7 @@ const COYOTE = 0.1;
 const JUMP_BUFFER = 0.12;
 const DASH_SPEED = 270;
 const DASH_TIME = 0.18;
+const GHOST_LIFE = 0.22;   // lo que tarda en desvanecerse cada silueta de la estela
 const GRAPPLE_RANGE = 135;
 // Tendón como cuerda de péndulo: te balanceas desde el anclaje.
 const ROPE_MIN = 18;        // longitud mínima (pegado al esfínter)
@@ -322,6 +323,7 @@ export class Player {
         this.dashDir = dashDir;
         this.rammed = new Set();
         audio.play('dash', this);
+        this.#dashDust(-dashDir, 10, 70); // arranca: polvo hacia atrás
       }
     }
 
@@ -442,6 +444,54 @@ export class Player {
 
     this.#weapon(dt);
     this.#updateMesh(dt);
+  }
+
+  // Embestida: estela de siluetas que se desvanecen (copias del cuerpo en ese instante,
+  // del color de los émbolos) y un frenazo que levanta polvo al acabar en el suelo.
+  #dashFx(dt, x, y) {
+    if (this.dash > 0) {
+      this.ghostT = (this.ghostT ?? 0) - dt;
+      if (this.ghostT <= 0) { this.ghostT = 0.035; this.#ghost(x, y); }
+    } else if (this.wasDashing && this.onGround) this.#dashDust(this.dashDir, 8, 45); // frenazo
+    this.wasDashing = this.dash > 0;
+    for (const gh of this.ghosts ?? []) {
+      if (gh.life <= 0) continue;
+      gh.life -= dt;
+      gh.mesh.visible = gh.life > 0;
+      gh.mesh.material.opacity = Math.max(0, gh.life / GHOST_LIFE) * 0.85;
+    }
+  }
+
+  #ghost(x, y) {
+    this.ghosts ??= [];
+    let gh = this.ghosts.find((o) => o.life <= 0);
+    if (!gh && this.ghosts.length < 10) {
+      const canvas = document.createElement('canvas');
+      canvas.width = BODY_W; canvas.height = BODY_H;
+      const tex = canvasTexture(canvas);
+      const mesh = spriteMesh(BODY_W, BODY_H, { glow: true, color: '#ffb070' });
+      mesh.renderOrder = 2;
+      setMap(mesh, tex);
+      this.game.visual.glow.add(mesh);
+      gh = { canvas, ctx: canvas.getContext('2d'), tex, mesh, life: 0 };
+      this.ghosts.push(gh);
+    }
+    if (!gh) return;
+    gh.ctx.clearRect(0, 0, BODY_W, BODY_H);
+    gh.ctx.drawImage(this.body.canvas, 0, 0);
+    gh.tex.needsUpdate = true;
+    placeMesh(gh.mesh, x, y, BODY_W, BODY_H);
+    gh.mesh.scale.x = this.facing;
+    gh.life = GHOST_LIFE;
+  }
+
+  // Polvo y chispas de los émbolos a los pies, lanzados hacia `dir`.
+  #dashDust(dir, n, speed) {
+    const g = this.game, fy = this.y + this.h - 1;
+    for (let i = 0; i < n; i++) {
+      g.particles.emit(this.cx + (Math.random() - 0.5) * 6, fy - Math.random() * 3, { vx: dir * (speed * (0.4 + Math.random())), vy: -10 - Math.random() * 35, life: 0.3 + Math.random() * 0.2, color: [0.75, 0.62, 0.5] });
+    }
+    for (let i = 0; i < 3; i++) g.glowParticles.emit(this.cx, fy - 2, { vx: dir * (40 + Math.random() * 60), vy: -20 - Math.random() * 30, life: 0.2, color: [1, 0.7, 0.35] });
   }
 
   // Consumibles activos, sin iconos en el HUD: se ven en el propio cuerpo.
@@ -890,8 +940,10 @@ export class Player {
     this.landT = Math.max(0, (this.landT ?? 0) - dt);
     // El gesto de agacharse o levantarse dura un instante (la caja cambia de golpe).
     this.crouchK = Math.max(0, Math.min(1, (this.crouchK ?? 0) + (this.crouching ? 1 : -1) * dt * 14));
+    // La zancada de la embestida entra de golpe y se recoge un poco más despacio.
+    this.dashK = this.dash > 0 ? Math.min(1, (this.dashK ?? 0) + dt * 30) : Math.max(0, (this.dashK ?? 0) - dt * 7);
     this.body.render(st.mutations, {
-      t: this.anim, dt, aim, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: this.crouchK,
+      t: this.anim, dt, aim, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: this.crouchK, dash: this.dashK,
       vx: this.vx * this.facing, vy: this.vy,
       onGround: this.onGround, clinging: !!this.clinging, rope, reach, charge: this.charge,
       weapon: st.weaponId, recoil: this.recoil ?? 0, armRaise: this.#armRaise(dt),
@@ -938,6 +990,7 @@ export class Player {
     const blink = this.invuln > 0 && Math.floor(this.invuln * 20) % 2 === 0;
     this.mesh.visible = this.selfMesh.visible = !blink;
     this.#itemFx(dt);
+    this.#dashFx(dt, x, y);
 
     // Destello del ojo fotóforo: toma el color de la energía lumínica y late al respirar.
     const on = st.flashlightOn && st.light > 0;

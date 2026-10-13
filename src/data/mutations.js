@@ -199,10 +199,10 @@ export const MUTATIONS = {
     ability: 'dash',
     integrityCost: 10,
     rejection: 20,
-    mods: { oxygenRegen: 0.75 },
-    desc: 'Extremidades I: doble toque A/D: embestida (25 O2) que revienta membranas y atraviesa criaturas. Aliento -25%.',
+    mods: { oxygenRegen: 0.75, moveSpeed: 1.12 }, // además corres un 12% más rápido
+    desc: 'Extremidades I: doble toque A/D: embestida (25 O2) que revienta membranas y atraviesa criaturas. Corres un 12% más rápido.',
     controls: 'Pulsa dos veces rápido A o D: embestida hacia ese lado (25 O2). Revienta las membranas agrietadas (X) y atraviesa a las criaturas hiriéndolas sin que te toquen. En el aire, alarga el salto.',
-    effect: 'Piernas veloces: la embestida no se frena con el peso del cuerpo.',
+    effect: 'Piernas veloces: corres un 12% más rápido y la embestida no se frena con el peso del cuerpo.',
     unlockHint: 'Dos toques rápidos a un lado: embiste. Las membranas agrietadas ya no te detienen.',
     drawback: 'Los émbolos beben de tus pulmones: recuperas el aliento un 25% más lento.',
     lore: 'Te arrancan los tendones de los muslos y en su lugar sisean dos émbolos hidráulicos atornillados al hueso. Ya no caminas: te disparas.',

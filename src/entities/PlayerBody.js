@@ -134,16 +134,18 @@ export class PlayerBody {
     const strike = (pose.punch ?? 0) > 0 ? (pt < 0.3 ? pt / 0.3 : 1 - (pt - 0.3) / 0.7) : 0;
     // Colgado del tendón, el cuerpo se inclina hacia el anclaje y la cadera se queda atrás.
     const swingLag = hanging ? Math.max(-3, Math.min(3, -(pose.vx ?? 0) * 0.012)) : 0;
-    const lean = (hanging ? pose.rope.x * 3 : moving ? 1.5 : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5;
+    // Embestida (pose.dash 0..1): el cuerpo se echa hacia delante como en una zancada.
+    const dashK = pose.dash ?? 0;
+    const lean = (hanging ? pose.rope.x * 3 : moving ? 1.5 : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 3.5;
     // Agachado (pose.crouch 0..1): la cadera baja casi al suelo, el tronco se encoge y
     // se echa hacia delante; las rodillas se doblan con un pie adelantado.
     const crouch = pose.crouch ?? 0;
-    const hip = [CX + swingLag - crouch, GROUND - 11 - bob * (1 - crouch) + (has('pistones') ? -1 : 0) + crouch * CROUCH_DROP];
+    const hip = [CX + swingLag - crouch - dashK, GROUND - 11 - bob * (1 - crouch) * (1 - dashK) + (has('pistones') ? -1 : 0) + crouch * CROUCH_DROP + dashK];
     const sh = [CX + lean + crouch * 2, hip[1] - 8 + crouch + (pose.onGround && !moving ? -breath * 0.6 : 0)];
     const head = [sh[0] + 1, sh[1] - 6];
     const aim = pose.aim ?? 0;
     pose.strike = strike;
-    const ctx = { has, P, t, pose, moving, air, hanging, phase, breath, hip, sh, head, aim, n, crouch };
+    const ctx = { has, P, t, pose, moving, air, hanging, phase, breath, hip, sh, head, aim, n, crouch, dashK };
 
     const shows = (id) => has(id) || opts.ghost === id;
     const part = (id, fn, behind = false) => {
@@ -298,6 +300,7 @@ export class PlayerBody {
     if (air) [fx, fy] = airFeet(hx, far, pose, c.hanging);
     if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 5 : 2); }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -4 : 4); fy = GROUND; } // agachado: un pie adelantado
+    if (c.dashK > 0.3) { fx = hx + (far ? -7 : 5); fy = GROUND - (air ? 3 : 0) - (far ? 2 : 0); } // embestida: zancada, la pierna de atrás estirada
     if (pose.land > 0 && !air) { fx = hx + (far ? -3 : 3); }            // pies abiertos al caer
     const [kx, ky] = ik(hx, hy, fx, fy - 1, 6, 6, -1);
     if (!far) this.knee = [kx, ky];
@@ -480,6 +483,7 @@ export class PlayerBody {
     if (air) { [fx, fy] = airFeet(hx, far, pose, c.hanging); fy -= 1; }
     if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 6 : 3); }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -2 : 5); fy = GROUND; } // agachado sobre los talones
+    if (c.dashK > 0.3) { fx = hx + (far ? -6 : 6); fy = GROUND - (air ? 3 : 0) - (far ? 2 : 0); } // embestida: zancada
     const ax = fx - 3, ay = fy - 4;                                 // talón alzado
     const [kx, ky] = ik(hx, hy, ax, ay, 5, 5, -1);                  // rodilla adelante
     if (!far) this.knee = [kx, ky];
