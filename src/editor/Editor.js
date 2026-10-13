@@ -331,6 +331,7 @@ cv.addEventListener('mousedown', (e) => {
       snapshot();
       const K = KINDS[S.kind];
       const o = K.make(x, y, room());
+      if (S.kind === 'nodules' && S.noduleLux) o.push('luz'); // desde la paleta: nódulo lumínico
       if (o) { (room()[S.kind] ??= []).push(o); S.sel = { kind: S.kind, index: room()[S.kind].length - 1 }; }
       else if (S.kind === 'pods') S.sel = { kind: 'pods', index: room().pods.at.length - 1 };
       touch(); renderInspector(); return;
@@ -400,14 +401,29 @@ function renderTools() {
   $('tools').innerHTML = TOOLS.map(([id, label, key]) => `<button data-tool="${id}" title="${label} (${key})">${label}<kbd>${key}</kbd></button>`).join('');
   for (const b of document.querySelectorAll('[data-tool]')) b.onclick = () => setTool(b.dataset.tool);
   $('kind').innerHTML = Object.entries(KINDS).filter(([k]) => k !== 'exits').map(([k, K]) => `<option value="${k}">${K.label}</option>`).join('');
-  $('kind').onchange = () => { S.kind = $('kind').value; };
+  $('kind').onchange = () => { S.kind = $('kind').value; S.noduleLux = false; };
   $('brush').oninput = () => { S.brush = Number($('brush').value); $('brush-v').textContent = S.brush; };
   setTool('brush');
 }
 function renderPalette() {
   const bc = biomeColors(room()?.biome);
-  $('palette').innerHTML = TILES.map((t) => `<button class="sw${t.c === S.tile ? ' on' : ''}" data-c="${t.c}" title="${t.name}"><i style="background:${t.c === '#' ? bc.wall : t.c === '.' ? bc.air : t.color}"></i><b>${t.c}</b><span>${t.name}</span></button>`).join('');
-  for (const b of document.querySelectorAll('#palette .sw')) b.onclick = () => { S.tile = b.dataset.c; if (!['brush', 'blob', 'rect', 'fill'].includes(S.tool)) setTool('brush'); renderPalette(); };
+  // Al final, accesos a elementos que se buscan junto a los objetos (los nódulos no son
+  // casillas: pulsarlos pasa a "Colocar elementos" con ese nódulo).
+  const extras = [['nodule', 'Nódulo óseo (elemento: suelta hueso)', '#e8dcc8', 'n'], ['noduleLux', 'Nódulo lumínico (elemento: suelta célula)', '#ffd23f', 'n*']];
+  $('palette').innerHTML = TILES.map((t) => `<button class="sw${t.c === S.tile ? ' on' : ''}" data-c="${t.c}" title="${t.name}"><i style="background:${t.c === '#' ? bc.wall : t.c === '.' ? bc.air : t.color}"></i><b>${t.c}</b><span>${t.name}</span></button>`).join('')
+    + extras.map(([id, name, col, mark]) => `<button class="sw${S.tool === 'place' && S.kind === 'nodules' && !!S.noduleLux === (id === 'noduleLux') ? ' on' : ''}" data-el="${id}" title="${name}"><i style="background:${col}"></i><b>${mark}</b><span>${name}</span></button>`).join('');
+  for (const b of document.querySelectorAll('#palette .sw')) b.onclick = () => {
+    if (b.dataset.el) {
+      S.kind = 'nodules';
+      S.noduleLux = b.dataset.el === 'noduleLux';
+      $('kind').value = 'nodules';
+      setTool('place');
+    } else {
+      S.tile = b.dataset.c;
+      if (!['brush', 'blob', 'rect', 'fill'].includes(S.tool)) setTool('brush');
+    }
+    renderPalette();
+  };
 }
 
 // ---------------------------------------------------------------- inspector
