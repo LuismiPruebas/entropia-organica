@@ -407,7 +407,7 @@ export class Genome {
         'Células lumínicas, halladas o del útero (al 95 % o más se guardan).'],
       rej: [`${n(st.rejection)} %`,
         'Tu cuerpo rechaza los injertos.',
-        `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Al 100 % fallan y te dañan.`,
+        `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde 40 % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
         'Supresor · extensores del útero · Timo.'],
     }[id];
     this.vinfo.innerHTML = `

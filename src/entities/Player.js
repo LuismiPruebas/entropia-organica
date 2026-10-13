@@ -3,7 +3,7 @@ import { MUTATIONS } from '../data/mutations.js';
 import { spriteMesh, placeMesh, setMap, canvasTexture } from '../core/Sprites.js';
 import { PlayerBody, BODY_W, BODY_H, CROUCH_DROP } from './PlayerBody.js';
 import { TILE, overlap } from '../core/Physics.js';
-import { OXYGEN_COST } from '../state/State.js';
+import { OXYGEN_COST, REJECTION_FAIL_FROM } from '../state/State.js';
 
 export const GRAVITY = 900;
 const JUMP_V = 320;
@@ -494,6 +494,45 @@ export class Player {
     for (let i = 0; i < 3; i++) g.glowParticles.emit(this.cx, fy - 2, { vx: dir * (40 + Math.random() * 60), vy: -20 - Math.random() * 30, life: 0.2, color: [1, 0.7, 0.35] });
   }
 
+  // Rechazo en el cuerpo (diegético): desde el 40 % la silueta late en violeta, más
+  // deprisa y más fuerte cuanto más rechazo; desde el 70 % gotea pus y da tirones; al
+  // 100 % sangra y tiembla. Un fallo de mutación es un espasmo (rejectSpasm).
+  // Devuelve el desplazamiento horizontal del cuerpo en este fotograma.
+  #rejectFx(dt) {
+    const g = this.game, st = g.state;
+    const k = Math.max(0, Math.min(1, (st.rejection - REJECTION_FAIL_FROM) / (100 - REJECTION_FAIL_FROM)));
+    this.spasm = Math.max(0, (this.spasm ?? 0) - dt * 3);
+    this.rejPhase = (this.rejPhase ?? 0) + dt * (2 + k * 6); // el latido se acelera
+    const beat = Math.pow(Math.max(0, Math.sin(this.rejPhase * Math.PI)), 6);
+    const p = k * (0.25 + 0.55 * beat) + this.spasm * 0.9;
+    this.rejTint = [0.45 * p, 0.04 * p, 0.55 * p];
+    let jolt = this.spasm > 0.4 ? (Math.random() < 0.5 ? -1 : 1) : 0;
+    if (st.rejection >= 70) {
+      // Tirones sueltos y pus violeta que gotea del cuerpo.
+      if (Math.random() < dt * (0.4 + k)) this.twitch = 0.08;
+      if (Math.random() < dt * 4 * k) g.particles.emit(this.x + Math.random() * this.w, this.y + 6 + Math.random() * (this.h - 8), { vx: (Math.random() - 0.5) * 8, vy: 10 + Math.random() * 20, life: 0.6, color: [0.55, 0.15, 0.6] });
+    }
+    if (st.critical) {
+      // Crisis: tiembla sin parar y sangra.
+      if (Math.random() < dt * 6) g.particles.emit(this.x + Math.random() * this.w, this.y + 4 + Math.random() * (this.h - 6), { vx: (Math.random() - 0.5) * 14, vy: 15 + Math.random() * 25, life: 0.7, color: [0.55, 0.03, 0.08] });
+      if (Math.random() < 0.25) jolt = Math.random() < 0.5 ? -1 : 1;
+    }
+    this.twitch = Math.max(0, (this.twitch ?? 0) - dt);
+    if (this.twitch > 0) jolt = this.twitch > 0.04 ? 1 : -1;
+    return jolt;
+  }
+
+  // Una mutación no responde: el cuerpo se contrae con un fogonazo violeta.
+  rejectSpasm() {
+    this.spasm = 1;
+    const g = this.game;
+    for (let i = 0; i < 12; i++) {
+      const a = Math.random() * Math.PI * 2, s = 30 + Math.random() * 60;
+      g.glowParticles.emit(this.cx, this.cy, { vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.35, color: [0.8, 0.2, 0.9] });
+    }
+    g.flash(this.cx, this.cy, 50, [0.6, 0.1, 0.7], 0.15);
+  }
+
   // Consumibles activos, sin iconos en el HUD: se ven en el propio cuerpo.
   //   Perla de Nácar  la silueta brilla en cian nacarado y la rodean destellos
   //   Célula Madre    la silueta late en verde y le suben motas verdes
@@ -517,7 +556,8 @@ export class Player {
         g.glowParticles.emit(this.x + Math.random() * this.w, this.y + this.h * (0.4 + Math.random() * 0.6), { vx: (Math.random() - 0.5) * 10, vy: -25 - Math.random() * 25, life: 0.7, color: [0.3, 1, 0.45] });
       }
     }
-    this.selfMesh.material.color.setRGB(r, gr, b);
+    const [rr, rg, rb] = this.rejTint ?? [0, 0, 0]; // latido violeta del rechazo
+    this.selfMesh.material.color.setRGB(r + rr, gr + rg, b + rb);
     // Se acabó: un estallido del color del efecto y un aviso.
     for (const kind of ['shield', 'regen']) {
       if ((this.fxPrev?.[kind] ?? 0) > 0 && T[kind] <= 0) {
@@ -958,7 +998,8 @@ export class Player {
     // Agarrado a la pared, el cuerpo se pega a ella (y da un tirón al clavar las garras).
     this.clingJolt = Math.max(0, (this.clingJolt ?? 0) - dt * 8);
     const press = this.clinging ? this.facing * (1 + Math.round(this.clingJolt * 2)) : 0;
-    const x = this.cx - BODY_W / 2 + press, y = this.y + this.h - BODY_H;
+    const jolt = this.#rejectFx(dt); // el rechazo sacude el cuerpo
+    const x = this.cx - BODY_W / 2 + press + jolt, y = this.y + this.h - BODY_H;
     for (const m of [this.mesh, this.selfMesh, this.glowMesh]) {
       placeMesh(m, x, y, BODY_W, BODY_H);
       m.scale.x = this.facing;

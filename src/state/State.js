@@ -45,6 +45,12 @@ export const EXTENDER_PRICES = [30, 45, 65, 90, 120, 155, 195, 240, 290, 345, 40
 // Armas del cañón, en orden de su línea.
 export const WEAPONS = ['astillas', 'simbionte', 'escopeta'];
 const REJECTION_CRITICAL = 100;
+// Rechazo gradual: por debajo de REJECTION_FAIL_FROM no pasa nada; desde ahí las
+// mutaciones fallan cada vez más (hasta REJECTION_FAIL_MAX al 100 %); al 100 % además
+// el cuerpo se daña. Tramos de aviso (mensajes y señales en el cuerpo): 40, 70, 100.
+export const REJECTION_FAIL_FROM = 40;
+const REJECTION_FAIL_MAX = 0.35;
+export const REJECTION_TIERS = [40, 70, 100];
 const HUNGER_FLOOR = 10;          // el hambre de las mutaciones no baja tu biomasa de aquí
 const REJECTION_ESCALATION = 0.15; // cada mutación instalada encarece un 15% el rechazo de la siguiente
 
@@ -165,9 +171,18 @@ export class GameState {
     return m;
   }
 
-  // Con el rechazo al máximo, las mutaciones fallan a veces.
+  // Probabilidad de que una mutación no responda: crece del 0 (al 40 %) al 35 % (al 100 %).
+  get failChance() {
+    const k = (this.rejection - REJECTION_FAIL_FROM) / (REJECTION_CRITICAL - REJECTION_FAIL_FROM);
+    return Math.max(0, Math.min(1, k)) * REJECTION_FAIL_MAX;
+  }
+
+  // Tramo de rechazo (0 sano, 1 inflamado, 2 rechazo, 3 crisis), para los avisos.
+  get rejectionTier() { return REJECTION_TIERS.filter((t) => this.rejection >= t).length; }
+
+  // Con el rechazo alto, las mutaciones fallan a veces (cada vez más).
   abilityWorks(ability) {
-    if (this.critical && Math.random() < 0.35) {
+    if (Math.random() < this.failChance) {
       this.emit('mutationFail', ability);
       return false;
     }
@@ -274,6 +289,10 @@ export class GameState {
       if (hunger && this.biomass > HUNGER_FLOOR) this.biomass = Math.max(HUNGER_FLOOR, this.biomass - hunger * dt);
     }
     if (!this.dev.freezeRejection) this.rejection = Math.min(120, this.rejection + this.rejectionPerSecond * dt);
+    // Al cruzar un tramo hacia arriba, el cuerpo avisa (Game muestra el mensaje).
+    const tier = this.rejectionTier;
+    if (tier > (this.lastTier ?? 0)) this.emit('rejectionTier', tier);
+    this.lastTier = tier;
     if (this.dev.god) {
       this.oxygen = this.oxygenMax;
       this.light = 100;

@@ -106,10 +106,32 @@ export class Game {
     const st = this.state;
     st.on('damage', ({ n }) => { if (n >= 1) this.shake = Math.max(this.shake, 3); });
     st.on('death', (cause) => this.#onDeath(cause));
-    st.on('mutationFail', () => {
+    // Rechazo: lo que falla se cuenta como algo del cuerpo (diegético), no como un fallo
+    // del juego. El jugador ve el espasmo en el propio personaje (Player.rejectSpasm).
+    const FAIL_TEXT = {
+      dash: 'Los émbolos se agarrotan: tu cuerpo rechaza los Pistones.',
+      doubleJump: 'Los alveolos se cierran en un espasmo: no hay gas para el salto.',
+      wallClimb: 'Las garras tiemblan y no hacen presa: el injerto se resiste.',
+      grapple: 'El tendón se contrae solo y no sale: tu cuerpo lo rechaza.',
+    };
+    st.on('mutationFail', (ability) => {
       this.audio.play('fail');
-      this.say('RECHAZO CRÍTICO: la mutación no responde.', 1.5);
-      this.shake = 4;
+      this.player?.rejectSpasm();
+      this.shake = Math.max(this.shake, 2);
+      if (this.time - (this.lastFailSay ?? -9) > 3) {
+        this.lastFailSay = this.time;
+        this.say(FAIL_TEXT[ability] ?? 'Un injerto no responde: tu cuerpo lo rechaza.', 1.8);
+      }
+    });
+    st.on('rejectionTier', (tier) => {
+      this.audio.play('fail');
+      this.player?.rejectSpasm();
+      this.say([
+        '',
+        'Tus injertos se inflaman: a veces no responderán. Un Supresor del útero lo calma.',
+        'Tu cuerpo rechaza la carne ajena: las mutaciones fallan cada vez más.',
+        'CRISIS DE RECHAZO: los injertos te devoran por dentro. Busca un útero.',
+      ][tier], 4);
     });
     st.on('outOfBreath', () => {
       if (this.time - (this.lastBreathWarn ?? -9) < 1.2) return;
