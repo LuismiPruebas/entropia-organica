@@ -58,8 +58,8 @@ export const KINDS = {
     text: (o) => o.type,
   },
   nodules: {
-    label: 'Nódulo óseo', color: '#e8dcc8',
-    make: (x, y) => [x, y], box: (o) => [...pt(o), 1, 1], move: (o, x, y) => { o[0] = x; o[1] = y; }, text: (o) => (o[2] === 'luz' ? 'luz' : 'nód'),
+    label: 'Nódulo (óseo o lumínico)', color: '#e8dcc8',
+    make: (x, y) => [x, y], box: (o) => [...pt(o), 1, 1], move: (o, x, y) => { o[0] = x; o[1] = y; }, text: (o) => (o[2] === 'luz' ? 'nód·luz' : 'nód'),
   },
   hidden: {
     label: 'Objeto oculto (marca)', color: '#ffffff',
