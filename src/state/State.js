@@ -24,6 +24,8 @@ export const CELL_CHARGE = 100; // luz que devuelve cada célula lumínica de la
 // Una célula recogida o comprada siempre recarga el ojo al 100 %; si ya estaba a esto o
 // más (%), además se guarda en la reserva.
 export const CELL_STORE_FROM = 80;
+// Las células de la reserva se gastan solas cuando la luz baja de esto (%).
+export const CELL_AUTO_BELOW = 50;
 // Consumibles raros: se guardan y se usan desde el Genoma.
 // Apenas los sueltan las criaturas (los jefes, siempre uno); el útero los vende caros.
 export const ITEMS = {
@@ -78,7 +80,7 @@ export class GameState {
     this.extendersBought = 0;    // los comprados en el útero (fijan el precio del siguiente)
     this.weapon = null;          // arma del cañón elegida (WEAPONS); null = culata
     this.scrap = 12;
-    this.cells = 0;              // células lumínicas en reserva: se gastan solas al apagarse el ojo
+    this.cells = 0;              // células lumínicas en reserva: se gastan solas bajo CELL_AUTO_BELOW
     this.items = { shield: 0, regen: 0 }; // consumibles guardados (ITEMS)
     this.timers = { shield: 0, regen: 0 }; // segundos que le quedan a cada efecto activo
     this.flashlightOn = true;
@@ -272,8 +274,8 @@ export class GameState {
       this.light = Math.max(0, this.light - LIGHT_DRAIN * this.mod('lightDrain') * dt);
       if (this.light <= 0) { this.flashlightOn = false; this.eyeStarved = true; }
     }
-    // Ojo sin luz y células en reserva: se gasta una y el ojo se recarga entero.
-    if (this.light <= 0 && this.cells > 0) {
+    // La luz baja de CELL_AUTO_BELOW y hay células en reserva: se gasta una y el ojo se recarga.
+    if (this.light < CELL_AUTO_BELOW && this.cells > 0) {
       this.cells--;
       this.light = CELL_CHARGE;
       this.emit('cellUsed', this.cells);

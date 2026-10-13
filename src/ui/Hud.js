@@ -71,7 +71,7 @@ export class Hud {
     // En fila: icono del hueso y su valor (munición de las astillas), luego la célula y el suyo.
     drawBoneIcon(g, 64, 15, t);
     drawNumber(g, 75, 15, st.scrap, st.scrap === 0 ? '#ff5a5a' : '#e8dcc8');
-    // Células lumínicas en reserva: recargan el ojo solas cuando se apaga.
+    // Células lumínicas en reserva: recargan el ojo solas cuando su luz baja de la mitad.
     const cx = 75 + String(st.scrap).length * 4 + 4;
     drawCellIcon(g, cx, 13, t, st.cells > 0);
     drawNumber(g, cx + 6, 15, st.cells, st.cells === 0 ? '#6a6050' : '#ffd23f');

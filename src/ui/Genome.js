@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, LINE_ORDER, FRAGMENTS, SYNERGIES, CLASHES, ROMAN, linesOf } from '../data/mutations.js';
-import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM } from '../state/State.js';
+import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW } from '../state/State.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { PlayerBody, BODY_W, BODY_H } from '../entities/PlayerBody.js';
 import { caps } from './Hud.js';
@@ -403,7 +403,7 @@ export class Genome {
         'Sola al descansar · Nodo.'],
       lux: [`${n(st.light)} / 100`,
         'Revela lo oculto y fija tu arma en lo que alumbras.',
-        `Encendido gasta ${(LIGHT_DRAIN * st.mod('lightDrain')).toFixed(1).replace('.', ',')}/s. Al apagarse gasta una célula de la reserva (${st.cells}).`,
+        `Encendido gasta ${(LIGHT_DRAIN * st.mod('lightDrain')).toFixed(1).replace('.', ',')}/s. Bajo el ${CELL_AUTO_BELOW} % gasta sola una célula de la reserva (${st.cells}).`,
         `Células lumínicas, halladas o del útero: recargan el ojo y, con él al ${CELL_STORE_FROM} % o más, además se guardan.`],
       rej: [`${n(st.rejection)} %`,
         'Tu cuerpo rechaza los injertos.',
