@@ -42,18 +42,18 @@ const VEINS = [
   'M246,0 C250,35 240,70 247,95 S243,112 246,120',
 ];
 
-// Tipos de opción: cada uno destaca con su color y su etiqueta, y explica qué hace en
+// Tipos de opción: cada uno destaca con su color, y explica qué hace en
 // el panel de abajo al señalarlo (ratón, flechas o mando). Las mutaciones toman el
 // color de su órgano.
 const CATS = {
-  heal: { c: '#ff5a6a', tag: 'CURA', info: 'El útero cierra tus heridas con su propia carne. Guarda pocas curas, y se regeneran poco a poco con el tiempo.' },
-  cell: { c: '#ffd23f', tag: 'LUZ', info: `Recarga tu ojo al 100 %. Si ya estabas al ${CELL_STORE_FROM} % o más, además la guardas: las de la reserva se gastan solas cuando la luz baja del ${CELL_AUTO_BELOW} %.` },
-  suppressor: { c: '#c07bff', tag: 'RECHAZO', info: 'Calma el rechazo de tus injertos. Desde el 40 % las mutaciones empiezan a fallar, y al 100 % te dañan.' },
-  extender: { c: '#b48cff', tag: 'CARGA', info: 'Amplía la carga genética que tu cuerpo tolera: más mutaciones sin que el rechazo se dispare. Cada extensor cuesta más que el anterior.' },
-  trade: { c: '#c8b8a0', tag: 'TRUEQUE', info: 'El útero digiere un recurso y te devuelve el otro. Útil cuando te sobra uno y te falta el otro.' },
-  shield: { c: '#4ff0ff', tag: 'CONSUMIBLE', info: `Perla de Nácar: se guarda y la usas cuando quieras desde el Genoma. Nada te hiere durante ${ITEMS.shield.time} s.` },
-  regen: { c: '#7dff9a', tag: 'CONSUMIBLE', info: `Célula Madre: se guarda y la usas cuando quieras desde el Genoma. Regeneras integridad durante ${ITEMS.regen.time} s.` },
-  travel: { c: '#d0a8ff', tag: 'VIAJE', info: 'El Tercer Ojo te arrastra por el nervio del organismo hasta otro útero que ya conozcas.' },
+  heal: { c: '#ff5a6a', info: 'El útero guarda pocas curas; se regeneran con el tiempo.' },
+  cell: { c: '#ffd23f', info: `Al ${CELL_STORE_FROM} % o más, además se guarda; las guardadas se gastan solas bajo el ${CELL_AUTO_BELOW} %.` },
+  suppressor: { c: '#c07bff', info: 'Desde el 40 % de rechazo las mutaciones fallan; al 100 % te dañan.' },
+  extender: { c: '#b48cff', info: 'Llevas más mutaciones sin que el rechazo se dispare. Cada uno cuesta más.' },
+  trade: { c: '#c8b8a0', info: 'El útero digiere un recurso y te devuelve el otro.' },
+  shield: { c: '#4ff0ff', info: 'Se guarda; úsala cuando quieras desde el Genoma.' },
+  regen: { c: '#7dff9a', info: 'Se guarda; úsala cuando quieras desde el Genoma.' },
+  travel: { c: '#d0a8ff', info: 'El nervio del organismo te lleva a otro útero que ya conoces.' },
 };
 const HINT = 'Señala una opción para saber qué hace.';
 
@@ -171,11 +171,14 @@ export class NodeMenu {
     const g = this.game, st = g.state, key = g.room.id;
     const res = st.nodeReserve(key, g.time);
     const node = nodeOf(key); // cada útero ofrece y cobra distinto (data/nodes.js)
+    // Cada opción: en su ficha, solo nombre y coste (con el motivo si no se puede); lo
+    // que hace (effect + la explicación de su tipo) va al panel de abajo al señalarla.
     const options = [
       {
         icon: ['heal', { doses: res.doses, total: NODE_DOSES, fill: res.next ? 1 - res.next / NODE_REGEN : 0 }],
         label: 'Sanar tejido',
-        desc: `<span class="c-int">+${NODE_HEAL} integridad</span> · ${price(node.heal)}${why(!res.doses && 'útero vacío', st.integrity >= st.maxIntegrity && 'integridad al máximo', !st.canPay(node.heal) && 'no te alcanza')}${res.next ? ` <span class="dim">(+1 en ${res.next}s)</span>` : ''}`,
+        effect: `<span class="c-int">+${NODE_HEAL} integridad</span>${res.next ? ` <span class="dim">(otra cura en ${res.next}s)</span>` : ''}`,
+        cost: `${price(node.heal)}${why(!res.doses && 'útero vacío', st.integrity >= st.maxIntegrity && 'integridad al máximo', !st.canPay(node.heal) && 'no te alcanza')}`,
         enabled: res.doses > 0 && st.canPay(node.heal) && st.integrity < st.maxIntegrity,
         run: () => { if (st.healAtNode(key, g.time, node.heal)) g.audio.play('womb'); },
       },
@@ -183,8 +186,9 @@ export class NodeMenu {
       // a CELL_STORE_FROM o más, además se guardan. Cada útero solo cría unas pocas.
       {
         icon: ['cell', { left: st.nodeCellsLeft(key), total: NODE_CELLS }],
-        label: `Célula lumínica (quedan ${st.nodeCellsLeft(key)}/${NODE_CELLS})`,
-        desc: `<span class="c-lux">recarga el ojo${st.light >= CELL_STORE_FROM ? ` y se guarda (llevas ${st.cells})` : ''}</span> · ${price(CELL_PRICE)}${why(st.nodeCellsLeft(key) <= 0 && 'este útero ya no cría más', !st.canPay(CELL_PRICE) && 'no te alcanza')}`,
+        label: `Célula lumínica ${st.nodeCellsLeft(key)}/${NODE_CELLS}`,
+        effect: `<span class="c-lux">recarga el ojo${st.light >= CELL_STORE_FROM ? ` y se guarda (llevas ${st.cells})` : ''}</span>`,
+        cost: `${price(CELL_PRICE)}${why(st.nodeCellsLeft(key) <= 0 && 'este útero ya no cría más', !st.canPay(CELL_PRICE) && 'no te alcanza')}`,
         enabled: st.nodeCellsLeft(key) > 0 && st.canPay(CELL_PRICE),
         run: () => {
           const r = st.buyCell(key);
@@ -196,29 +200,33 @@ export class NodeMenu {
       node.suppressor && {
         icon: ['suppressor'],
         label: 'Supresor de rechazo',
-        desc: `<span class="c-rej">-35 rechazo</span> · ${price(node.suppressor)}${why(st.rejection <= 0 && 'sin rechazo', !st.canPay(node.suppressor) && 'no te alcanza')}`,
+        effect: `<span class="c-rej">-35 rechazo</span> <span class="dim">(ahora ${Math.floor(st.rejection)} %)</span>`,
+        cost: `${price(node.suppressor)}${why(st.rejection <= 0 && 'sin rechazo', !st.canPay(node.suppressor) && 'no te alcanza')}`,
         enabled: st.canPay(node.suppressor) && st.rejection > 0,
         run: () => { if (st.craftSuppressor(node.suppressor)) g.audio.play('womb'); },
       },
       {
         icon: ['extender'],
         label: 'Extensor de tolerancia',
-        desc: `<span class="c-rej">+${CAPACITY_PER_EXTENDER} carga genética</span> (${st.load}/${st.capacity}) · ${price(st.extenderPrice)}${why(!st.canPay(st.extenderPrice) && 'no te alcanza')}`,
+        effect: `<span class="c-rej">+${CAPACITY_PER_EXTENDER} carga genética</span> <span class="dim">(ahora ${st.load}/${st.capacity})</span>`,
+        cost: `${price(st.extenderPrice)}${why(!st.canPay(st.extenderPrice) && 'no te alcanza')}`,
         enabled: st.canPay(st.extenderPrice),
         run: () => { if (st.buyExtender()) { g.audio.play('mutate'); g.say('El útero te injerta un extensor: tu cuerpo tolera más carga genética.', 3); } },
       },
       node.trade && {
         icon: ['trade', { toBio: !!node.trade.get.bio }],
         label: node.trade.get.bio ? 'Digerir hueso' : 'Calcificar carne',
-        desc: `${price(node.trade.give)} → ${price(node.trade.get, '+')}${why(node.trade.get.bio && st.biomass >= st.biomassMax && 'biomasa al máximo', !st.canPay(node.trade.give) && 'no te alcanza')}`,
+        effect: '',
+        cost: `${price(node.trade.give)} → ${price(node.trade.get, '+')}${why(node.trade.get.bio && st.biomass >= st.biomassMax && 'biomasa al máximo', !st.canPay(node.trade.give) && 'no te alcanza')}`,
         enabled: st.canPay(node.trade.give) && !(node.trade.get.bio && st.biomass >= st.biomassMax),
         run: () => { if (st.tradeAtNode(node.trade)) g.audio.play('womb'); },
       },
       // Consumibles raros: el útero los cría, pero cuestan mucha carne.
       ...Object.entries(ITEMS).map(([kind, it]) => ({
         icon: [kind],
-        label: `${it.name} (llevas ${st.items[kind]})`,
-        desc: `${kind === 'shield' ? `<span class="c-o2">invulnerable ${it.time} s</span>` : `<span class="c-int">regeneras ${it.time} s</span>`} · ${price(it.price)}${why(it.price.bio > st.biomassMax && 'amplía tu reserva de biomasa (quistes)', !st.canPay(it.price) && 'no te alcanza')}`,
+        label: `${it.name} ×${st.items[kind]}`,
+        effect: kind === 'shield' ? `<span class="c-o2">invulnerable ${it.time} s</span>` : `<span class="c-int">regeneras ${it.time} s</span>`,
+        cost: `${price(it.price)}${why(it.price.bio > st.biomassMax && 'amplía tu reserva', !st.canPay(it.price) && 'no te alcanza')}`,
         enabled: st.canPay(it.price),
         run: () => { if (st.buyItem(kind)) { g.audio.play('womb'); g.say(`El útero cría una ${it.name}. Úsala ${g.itemKey(kind)}.`, 2.5); } },
       })),
@@ -229,13 +237,14 @@ export class NodeMenu {
         const tag = linesOf(m).map((l) => LINES[l].name).join(' + ');
         return {
           icon: ['dna', { id }],
-          label: `Asimilar ADN latente · ${tag} ${ROMAN[m.level]}`,
-          desc: ready
-            ? `<span class="c-int">-${cost.integrity} integridad máx</span> · <span class="c-rej">+${cost.rejection} rechazo</span>${cost.overload ? ` · <span class="c-rej">supera tu tolerancia (${st.load + (m.load ?? 1)}/${st.capacity})</span>` : ''}`
-            : `Aún no: antes necesitas ${st.missing(id).map(dnaTag).join(' y ')}`,
+          label: `Asimilar · ${tag} ${ROMAN[m.level]}`,
+          cost: ready
+            ? `<span class="c-int">-${cost.integrity} integridad máx</span> · <span class="c-rej">+${cost.rejection} rechazo</span>${cost.overload ? ` · <span class="c-rej">supera tu tolerancia</span>` : ''}`
+            : `<span class="dim">antes necesitas ${st.missing(id).map(dnaTag).join(' y ')}</span>`,
+          effect: cost.overload ? `<span class="c-rej">supera tu tolerancia (${st.load + (m.load ?? 1)}/${st.capacity}): el rechazo subirá más deprisa</span>` : '',
           enabled: ready,
           mutation: true,
-          cat: { c: LINES[m.line].color, tag: 'MUTACION', info: `Instala para siempre una mutación de tu ${tag.toLowerCase()}. Cuesta integridad máxima y sube el rechazo. Qué hace exactamente, solo lo sabrás al asimilarla.` },
+          cat: { c: LINES[m.line].color, info: 'Se instala para siempre. Qué hace, solo lo sabrás al asimilarla.' },
           run: () => { st.install(id); g.audio.play('mutate'); },
         };
       }),
@@ -243,7 +252,7 @@ export class NodeMenu {
       ...(st.has('eye3') ? travelTargets(st, key).map(([room, spawn]) => ({
         icon: ['travel'],
         label: `Viajar: ${nodeOf(room).name}`,
-        desc: `<span class="c-lux">-${TRAVEL.light} luz</span> · ${price({ bio: TRAVEL.bio })}${why(st.light < TRAVEL.light && 'sin luz', !st.canPay({ bio: TRAVEL.bio }) && 'no te alcanza')}`,
+        cost: `<span class="c-lux">-${TRAVEL.light} luz</span> · ${price({ bio: TRAVEL.bio })}${why(st.light < TRAVEL.light && 'sin luz', !st.canPay({ bio: TRAVEL.bio }) && 'no te alcanza')}`,
         enabled: st.light >= TRAVEL.light && st.canPay({ bio: TRAVEL.bio }),
         run: () => {
           if (!st.pay({ bio: TRAVEL.bio })) return;
@@ -277,13 +286,16 @@ export class NodeMenu {
       b.disabled = !o.enabled;
       if (o.mutation) b.classList.add('mut');
       // Cada tipo destaca a su manera: su color en la franja, el fondo, el título y el
-      // brillo del icono, con su etiqueta a la derecha. Al señalarla, explica qué hace.
-      const cat = o.cat ?? CATS[o.icon?.[0]] ?? { c: '#e8dcc8', tag: '', info: '' };
+      // brillo del icono. Al señalarla, el panel de abajo explica qué hace.
+      const cat = o.cat ?? CATS[o.icon?.[0]] ?? { c: '#e8dcc8', info: '' };
       b.style.setProperty('--c', cat.c);
       b.style.setProperty('--tint', `${cat.c}26`);
       b.dataset.info = cat.info;
-      b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas><span class="nm-tag">${cat.tag}</span><span class="nm-label">${i + 1}. ${o.label}</span>${o.desc ? `<span class="desc">${o.desc}</span>` : ''}`;
-      b.addEventListener('mouseenter', () => this.#showInfo(b));
+      b.dataset.title = o.label;
+      b.dataset.effect = o.effect ?? '';
+      b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas><span class="nm-label">${i + 1}. ${o.label}</span><span class="desc">${o.cost}</span>`;
+      // Con el ratón, la selección sigue al cursor: marco y panel siempre coinciden.
+      b.addEventListener('mouseenter', () => { if (!b.classList.contains('nav-sel')) this.nav.select(b); });
       if (o.icon) this.icons.push({ g: b.querySelector('canvas').getContext('2d'), kind: o.icon[0], opts: o.icon[1] ?? {} });
       b.addEventListener('click', () => {
         // Un clic justo al abrirse viene del gesto que lo abrió (un toque en USAR): se ignora.
@@ -329,12 +341,14 @@ export class NodeMenu {
     update();
   }
 
-  // Panel de abajo: qué hace la opción señalada, en su color.
+  // Panel de abajo: qué hace la opción señalada. Lleva su nombre en su color (y la
+  // misma franja), para que se vea a qué opción pertenece.
   #showInfo(b) {
     const box = this.el.querySelector('.nm-info');
     if (!box) return;
-    box.textContent = b?.dataset.info || HINT;
     box.style.setProperty('--c', b?.style.getPropertyValue('--c') || '#6a5a5a');
+    if (!b) { box.textContent = HINT; return; }
+    box.innerHTML = `<b class="nm-info-t">${b.dataset.title}</b>${b.dataset.effect ? ` ${b.dataset.effect}` : ''}<br>${b.dataset.info}`;
   }
 
   #drawIcons(t) {
