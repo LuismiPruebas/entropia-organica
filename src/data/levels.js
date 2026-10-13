@@ -273,7 +273,7 @@ export const LEVELS = {
       '################################################',
     ],
     sacs: [
-      { x: 14, y: 20, item: '*', until: 'gangliomadre' },
+      { x: 14, y: 20, item: 'B', until: 'gangliomadre' }, // era un fragmento óseo: aquí solo se ganan las piernas
     ],
     enemies: [
       { type: 'gangliomadre', x: 18, y: 16 },
