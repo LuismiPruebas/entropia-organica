@@ -18,7 +18,7 @@ for (const [id, lv] of Object.entries(LEVELS)) {
   if (!BIOMES[lv.biome]) fail(`bioma desconocido ${lv.biome}`);
   if (!lv.map) fail('falta la posición en el mapa (map)');
   lv.grid.forEach((row, y) => { if (row.length !== w) fail(`fila ${y} mide ${row.length}, se esperaba ${w}`); });
-  for (const e of lv.enemies) {
+  for (const e of lv.enemies ?? []) { // una sala puede no tener enemigos
     if (!ENEMIES[e.type]) fail(`enemigo desconocido ${e.type}`);
     if (SOLID.has(cell(id, e.x, e.y))) fail(`enemigo ${e.type} dentro de una pared en [${e.x},${e.y}]`);
     // Su caja entera (colocada como en Enemy.js) tampoco puede empezar dentro de la roca.

@@ -21,6 +21,9 @@ const OXYGEN_REGEN = 6;        // por segundo (base, mejorable con mutaciones)
 const OXYGEN_REGEN_DELAY = 0.9; // segundos de descanso antes de recuperar
 export const LIGHT_DRAIN = 1.5;       // por segundo con el ojo encendido (era 1.0: las células ahora se acumulan en reserva)
 export const CELL_CHARGE = 100; // luz que devuelve cada célula lumínica de la reserva
+// Una célula recogida o comprada recarga el ojo solo si está por debajo de esto (%);
+// si no, se guarda (era 95: en cuanto el ojo bajaba un poco ya no se acumulaban).
+export const CELL_USE_BELOW = 50;
 // Consumibles raros: se guardan y se usan cuando quieras (1 / 2, R3 / L3, botón táctil).
 // Apenas los sueltan las criaturas (los jefes, siempre uno); el útero los vende caros.
 export const ITEMS = {
@@ -426,10 +429,10 @@ export class GameState {
     return true;
   }
 
-  // Una célula lumínica nueva (encontrada o comprada): con el ojo casi lleno (95% o
-  // más) va a la reserva; si no, se consume al momento. Devuelve true si se guardó.
+  // Una célula lumínica nueva (encontrada o comprada): con el ojo por debajo de
+  // CELL_USE_BELOW se consume al momento; si no, va a la reserva. Devuelve true si se guardó.
   gainCell() {
-    if (this.light >= 95) { this.cells++; return true; }
+    if (this.light >= CELL_USE_BELOW) { this.cells++; return true; }
     this.light = Math.min(100, this.light + CELL_CHARGE);
     return false;
   }

@@ -11,7 +11,7 @@ export const SCRAP_PER_PIECE = 12;
 // Qué hace cada recurso al recogerlo. Añadir un tipo = añadir una entrada.
 export const PICKUPS = {
   biomass: { sprite: 'biomass', apply: (st, p) => st.addBiomass(p.amount ?? 8), sound: 'pickup' },
-  // Con el ojo casi lleno (95% o más) la célula se guarda en la reserva; si no, se consume al momento.
+  // Con el ojo por debajo de la mitad (State.CELL_USE_BELOW) la célula se consume; si no, a la reserva.
   battery: {
     sprite: 'battery',
     sound: 'pickup',

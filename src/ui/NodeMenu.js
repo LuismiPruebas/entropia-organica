@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { NODE_DOSES, NODE_HEAL, NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, CELL_PRICE, NODE_CELLS } from '../state/State.js';
+import { NODE_DOSES, NODE_HEAL, NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, CELL_PRICE, NODE_CELLS, CELL_USE_BELOW } from '../state/State.js';
 import { LEVELS } from '../data/levels.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { nodeOf } from '../data/nodes.js';
@@ -164,12 +164,12 @@ export class NodeMenu {
         enabled: res.doses > 0 && st.canPay(node.heal) && st.integrity < st.maxIntegrity,
         run: () => { if (st.healAtNode(key, g.time, node.heal)) g.audio.play('womb'); },
       },
-      // Células lumínicas: como al encontrarlas, recargan el ojo si no está casi lleno
-      // (95%); si lo está, van a la reserva. Cada útero solo cría unas pocas.
+      // Células lumínicas: como al encontrarlas, recargan el ojo si está por debajo
+      // (CELL_USE_BELOW); si no, van a la reserva. Cada útero solo cría unas pocas.
       {
         icon: ['cell', { left: st.nodeCellsLeft(key), total: NODE_CELLS }],
         label: `Célula lumínica (quedan ${st.nodeCellsLeft(key)}/${NODE_CELLS})`,
-        desc: `<span class="c-lux">${st.light >= 95 ? `a la reserva (llevas ${st.cells})` : 'recarga el ojo'}</span> · ${price(CELL_PRICE)}${why(st.nodeCellsLeft(key) <= 0 && 'este útero ya no cría más', !st.canPay(CELL_PRICE) && 'no te alcanza')}`,
+        desc: `<span class="c-lux">${st.light >= CELL_USE_BELOW ? `a la reserva (llevas ${st.cells})` : 'recarga el ojo'}</span> · ${price(CELL_PRICE)}${why(st.nodeCellsLeft(key) <= 0 && 'este útero ya no cría más', !st.canPay(CELL_PRICE) && 'no te alcanza')}`,
         enabled: st.nodeCellsLeft(key) > 0 && st.canPay(CELL_PRICE),
         run: () => {
           const r = st.buyCell(key);
