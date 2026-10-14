@@ -312,8 +312,8 @@ export const LEVELS = {
       '#..#..............##############',
       '#..X.......B.......#############',
       '#..X..............##############',
-      '#..X..................f.........',
-      '#*.X..................fB........',
+      '...X..................f.........',
+      '.*.X..................fB........',
       '######............##############',
       '######............##############',
       '######............##############',
@@ -341,6 +341,7 @@ export const LEVELS = {
     hidden: [[1, 10], [11, 7]],
     exits: [
       { side: 'right', to: 'A3', spawn: [2, 38] },
+      { side: 'left', at: [9, 10], to: 'O6', spawn: [78, 11] },
     ],
     hints: [
       { x: 25, y: 10, r: 3, text: 'El tejido de la pared se estremece con la luz.' },
@@ -1562,7 +1563,7 @@ export const LEVELS = {
   O6: {
     name: 'Canal de Havers',
     biome: 'oseo',
-    map: [-8, 1, 4, 1],
+    map: [-8, 1, 5, 1],
     grid: [
       '######################################################..########################',
       '######....############################################..########################',
@@ -1592,6 +1593,7 @@ export const LEVELS = {
     exits: [
       { side: 'top', at: [54, 55], to: 'O2', spawn: [9, 38] },
       { side: 'left', at: [10, 11], to: 'O7', spawn: [29, 11] },
+      { side: 'right', at: [10, 11], to: 'A5', spawn: [1, 10] },
     ],
     hints: [
       { x: 51, y: 5, r: 3, text: 'Un canal que recorre el hueso por dentro,  de punta a punta. Las paredes se cierran en membranas: embístelas.' },
