@@ -72,7 +72,7 @@ function fakeEntity(id, def) {
       ceilingEye: { charging: true },
       golem: { state: 'punch', vx: 0 },
       rhino: { state: 'charge', vx: 165 },
-      bossToad: { state: 'leap', vx: 200, vy: -200 },
+      bossToad: { state: 'bite', biteK: 1 },
     })[def.behavior] ?? {});
   }
   return e;

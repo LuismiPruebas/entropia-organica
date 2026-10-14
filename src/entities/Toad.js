@@ -12,7 +12,7 @@ import { px, seg, limb, blob, part, ik, OUTLINE as K } from './Rig.js';
 // leap (estirado en el aire) · land (aplastado, con la panza al aire: aturdido) ·
 // brood (las celdas se hinchan y asoman las sanguijuelas antes de reventar).
 
-const W = 96, H = 52, GROUND = H - 1; // ancho: deja sitio a la cabeza cuando la dispara (bocado)
+const W = 108, H = 60, GROUND = H - 1; // grande: deja sitio a las fauces cuando las dispara (bocado)
 const C = {
   skin: '#6c6874', skinD: '#44404c', skinL: '#9e98a6', spot: '#4c4852', wart: '#8a8290', wartL: '#bab2c0',
   belly: '#c0b0b4', bellyD: '#8e7e86', scar: '#3a2a2a', stitch: '#d8ccb8',
@@ -23,6 +23,71 @@ const C = {
 };
 // Ruido fijo por píxel (para el moteado de la piel: no parpadea entre fotogramas).
 const hash = (x, y) => ((((x * 73856093) ^ (y * 19349663)) >>> 0) % 100) / 100;
+
+// Fauces del bocado: las dos mandíbulas se abren en cepo desde la bisagra (x0, y0) y
+// enseñan todo el interior: garganta honda con anillos, encías rosadas, dos filas de
+// dientes que apuntan hacia dentro, lengua gruesa e hilos de baba. Puede tragar algo
+// del tamaño de su cuerpo. `bite` 0..1 = cuánto se ha abierto.
+function drawMaw(g, gl, x0, y0, bite, t) {
+  const a = 0.25 + bite * 0.6;                   // media apertura (rad): casi 100° en total
+  const L = 15 + bite * 6;                       // largo de cada mandíbula
+  const dir = (ang, d) => [x0 + Math.cos(ang) * d, y0 + Math.sin(ang) * d];
+  const [ux, uy] = dir(-a, L), [lx, ly] = dir(a, L);
+  // Mandíbulas por fuera: la de arriba es la cabeza (piel), la de abajo, la barbilla pálida.
+  limb(g, x0, y0 - 1, ux, uy - 2, 8, C.skin, C.skinL);
+  limb(g, x0, y0 + 1, lx, ly + 2, 7, C.skin, C.belly);
+  for (const k of [0.35, 0.6, 0.85]) { const [sx, sy] = dir(-a, L * k); px(g, sx, sy - 3, C.spot); } // moteado
+  // Interior: de la garganta (negra) a los labios (rojos), con anillos en el gaznate.
+  for (let y = -Math.ceil(L); y <= Math.ceil(L); y++) for (let x = 0; x <= Math.ceil(L); x++) {
+    const d = Math.hypot(x, y), ang = Math.atan2(y, x);
+    if (d > L - 0.5 || Math.abs(ang) > a - 0.1) continue;
+    const k = d / L;
+    let c = k < 0.28 ? '#120208' : k < 0.5 ? '#3e0a16' : k < 0.75 ? '#6e1a2a' : '#922a3c';
+    if (Math.abs(d - L * 0.3) < 0.6 || Math.abs(d - L * 0.45) < 0.5) c = '#5a1222'; // anillos del gaznate
+    if (Math.abs(ang) > a - 0.24 && d > 4) c = Math.abs(ang) > a - 0.15 ? '#e8909c' : '#c86070'; // encías
+    px(g, x0 + x, y0 + y, c);
+  }
+  // Lengua gruesa y bífida, tendida sobre la mandíbula de abajo.
+  const [tx, ty] = dir(a * 0.35, L * 0.75);
+  limb(g, x0 + 2, y0 + 2, tx, ty, 3, '#c0506a', '#e88a9a');
+  px(g, tx + 1, ty - 1, '#e88a9a'); px(g, tx + 1, ty + 1, '#a03a50');
+  // Dientes: dos filas en las encías, largos y curvos, apuntando hacia dentro.
+  for (const s of [-1, 1]) {
+    for (let d = 6; d < L - 1; d += 4) {
+      const [bx, by] = dir(s * (a - 0.16), d);
+      const inward = s * (a - 0.16) - s * Math.PI / 2 + s * 0.35; // hacia dentro y algo hacia la garganta
+      const len = 2 + (d > L * 0.6 ? 1 : 0);
+      const ex = bx + Math.cos(inward) * len, ey = by + Math.sin(inward) * len;
+      seg(g, bx, by, ex, ey, '#5a1222', 3);
+      seg(g, bx, by, ex, ey, C.tooth, 2);
+      px(g, ex, ey, '#fffaf0');
+    }
+  }
+  // Hilos de baba entre las dos mandíbulas, que se estiran al abrir.
+  for (const k of [0.62, 0.86]) {
+    const [ax, ay] = dir(-(a - 0.22), L * k), [bx, by] = dir(a - 0.22, L * k);
+    const n = Math.round(Math.abs(by - ay));
+    for (let i = 1; i < n; i += 2) {
+      const sag = Math.sin((i / n) * Math.PI) * 2;              // la baba cuelga en curva
+      px(g, ax + (bx - ax) * (i / n) + sag, ay + (by - ay) * (i / n), '#c8dcb0');
+    }
+  }
+  // Labios oscuros y ácido que gotea del de abajo.
+  seg(g, x0, y0 - 1, ux, uy, K, 1);
+  seg(g, x0, y0 + 1, lx, ly, K, 1);
+  const drip = Math.floor((t * 4) % 5);
+  px(g, lx - 1, ly + 2 + drip, C.acid);
+  px(gl, lx - 1, ly + 2 + drip, C.acid);
+  // Los ojos van sobre la mandíbula de arriba: se levantan al abrir.
+  for (const k of [0.25, 0.5]) {
+    const [ex, ey] = dir(-a, L * k);
+    const oy = ey - 5;
+    px(g, ex - 2, oy - 1, K, 6, 5);
+    px(g, ex - 1, oy, C.eye, 4, 3);
+    px(g, ex + 1, oy, K, 1, 3);                                  // pupila de rendija (mirando al frente)
+    px(gl, ex, oy + 1, C.eye, 2, 1);
+  }
+}
 
 export const TOAD = {
   size: () => [W, H],
@@ -134,52 +199,55 @@ export const TOAD = {
     px(g, hx, hy + 5, '#e8ccc8');
 
     // ---- Cabeza ancha con boca de oreja a oreja y dientes.
-    part(g, hx, hy, 9 + bite * 3, 6.5 - squash + bite * 2, C.skin, C.skinD, C.skinL);
-    for (const [dx, dy] of [[-3, -3], [3, -2], [6, 1], [-5, 1]]) px(g, hx + dx, hy + dy, C.spot);
-    const want = bite ? 4 + bite * 9 : windup ? 2 + (Math.sin(t * 50) > 0 ? 1 : 0)
-      : st === 'leap' ? 4 : st === 'brood' ? 4 : st === 'crouch' ? 1.5 + swell : squash ? 1 + swell * 1.5 : croak * 2.5;
-    e.jaw = (e.jaw ?? 0) + (want - (e.jaw ?? 0)) * (bite ? 0.7 : 0.35);  // suaviza entre fotogramas (el bocado, rápido)
-    const open = Math.round(e.jaw);
-    if (open > 0) {
-      // Las fauces: más anchas cuanto más se abren (en el bocado, enormes).
-      const mw = Math.round(bite * 3);
-      for (let y = 0; y <= open; y++) seg(g, hx - 6 - mw, hy + 2 + y, hx + 7 + mw, hy + 2 + y, y === open ? K : C.mouth, 1);
-      if (open > 5) blob(g, hx + 1, hy + 2 + open / 2, 3 + mw, open / 3, '#2a0408');  // la garganta, al fondo
-      seg(g, hx - 3, hy + 1 + open, hx + 3, hy + 1 + open, '#a03a48', 1);   // lengua
-      for (let x = hx - 5 - mw; x <= hx + 7 + mw; x += 2) {
-        px(g, x, hy + 2, C.tooth); px(g, x + 1, hy + 1 + open, C.tooth);
-        if (open > 5) { px(g, x, hy + 3, C.tooth); px(g, x + 1, hy + open, C.tooth); } // colmillos largos
-      }
-      seg(g, hx - 7 - mw, hy + 2, hx - 7 - mw, hy + 2 + open, K, 1);    // comisura
-      if (open > 4) limb(g, hx - 6 - mw, hy + 3 + open, hx + 8 + mw, hy + 2 + open, 2, C.skin, C.skinL); // mandíbula de abajo
-    } else {
-      seg(g, hx - 7, hy + 2, hx + 8, hy + 1, K, 1);
-      for (let x = hx - 4; x <= hx + 6; x += 3) px(g, x, hy + 3, C.tooth); // colmillos que asoman
-    }
-    // Babea ácido.
-    const drip = Math.floor((t * 3) % 4);
-    px(g, hx + 7, hy + 3 + drip, C.acid);
-    px(gl, hx + 7, hy + 3 + drip, C.acid);
-
-    // ---- Ojos: dos saltones inyectados en sangre que te siguen, y uno pequeño y deforme.
-    const p = game.player;
-    const a = Math.atan2(p.cy - e.cy, (p.cx - e.cx) * (e.dir < 0 ? -1 : 1));
-    for (const [ex, ey, big] of [[hx - 3, hy - 7, true], [hx + 3, hy - 7, true], [hx - 7, hy - 3, false]]) {
-      if (big) {
-        // Ojo saltón: párpado oscuro, globo amarillo, pupila de rendija y una vena.
-        px(g, ex - 1, ey - 2, K, 4, 1); px(g, ex - 2, ey - 1, K, 6, 4); px(g, ex - 1, ey + 3, K, 4, 1);
-        px(g, ex - 1, ey - 1, C.eye, 4, 3);
-        px(g, ex - 1, ey + 1, '#a89a30', 4, 1);                            // sombra baja del globo
-        px(g, ex - 1, ey + 1, C.vein);                                     // vena
-        const ix = ex + Math.round(Math.cos(a) * 0.8), iy = ey - 1 + Math.round(Math.sin(a) * 0.6);
-        px(g, ix, iy, K, 1, 3);                                            // pupila de rendija
-        if (blink || squash) px(g, ex - 1, ey - 1, C.skinD, 4, blink ? 3 : 1); // párpado
-        px(gl, ex, ey, C.eye, 2, 1);
+    // Cabeza normal; en pleno bocado se convierte en unas fauces abiertas en cepo (drawMaw).
+    if (bite < 0.3) {
+      part(g, hx, hy, 9 + bite * 3, 6.5 - squash + bite * 2, C.skin, C.skinD, C.skinL);
+      for (const [dx, dy] of [[-3, -3], [3, -2], [6, 1], [-5, 1]]) px(g, hx + dx, hy + dy, C.spot);
+      const want = bite ? 4 + bite * 9 : windup ? 2 + (Math.sin(t * 50) > 0 ? 1 : 0)
+        : st === 'leap' ? 4 : st === 'brood' ? 4 : st === 'crouch' ? 1.5 + swell : squash ? 1 + swell * 1.5 : croak * 2.5;
+      e.jaw = (e.jaw ?? 0) + (want - (e.jaw ?? 0)) * (bite ? 0.7 : 0.35);  // suaviza entre fotogramas (el bocado, rápido)
+      const open = Math.round(e.jaw);
+      if (open > 0) {
+        // Las fauces: más anchas cuanto más se abren (en el bocado, enormes).
+        const mw = Math.round(bite * 3);
+        for (let y = 0; y <= open; y++) seg(g, hx - 6 - mw, hy + 2 + y, hx + 7 + mw, hy + 2 + y, y === open ? K : C.mouth, 1);
+        if (open > 5) blob(g, hx + 1, hy + 2 + open / 2, 3 + mw, open / 3, '#2a0408');  // la garganta, al fondo
+        seg(g, hx - 3, hy + 1 + open, hx + 3, hy + 1 + open, '#a03a48', 1);   // lengua
+        for (let x = hx - 5 - mw; x <= hx + 7 + mw; x += 2) {
+          px(g, x, hy + 2, C.tooth); px(g, x + 1, hy + 1 + open, C.tooth);
+          if (open > 5) { px(g, x, hy + 3, C.tooth); px(g, x + 1, hy + open, C.tooth); } // colmillos largos
+        }
+        seg(g, hx - 7 - mw, hy + 2, hx - 7 - mw, hy + 2 + open, K, 1);    // comisura
+        if (open > 4) limb(g, hx - 6 - mw, hy + 3 + open, hx + 8 + mw, hy + 2 + open, 2, C.skin, C.skinL); // mandíbula de abajo
       } else {
-        // El tercer ojo: pequeño, lechoso, torcido.
-        px(g, ex - 1, ey - 1, K, 3, 3); px(g, ex, ey, '#c8c0a0'); px(gl, ex, ey, '#c8c0a0');
+        seg(g, hx - 7, hy + 2, hx + 8, hy + 1, K, 1);
+        for (let x = hx - 4; x <= hx + 6; x += 3) px(g, x, hy + 3, C.tooth); // colmillos que asoman
       }
-    }
+      // Babea ácido.
+      const drip = Math.floor((t * 3) % 4);
+      px(g, hx + 7, hy + 3 + drip, C.acid);
+      px(gl, hx + 7, hy + 3 + drip, C.acid);
+  
+      // ---- Ojos: dos saltones inyectados en sangre que te siguen, y uno pequeño y deforme.
+      const p = game.player;
+      const a = Math.atan2(p.cy - e.cy, (p.cx - e.cx) * (e.dir < 0 ? -1 : 1));
+      for (const [ex, ey, big] of [[hx - 3, hy - 7, true], [hx + 3, hy - 7, true], [hx - 7, hy - 3, false]]) {
+        if (big) {
+          // Ojo saltón: párpado oscuro, globo amarillo, pupila de rendija y una vena.
+          px(g, ex - 1, ey - 2, K, 4, 1); px(g, ex - 2, ey - 1, K, 6, 4); px(g, ex - 1, ey + 3, K, 4, 1);
+          px(g, ex - 1, ey - 1, C.eye, 4, 3);
+          px(g, ex - 1, ey + 1, '#a89a30', 4, 1);                            // sombra baja del globo
+          px(g, ex - 1, ey + 1, C.vein);                                     // vena
+          const ix = ex + Math.round(Math.cos(a) * 0.8), iy = ey - 1 + Math.round(Math.sin(a) * 0.6);
+          px(g, ix, iy, K, 1, 3);                                            // pupila de rendija
+          if (blink || squash) px(g, ex - 1, ey - 1, C.skinD, 4, blink ? 3 : 1); // párpado
+          px(gl, ex, ey, C.eye, 2, 1);
+        } else {
+          // El tercer ojo: pequeño, lechoso, torcido.
+          px(g, ex - 1, ey - 1, K, 3, 3); px(g, ex, ey, '#c8c0a0'); px(gl, ex, ey, '#c8c0a0');
+        }
+      }
+    } else drawMaw(g, gl, hx - 6, hy, bite, t);
     // Aturdido: estrellitas de bilis sobre la cabeza.
     if (squash) for (let i = 0; i < 3; i++) {
       const s = t * 6 + i * 2.1;
