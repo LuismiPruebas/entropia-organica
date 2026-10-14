@@ -403,7 +403,7 @@ export const ENEMIES = {
     music: 'coro',
     exposedBonus: 1.6, // al caer de un salto queda aturdido y la panza al aire
     hp: 320, w: 46, h: 30,
-    light: { color: [0.3, 0.55, 0.15], r: 190 },
+    light: { color: [0.36, 0.32, 0.42], r: 190 }, // luz cenicienta: que no se confunda con el ácido
     contactDamage: 12,
     leapDamage: 18,   // el topetazo del salto
     drop: { biomass: 25, fragments: 2, items: ['thymus'] },
