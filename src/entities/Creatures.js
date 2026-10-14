@@ -14,6 +14,7 @@ import { STAG } from './StagBeetle.js';
 import { GOLEM } from './Golem.js';
 import { MOTH } from './Moth.js';
 import { RHINO } from './RhinoBeetle.js';
+import { TOAD } from './Toad.js';
 
 const P = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
 
@@ -401,6 +402,8 @@ export const CREATURES = {
 
   // GLÁNDULA GÁSTRICA: masa cerebral colgada de tubos elásticos (entities/Gland.js).
   glandula: GLAND,
+  // SAPO PARTERO: jefe de la charca de ácido (entities/Toad.js).
+  sapo: TOAD,
   // Jefes aberración (Quimera, Coro) y la cabeza-araña: entities/Aberrations.js.
   ...ABERRATIONS,
 };

@@ -389,6 +389,33 @@ export const ENEMIES = {
     habits: 'Se mueve a tirones, sacudido por espasmos, y salta como un saltamontes. Cada cabeza tiene su ataque y solo es vulnerable mientras lo usa: la grande estira el cuello y muerde, la de colmillos vomita anguilas, la de antenas escupe un chorro de ácido y la del hombre canta anillos. El resto rebota. Herido, electrifica el suelo: súbete a las repisas.',
     lore: 'Los otros sujetos del injerto, fundidos en una sola bestia en el fondo del intestino: la espalda del que los vigilaba hace de lomo y las cabezas de los demás le cuelgan delante, cada una de algo distinto. Cantan juntas, pero ninguna en la misma nota.',
   },
+  // SAPO PARTERO: jefe de la charca de ácido (Colon Sigmoide). Lleva a sus crías en
+  // la espalda, en celdas de carne; cuando revientan, brotan sanguijuelas.
+  sapo: {
+    frag: 'dermal', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
+    name: 'Sapo Partero',
+    biome: 'digestivo',
+    creature: 'sapo',
+    gore: { blood: '#6a9a1a', flesh: ['#5a7a2a', '#3a5018', '#c8c070', '#9be06a'] },
+    voice: ['eelGurgle'],
+    behavior: 'bossToad',
+    boss: true,
+    music: 'coro',
+    exposedBonus: 1.6, // al caer de un salto queda aturdido y la panza al aire
+    hp: 320, w: 46, h: 30,
+    light: { color: [0.3, 0.55, 0.15], r: 190 },
+    contactDamage: 12,
+    leapDamage: 18,   // el topetazo del salto
+    drop: { biomass: 25, fragments: 2, items: ['thymus'] },
+    reward: {
+      lore: ['MEMORIA: LA CRIADORA', 'En el laboratorio había una cámara húmeda donde lo criaban todo. Alguien dijo que lo que crecía allí no debía salir nunca. Lo que crecía allí te miraba cuando pasabas por delante del cristal.'],
+      text: 'La charca se aquieta. Las crías que quedaban se deshacen en el ácido.',
+    },
+    sounds: { reveal: 'eelGurgle', attack: 'spit', summon: 'choirRetch', hurt: 'eelHurt', die: 'eelDie' },
+    auraPeriod: 3,
+    habits: 'Se agazapa, tiembla y salta con las patas traseras para toparte: apártate cuando se encoja. Al caer queda aturdido con la panza al aire, y ahí es cuando más le duele. De vez en cuando le revientan las celdas de la espalda y brotan sanguijuelas. La charca se inunda a ratos: súbete a las repisas.',
+    lore: 'Un sapo que el intestino dejó crecer demasiado. Carga a sus crías en la espalda, hundidas en celdas de su propia piel, y las suelta cuando tiene hambre. Salta como si el suelo le quemara... y aquí el suelo quema.',
+  },
   larva: {
     lucifugo: true, // huye del haz del Ojo Pineal
     frag: 'dermal', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)

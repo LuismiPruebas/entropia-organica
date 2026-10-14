@@ -1225,6 +1225,79 @@ export const BEHAVIORS = {
   //          los tubos y latiguea con los cilios antes de volver a subir
   // Cada cierto tiempo se exprime e inunda la arena. Solo es vulnerable con la boca
   // abierta (al cargar, al rociar, colgada abajo y al inundar).
+  // Sapo Partero (entities/Toad.js). Ciclo:
+  //   sit     se arrastra hacia ti, pesado
+  //   crouch  se agazapa y tiembla: va a saltar (¡apártate!)
+  //   leap    salta con las patas traseras hacia donde estás; su topetazo duele
+  //   land    cae, salpica ácido y queda aturdido con la panza al aire (más daño)
+  //   brood   le revientan las celdas de la espalda y brotan sanguijuelas
+  // Enfurecido (media vida) se agazapa menos, salta más a menudo y cría más.
+  bossToad(e, dt, g) {
+    const d = e.def, p = g.player;
+    const enraged = e.hp < d.hp / 2;
+    e.state ??= 'sit';
+    e.timer = (e.timer ?? 1.2) - dt;
+    e.broodCool = (e.broodCool ?? 7) - dt;
+    const dx = p.cx - e.cx;
+    e.exposed = e.state === 'land';
+    if (e.state === 'sit') {
+      e.dir = Math.sign(dx) || e.dir;
+      e.vx = e.onGround ? e.dir * 18 * (0.4 + 0.6 * Math.max(0, Math.sin(e.t * 4))) : e.vx;
+      const minions = g.room.enemies.filter((m) => m.minion && m.alive).length;
+      if (e.broodCool <= 0 && minions < (enraged ? 4 : 2)) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; g.audio.play(d.sounds.summon, e); }
+      else if (e.timer <= 0 && e.onGround) { e.state = 'crouch'; e.timer = enraged ? 0.35 : 0.6; e.vx = 0; g.audio.play('eelGurgle', e); }
+    } else if (e.state === 'crouch') {
+      e.vx = 0;
+      if (e.timer <= 0) {
+        e.state = 'leap';
+        e.dir = Math.sign(dx) || e.dir;
+        e.vx = clamp(dx * 1.3, -230, 230);
+        e.vy = -360 - Math.min(120, Math.max(0, -(p.cy - e.cy)) * 0.8); // más alto si estás arriba
+        e.hitDone = false;
+        e.airT = 0;
+        g.audio.play(d.sounds.attack, e);
+      }
+    } else if (e.state === 'leap') {
+      e.airT += dt;
+      // El topetazo: una vez por salto.
+      if (!e.hitDone && overlap(p, e)) { e.hitDone = true; g.hurtPlayer(d.leapDamage, e.cx, d.name); }
+      if (e.onGround && e.airT > 0.15) {
+        e.state = 'land';
+        e.timer = enraged ? 0.8 : 1.2;
+        e.vx = 0;
+        g.shake = Math.max(g.shake, 6);
+        g.audio.play('thump', e);
+        // Salpicadura de ácido a los lados.
+        for (const s of [-1, 1]) for (let i = 0; i < (enraged ? 3 : 2); i++) {
+          g.spawnProjectile({
+            x: e.cx - 2, y: e.y + e.h - 6, w: 4, h: 4, vx: s * (60 + i * 50), vy: -160 - i * 40, gravity: 520, life: 2,
+            damage: 6, kind: 'drip', owner: 'enemy', color: '#9be06a', glow: [0.4, 1, 0.3],
+          });
+        }
+      }
+    } else if (e.state === 'land') {
+      e.vx = 0;
+      if (e.timer <= 0) { e.state = 'sit'; e.timer = enraged ? 0.9 : 1.7; }
+    } else if (e.state === 'brood') {
+      e.vx = 0;
+      if (e.timer <= 0) {
+        // Revientan las celdas: las crías saltan de la espalda.
+        for (let i = 0; i < (enraged ? 3 : 2); i++) {
+          g.spawnMinion('larva', e.cx + (i - 1) * 10, e.y - 6);
+          const m = g.room.enemies[g.room.enemies.length - 1];
+          m.vy = -160; m.vx = (i - 1) * 60;
+        }
+        for (let i = 0; i < 12; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * 30, e.y + 4, { vx: (Math.random() - 0.5) * 100, vy: -60 - Math.random() * 80, life: 0.6, gravity: 400, color: [0.45, 0.6, 0.2] });
+        e.broodCool = enraged ? 6 : 9;
+        e.state = 'sit';
+        e.timer = 1;
+      }
+    }
+    e.vy = Math.min(420, e.vy + GRAVITY * dt);
+    g.world.move(e, dt);
+    if (e.hitWall && e.state === 'leap') e.vx = 0;
+  },
+
   bossGland(e, dt, g) {
     const p = g.player, d = e.def;
     const enraged = e.hp < d.hp / 2;

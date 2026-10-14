@@ -1124,9 +1124,9 @@ export const LEVELS = {
     grid: [
       '###..###########################',
       '#.#..##................#.......#',
-      '#.#..##................X.......#',
-      '#.#..##................X.......#',
-      '#.#....................X...S.g.#',
+      '#.#..##................X........',
+      '#.#..##................X........',
+      '#.#....................X...S.g..',
       '#.#..........###################',
       '#.#.b..........................#',
       '#######........................#',
@@ -1161,6 +1161,7 @@ export const LEVELS = {
     ],
     exits: [
       { side: 'top', to: 'C4', spawn: [28, 11] },
+      { side: 'right', at: [2, 4], to: 'C10', spawn: [1, 4] },
     ],
     hints: [
       { x: 4, y: 6, r: 3, text: 'Un saco que se llena. Cuando gorgotea, el ácido sube hasta media altura: sube antes.' },
@@ -1287,12 +1288,89 @@ export const LEVELS = {
       '####..######################################',
       '####..######################################',
     ],
-    enemies: [{ type: 'coro', x: 32, y: 21 }],
+    enemies: [{ type: 'sapo', x: 32, y: 21 }],
+    // La charca se inunda a ratos: súbete a las repisas mientras el Sapo salta.
+    fluids: [{ x: [6, 42], top: 19, bottom: 21, period: 14, phase: 3 }],
     nodules: [[40, 21, 'luz'], [23, 11]],
     exits: [{ side: 'bottom', at: [4, 5], to: 'C7', spawn: [3, 4] }],
     hints: [
-      { x: 7, y: 21, r: 3, text: 'Se oye cantar. Muchas voces, ninguna en la misma nota.' },
-      { x: 10, y: 21, r: 3, text: 'Algo enorme. Mejor venir con el cuerpo bien armado: el Cañón Simbionte y todo lo que te haga más fuerte.' },
+      { x: 7, y: 21, r: 3, text: 'Croar hondo, como de algo que respira bajo el ácido. Y un chapoteo de muchas bocas pequeñas.' },
+      { x: 10, y: 21, r: 3, text: 'Algo enorme salta ahí dentro. Cuando se encoja, apártate; cuando caiga, golpéale la panza. Y la charca sube a ratos: busca las repisas.' },
+    ],
+  },
+
+  C10: {
+    name: 'Yeyuno Anegado',
+    biome: 'digestivo',
+    map: [14, 1, 3, 1],
+    grid: [
+      '################################################',
+      '#..............................................#',
+      '...............................................#',
+      '...............................................#',
+      '...............................................#',
+      '########..................................##..##',
+      '########..................................##..##',
+      '########..............................##..##..##',
+      '########..................................##..##',
+      '########..................................##..##',
+      '########............................##....##..##',
+      '########..................................##..##',
+      '########..................................##..##',
+      '########################################..##..##',
+    ],
+    lamps: [[3, 1, 12], [22, 1, 16], [43, 1, 10]],
+    enemies: [{ type: 'anguila', x: 15, y: 11 }, { type: 'anguila', x: 27, y: 11 }],
+    // Un pozo lleno de ácido; la pústula del techo lo evacúa para siempre y las anguilas
+    // se quedan en seco. Nadar a través se puede... si aguantas el ácido.
+    fluids: [{ x: [8, 35], top: 5, bottom: 12, manual: true, start: 1 }],
+    valves: [{ x: 7, y: 1, dir: 'down', pool: 0, action: 'drain' }],
+    winds: [{ x: 44, y: 5, w: 2, h: 9, dir: 'up' }],
+    exits: [
+      { side: 'left', to: 'C6', spawn: [30, 4] },
+      { side: 'bottom', at: [40, 41], to: 'C11', spawn: [40, 11] },
+    ],
+    hints: [
+      { x: 3, y: 4, r: 3, text: 'Un yeyuno anegado de ácido. Algo se mueve bajo la superficie. Arriba, una pústula de drenaje palpita.' },
+    ],
+  },
+  C11: {
+    name: 'Íleon Inundado',
+    biome: 'digestivo',
+    map: [14, 2, 3, 1],
+    grid: [
+      '########################################..##..##',
+      '#####..........................................#',
+      '#####..........................................#',
+      '#####......................................Q*..#',
+      '#####......................................#####',
+      '#####..........................................#',
+      '#####..........................................#',
+      '#####..........................................#',
+      '#####..........................................#',
+      '#####..........................................#',
+      '#####..........................................#',
+      '#####..........................................#',
+      '################################################',
+      '################################################',
+    ],
+    lamps: [[12, 1, 10], [30, 1, 14]],
+    enemies: [{ type: 'vestigio', x: 20, y: 11 }],
+    // Una cubeta seca con balsas de grasa: las pústulas la llenan un rato y las balsas
+    // suben hasta la repisa alta (premio y corriente de vuelta a C10).
+    fluids: [{ x: [5, 42], top: 2, bottom: 11, manual: true, start: 0 }],
+    valves: [
+      { x: 6, y: 10, dir: 'right', pool: 0, action: 'fill', time: 16 },
+      { x: 38, y: 10, dir: 'left', pool: 0, action: 'fill', time: 16 },
+    ],
+    floats: [{ x: [9, 12], pool: 0 }, { x: [17, 20], pool: 0 }, { x: [25, 28], pool: 0 }, { x: [33, 36], pool: 0 }],
+    winds: [{ x: 44, y: 0, w: 2, h: 4, dir: 'up' }],
+    exits: [
+      { side: 'top', at: [44, 45], to: 'C10', spawn: [43, 4] },
+      { side: 'top', at: [40, 41], to: 'C10', spawn: [43, 4] },
+    ],
+    hints: [
+      { x: 40, y: 11, r: 3, text: 'Una cubeta seca. Las balsas de grasa esperan en el fondo... y en las paredes, pústulas hinchadas.' },
     ],
   },
 
