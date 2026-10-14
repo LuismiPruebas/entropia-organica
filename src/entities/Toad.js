@@ -12,7 +12,7 @@ import { px, seg, limb, blob, part, ik, OUTLINE as K } from './Rig.js';
 // leap (estirado en el aire) · land (aplastado, con la panza al aire: aturdido) ·
 // brood (las celdas se hinchan y asoman las sanguijuelas antes de reventar).
 
-const W = 76, H = 52, GROUND = H - 1;
+const W = 96, H = 52, GROUND = H - 1; // ancho: deja sitio a la cabeza cuando la dispara (bocado)
 const C = {
   skin: '#6c6874', skinD: '#44404c', skinL: '#9e98a6', spot: '#4c4852', wart: '#8a8290', wartL: '#bab2c0',
   belly: '#c0b0b4', bellyD: '#8e7e86', scar: '#3a2a2a', stitch: '#d8ccb8',
@@ -44,7 +44,7 @@ export const TOAD = {
     // Parpadeo de vez en cuando.
     const blink = ((t * 0.27 + seed) % 1) < 0.035;
     const bodyY = GROUND - 15 + crouch * 4 + squash * 5 - (air ? 4 : 0) - (air ? 0 : swell * 0.8);
-    const bx = 34 + shake;
+    const bx = W / 2 - 4 + shake;
     const rx = 21 + squash * 3 - (air ? 1 : 0) + (air ? 0 : swell * 0.8);
     const ry = 11 - squash * 3 + (air ? 1 : 0) + (air ? 0 : swell * 1.2);
 
@@ -117,23 +117,41 @@ export const TOAD = {
     }
 
     // ---- Saco bucal bajo la mandíbula: se hincha al respirar (y del todo al criar).
-    const hx = bx + rx - 2, hy = bodyY - 2 + crouch;
+    // Bocado: la cabeza se echa atrás (biteWind) y sale disparada sobre un cuello de carne.
+    const windup = st === 'biteWind' ? 1 : 0;
+    const bite = st === 'bite' ? (e.biteK ?? 0) : 0;
+    const hx = bx + rx - 2 - windup * 3 + bite * 18, hy = bodyY - 2 + crouch - bite * 2;
+    if (bite > 0.05) {
+      // El cuello estirado: carne tensa con estrías y algún vaso.
+      const nx = bx + rx - 5, ny = bodyY - 1;
+      limb(g, nx, ny, hx - 5, hy + 2, 8, C.skin, C.skinL);
+      for (let i = 1; i < 4; i++) { const k = i / 4; px(g, nx + (hx - 5 - nx) * k, ny + (hy + 2 - ny) * k - 2, C.skinD, 1, 4); }
+      px(g, (nx + hx) / 2, (ny + hy) / 2 + 2, C.vein, 3, 1);
+    }
     const sacR = 2.6 + swell * 1.2 + croak * 4.5 + (st === 'brood' ? 2 : 0) + (crouch ? swell : 0);
     blob(g, hx + 1, hy + 6, sacR + 1, sacR * 0.7 + 1, K);
     blob(g, hx + 1, hy + 6, sacR, sacR * 0.7, C.sac, C.sacD);
     px(g, hx, hy + 5, '#e8ccc8');
 
     // ---- Cabeza ancha con boca de oreja a oreja y dientes.
-    part(g, hx, hy, 9, 6.5 - squash, C.skin, C.skinD, C.skinL);
+    part(g, hx, hy, 9 + bite * 3, 6.5 - squash + bite * 2, C.skin, C.skinD, C.skinL);
     for (const [dx, dy] of [[-3, -3], [3, -2], [6, 1], [-5, 1]]) px(g, hx + dx, hy + dy, C.spot);
-    const want = st === 'leap' ? 4 : st === 'brood' ? 4 : st === 'crouch' ? 1.5 + swell : squash ? 1 + swell * 1.5 : croak * 2.5;
-    e.jaw = (e.jaw ?? 0) + (want - (e.jaw ?? 0)) * 0.35;            // suaviza entre fotogramas
+    const want = bite ? 4 + bite * 9 : windup ? 2 + (Math.sin(t * 50) > 0 ? 1 : 0)
+      : st === 'leap' ? 4 : st === 'brood' ? 4 : st === 'crouch' ? 1.5 + swell : squash ? 1 + swell * 1.5 : croak * 2.5;
+    e.jaw = (e.jaw ?? 0) + (want - (e.jaw ?? 0)) * (bite ? 0.7 : 0.35);  // suaviza entre fotogramas (el bocado, rápido)
     const open = Math.round(e.jaw);
     if (open > 0) {
-      for (let y = 0; y <= open; y++) seg(g, hx - 6, hy + 2 + y, hx + 7, hy + 2 + y, y === open ? K : C.mouth, 1);
+      // Las fauces: más anchas cuanto más se abren (en el bocado, enormes).
+      const mw = Math.round(bite * 3);
+      for (let y = 0; y <= open; y++) seg(g, hx - 6 - mw, hy + 2 + y, hx + 7 + mw, hy + 2 + y, y === open ? K : C.mouth, 1);
+      if (open > 5) blob(g, hx + 1, hy + 2 + open / 2, 3 + mw, open / 3, '#2a0408');  // la garganta, al fondo
       seg(g, hx - 3, hy + 1 + open, hx + 3, hy + 1 + open, '#a03a48', 1);   // lengua
-      for (let x = hx - 5; x <= hx + 7; x += 2) { px(g, x, hy + 2, C.tooth); px(g, x + 1, hy + 1 + open, C.tooth); }
-      seg(g, hx - 7, hy + 2, hx - 7, hy + 2 + open, K, 1);               // comisura
+      for (let x = hx - 5 - mw; x <= hx + 7 + mw; x += 2) {
+        px(g, x, hy + 2, C.tooth); px(g, x + 1, hy + 1 + open, C.tooth);
+        if (open > 5) { px(g, x, hy + 3, C.tooth); px(g, x + 1, hy + open, C.tooth); } // colmillos largos
+      }
+      seg(g, hx - 7 - mw, hy + 2, hx - 7 - mw, hy + 2 + open, K, 1);    // comisura
+      if (open > 4) limb(g, hx - 6 - mw, hy + 3 + open, hx + 8 + mw, hy + 2 + open, 2, C.skin, C.skinL); // mandíbula de abajo
     } else {
       seg(g, hx - 7, hy + 2, hx + 8, hy + 1, K, 1);
       for (let x = hx - 4; x <= hx + 6; x += 3) px(g, x, hy + 3, C.tooth); // colmillos que asoman

@@ -406,6 +406,7 @@ export const ENEMIES = {
     light: { color: [0.36, 0.32, 0.42], r: 190 }, // luz cenicienta: que no se confunda con el ácido
     contactDamage: 12,
     leapDamage: 18,   // el topetazo del salto
+    biteDamage: 16,   // el bocado a quemarropa (la cabeza sale disparada)
     drop: { biomass: 25, fragments: 2, items: ['thymus'] },
     reward: {
       lore: ['MEMORIA: LA CRIADORA', 'En el laboratorio había una cámara húmeda donde lo criaban todo. Alguien dijo que lo que crecía allí no debía salir nunca. Lo que crecía allí te miraba cuando pasabas por delante del cristal.'],
@@ -413,7 +414,7 @@ export const ENEMIES = {
     },
     sounds: { reveal: 'eelGurgle', attack: 'spit', summon: 'choirRetch', hurt: 'eelHurt', die: 'eelDie' },
     auraPeriod: 3,
-    habits: 'Se agazapa, tiembla y salta con las patas traseras para toparte: apártate cuando se encoja. Al caer queda aturdido con la panza al aire, y ahí es cuando más le duele. De vez en cuando le revientan las celdas de la espalda y brotan sanguijuelas. La charca se inunda a ratos: súbete a las repisas.',
+    habits: 'Se agazapa, tiembla y salta con las patas traseras para toparte: apártate cuando se encoja. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes. Al caer queda aturdido con la panza al aire, y ahí es cuando más le duele. De vez en cuando le revientan las celdas de la espalda y brotan sanguijuelas. La charca se inunda a ratos: súbete a las repisas.',
     lore: 'Un sapo que el intestino dejó crecer demasiado. Carga a sus crías en la espalda, hundidas en celdas de su propia piel, y las suelta cuando tiene hambre. Salta como si el suelo le quemara... y aquí el suelo quema.',
   },
   larva: {

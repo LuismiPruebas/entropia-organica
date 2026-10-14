@@ -1231,6 +1231,7 @@ export const BEHAVIORS = {
   //   leap    salta con las patas traseras hacia donde estás; su topetazo duele
   //   land    cae, salpica ácido y queda aturdido con la panza al aire (más daño)
   //   brood   le revientan las celdas de la espalda y brotan sanguijuelas
+  //   bite    pegado a ti: echa la cabeza atrás y la dispara con las fauces abiertas
   // Enfurecido (media vida) se agazapa menos, salta más a menudo y cría más.
   bossToad(e, dt, g) {
     const d = e.def, p = g.player;
@@ -1240,11 +1241,16 @@ export const BEHAVIORS = {
     e.broodCool = (e.broodCool ?? 7) - dt;
     const dx = p.cx - e.cx;
     e.exposed = e.state === 'land';
+    e.biteCool = (e.biteCool ?? 1) - dt;
     if (e.state === 'sit') {
       e.dir = Math.sign(dx) || e.dir;
       e.vx = e.onGround ? e.dir * 18 * (0.4 + 0.6 * Math.max(0, Math.sin(e.t * 4))) : e.vx;
       const minions = g.room.enemies.filter((m) => m.minion && m.alive).length;
-      if (e.broodCool <= 0 && minions < (enraged ? 4 : 2)) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; g.audio.play(d.sounds.summon, e); }
+      // Pegado a ti: el bocado (la cabeza sale disparada con las fauces abiertas).
+      if (Math.abs(dx) < 50 && Math.abs(p.cy - e.cy) < 28 && e.biteCool <= 0 && e.onGround) {
+        e.state = 'biteWind'; e.timer = enraged ? 0.22 : 0.32; e.vx = 0; e.biteK = 0;
+        g.audio.play('eelGurgle', e);
+      } else if (e.broodCool <= 0 && minions < (enraged ? 4 : 2)) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; g.audio.play(d.sounds.summon, e); }
       else if (e.timer <= 0 && e.onGround) { e.state = 'crouch'; e.timer = enraged ? 0.35 : 0.6; e.vx = 0; g.audio.play('eelGurgle', e); }
     } else if (e.state === 'crouch') {
       e.vx = 0;
@@ -1275,6 +1281,20 @@ export const BEHAVIORS = {
           });
         }
       }
+    } else if (e.state === 'biteWind') {
+      e.vx = 0;
+      if (e.timer <= 0) { e.state = 'bite'; e.timer = 0.5; e.hitDone = false; g.audio.play('spit', e); g.audio.play('melee', e); }
+    } else if (e.state === 'bite') {
+      e.vx = 0;
+      // La cabeza sale en un golpe seco, aguanta un instante y se recoge despacio.
+      const k = 1 - e.timer / 0.5;
+      e.biteK = k < 0.25 ? k / 0.25 : k < 0.5 ? 1 : 1 - (k - 0.5) / 0.5;
+      if (!e.hitDone && e.biteK > 0.6) {
+        const reach = 14 + 22 * e.biteK;
+        const box = { x: e.dir > 0 ? e.x + e.w : e.x - reach, y: e.y - 4, w: reach, h: e.h + 4 };
+        if (overlap(p, box)) { e.hitDone = true; g.hurtPlayer(d.biteDamage ?? 16, e.cx, d.name); g.shake = Math.max(g.shake, 4); }
+      }
+      if (e.timer <= 0) { e.state = 'sit'; e.biteK = 0; e.timer = enraged ? 0.6 : 1.1; e.biteCool = enraged ? 1.8 : 2.8; }
     } else if (e.state === 'land') {
       e.vx = 0;
       if (e.timer <= 0) { e.state = 'sit'; e.timer = enraged ? 0.9 : 1.7; }
