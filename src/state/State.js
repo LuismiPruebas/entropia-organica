@@ -477,6 +477,9 @@ export class GameState {
     const store = this.light >= CELL_STORE_FROM;
     if (store) this.cells++;
     this.light = Math.min(100, this.light + CELL_CHARGE);
+    // Una célula enciende el ojo aunque lo hubieras apagado (si no, parecía no hacer nada).
+    this.flashlightOn = true;
+    this.eyeStarved = false;
     return store;
   }
 
