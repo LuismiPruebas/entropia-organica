@@ -94,6 +94,13 @@ function airFeet(hx, far, pose, hanging) {
   return [hx + (far ? -3 : 4), GROUND - 1];
 }
 
+// Mano del brazo trasero al nadar: en cada brazada barre de arriba-delante hacia
+// abajo-atrás; entre brazadas chapotea suave. `r` es lo que alcanza el brazo.
+function swimHand(s, c, r) {
+  const a = c.stroke > 0 ? -2.3 + (1 - c.stroke) * 3.4 : 1.4 + Math.sin(c.t * 4) * 0.5;
+  return [s[0] + Math.cos(a) * r, s[1] + Math.sin(a) * r];
+}
+
 export class PlayerBody {
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -139,7 +146,10 @@ export class PlayerBody {
     const swingLag = hanging ? Math.max(-3, Math.min(3, -(pose.vx ?? 0) * 0.012)) : 0;
     // Embestida (pose.dash 0..1): el cuerpo se echa hacia delante como en una zancada.
     const dashK = pose.dash ?? 0;
-    const lean = (hanging ? pose.rope.x * 3 : moving ? (ninja ? 2.5 : 1.5) : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 5; // se abalanza: el torso casi en horizontal
+    // Nado (pose.swim 0..1, pose.stroke 1→0 tras cada brazada): el cuerpo se echa hacia
+    // delante; brazos, piernas, émbolos y tentáculo se mueven según lo que tengas.
+    const swim = pose.swim ?? 0, stroke = pose.stroke ?? 0;
+    const lean = (hanging ? pose.rope.x * 3 : moving ? (ninja ? 2.5 : 1.5) : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 5 + swim * 2; // se abalanza: el torso casi en horizontal
     // Agachado (pose.crouch 0..1): la cadera baja casi al suelo, el tronco se encoge y
     // se echa hacia delante; las rodillas se doblan con un pie adelantado.
     const crouch = pose.crouch ?? 0;
@@ -148,7 +158,7 @@ export class PlayerBody {
     const head = [sh[0] + 1, sh[1] - 6];
     const aim = pose.aim ?? 0;
     pose.strike = strike;
-    const ctx = { has, P, t, pose, moving, air, hanging, phase, breath, hip, sh, head, aim, n, crouch, dashK };
+    const ctx = { has, P, t, pose, moving, air, hanging, phase, breath, hip, sh, head, aim, n, crouch, dashK, swim, stroke };
 
     const shows = (id) => has(id) || opts.ghost === id;
     const part = (id, fn, behind = false) => {
@@ -304,6 +314,11 @@ export class PlayerBody {
     if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 5 : 2); }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -4 : 4); fy = GROUND; } // agachado: un pie adelantado
     if (c.dashK > 0.3) { fx = hx + (far ? -9 : 7); fy = GROUND - (air ? 3 : 0) - (far ? 2 : 0); } // embestida: zancada, la pierna de atrás estirada
+    if (c.swim > 0.3 && air) { // nado: patada alterna; en la brazada, estiradas hacia atrás
+      const k = Math.sin(c.t * 9 + (far ? Math.PI : 0));
+      fx = hx - 5 + (far ? -1 : 1) + k * 2 - c.stroke * 4;
+      fy = GROUND - 6 + k * 1.5 + c.stroke * 2;
+    }
     if (pose.land > 0 && !air) { fx = hx + (far ? -3 : 3); }            // pies abiertos al caer
     const [kx, ky] = ik(hx, hy, fx, fy - 1, 6, 6, -1);
     if (!far) this.knee = [kx, ky];
@@ -394,6 +409,7 @@ export class PlayerBody {
     if (c.air && !hanging) hand = pose.vy < -60 ? [s[0] + 1, s[1] - 7] : pose.vy > 60 ? [s[0] - 7, s[1] + 1] : [s[0] - 4, s[1] - 4];
     if (pose.clinging) hand = [s[0] + 8, s[1] - 3];
     if (hanging) hand = [s[0] + pose.rope.x * 9, s[1] + pose.rope.y * 9];
+    if (c.swim > 0.3 && c.air && !hanging) hand = swimHand(s, c, 7); // brazada
     const el = ik(s[0], s[1], hand[0], hand[1], 4, 4, 1);
     limb(g, s[0], s[1], el[0], el[1], 2, P.muscleD);
     limb(g, el[0], el[1], hand[0], hand[1], 2, P.muscle);
@@ -487,6 +503,11 @@ export class PlayerBody {
     if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 6 : 3); }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -2 : 5); fy = GROUND; } // agachado sobre los talones
     if (c.dashK > 0.3) { fx = hx + (far ? -8 : 8); fy = GROUND - (air ? 3 : 0) - (far ? 2 : 0); } // embestida: zancada
+    if (c.swim > 0.3 && air) { // nado con émbolos: patada rápida y amplia que se dispara en la brazada
+      const k = Math.sin(c.t * 13 + (far ? Math.PI : 0));
+      fx = hx - 5 + k * 3 - c.stroke * 6;
+      fy = GROUND - 7 + k * 2 + c.stroke * 3;
+    }
     const ax = fx - 3, ay = fy - 4;                                 // talón alzado
     const [kx, ky] = ik(hx, hy, ax, ay, 5, 5, -1);                  // rodilla adelante
     if (!far) this.knee = [kx, ky];
@@ -529,14 +550,17 @@ export class PlayerBody {
     const pts = this.tentacle;
     const dt = Math.min(0.05, pose.dt ?? 1 / 60);
     // Sin cuerda cae hacia atrás, lejos del cuerpo, para que se vea serpentear.
-    const fx = -(pose.vx ?? 0) * 0.9 - 260 + (pose.rope ? pose.rope.x * 1400 + 260 : 0);
-    const fy = 480 - (pose.vy ?? 0) * 0.5 + (pose.rope ? pose.rope.y * 1400 : 0);
+    // Nadando, el tentáculo flota detrás como una cola y da un coletazo en cada brazada.
+    const sw = (c.swim ?? 0) > 0.3;
+    const fx = -(pose.vx ?? 0) * 0.9 - 260 + (pose.rope ? pose.rope.x * 1400 + 260 : 0) - (sw ? 300 + c.stroke * 900 : 0);
+    const fy = sw ? 60 - c.stroke * 300 : 480 - (pose.vy ?? 0) * 0.5 + (pose.rope ? pose.rope.y * 1400 : 0);
     pts[0].x = sx; pts[0].y = sy;
     for (let i = 1; i < N; i++) {
       const p = pts[i];
       const vx = (p.x - p.px) * 0.86, vy = (p.y - p.py) * 0.86;
       p.px = p.x; p.py = p.y;
       p.x += vx + fx * dt * dt + Math.sin(pose.t * 3 + i * 0.7) * 0.12;
+      if (sw) p.y += Math.sin(pose.t * 8 - i * 0.9) * 0.35; // ondula como una anguila
       p.y += vy + fy * dt * dt;
     }
     for (let k = 0; k < 3; k++) for (let i = 1; i < N; i++) {
@@ -573,6 +597,7 @@ export class PlayerBody {
     if (c.air && !hanging) hand = pose.vy < -60 ? [s[0] + 1, s[1] - 10] : pose.vy > 60 ? [s[0] - 10, s[1] + 2] : [s[0] - 6, s[1] - 6];
     if (pose.clinging) hand = [s[0] + 10, s[1] - 4];
     if (hanging) hand = [s[0] + pose.rope.x * 12, s[1] + pose.rope.y * 12];
+    if (c.swim > 0.3 && c.air && !hanging) hand = swimHand(s, c, 10); // el brazo de hueso rema
     // Agachado, el brazo largo se apoya atrás con las garras clavadas en el suelo.
     if (c.crouch > 0.3 && !c.air) hand = [s[0] - 6, Math.min(hand[1], GROUND - 5)];
     const el = ik(s[0], s[1], hand[0], hand[1], 6, 8, 1);

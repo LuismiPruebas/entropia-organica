@@ -9,6 +9,9 @@ export const GRAVITY = 900;
 const JUMP_V = 320;
 const MOVE = 92;
 const MAX_FALL = 380;
+const SWIM_SINK = 34;      // velocidad a la que te hundes en el fluido
+const SWIM_STROKE = 165;   // impulso de cada brazada (el salto, dentro del fluido)
+const SWIM_SPEED = 0.6;    // en el fluido avanzas más despacio
 const COYOTE = 0.1;
 const JUMP_BUFFER = 0.12;
 const DASH_SPEED = 270;
@@ -331,6 +334,12 @@ export class Player {
     const wasGround = this.onGround;
     const up = input.down('KeyW', 'ArrowUp', 'PadUp'), down = input.down('KeyS', 'ArrowDown', 'PadDown');
     this.#crouch(down && this.jumpBuf <= 0);
+    // --- Nado: en el fluido te hundes despacio y cada salto es una brazada ---
+    const surface = this.game.fluidSurfaceAt(this);
+    this.swimming = surface != null && this.cy > surface && !this.rope && this.dash <= 0;
+    if (this.swimming !== !!this.wasSwimming) this.#splash(surface ?? this.y);
+    this.wasSwimming = this.swimming;
+    this.strokeCd = Math.max(0, (this.strokeCd ?? 0) - dt);
     if (this.rope) {
       // Recoger o soltar cuerda; al engancharte, un tirón te recoge un tramo.
       const r = this.rope;
@@ -355,7 +364,7 @@ export class Player {
       // Tras un salto de pared, un instante sin control para separarse del muro.
       // Corrientes de aire (entities/Traps.js -> Wind): el aire arrastra; en el suelo, menos.
       const wind = (this.windX ?? 0) * (this.onGround ? 0.6 : 1);
-      const target = this.wallLock > 0 ? this.vx : (this.crouching ? 0 : dir * speed) + wind; // agachado no se anda
+      const target = this.wallLock > 0 ? this.vx : (this.crouching ? 0 : dir * speed * (this.swimming ? SWIM_SPEED : 1)) + wind; // agachado no se anda
       // Tras soltarte del péndulo, el control en el aire apenas frena la inercia.
       this.flung = Math.max(0, (this.flung ?? 0) - dt);
       if (this.rope && !this.onGround) {
@@ -367,7 +376,8 @@ export class Player {
         // conserva la velocidad del balanceo
       } else if (this.vx < target) this.vx = Math.min(target, this.vx + accel * dt);
       else if (this.vx > target) this.vx = Math.max(target, this.vx - accel * dt);
-      this.vy = Math.min(this.rope ? SWING_MAX : MAX_FALL, this.vy + (GRAVITY - (this.lift ?? 0)) * dt);
+      if (this.swimming) this.vy += (SWIM_SINK - this.vy) * Math.min(1, dt * 2.5); // se hunde despacio
+      else this.vy = Math.min(this.rope ? SWING_MAX : MAX_FALL, this.vy + (GRAVITY - (this.lift ?? 0)) * dt);
       if (this.lift) this.vy = Math.max(this.vy, -(this.riseMax ?? 230));
     }
     this.windX = 0;
@@ -399,7 +409,8 @@ export class Player {
     }
 
     // --- Salto ---
-    if (this.jumpBuf > 0) {
+    if (this.jumpBuf > 0 && this.swimming) this.#stroke(surface);
+    else if (this.jumpBuf > 0) {
       if (this.rope && !this.onGround) {
         // Colgado, W recoge cuerda: solo Espacio te suelta, con toda la inercia del balanceo.
         if (this.jumpKey === 'Space') this.#releaseRope(true);
@@ -431,7 +442,7 @@ export class Player {
         }
       }
     }
-    if (input.up('KeyW', 'Space', 'ArrowUp') && this.vy < 0 && !this.rope && !(this.flung > 0)) this.vy *= 0.5;
+    if (input.up('KeyW', 'Space', 'ArrowUp') && this.vy < 0 && !this.swimming && !this.rope && !(this.flung > 0)) this.vy *= 0.5;
 
     world.move(this, dt);
     if (this.rope) this.#constrainRope();
@@ -444,6 +455,31 @@ export class Player {
 
     this.#weapon(dt);
     this.#updateMesh(dt);
+  }
+
+  // Brazada (el salto dentro del fluido): impulso hacia arriba; cerca de la superficie,
+  // te saca del todo. Los Pistones y el Tendón empujan algo más (patada y coletazo).
+  #stroke(surface) {
+    this.jumpBuf = 0;
+    if (this.strokeCd > 0) return;
+    const g = this.game, st = g.state;
+    const k = 1 + (st.has('dash') ? 0.15 : 0) + (st.has('grapple') ? 0.15 : 0);
+    this.vy = this.y < surface + 8 ? -JUMP_V * 0.85 : -SWIM_STROKE * k;
+    this.strokeT = 1;
+    this.strokeCd = 0.3;
+    g.audio.play('splat', this);
+    for (let i = 0; i < 6; i++) {
+      g.glowParticles.emit(this.cx + (Math.random() - 0.5) * 10, this.y + this.h - 4, { vx: (Math.random() - 0.5) * 30, vy: 20 + Math.random() * 30, life: 0.5, color: [0.4, 1, 0.35] });
+    }
+  }
+
+  // Al entrar o salir del fluido: salpicadura en la superficie.
+  #splash(y) {
+    const g = this.game;
+    g.audio.play('acid', this);
+    for (let i = 0; i < 10; i++) {
+      g.glowParticles.emit(this.cx + (Math.random() - 0.5) * 14, y, { vx: (Math.random() - 0.5) * 80, vy: -40 - Math.random() * 70, life: 0.5, color: [0.4, 1, 0.3] });
+    }
   }
 
   // Embestida: estela de siluetas que se desvanecen (copias del cuerpo en ese instante,
@@ -982,8 +1018,11 @@ export class Player {
     this.crouchK = Math.max(0, Math.min(1, (this.crouchK ?? 0) + (this.crouching ? 1 : -1) * dt * 14));
     // La zancada de la embestida entra de golpe y se recoge un poco más despacio.
     this.dashK = this.dash > 0 ? Math.min(1, (this.dashK ?? 0) + dt * 30) : Math.max(0, (this.dashK ?? 0) - dt * 7);
+    // Nado: la pose entra y sale suave; la brazada se apaga en medio segundo.
+    this.swimK = Math.max(0, Math.min(1, (this.swimK ?? 0) + (this.swimming ? 1 : -1) * dt * 6));
+    this.strokeT = Math.max(0, (this.strokeT ?? 0) - dt * 2);
     this.body.render(st.mutations, {
-      t: this.anim, dt, aim, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: this.crouchK, dash: this.dashK,
+      t: this.anim, dt, aim, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: this.crouchK, dash: this.dashK, swim: this.swimK, stroke: this.strokeT,
       vx: this.vx * this.facing, vy: this.vy,
       onGround: this.onGround, clinging: !!this.clinging, rope, reach, charge: this.charge,
       weapon: st.weaponId, recoil: this.recoil ?? 0, armRaise: this.#armRaise(dt),

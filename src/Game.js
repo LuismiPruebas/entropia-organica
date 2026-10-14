@@ -290,6 +290,20 @@ export class Game {
     this.say(`${d.name} ha caído. ${r.lore ? '[I] Nueva memoria en el Genoma. ' : ''}${r.text ?? ''}`, 6);
   }
 
+  // Superficie del fluido en el que está metido `p` (cubetas que se llenan o ácido fijo
+  // '~'), o null si no está en ninguno. La usa el nado del jugador.
+  fluidSurfaceAt(p) {
+    for (const h of this.room.hazards) {
+      if (h.surfaceY === undefined || h.level <= 0.01) continue;
+      if (p.cx >= h.x0 && p.cx <= h.x0 + h.w && p.y + p.h > h.surfaceY && p.y < h.yBottom) return h.surfaceY;
+    }
+    const tx = Math.floor(p.cx / TILE);
+    let ty = Math.floor(p.cy / TILE);
+    if (this.world.get(tx, ty) !== '~') return null;
+    while (this.world.get(tx, ty - 1) === '~') ty--;
+    return ty * TILE;
+  }
+
   flash(x, y, r, color, dur) { this.flashes.push({ x, y, r, color, t: dur, dur }); }
 
   say(text, seconds) { this.hud.say(text, seconds); }

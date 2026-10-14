@@ -734,6 +734,25 @@ export const BEHAVIORS = {
     const p = g.player, d = e.def;
     e.home ??= { x: e.x, y: e.y };
     e.state ??= 'under';
+    // Si vive en una cubeta y la vacías (una válvula de drenaje), se queda en seco: se
+    // retuerce un momento y muere. En el ácido fijo (~) no le pasa.
+    if (e.pool === undefined) {
+      const cx = e.home.x + e.w / 2;
+      e.pool = g.room.hazards.find((h) => h.surfaceY !== undefined && cx >= h.x0 && cx <= h.x0 + h.w && e.home.y + e.h >= h.yTop && e.home.y <= h.yBottom) ?? null;
+    }
+    if (e.pool && e.state !== 'air' && e.pool.surfaceY > e.home.y + e.h * 0.6) {
+      e.dryT = (e.dryT ?? 1.6) - dt;
+      e.submerged = false;
+      e.x = e.home.x + Math.sin(e.dryT * 30) * 1.5; // coletazos en el fondo seco
+      e.y = e.home.y + e.h * 0.3;
+      if (e.dryT <= 0) {
+        if (!g.state.seenEelDry) { g.state.seenEelDry = true; g.say('Sin fluido, la anguila se retuerce en el fondo seco y muere.', 3); }
+        e.hp = 0;
+        e.die();
+      }
+      return;
+    }
+    e.dryT = undefined;
     e.cool = (e.cool ?? 1 + Math.random() * 2) - dt;
     const near = Math.hypot(p.cx - e.cx, p.cy - e.cy) < d.range;
     if (e.state === 'under' || e.state === 'peek') {
