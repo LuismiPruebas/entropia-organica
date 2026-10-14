@@ -59,6 +59,7 @@ function fakeEntity(id, def) {
   if (def.behavior === 'centaur') Object.assign(e, { state: 'walk', vx: 14 });
   if (def.behavior === 'rhino') Object.assign(e, { state: 'walk', vx: 12 });
   if (def.behavior === 'bossMoth') Object.assign(e, { pose: 'fly', rot: 0, face: 1, glowK: 0 });
+  if (def.behavior === 'bossToad') Object.assign(e, { state: 'sit', broodCool: 0.8 }); // con las crías asomando
   e.onGround = true;
   if (q.get('pose') === 'accion') {
     Object.assign(e, ({
@@ -71,6 +72,7 @@ function fakeEntity(id, def) {
       ceilingEye: { charging: true },
       golem: { state: 'punch', vx: 0 },
       rhino: { state: 'charge', vx: 165 },
+      bossToad: { state: 'leap', vx: 200, vy: -200 },
     })[def.behavior] ?? {});
   }
   return e;

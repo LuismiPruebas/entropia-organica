@@ -419,7 +419,7 @@ export const ENEMIES = {
   larva: {
     lucifugo: true, // huye del haz del Ojo Pineal
     frag: 'dermal', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
-    name: 'Anguila Vomitada',
+    name: 'Sanguijuela de Charca',
     biome: 'digestivo',
     creature: 'larva',
     gore: { blood: '#4a8a1a', flesh: ['#4a7a2a', '#2a4a18', '#9be06a'] },
@@ -433,6 +433,6 @@ export const ENEMIES = {
     fragmentChance: 0,
     sounds: { reveal: 'eelGurgle', windup: 'eelGurgle', lunge: 'spit', die: 'eelDie', hurt: 'eelHurt' },
     habits: 'Repta ondulando y se abalanza con las fauces abiertas.',
-    lore: 'Crías de intestino que el Coro guarda dentro y escupe cuando tiene hambre.',
+    lore: 'Crías del Sapo Partero: crecen hundidas en las celdas de su espalda y, cuando revientan, se descuelgan a buscar algo caliente que chupar.',
   },
 };
