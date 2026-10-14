@@ -33,9 +33,20 @@ export const TOAD = {
     const crouch = st === 'crouch' ? 1 : 0;
     const squash = st === 'land' ? 1 : 0;
     const shake = crouch ? Math.round(Math.sin(t * 60)) : 0;
-    const breath = Math.sin(t * 2.4);
-    const bodyY = GROUND - 15 + crouch * 4 + squash * 5 - (air ? 4 : 0) + (st === 'sit' ? breath * 0.6 : 0);
-    const bx = 34 + shake, rx = 21 + squash * 3 - (air ? 1 : 0), ry = 11 - squash * 3 + (air ? 1 : 0);
+    // Respira hinchando todo el cuerpo; agazapado jadea deprisa; aturdido boquea.
+    const seed = (e.seed ?? (e.seed = Math.random() * 10));
+    const breathRate = crouch ? 9 : squash ? 5 : 2.2;
+    const breath = Math.sin((t + seed) * breathRate);
+    const swell = (breath + 1) / 2;                                  // 0 vacío · 1 lleno
+    // Croar: cada ~3,6 s el saco bucal se infla como un globo y la boca se entreabre.
+    const cp = ((t + seed) % 3.6) / 3.6;
+    const croak = st === 'sit' && cp < 0.28 ? Math.sin((cp / 0.28) * Math.PI) : 0;
+    // Parpadeo de vez en cuando.
+    const blink = ((t * 0.27 + seed) % 1) < 0.035;
+    const bodyY = GROUND - 15 + crouch * 4 + squash * 5 - (air ? 4 : 0) - (air ? 0 : swell * 0.8);
+    const bx = 34 + shake;
+    const rx = 21 + squash * 3 - (air ? 1 : 0) + (air ? 0 : swell * 0.8);
+    const ry = 11 - squash * 3 + (air ? 1 : 0) + (air ? 0 : swell * 1.2);
 
     // ---- Patas traseras: muslos gruesos en Z, o estiradas al saltar; dedos con garras.
     for (const far of [true, false]) {
@@ -107,7 +118,7 @@ export const TOAD = {
 
     // ---- Saco bucal bajo la mandíbula: se hincha al respirar (y del todo al criar).
     const hx = bx + rx - 2, hy = bodyY - 2 + crouch;
-    const sacR = 3 + (breath + 1) * 0.8 + (st === 'brood' ? 2 : 0);
+    const sacR = 2.6 + swell * 1.2 + croak * 4.5 + (st === 'brood' ? 2 : 0) + (crouch ? swell : 0);
     blob(g, hx + 1, hy + 6, sacR + 1, sacR * 0.7 + 1, K);
     blob(g, hx + 1, hy + 6, sacR, sacR * 0.7, C.sac, C.sacD);
     px(g, hx, hy + 5, '#e8ccc8');
@@ -115,12 +126,18 @@ export const TOAD = {
     // ---- Cabeza ancha con boca de oreja a oreja y dientes.
     part(g, hx, hy, 9, 6.5 - squash, C.skin, C.skinD, C.skinL);
     for (const [dx, dy] of [[-3, -3], [3, -2], [6, 1], [-5, 1]]) px(g, hx + dx, hy + dy, C.spot);
-    const open = st === 'leap' || st === 'brood' ? 3 : st === 'crouch' ? 1 : 0;
-    seg(g, hx - 7, hy + 2, hx + 8, hy + 1, K, 1 + open);
-    if (open) {
-      seg(g, hx - 5, hy + 2, hx + 7, hy + 2, C.mouth, Math.max(1, open - 1));
-      for (let x = hx - 5; x <= hx + 7; x += 2) { px(g, x, hy + 1, C.tooth); px(g, x + 1, hy + 2 + open - 1, C.tooth); } // dientes arriba y abajo
-    } else for (let x = hx - 4; x <= hx + 6; x += 3) px(g, x, hy + 3, C.tooth);    // colmillos que asoman
+    const want = st === 'leap' ? 4 : st === 'brood' ? 4 : st === 'crouch' ? 1.5 + swell : squash ? 1 + swell * 1.5 : croak * 2.5;
+    e.jaw = (e.jaw ?? 0) + (want - (e.jaw ?? 0)) * 0.35;            // suaviza entre fotogramas
+    const open = Math.round(e.jaw);
+    if (open > 0) {
+      for (let y = 0; y <= open; y++) seg(g, hx - 6, hy + 2 + y, hx + 7, hy + 2 + y, y === open ? K : C.mouth, 1);
+      seg(g, hx - 3, hy + 1 + open, hx + 3, hy + 1 + open, '#a03a48', 1);   // lengua
+      for (let x = hx - 5; x <= hx + 7; x += 2) { px(g, x, hy + 2, C.tooth); px(g, x + 1, hy + 1 + open, C.tooth); }
+      seg(g, hx - 7, hy + 2, hx - 7, hy + 2 + open, K, 1);               // comisura
+    } else {
+      seg(g, hx - 7, hy + 2, hx + 8, hy + 1, K, 1);
+      for (let x = hx - 4; x <= hx + 6; x += 3) px(g, x, hy + 3, C.tooth); // colmillos que asoman
+    }
     // Babea ácido.
     const drip = Math.floor((t * 3) % 4);
     px(g, hx + 7, hy + 3 + drip, C.acid);
@@ -138,6 +155,7 @@ export const TOAD = {
         px(g, ex - 1, ey + 1, C.vein);                                     // vena
         const ix = ex + Math.round(Math.cos(a) * 0.8), iy = ey - 1 + Math.round(Math.sin(a) * 0.6);
         px(g, ix, iy, K, 1, 3);                                            // pupila de rendija
+        if (blink || squash) px(g, ex - 1, ey - 1, C.skinD, 4, blink ? 3 : 1); // párpado
         px(gl, ex, ey, C.eye, 2, 1);
       } else {
         // El tercer ojo: pequeño, lechoso, torcido.
