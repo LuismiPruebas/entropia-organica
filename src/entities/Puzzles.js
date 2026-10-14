@@ -2,6 +2,7 @@ import { TILE, overlap } from '../core/Physics.js';
 import { canvasTexture, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { px, seg, blob } from './Rig.js';
 import { paintFangTile } from '../factory/TilePainter.js';
+import { ENEMIES } from '../data/enemies.js';
 
 // Mecanismos vivos de las salas: puzles sencillos hechos de carne. En data/levels.js:
 //
@@ -54,7 +55,8 @@ export class Gate {
     this.def = def;
     this.key = `gate:${room.id}:${def.id}`;
     this.cells = Array.from({ length: def.h }, (_, i) => [def.x, def.y + i]);
-    this.forever = game.state.flags.has(this.key);
+    // Con `until: 'jefe'` es un sello de frontera: abierto para siempre cuando ese jefe cae.
+    this.forever = game.state.flags.has(this.key) || (def.until && game.state.flags.has(`boss:${def.until}`));
     this.k = this.forever ? 1 : 0; // 0 cerrada, 1 recogida
     this.timer = 0;
     this.solid = !this.forever;
@@ -89,6 +91,15 @@ export class Gate {
   update(dt) {
     const g = this.game;
     this.t += dt;
+    // Sello de frontera: al tocarlo cerrado, se explica qué lo abre.
+    if (this.def.until && !this.forever) {
+      const p = g.player, near = this.cells.some(([x, y]) => overlap(p, { x: x * TILE - 4, y: y * TILE, w: TILE + 8, h: TILE }));
+      if (near && g.time - (g.lastSealSay ?? -9) > 4) {
+        g.lastSealSay = g.time;
+        g.audio.play('thump', this.center);
+        g.say(`Un esfínter de carne cierra el paso. Late al ritmo de ${ENEMIES[this.def.until]?.name ?? 'algo vivo'}: no cederá mientras siga en pie.`, 3.5);
+      }
+    }
     if (this.timer > 0) {
       this.timer -= dt;
       // Últimos segundos: late para avisar de que se va a cerrar.

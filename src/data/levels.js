@@ -908,6 +908,7 @@ export const LEVELS = {
       { x: 30, y: 12, r: 2, text: 'Esfínteres colgantes sobre el abismo... si tuvieras con qué agarrarte.' },
       { x: 45, y: 12, r: 2, text: 'La pared derecha sube hasta un esfínter sellado en el techo.' },
     ],
+    gates: [{ id: 'frontera', x: 2, y: 10, h: 3, until: 'matriarca' }],
   },
 
   C2: {
