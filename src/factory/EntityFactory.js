@@ -10,6 +10,7 @@ import { Enemy } from '../entities/Enemy.js';
 import { Pickup } from '../entities/Pickup.js';
 import { Womb } from '../entities/Womb.js';
 import { FluidPool, Mouth, Drip } from '../entities/Hazards.js';
+import { Lamp } from '../entities/Lamp.js';
 import { BoneTrap, Wind } from '../entities/Traps.js';
 import { Nodule } from '../entities/Nodule.js';
 import { YolkSac } from '../entities/YolkSac.js';
@@ -112,6 +113,8 @@ export class EntityFactory {
       room.pickups.push(pk);
       if (!g.state.flags.has(`boss:${d.until}`)) room.sacs.push(new YolkSac(g, d, pk));
     }
+    // Luminarias colgantes: luz tenue que se ve aunque tu ojo esté apagado.
+    room.lamps = (def.lamps ?? []).map((d) => new Lamp(g, d, def.biome));
     // Nódulos óseos (vuelven a crecer al descansar en un Nodo).
     room.nodules = (def.nodules ?? [])
       .filter(([x, y]) => !g.state.nodules.has(`${id}:${x},${y}`))
@@ -262,6 +265,7 @@ export class EntityFactory {
     for (const w of room.wombs ?? []) w.dispose();
     for (const h of room.hazards ?? []) h.dispose();
     for (const n of room.nodules ?? []) if (n.alive) n.dispose();
+    for (const l of room.lamps ?? []) l.dispose();
     for (const s of room.sacs ?? []) if (s.alive) s.dispose();
     for (const m of room.photo ?? []) m.view?.dispose();
     for (const p of room.pickups) p.dispose();

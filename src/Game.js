@@ -482,6 +482,7 @@ export class Game {
     for (const w of this.room.wombs) w.update();
     for (const h of this.room.hazards) h.update(dt);
     for (const n of this.room.nodules) n.update(dt);
+    for (const l of this.room.lamps ?? []) l.update(dt);
     for (const s of this.room.sacs) s.update(dt);
     this.room.sacs = this.room.sacs.filter((s) => s.alive);
     this.room.nodules = this.room.nodules.filter((n) => n.alive);
@@ -908,6 +909,7 @@ export class Game {
     lights.push({ x: p.lampPos.x, y: p.y - 1, r: 12, color: this.eyeColor.map((c) => c * halo) }); // halo del ojo fotóforo
     if (st.weaponId === 'simbionte' || st.weaponId === 'escopeta') lights.push({ x: p.gunPos.x, y: p.gunPos.y, r: 14, color: [0.3, 0.05, 0.25] }); // cañón vivo
     if (st.mutations.has('alveolos')) lights.push({ x: p.cx, y: p.y + 8, r: 26, color: [0.08, 0.35, 0.14] });
+    for (const l of this.room.lamps ?? []) lights.push(l.light()); // luminarias colgantes
     // Consumibles activos: un halo de nácar cian o el verde de la regeneración, que late.
     const pulse = 0.75 + 0.25 * Math.sin(this.time * 9);
     const fading = (left) => left < 2 && Math.floor(left * 8) % 2 === 0; // titila al acabarse

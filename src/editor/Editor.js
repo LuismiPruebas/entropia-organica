@@ -409,14 +409,14 @@ function renderPalette() {
   const bc = biomeColors(room()?.biome);
   // Al final, accesos a elementos que se buscan junto a los objetos (los nódulos no son
   // casillas: pulsarlos pasa a "Colocar elementos" con ese nódulo).
-  const extras = [['nodule', 'Nódulo óseo (elemento: suelta hueso)', '#e8dcc8', 'n'], ['noduleLux', 'Nódulo lumínico (elemento: suelta célula)', '#ffd23f', 'n*']];
+  const extras = [['nodule', 'Nódulo óseo (elemento: suelta hueso)', '#e8dcc8', 'n'], ['noduleLux', 'Nódulo lumínico (elemento: suelta célula)', '#ffd23f', 'n*'], ['lamp', 'Luminaria colgante (elemento: luz tenue)', '#9affc8', 'l']];
   $('palette').innerHTML = TILES.map((t) => `<button class="sw${t.c === S.tile ? ' on' : ''}" data-c="${t.c}" title="${t.name}"><i style="background:${t.c === '#' ? bc.wall : t.c === '.' ? bc.air : t.color}"></i><b>${t.c}</b><span>${t.name}</span></button>`).join('')
-    + extras.map(([id, name, col, mark]) => `<button class="sw${S.tool === 'place' && S.kind === 'nodules' && !!S.noduleLux === (id === 'noduleLux') ? ' on' : ''}" data-el="${id}" title="${name}"><i style="background:${col}"></i><b>${mark}</b><span>${name}</span></button>`).join('');
+    + extras.map(([id, name, col, mark]) => `<button class="sw${S.tool === 'place' && (id === 'lamp' ? S.kind === 'lamps' : S.kind === 'nodules' && !!S.noduleLux === (id === 'noduleLux')) ? ' on' : ''}" data-el="${id}" title="${name}"><i style="background:${col}"></i><b>${mark}</b><span>${name}</span></button>`).join('');
   for (const b of document.querySelectorAll('#palette .sw')) b.onclick = () => {
     if (b.dataset.el) {
-      S.kind = 'nodules';
+      S.kind = b.dataset.el === 'lamp' ? 'lamps' : 'nodules';
       S.noduleLux = b.dataset.el === 'noduleLux';
-      $('kind').value = 'nodules';
+      $('kind').value = S.kind;
       setTool('place');
     } else {
       S.tile = b.dataset.c;
@@ -460,6 +460,8 @@ function renderInspector() {
   let html = `<h3>${KINDS[kind]?.label ?? kind} <span class="dim">#${S.sel.index}</span></h3>`;
   if (Array.isArray(o)) html += field('posición [x, y]', o, (v) => { o[0] = v[0]; o[1] = v[1]; });
   // Nódulos: el tercer valor 'luz' lo vuelve lumínico (brilla a oscuras y suelta una célula).
+  // Luminarias: el tercer valor es el largo del pingajo en píxeles.
+  if (kind === 'lamps') html += field('largo (px)', o[2] ?? 10, (v) => { o[2] = Math.max(2, Math.round(v)); }, 'number');
   if (kind === 'nodules') html += field('tipo', { v: o[2] === 'luz' ? 'luz (suelta célula)' : 'óseo (suelta hueso)', options: ['óseo (suelta hueso)', 'luz (suelta célula)'] }, (nv) => { if (nv.startsWith('luz')) o[2] = 'luz'; else o.length = 2; }, 'select');
   else for (const [k, v] of Object.entries(o)) {
     if (kind === 'enemies' && k === 'type') html += field('tipo', { v, options: ENEMY_TYPES }, (nv) => { o.type = nv; }, 'select');
