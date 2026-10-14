@@ -407,7 +407,7 @@ export class Genome {
         `Células lumínicas, halladas o del útero: recargan el ojo y, con él al ${CELL_STORE_FROM} % o más, además se guardan.`],
       rej: [`${n(st.rejection)} %`,
         st.immuneRejection ? 'Tu sistema inmune calla: ya no rechaza nada.' : 'Tu cuerpo rechaza los injertos.',
-        st.immuneRejection ? 'Todos los timos asimilados: el rechazo no sube, no falla, no daña.' : `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde ${st.failFrom} % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
+        st.immuneRejection ? 'Todos los timos asimilados: el rechazo no sube, no falla, no daña.' : st.timers.suppress > 0 ? `Supresor activo: no sube durante ${Math.ceil(st.timers.suppress)} s más.` : `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde ${st.failFrom} % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
         `Supresor del útero · extensores · Timos Necróticos ${st.thymus}/${st.thymusMax}.`],
     }[id];
     this.vinfo.innerHTML = `

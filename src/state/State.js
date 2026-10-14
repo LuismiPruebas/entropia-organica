@@ -74,6 +74,9 @@ export function countThymus() {
   return Math.max(1, n);
 }
 export const REJECTION_TIERS = [40, 70, 100];
+// Supresor del útero: resta rechazo de golpe y lo frena un buen rato (no sube).
+export const SUPPRESS_CUT = 35;
+export const SUPPRESS_TIME = 120; // segundos
 const HUNGER_FLOOR = 10;          // el hambre de las mutaciones no baja tu biomasa de aquí
 const REJECTION_ESCALATION = 0.15; // cada mutación instalada encarece un 15% el rechazo de la siguiente
 
@@ -101,7 +104,7 @@ export class GameState {
     this.scrap = 12;
     this.cells = 0;              // células lumínicas en reserva: se gastan solas bajo CELL_AUTO_BELOW
     this.items = { shield: 0, regen: 0 }; // consumibles guardados (ITEMS)
-    this.timers = { shield: 0, regen: 0 }; // segundos que le quedan a cada efecto activo
+    this.timers = { shield: 0, regen: 0, suppress: 0 }; // segundos que le quedan a cada efecto activo
     this.flashlightOn = true;
     this.mutations = new Set();   // instaladas
     this.dna = new Set();         // muestras recogidas sin instalar
@@ -328,7 +331,8 @@ export class GameState {
       const hunger = (MUTATIONS[id].hunger ?? 0) * hungerK;
       if (hunger && this.biomass > HUNGER_FLOOR) this.biomass = Math.max(HUNGER_FLOOR, this.biomass - hunger * dt);
     }
-    if (!this.dev.freezeRejection) this.rejection = Math.min(120, this.rejection + this.rejectionPerSecond * dt);
+    // Con un Supresor reciente el rechazo no sube (timers.suppress).
+    if (!this.dev.freezeRejection && !(this.timers.suppress > 0)) this.rejection = Math.min(120, this.rejection + this.rejectionPerSecond * dt);
     // Al cruzar un tramo hacia arriba, el cuerpo avisa (Game muestra el mensaje).
     const tier = this.rejectionTier;
     if (tier > (this.lastTier ?? 0)) this.emit('rejectionTier', tier);
@@ -443,7 +447,8 @@ export class GameState {
 
   craftSuppressor(price) {
     if (this.rejection <= 0 || !this.pay(price)) return false;
-    this.rejection = Math.max(0, this.rejection - 35);
+    this.rejection = Math.max(0, this.rejection - SUPPRESS_CUT);
+    this.timers.suppress = SUPPRESS_TIME;
     return true;
   }
 
@@ -492,7 +497,7 @@ export class GameState {
 
   respawn() {
     this.dead = false;
-    this.timers = { shield: 0, regen: 0 };
+    this.timers = { shield: 0, regen: 0, suppress: this.timers.suppress }; // el supresor sigue actuando
     this.rest();
     this.integrity = Math.ceil(this.maxIntegrity * 0.5);
     this.oxygen = this.oxygenMax;
