@@ -58,7 +58,11 @@ export const VOICES = {
     a.voice(o, { pitch: [[0, 118], [0.5, 112], [1, 104]], dur: 0.7, vol: 0.55, growl: 0.15, vib: 4, formants: F('m'), delay: 0.12 });
   },
   eyeAlert: (a, o) => a.voice(o, { pitch: [[0, 105], [1, 175]], dur: 0.5, vol: 0.55, vib: 5, formants: F('m'), attack: 0.06 }),
-  eyeHurt: (a, o) => a.voice(o, { pitch: [[0, 480], [0.4, 700], [1, 330]], dur: 0.35, vol: 0.4, breath: 0.3, formants: F('u', 1.5), attack: 0.01 }),
+  // Dolor: el globo se aplasta (chasquido húmedo) y gime con la boca cerrada.
+  eyeHurt: (a, o) => {
+    air(a, o, { f0: 1800, f1: 500, q: 3, dur: 0.07, vol: 0.35, attack: 0.005 });
+    a.voice(o, { pitch: [[0, 175], [0.25, 190], [1, 118]], dur: 0.38, vol: 0.55, growl: 0.25, vib: 5, formants: F('m'), attack: 0.02, delay: 0.04 });
+  },
 
   // ---------------------------------------------------------------- Saco Esporífero
   // Firma: inspira con un silbido que sube y suelta el aire en un resoplido.
@@ -67,7 +71,11 @@ export const VOICES = {
     a.voice(o, { f0: 1500, f1: 1750, dur: 0.5, vol: 0.06, wave: 'sine', formants: [[1600, 6, 1]], attack: 0.2, delay: 0.25 });
     air(a, o, { f0: 900, f1: 260, q: 2, dur: 0.45, vol: 0.35, attack: 0.02, delay: 0.85 });
   },
-  sacHurt: (a, o) => a.voice(o, { pitch: [[0, 650], [1, 1100]], dur: 0.25, vol: 0.35, breath: 0.6, formants: F('i', 1.1), attack: 0.01 }),
+  // Dolor: se desinfla por el pinchazo (aire que escapa) y borbotea por dentro.
+  sacHurt: (a, o) => {
+    air(a, o, { f0: 1500, f1: 380, q: 4, dur: 0.32, vol: 0.4, attack: 0.008, release: 0.3 });
+    for (let i = 0; i < 3; i++) { const f = rnd(220, 380); a.voice(o, { f0: f, f1: f * 1.8, dur: 0.05, vol: 0.18, wave: 'sine', vibDepth: 0, formants: [[f * 1.5, 1.5, 1]], attack: 0.005, delay: 0.1 + i * 0.06 }); }
+  },
 
   // ---------------------------------------------------------------- Fauce Colgante
   // Firma: dientes que castañetean con cuerpo, un sorbo húmedo y un gruñido de hambre.
@@ -77,7 +85,11 @@ export const VOICES = {
     air(a, o, { f0: 600, f1: 1500, q: 3, dur: 0.3, vol: 0.25, delay: t + 0.05 });
     a.voice(o, { pitch: [[0, 130], [1, 105]], dur: 0.4, vol: 0.4, growl: 0.7, growlRate: 26, formants: F('o', 0.9), delay: t + 0.2 });
   },
-  podHurt: (a, o) => a.voice(o, { pitch: [[0, 500], [1, 900]], dur: 0.3, vol: 0.35, breath: 0.7, formants: [[2200, 3, 1]], attack: 0.01 }),
+  // Dolor: un castañeteo seco de dientes y un gruñido ahogado.
+  podHurt: (a, o) => {
+    for (let i = 0; i < 3; i++) a.knock(o, { f: rnd(1200, 1500), q: 12, dur: 0.05, vol: 0.25, delay: i * 0.045 });
+    a.voice(o, { pitch: [[0, 240], [1, 160]], dur: 0.24, vol: 0.45, growl: 0.75, growlRate: 30, breath: 0.3, formants: F('o', 1), attack: 0.01, delay: 0.1 });
+  },
 
   // ---------------------------------------------------------------- Colonia Bacilar
   // Firma: "hm-hm-HMMM", tres gruñidos húmedos que suben (imita una voz que oyó).
@@ -123,6 +135,28 @@ export const VOICES = {
     for (let i = 0; i < 6; i++) { const f = rnd(140, 260); a.voice(o, { f0: f, f1: f * 2, dur: 0.07, vol: 0.25, wave: 'sine', vibDepth: 0, formants: [[f * 1.6, 1.5, 1]], attack: 0.01, delay: Math.random() * 0.5 }); }
     air(a, o, { f0: 2800, f1: 2200, q: 2, dur: 0.3, vol: 0.2, delay: 0.45 });
   },
+  // Sanguijuela: chasquido viscoso y un chillido corto y agudo (es pequeñita).
+  leechHurt: (a, o) => {
+    air(a, o, { f0: 700, f1: 1800, q: 3, dur: 0.06, vol: 0.3, attack: 0.005 });
+    a.voice(o, { pitch: [[0, 1100], [1, 1500]], dur: 0.09, vol: 0.3, breath: 0.4, wave: 'triangle', formants: [[1600, 4, 1]], attack: 0.008, delay: 0.04 });
+  },
+
+  // ---------------------------------------------------------------- Sapo Partero
+  // Firma: un croar hondo, de buche enorme, en dos golpes y con gorgoteo de ácido.
+  toadCroak: (a, o) => {
+    for (let i = 0; i < 2; i++) a.voice(o, { pitch: [[0, 62], [0.4, 70], [1, 52]], dur: 0.32, vol: 0.7, growl: 1, growlRate: 14, breath: 0.25, formants: F('o', 0.55), to: F('u', 0.55), attack: 0.03, delay: i * 0.38 });
+    for (let i = 0; i < 4; i++) { const f = rnd(110, 200); a.voice(o, { f0: f, f1: f * 1.7, dur: 0.07, vol: 0.18, wave: 'sine', vibDepth: 0, formants: [[f * 1.5, 1.5, 1]], delay: 0.8 + Math.random() * 0.3 }); }
+  },
+  // Dolor: un bramido grave que se le ahoga en la garganta (nada de chillidos).
+  toadHurt: (a, o) => {
+    a.voice(o, { pitch: [[0, 92], [0.25, 112], [1, 58]], dur: 0.45, vol: 0.75, growl: 0.95, growlRate: 17, breath: 0.35, formants: F('a', 0.6), to: F('o', 0.6), attack: 0.015 });
+    air(a, o, { f0: 600, f1: 250, q: 2, dur: 0.3, vol: 0.25, delay: 0.25 });
+  },
+  toadDie: (a, o) => {
+    a.voice(o, { pitch: [[0, 80], [0.2, 98], [1, 34]], dur: 2, vol: 0.75, growl: 1, growlRate: 13, breath: 0.4, formants: F('a', 0.55), to: F('u', 0.55), attack: 0.04 });
+    for (let i = 0; i < 14; i++) { const f = rnd(90, 220); a.voice(o, { f0: f, f1: f * 2, dur: 0.08, vol: 0.18, wave: 'sine', vibDepth: 0, formants: [[f * 1.5, 1.5, 1]], delay: 0.6 + Math.random() * 1.5 }); }
+  },
+
   eelHurt: (a, o) => a.voice(o, { pitch: [[0, 680], [0.3, 940], [1, 400]], dur: 0.26, vol: 0.4, breath: 0.5, formants: [[1400, 4, 1], [2600, 6, 0.4]], attack: 0.01 }),
 
   // ---------------------------------------------------------------- Escarabajo Rinoceronte
@@ -164,7 +198,8 @@ export const VOICE_GAIN = {
   colonySquirm: 2.7, colonyAlert: 2.5, colonyHurt: 2.5,
   stagBellow: 2.6, stagHuff: 3, stagGrunt: 2.4,
   vestigioBreath: 2.55, moan: 2.55, vestigioAlert: 2.15, vestigioHurt: 2.2,
-  eelGurgle: 1, eelHurt: 1.8,
+  eelGurgle: 1, eelHurt: 1.8, leechHurt: 1.6,
+  toadCroak: 2.6, toadHurt: 2.6, toadDie: 2.4,
   rhinoSnort: 3.4, rhinoRattle: 7.7, rhinoBellow: 3, rhinoHurt: 3.2, rhinoDie: 2.6,
   // Trampas y corrientes (entities/Traps.js).
   stakes: 2.2, boneCreak: 3.5, gust: 2.5,

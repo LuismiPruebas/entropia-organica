@@ -434,7 +434,7 @@ const SOUNDS = {
     a.creature(o, { f0: 120, f1: 90, dur: 0.8, vol: 0.15, formant: 500, rough: 0.8 });
   },
   chimSpit: (a, o) => { a.noise(o, { dur: 0.2, vol: 0.4, type: 'bandpass', f0: 1200, f1: 300, q: 3 }); a.tone(o, { type: 'sawtooth', f0: 200, f1: 60, dur: 0.2, vol: 0.12 }); },
-  chimHurt: (a, o) => { a.creature(o, { f0: 520, f1: 300, dur: 0.22, vol: 0.18, formant: 1000, rough: 0.8 }); a.noise(o, { dur: 0.1, vol: 0.2, type: 'bandpass', f0: 700, q: 2 }); },
+  chimHurt: (a, o) => { a.creature(o, { f0: 240, f1: 130, dur: 0.3, vol: 0.2, formant: 600, rough: 0.9 }); a.creature(o, { f0: 120, f1: 80, dur: 0.32, vol: 0.12, formant: 380, rough: 1 }); a.noise(o, { dur: 0.1, vol: 0.2, type: 'bandpass', f0: 450, q: 2 }); }, // grave: es una bestia grande
   chimAura: (a, o) => { a.creature(o, { f0: 70, f1: 62, dur: 1.4, vol: 0.12, formant: 380, q: 5, vib: 3, rough: 0.8 }); a.creature(o, { f0: 700, f1: 560, dur: 0.6, vol: 0.04, formant: 1300, vib: 12, delay: 0.7 }); },
   chimDie: (a, o) => {
     deathImpact(a, o, 1.6);

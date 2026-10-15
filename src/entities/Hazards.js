@@ -121,6 +121,40 @@ function paintMouth(open) {
   return canvasTexture(c);
 }
 
+// Chorro de ácido espeso: una columna de líquido grumoso pintada a mano en cada
+// fotograma (a lo largo de u, de la boca hacia fuera). El grosor ondula, los grumos
+// avanzan con el flujo e hinchan la columna, el borde es oscuro y la cresta brilla
+// húmeda; burbujas que viajan dentro. `reach` es lo que ha salido ya de la boca.
+const JET_H = 16;
+function paintJet(g, len, s, reach, t) {
+  g.clearRect(0, 0, len, JET_H);
+  const mid = JET_H / 2;
+  for (let u = 0; u < Math.min(len, reach); u++) {
+    // Grosor: ondas que viajan con el flujo + grumos gordos (y la punta, que se adelgaza).
+    let w = 3.4 + Math.sin((u - s) * 0.19) * 0.8 + Math.sin((u - s * 1.25) * 0.47) * 0.4;
+    // Grumos redondos de tamaños distintos; cuelgan más por abajo (pesan).
+    const P = 30, lump = ((u - s * 0.9) % P + P) % P, size = 8 + (Math.floor((u - s * 0.9) / P) % 3 + 3) % 3 * 2;
+    const b = lump < size ? Math.sqrt(Math.sin((lump / size) * Math.PI)) * (1.8 + size * 0.12) : 0;
+    const taper = Math.min(1, 0.55 + u / 10) * Math.min(1, (reach - u) / 6 + 0.35);
+    const sag = Math.sin((u - s * 0.6) * 0.08) * 0.8;                    // la columna culebrea
+    const top = Math.round(mid - (w + b * 0.7) * taper + sag), bot = Math.round(mid + (w + b * 1.25) * taper + sag);
+    for (let v = top; v <= bot; v++) {
+      const k = (v - top) / Math.max(1, bot - top);
+      let c = v === top || v === bot ? '#1a3a0a' : k < 0.22 ? '#c8f080' : k < 0.45 ? '#7ad83a' : k < 0.8 ? '#4aa822' : '#2e7414';
+      if (k > 0.12 && k < 0.22 && (u + Math.floor(s)) % 7 < 3) c = '#f0ffc0';  // brillo húmedo en la cresta
+      g.fillStyle = c;
+      g.fillRect(u, v, 1, 1);
+    }
+  }
+  // Burbujas que viajan dentro del chorro.
+  for (let i = 0; i < Math.floor(len / 18); i++) {
+    const u = ((i * 18 + s * 1.1 + i * 7) % len), v = mid + Math.sin(i * 2.3 + t * 3) * 1.5;
+    if (u > reach - 3) continue;
+    g.fillStyle = '#e0ffa8'; g.fillRect(u, v - 1, 1, 1);
+    g.fillStyle = '#2e7414'; g.fillRect(u, v, 1, 1);
+  }
+}
+
 export class Mouth {
   constructor(game, def, world) {
     this.game = game;
@@ -139,14 +173,24 @@ export class Mouth {
     this.mesh.renderOrder = 2;
     this.mesh.position.set(this.cx, -this.cy, 0);
     this.mesh.rotation.z = { down: 0, up: Math.PI, left: -Math.PI / 2, right: Math.PI / 2 }[def.dir];
+    // El chorro: lienzo propio (largo × JET_H) girado según la dirección de la boca.
+    this.jetCv = document.createElement('canvas');
+    this.jetCv.width = this.len;
+    this.jetCv.height = JET_H;
+    this.jetG = this.jetCv.getContext('2d');
+    this.jetTex = canvasTexture(this.jetCv);
+    this.stream = new THREE.Mesh(new THREE.PlaneGeometry(this.len, JET_H), new THREE.MeshBasicMaterial({ map: this.jetTex, transparent: true, depthTest: false, depthWrite: false }));
+    this.stream.renderOrder = 3;
+    this.stream.rotation.z = { right: 0, left: Math.PI, down: -Math.PI / 2, up: Math.PI / 2 }[def.dir];
+    // Un halo tenue (no un láser): el ácido brilla poco.
     const horiz = dx !== 0;
-    this.stream = plane(horiz ? this.len : 6, horiz ? 6 : this.len, '#5aff4a', { additive: true, opacity: 0.85, order: 3 });
-    this.core = plane(horiz ? this.len : 3, horiz ? 3 : this.len, '#d8ffb0', { additive: true, order: 3 });
+    this.core = plane(horiz ? this.len : 10, horiz ? 10 : this.len, '#3a8a1a', { additive: true, opacity: 0.22, order: 3 });
     const sx = this.cx + dx * (this.len / 2 + 4), sy = this.cy + dy * (this.len / 2 + 4);
     this.stream.position.set(sx, -sy, 0);
     this.core.position.set(sx, -sy, 0);
-    game.visual.world.add(this.mesh);
-    game.visual.glow.add(this.stream, this.core);
+    this.spitT = 0;
+    game.visual.world.add(this.mesh, this.stream);
+    game.visual.glow.add(this.core);
     this.state = 'closed';
   }
 
@@ -165,15 +209,25 @@ export class Mouth {
     this.mesh.material.map = MOUTH_TEX[state === 'closed' ? 0 : 1];
     const spitting = state === 'spit';
     this.stream.visible = this.core.visible = spitting;
+    this.spitT = spitting ? this.spitT + dt : 0;
     if (spitting) {
-      this.stream.material.opacity = 0.6 + Math.random() * 0.3;
-      if (Math.random() < 0.8) {
-        const k = Math.random() * this.len;
-        g.glowParticles.emit(this.cx + this.dx * (k + 4) + (Math.random() - 0.5) * 5, this.cy + this.dy * (k + 4) + (Math.random() - 0.5) * 5, { vx: this.dx * 60, vy: this.dy * 60, life: 0.3, color: [0.4, 1, 0.3] });
+      // El líquido sale de la boca y avanza (no aparece de golpe como un rayo).
+      const reach = Math.min(this.len, this.spitT * 420);
+      paintJet(this.jetG, this.len, g.time * 70, reach, g.time);
+      this.jetTex.needsUpdate = true;
+      this.core.material.opacity = 0.18 + Math.random() * 0.08;
+      // Goterones que se desprenden del chorro y caen; salpicadura donde choca.
+      if (Math.random() < 0.35) {
+        const k = Math.random() * reach;
+        g.particles.emit(this.cx + this.dx * (k + 4), this.cy + this.dy * (k + 4) + (this.dx ? 3 : 0), { vx: this.dx * 40, vy: this.dy * 40 + 20, life: 0.9, gravity: 600, color: [0.35, 0.75, 0.15], stain: '#4a8a1a' });
       }
-      const w = this.dx ? this.len : 8, h = this.dx ? 8 : this.len;
-      const x = this.dx >= 0 ? (this.dx ? this.cx + 4 : this.cx - 4) : this.cx - 4 - this.len;
-      const y = this.dy >= 0 ? (this.dy ? this.cy + 4 : this.cy - 4) : this.cy - 4 - this.len;
+      if (reach >= this.len && Math.random() < 0.6) {
+        const ex = this.cx + this.dx * (this.len + 4), ey = this.cy + this.dy * (this.len + 4);
+        g.particles.emit(ex, ey, { vx: -this.dx * 50 + (Math.random() - 0.5) * 120, vy: -this.dy * 50 - 60 - Math.random() * 80, life: 0.7, gravity: 600, color: Math.random() < 0.3 ? [0.75, 1, 0.45] : [0.35, 0.75, 0.15], stain: '#4a8a1a' });
+      }
+      const w = this.dx ? reach : 8, h = this.dx ? 8 : reach;               // daña lo que ya ha salido
+      const x = this.dx >= 0 ? (this.dx ? this.cx + 4 : this.cx - 4) : this.cx - 4 - reach;
+      const y = this.dy >= 0 ? (this.dy ? this.cy + 4 : this.cy - 4) : this.cy - 4 - reach;
       if (overlapsRect(g.player, x, y, w, h)) acidHurt(g, dt * 1.5);
     } else if (state === 'warn' && Math.random() < 0.15) {
       g.glowParticles.emit(this.cx + this.dx * 6, this.cy + this.dy * 6, { vx: this.dx * 15, vy: this.dy * 15 + 20, life: 0.4, color: [0.4, 1, 0.3] });
