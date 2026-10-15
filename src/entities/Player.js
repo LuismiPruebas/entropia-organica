@@ -306,7 +306,8 @@ export class Player {
       // criatura más cercana que alumbra el ojo en la dirección en que miras. Solo con
       // luz: a oscuras no hay fijado y toca apuntar a mano.
       this.lock = this.#lockOn();
-      const forward = this.facing > 0 ? 0 : Math.PI;
+      // Agarrado a la pared, el arma apunta hacia arriba a lo largo de ella (no dentro).
+      const forward = this.clinging ? Math.atan2(-1, 0.35 * this.clinging) : this.facing > 0 ? 0 : Math.PI;
       if (this.lock) {
         const lp = this.#lockAt();
         const want = Math.atan2(lp.y - this.lampPos.y, lp.x - this.lampPos.x);
@@ -402,6 +403,7 @@ export class Player {
       const slick = [...world.tilesIn(probeX, this.y + 3, 1, this.h - 6)].some((t) => t.c === 'm');
       if (!slick && world.rectSolid(probeX, this.y + 3, 1, this.h - 6)) {
         this.clinging = dir;
+        this.facing = dir; // agarrado, siempre de cara a la pared (aunque apuntes hacia atrás)
         this.airJumps = 1;
         if (this.vy < -CLIMB_SPEED) this.vy = Math.max(this.vy * 0.85, -170); // el impulso se frena contra la pared
         if (up) this.vy = Math.min(this.vy, -CLIMB_SPEED);

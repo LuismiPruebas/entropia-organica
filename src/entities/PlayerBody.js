@@ -159,7 +159,10 @@ export class PlayerBody {
     const head = [sh[0] + 1, sh[1] - 6];
     const aim = pose.aim ?? 0;
     pose.strike = strike;
-    const ctx = { has, P, t, pose, moving, air, hanging, phase, breath, hip, sh, head, aim, n, crouch, dashK, swim, stroke };
+    // Agarrado a la pared: ciclo de escalada (cl) que avanza al subir o bajar; quieto, nada.
+    const climbing = pose.clinging && (pose.vy < -20 || pose.vy > 60);
+    const cl = climbing ? t * (pose.vy > 0 ? 13 : 9) : 0;
+    const ctx = { has, P, t, pose, moving, air, hanging, phase, breath, hip, sh, head, aim, n, crouch, dashK, swim, stroke, climbing, cl };
 
     const shows = (id) => has(id) || opts.ghost === id;
     const part = (id, fn, behind = false) => {
@@ -315,7 +318,10 @@ export class PlayerBody {
     let fx = hx + (far ? -2 : 2), fy = GROUND;
     if (moving) { fx = hx + Math.sin(ph) * 5; fy = GROUND - Math.max(0, Math.cos(ph)) * 3; }
     if (air) [fx, fy] = airFeet(hx, far, pose, c.hanging);
-    if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 5 : 2); }
+    if (pose.clinging) { // pies contra la pared, empujando por turnos al trepar
+      const k = c.climbing ? Math.sin(c.cl + (far ? 0 : Math.PI)) : 0;
+      fx = hx + 4 + Math.max(0, k); fy = GROUND - (far ? 5 : 2) - k * 3;
+    }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -4 : 4); fy = GROUND; } // agachado: un pie adelantado
     if (c.dashK > 0.3) { fx = hx + (far ? -9 : 7); fy = GROUND - (air ? 3 : 0) - (far ? 2 : 0); } // embestida: zancada, la pierna de atrás estirada
     if (c.swim > 0.3 && air) { // nado: piernas estiradas y patada alterna; más rápida en la brazada
@@ -411,7 +417,7 @@ export class PlayerBody {
     const s = [sh[0] - 3, sh[1] + 1];
     let hand = [s[0] - 1 + (moving ? -Math.sin(phase) * 3 : 0), s[1] + 9];
     if (c.air && !hanging) hand = pose.vy < -60 ? [s[0] + 1, s[1] - 7] : pose.vy > 60 ? [s[0] - 7, s[1] + 1] : [s[0] - 4, s[1] - 4];
-    if (pose.clinging) hand = [s[0] + 8, s[1] - 3];
+    if (pose.clinging) hand = [s[0] + 8, s[1] - 3 - (c.climbing ? Math.sin(c.cl) * 3 : 0)];
     if (hanging) hand = [s[0] + pose.rope.x * 9, s[1] + pose.rope.y * 9];
     if (c.swim > 0.3 && c.air && !hanging) hand = swimHand(s, c, 7); // brazada
     const el = ik(s[0], s[1], hand[0], hand[1], 4, 4, 1);
@@ -433,7 +439,8 @@ export class PlayerBody {
     const aim = k > 0 ? rest * (1 - k) : rest;
     const s = [sh[0] + 3, sh[1] + 1];
     let hand = [s[0] + Math.cos(aim) * (7 + k * 6), s[1] + Math.sin(aim) * (7 + k * 6)];
-    if (c.swim > 0.3 && c.air && !c.hanging && raise < 0.5 && k <= 0) {
+    if (c.pose.clinging && raise < 0.5 && k <= 0) hand = [s[0] + 5, s[1] - 4 - (c.climbing ? Math.sin(c.cl + Math.PI) * 3 : 0)];
+    else if (c.swim > 0.3 && c.air && !c.hanging && raise < 0.5 && k <= 0) {
       // Brazada a contratiempo: cuando el de atrás tira, este se estira al frente.
       const a = c.stroke > 0 ? 2.3 - (1 - c.stroke) * 3.2 : 0.4 + Math.sin(c.t * 4 + Math.PI) * 0.5;
       hand = [s[0] + Math.cos(a) * 7, s[1] + Math.sin(a) * 7];
@@ -509,7 +516,10 @@ export class PlayerBody {
     let fx = hx + (far ? -2 : 3), fy = GROUND;
     if (moving) { fx = hx + Math.sin(ph) * 4.5; fy = GROUND - Math.max(0, Math.cos(ph)) * 2.5; } // zancada corta y rápida
     if (air) { [fx, fy] = airFeet(hx, far, pose, c.hanging); fy -= 1; }
-    if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 6 : 3); }
+    if (pose.clinging) { // émbolos contra la pared, por turnos al trepar
+      const k = c.climbing ? Math.sin(c.cl + (far ? 0 : Math.PI)) : 0;
+      fx = hx + 4 + Math.max(0, k); fy = GROUND - (far ? 6 : 3) - k * 3;
+    }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -2 : 5); fy = GROUND; } // agachado sobre los talones
     if (c.dashK > 0.3) { fx = hx + (far ? -8 : 8); fy = GROUND - (air ? 3 : 0) - (far ? 2 : 0); } // embestida: zancada
     if (c.swim > 0.3 && air) { // nado con émbolos: patada de rana rápida y amplia que se dispara en la brazada
@@ -604,7 +614,7 @@ export class PlayerBody {
     const s = [sh[0] - 3, sh[1] + 1];
     let hand = [s[0] - 2 + (moving ? -Math.sin(phase) * 3 : 0), s[1] + 13];
     if (c.air && !hanging) hand = pose.vy < -60 ? [s[0] + 1, s[1] - 10] : pose.vy > 60 ? [s[0] - 10, s[1] + 2] : [s[0] - 6, s[1] - 6];
-    if (pose.clinging) hand = [s[0] + 10, s[1] - 4];
+    if (pose.clinging) hand = [s[0] + 10, s[1] - 4 - (c.climbing ? Math.sin(c.cl) * 4 : 0)]; // la garra se clava más arriba
     if (hanging) hand = [s[0] + pose.rope.x * 12, s[1] + pose.rope.y * 12];
     if (c.swim > 0.3 && c.air && !hanging) hand = swimHand(s, c, 10); // el brazo de hueso rema
     // Agachado, el brazo largo se apoya atrás con las garras clavadas en el suelo.
