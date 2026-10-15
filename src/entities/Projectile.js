@@ -89,6 +89,7 @@ export class Projectile {
       dy = 0;
       this.#bounced();
     }
+    const pcx = this.cx, pcy = this.cy;
     this.x += dx;
     this.y += dy;
 
@@ -103,10 +104,14 @@ export class Projectile {
       }
     }
 
-    if (g.world.solidAtPx(this.cx, this.cy)) {
+    // Choque con el escenario: un rayo desde donde estaba hasta donde está (aunque vaya
+    // muy deprisa no atraviesa esquinas ni pendientes); se queda en el punto del impacto.
+    const ray = g.world.raycast(pcx, pcy, this.cx, this.cy);
+    if (ray || g.world.solidAtPx(this.cx, this.cy)) {
+      if (ray) { this.x += ray.x - this.cx; this.y += ray.y - this.cy; }
       // El cañón de nivel II o más (simbionte, escopeta) revienta las membranas agrietadas.
       if (this.breaks && this.owner === 'player') {
-        const tx = Math.floor(this.cx / 16), ty = Math.floor(this.cy / 16);
+        const tx = ray ? ray.cx : Math.floor(this.cx / 16), ty = ray ? ray.cy : Math.floor(this.cy / 16);
         if (g.world.get(tx, ty) === 'X') g.breakMembrane(tx, ty);
       }
       if (!s?.impact) {

@@ -184,8 +184,15 @@ function draw() {
     const bc = biomeColors(r.biome);
     for (let y = 0; y < H(); y++) for (let x = 0; x < W(); x++) {
       const c = r.grid[y][x], t = TILE_BY_CHAR[c];
-      g.fillStyle = c === '#' ? bc.wall : c === '.' || t?.item ? bc.air : t?.color ?? '#ff00ff';
+      g.fillStyle = c === '#' ? bc.wall : c === '.' || t?.item || t?.slope ? bc.air : t?.color ?? '#ff00ff';
       g.fillRect(x * z, y * z, z, z);
+      if (t?.slope) {
+        // Pendiente: el triángulo (o trapecio) de pared bajo su recta.
+        const [l, rr] = t.slope;
+        g.fillStyle = bc.wall; g.beginPath();
+        g.moveTo(x * z, y * z + (l / 16) * z); g.lineTo(x * z + z, y * z + (rr / 16) * z);
+        g.lineTo(x * z + z, y * z + z); g.lineTo(x * z, y * z + z); g.closePath(); g.fill();
+      }
       if (t?.item || ['o', 'N', 'X', 'Y', 'f', 'z', '^'].includes(c)) {
         g.fillStyle = t?.color ?? '#fff';
         if (t?.item) { g.beginPath(); g.arc(x * z + z / 2, y * z + z / 2, z * 0.32, 0, Math.PI * 2); g.fill(); }
@@ -598,7 +605,7 @@ function validate() {
       if (!S.rooms[ex.to]) { add(id, `salida hacia sala inexistente ${ex.to}`); continue; }
       const [x, y] = ex.spawn;
       if (SOLID.has(cell(ex.to, x, y)) || SOLID.has(cell(ex.to, x, y - 1))) add(id, `la llegada a ${ex.to} [${x},${y}] está dentro de la roca`);
-      else if (!SOLID.has(cell(ex.to, x, y + 1))) add(id, `la llegada a ${ex.to} [${x},${y}] no tiene suelo`);
+      else if (!SOLID.has(cell(ex.to, x, y + 1)) && !TILE_BY_CHAR[cell(ex.to, x, y + 1)]?.slope && !TILE_BY_CHAR[cell(ex.to, x, y)]?.slope) add(id, `la llegada a ${ex.to} [${x},${y}] no tiene suelo`);
       if (!(S.rooms[ex.to].exits ?? []).some((b) => b.to === id)) add(id, `${ex.to} no tiene salida de vuelta a ${id}`);
     }
     const gates = new Set((r.gates ?? []).map((q) => q.id));

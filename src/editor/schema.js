@@ -17,6 +17,13 @@ export const TILES = [
   { c: 'f', name: 'Membrana fotosensible (luz)', color: '#c8a0c0' },
   { c: 'z', name: 'Pared falsa (luz)', color: '#8a5a6a' },
   { c: 'm', name: 'Mucosa resbaladiza', color: '#6a8a30' },
+  // Pendientes (core/Physics.js -> SLOPES): suelo inclinado, pared por debajo de la recta.
+  { c: '/', name: 'Rampa 45° (sube a la derecha)', color: '#8a3a58', slope: [16, 0] },
+  { c: 'k', name: 'Rampa 45° (sube a la izquierda)', color: '#8a3a58', slope: [0, 16] },
+  { c: 'a', name: 'Rampa suave ↗ (mitad baja)', color: '#8a3a58', slope: [16, 8] },
+  { c: 'A', name: 'Rampa suave ↗ (mitad alta)', color: '#8a3a58', slope: [8, 0] },
+  { c: 'E', name: 'Rampa suave ↖ (mitad alta)', color: '#8a3a58', slope: [0, 8] },
+  { c: 'e', name: 'Rampa suave ↖ (mitad baja)', color: '#8a3a58', slope: [8, 16] },
   { c: 'b', name: 'Biomasa', color: '#e07a98', item: true },
   { c: 'B', name: 'Célula lumínica (batería)', color: '#ffd23f', item: true },
   { c: 'S', name: 'Hueso', color: '#e8dcc8', item: true },

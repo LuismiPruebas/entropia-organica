@@ -2,7 +2,7 @@ import * as THREE from '../../vendor/three.module.min.js'; // ruta directa: Safa
 import { getSprite, spriteMesh, placeMesh, setMap, canvasTexture } from '../core/Sprites.js';
 import { CREATURES, tintCanvas } from './Creatures.js';
 import { stingTip } from './Moth.js';
-import { TILE, overlap } from '../core/Physics.js';
+import { TILE, overlap, isSlope } from '../core/Physics.js';
 import { SPRITES } from '../data/sprites.js';
 import { ITEM_DROP_CHANCE } from '../state/State.js';
 // Probabilidad de que una criatura suelte su fragmento de ADN (era 0.3): el mapa y sus
@@ -40,10 +40,18 @@ function speedMods(e, g, s) {
   if (e.lit) s *= e.def.lightFear ?? 1;
   return s;
 }
+// ¿Hay un borde (precipicio) justo delante? Un rayo hacia abajo desde el pie de
+// delante: suelo plano a ras o una rampa (aunque baje) no es borde; un escalón sí.
+function ledgeAhead(g, e, footX) {
+  const feet = e.y + e.h;
+  const hit = g.world.raycast(footX, feet - 2, footX, feet + e.w / 2 + 10);
+  if (!hit) return true;
+  return !(hit.y <= feet + 2 || isSlope(hit.c) || g.world.slopeAt(footX, feet + 1));
+}
 // Paso por el suelo sin caerse por los bordes.
 function groundWalk(e, g, dt, speed, chasing) {
   const footX = e.dir > 0 ? e.x + e.w + 1 : e.x - 1;
-  if (!g.world.solidAtPx(footX, e.y + e.h + 2) && e.onGround) {
+  if (ledgeAhead(g, e, footX) && e.onGround) {
     if (chasing) speed = 0;
     else e.dir *= -1;
   }
@@ -718,7 +726,7 @@ export const BEHAVIORS = {
       let speed = (s.sees ? d.chaseSpeed : d.speed) * (0.35 + 0.65 * Math.max(0, Math.sin(e.t * 5.5)));
       speed = speedMods(e, g, speed);
       const footX = e.dir > 0 ? e.x + e.w + 1 : e.x - 1;
-      if (!g.world.solidAtPx(footX, e.y + e.h + 2) && e.onGround) { if (s.sees) speed = 0; else e.dir *= -1; }
+      if (ledgeAhead(g, e, footX) && e.onGround) { if (s.sees) speed = 0; else e.dir *= -1; }
       e.vx = e.dir * speed;
     }
     // En carrera no se detiene ante el borde: es torpe.

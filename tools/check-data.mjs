@@ -4,7 +4,7 @@ import { LEVELS, START } from '../src/data/levels.js';
 import { ENEMIES } from '../src/data/enemies.js';
 import { SPRITES } from '../src/data/sprites.js';
 import { BIOMES } from '../src/data/biomes.js';
-import { TileWorld, TILE } from '../src/core/Physics.js';
+import { TileWorld, TILE, isSlope } from '../src/core/Physics.js';
 
 const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm']);
 let errors = 0;
@@ -50,7 +50,7 @@ for (const [id, lv] of Object.entries(LEVELS)) {
     if (!LEVELS[ex.to]) { fail(`salida hacia sala inexistente ${ex.to}`); continue; }
     const [x, y] = ex.spawn;
     if (SOLID.has(cell(ex.to, x, y))) fail(`spawn de ${ex.side}->${ex.to} [${x},${y}] es sólido`);
-    if (!SOLID.has(cell(ex.to, x, y + 1))) fail(`spawn de ${ex.side}->${ex.to} [${x},${y}] no tiene suelo`);
+    if (!SOLID.has(cell(ex.to, x, y + 1)) && !isSlope(cell(ex.to, x, y + 1)) && !isSlope(cell(ex.to, x, y))) fail(`spawn de ${ex.side}->${ex.to} [${x},${y}] no tiene suelo`);
     // El cuerpo mide casi dos tiles: también ha de caber la cabeza.
     if (SOLID.has(cell(ex.to, x, y - 1))) fail(`spawn de ${ex.side}->${ex.to} [${x},${y}]: no cabe (techo encima)`);
     const h = lv.grid.length;

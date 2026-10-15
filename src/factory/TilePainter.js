@@ -1,4 +1,4 @@
-import { TILE } from '../core/Physics.js';
+import { TILE, isSlope, slopeSurface } from '../core/Physics.js';
 
 // Pinta procedimentalmente cada sala: un mundo de carne, con el tejido, la paleta y
 // los brotes propios de su bioma (data/biomes.js). Nada mecánico: solo el
@@ -38,7 +38,7 @@ const px = (g, x, y, color, w = 1, h = 1) => {
   g.fillRect(x, y, w, h);
 };
 
-const isWallChar = (c) => c === '#' || c === 'X' || c === 'f' || c === 'Y' || c === 'z' || c === 'm';
+const isWallChar = (c) => c === '#' || c === 'X' || c === 'f' || c === 'Y' || c === 'z' || c === 'm' || isSlope(c);
 
 // Mucosa resbaladiza (m): pared cubierta de moco brillante. Se pinta como la pared y
 // encima un barniz verdoso con regueros que relucen (las Garras no se agarran).
@@ -443,7 +443,15 @@ function tileMask(world, fn, div) {
   const T = TILE / div, W = world.w * T, H = world.h * T;
   const mask = new Float32Array(W * H);
   for (let cy = 0; cy < world.h; cy++) for (let cx = 0; cx < world.w; cx++) {
-    if (!fn(world.get(cx, cy))) continue;
+    const c = world.get(cx, cy);
+    if (!fn(c)) continue;
+    if (isSlope(c)) {
+      // Pendiente: cada celda de la máscara, según su centro quede bajo la recta.
+      for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+        if ((y + 0.5) * div >= slopeSurface(c, (x + 0.5) * div)) mask[(cy * T + y) * W + cx * T + x] = 1;
+      }
+      continue;
+    }
     for (let y = cy * T; y < (cy + 1) * T; y++) mask.fill(1, y * W + cx * T, y * W + (cx + 1) * T);
   }
   return mask;
@@ -491,7 +499,7 @@ function organicSilhouette(g, world) {
   // Lo que pertenece al cuerpo de la sala (pared y mucosa). El resto de lo sólido
   // (membranas, sellos, paredes falsas, compuertas) cuenta como carne para la forma,
   // pero no se recorta ni se pinta encima: tiene su propio dibujo.
-  const body = (c) => c === '#' || c === 'm';
+  const body = (c) => c === '#' || c === 'm' || isSlope(c);
   const solidish = (c) => isWallChar(c) || c === 'D';
   const f = blurField(tileMask(world, solidish, 1), W, H, SIGMA);
   const img = g.getImageData(0, 0, W, H), d = img.data;
@@ -909,7 +917,7 @@ export function paintRoom(world, biome) {
     for (let cx = 0; cx < world.w; cx++) {
       const c = world.get(cx, cy);
       const ox = cx * TILE, oy = cy * TILE;
-      if (c === '#') paintWall(g, world, cx, cy, ox, oy);
+      if (c === '#' || isSlope(c)) paintWall(g, world, cx, cy, ox, oy); // la pendiente se recorta luego (organicSilhouette)
       else if (c === 'm') { paintWall(g, world, cx, cy, ox, oy); paintMucus(g, gl, cx, cy, ox, oy); }
       // 'X' (membrana agrietada) se dibuja aparte y animada: paintMembraneGroup.
       // '^' (púas): sus colmillos son una pieza animada (entities/Fangs.js).

@@ -15,6 +15,9 @@
 //  Y  esfínter sellado: pared de músculo; el Tendón lo desgarra y queda abierto
 //  z  pared falsa: parece roca pero no lo es; la luz la atraviesa y la delata
 //  m  mucosa resbaladiza: pared en la que las Garras no se agarran
+//  /  rampa 45° que sube a la derecha    k  rampa 45° que sube a la izquierda
+//  aA rampa suave (22,5°) que sube a la derecha (mitad baja + mitad alta)
+//  Ee rampa suave que sube a la izquierda (mitad alta + mitad baja); debajo, pared
 //
 // Los huecos en los bordes de la sala son salidas (también en techo y suelo);
 // `exits` dice a dónde llevan. Si un lado tiene varias, `at` indica el tramo de
@@ -50,7 +53,7 @@ export const LEVELS = {
       '#.....................................##########',
       '#.................................##############',
       '#.................................f.....########',
-      '#...N.....###############.........f.bBB.########',
+      '#...N...../############Ee.........f.bBB.########',
       '################################################',
       '################################################',
     ],
