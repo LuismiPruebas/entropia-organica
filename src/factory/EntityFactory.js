@@ -12,6 +12,7 @@ import { Womb } from '../entities/Womb.js';
 import { FluidPool, Mouth, Drip } from '../entities/Hazards.js';
 import { Lamp } from '../entities/Lamp.js';
 import { Hook } from '../entities/Hook.js';
+import { BloodPool, Artery, HeartValve, Ventricle } from '../entities/Blood.js';
 import { BoneTrap, Wind } from '../entities/Traps.js';
 import { Nodule } from '../entities/Nodule.js';
 import { YolkSac } from '../entities/YolkSac.js';
@@ -130,6 +131,11 @@ export class EntityFactory {
     for (const d of def.gates ?? []) room.gates[d.id] = new Gate(g, room, d);
     room.hazards = [
       ...pools,
+      // Sistema circulatorio (entities/Blood.js): charcas que laten, arterias, válvulas y ventrículos.
+      ...(def.blood ?? []).map((d) => new BloodPool(g, d)),
+      ...(def.arteries ?? []).map((d) => new Artery(g, d)),
+      ...(def.heartValves ?? []).map((d) => new HeartValve(g, room, d)),
+      ...(def.ventricles ?? []).map((d) => new Ventricle(g, d)),
       ...(def.mouths ?? []).map((d) => new Mouth(g, d, world)),
       ...(def.drips ?? []).map((d) => new Drip(g, d)),
       // Empalizadas de hueso y corrientes de aire (entities/Traps.js).

@@ -111,6 +111,12 @@ const MATERIALS = {
     myelin: '#e0d0b0', light: '#f4ead4', tissue: '#7a2a20', outline: '#3a2216',
     pulse: 'rgba(255,170,130,0.6)',
   },
+  // Sistema circulatorio: pared de vaso, granate húmeda, cruzada de capilares de colores.
+  vascular: {
+    base: ['#5a0a22', '#6a0e2a', '#4e081e'], groove: '#2a0410', deep: '#1e030c',
+    myelin: '#c84a6a', light: '#ff8aa0', tissue: '#7a1a3a', outline: '#1a0208',
+    pulse: null, // los capilares laten aparte (paintCapillaryLight), al pulso del corazón
+  },
   // El Corazón (carmesí): músculo estriado con grasa.
   muscle: {
     base: ['#9a1a2c', '#aa2236', '#8a1426'], groove: '#4e0816', deep: '#40060f',
@@ -178,6 +184,7 @@ function paintWall(g, world, cx, cy, ox, oy) {
   const top = open(0, -1), left = open(-1, 0), right = open(1, 0);
   const exposed = top || open(0, 1) || left || right;
   if (!exposed && MAT === 'villous') { paintScales(g, ox, oy, TILE, TILE, 0.35); return; }
+  if (MAT === 'vascular') { paintVasc(g, ox, oy, exposed ? 0 : 0.35); return; }
   if (!exposed) {
     px(g, ox, oy, m.deep, TILE, TILE);
     if (r() < 0.3) px(g, ox + 2 + Math.floor(r() * 12), oy + 2 + Math.floor(r() * 12), m.groove, 2, 1);
@@ -293,7 +300,59 @@ const MASS = {
   villous: { near: '#9a6018', far: '#6c4210', marble: '#bc8632', fat: '#f4c868', vein: '#7a4060' },
   osseous: { near: '#8a6a50', far: '#5a3e2e', marble: '#b09070', fat: '#e0d0b0', vein: '#6a2018' },
   muscle: { near: '#961a2a', far: '#640e1c', marble: '#bc3044', fat: '#f4b888', vein: '#6a0c1e' },
+  vascular: { near: '#5a0a22', far: '#2e0412', marble: '#8a1a3a', fat: '#c84a6a', vein: '#3a0a40' },
 };
+
+// --- Pared de vaso (Sistema circulatorio) -------------------------------------------
+// Carne granate y húmeda con pliegues suaves y un brillo ancho, cruzada por una red de
+// capilares de colores (arteriolas rojas, vénulas azules, capilares violetas) que es
+// continua entre casillas (coordenadas del mundo). capillary() dice si un píxel es
+// capilar y de qué color; paintCapillaryLight los hace latir en la capa de pulso.
+const CAP = [[255, 58, 74], [74, 122, 255], [192, 80, 255]]; // rojo, azul, violeta
+function capillary(X, Y) {
+  const wx = X / 30 + fbm(X / 60, Y / 60, 21) * 1.4, wy = Y / 30 + fbm(X / 60 + 5, Y / 60, 22) * 1.4;
+  const big = Math.abs(fbm(wx, wy, 23) - 0.5);
+  if (big < 0.016) return { col: CAP[Math.floor(fbm(X / 90, Y / 90, 24) * 5) % 3], thick: true };
+  const fine = Math.abs(fbm(X / 11 + 3, Y / 11, 25) - 0.5);
+  if (fine < 0.012) return { col: CAP[Math.floor(fbm(X / 40, Y / 40, 26) * 6) % 3], thick: false };
+  return null;
+}
+function vascRGB(X, Y, depth = 0) {
+  const n = fbm(X / 24, Y / 18, 27);
+  const fold = Math.sin(Y / 5 + n * 6) * 0.5 + 0.5;                     // pliegues de la íntima
+  let k = 0.78 + fold * 0.25 + (n - 0.5) * 0.35;
+  if (fbm(X / 50 + 9, Y / 50, 28) > 0.68) k += 0.2;                   // brillo húmedo ancho
+  let c = [168 * k, 34 * k, 58 * k];
+  const cap = capillary(X, Y);
+  if (cap) { const a = cap.thick ? 0.5 : 0.22; c = [c[0] + (cap.col[0] * 0.75 - c[0]) * a, c[1] + (cap.col[1] * 0.75 - c[1]) * a, c[2] + (cap.col[2] * 0.75 - c[2]) * a]; }
+  const dk = 1 - depth * 0.7;
+  return [c[0] * dk, c[1] * dk, c[2] * dk];
+}
+function paintVasc(g, ox, oy, depth) {
+  for (let y = 0; y < TILE; y++) for (let x = 0; x < TILE; x++) {
+    const [r, gg, b] = vascRGB(ox + x, oy + y, depth);
+    g.fillStyle = `rgb(${r | 0},${gg | 0},${b | 0})`;
+    g.fillRect(ox + x, oy + y, 1, 1);
+  }
+}
+// Los capilares cerca de la superficie brillan (tenue) y laten con el corazón (capa de
+// pulso, cuya opacidad lleva el ritmo del bioma en core/Scenery.js).
+function paintCapillaryLight(gl, pl, world) {
+  const D = wallDepth(world), W = world.w * TILE, H = world.h * TILE;
+  const gi = gl.getImageData(0, 0, W, H), pi = pl.getImageData(0, 0, W, H);
+  for (let cy = 0; cy < world.h; cy++) for (let cx = 0; cx < world.w; cx++) {
+    if (!isWallChar(world.get(cx, cy)) || D[cy * world.w + cx] > 2) continue;
+    for (let py = 0; py < TILE; py++) for (let pxl = 0; pxl < TILE; pxl++) {
+      const x = cx * TILE + pxl, y = cy * TILE + py, cap = capillary(x, y);
+      if (!cap || !cap.thick) continue;                                   // solo los gruesos laten
+      const i = (y * W + x) * 4, a = 0.55;
+      gi.data[i] = cap.col[0] * 0.12 * a; gi.data[i + 1] = cap.col[1] * 0.12 * a; gi.data[i + 2] = cap.col[2] * 0.12 * a;
+      pi.data[i] = cap.col[0] * a; pi.data[i + 1] = cap.col[1] * a; pi.data[i + 2] = cap.col[2] * a; pi.data[i + 3] = 255;
+    }
+  }
+  gl.putImageData(gi, 0, 0);
+  pl.putImageData(pi, 0, 0);
+}
 const hexRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
 // Distancia (en tiles) de cada pared al aire más cercano.
@@ -342,13 +401,14 @@ function paintMasses(g, world) {
     // El borde lo pinta su material; en el Digestivo la carne es una sola pieza (borde e
     // interior con la misma profundidad continua: sin saltos de una casilla a otra).
     const edge = D[cy * world.w + cx] < 2;
-    if ((c !== '#' && c !== 'm') || (edge && (MAT !== 'villous' || c === 'm'))) continue;
+    const cont = MAT === 'villous' || MAT === 'vascular';
+    if ((c !== '#' && c !== 'm') || (edge && (!cont || c === 'm'))) continue;
     for (let py = 0; py < TILE; py++) for (let pxl = 0; pxl < TILE; pxl++) {
       const x = cx * TILE + pxl, y = cy * TILE + py;
       const k = Math.min(1, Math.max(0, (deep[y * W + x] - 0.62) / 0.36));
-      if (MAT === 'villous') {
+      if (cont) {
         const dv = Math.min(1, Math.max(0, (deep[y * W + x] - 0.5) / 0.46));
-        const sc = scaleRGB(x, y, dv * 0.85), i = (y * W + x) * 4;
+        const sc = (MAT === 'vascular' ? vascRGB : scaleRGB)(x, y, dv * 0.85), i = (y * W + x) * 4;
         d[i] = sc[0]; d[i + 1] = sc[1]; d[i + 2] = sc[2]; d[i + 3] = 255;
         continue;
       }
@@ -860,6 +920,7 @@ export function paintRoom(world, biome) {
     }
   }
   paintMasses(g, world);
+  if (MAT === 'vascular') paintCapillaryLight(gl, pl, world);
   organicSilhouette(g, world);
   organicPass(g, pl, world);
   if (biome) paintGrowths(g, gl, world, biome);
@@ -992,6 +1053,27 @@ function skinFlap(g, x, y, len, w, r) {
   if (r() < 0.4) px(g, x + 1, y + 1, '#8a2a20', 1, 3);                     // mancha de sangre seca
 }
 
+// Capilar colgante: un hilo de color que se ramifica hacia abajo; la punta brilla.
+function capTendril(g, gl, x, y, len, r) {
+  const col = ['#ff3a4a', '#5a8aff', '#c050ff'][Math.floor(r() * 3)];
+  let xx = x;
+  for (let i = 0; i < len; i++) {
+    px(g, xx, y + i, i % 4 === 3 ? '#2a0410' : col);
+    if (r() < 0.25) xx += r() < 0.5 ? -1 : 1;
+    if (i > 2 && r() < 0.12) { const bx = xx + (r() < 0.5 ? -1 : 1); px(g, bx, y + i + 1, col); px(g, bx + (bx > xx ? 1 : -1), y + i + 2, col); } // rama
+  }
+  px(g, xx - 1, y + len, '#2a0410', 3, 2);
+  px(g, xx, y + len, '#ffd0e0');
+  px(gl, xx - 1, y + len - 1, col, 3, 3);
+}
+// Bulbo de vaso pegado a un suelo: una burbuja de sangre con su brillo.
+function vesselBulb(g, gl, x, y, r) {
+  const rad = 1 + Math.floor(r() * 2);
+  for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) if (Math.hypot(dx, dy) <= rad + 0.3) px(g, x + dx, y - rad + dy, Math.hypot(dx, dy) > rad - 0.6 ? '#2a0410' : '#c0182a');
+  px(g, x - 1, y - rad - 1, '#ff8aa0');
+  px(gl, x, y - rad, 'rgba(255,40,60,0.6)');
+}
+
 function paintGrowths(g, gl, world, biome) {
   const d = biome.growthDensity ?? 0.4;
   for (let cy = 0; cy < world.h; cy++) {
@@ -1031,6 +1113,10 @@ function paintGrowths(g, gl, world, biome) {
           if (air(0, 1) && r() < d * 0.45) skinFlap(g, ox + 2 + Math.floor(r() * 9), oy + 15, 5 + Math.floor(r() * 12), 3 + Math.floor(r() * 3), r);
           if (side && r() < d * 0.3) skinFlap(g, left ? ox - 2 : ox + 14, oy + Math.floor(r() * 4), 6 + Math.floor(r() * 8), 2 + Math.floor(r() * 2), r);
           if (side && r() < d * 0.5) for (let k = 0; k < 6; k++) px(g, (left ? ox : ox + 13) + Math.floor(r() * 3), oy + Math.floor(r() * 16), r() < 0.5 ? '#5a0e14' : '#7a1a1e'); // musgo en la cara
+          break;
+        case 'capillaries':
+          if (air(0, 1) && r() < d * 0.5) capTendril(g, gl, ox + 2 + Math.floor(r() * 12), oy + 16, 4 + Math.floor(r() * 12), r);
+          if (air(0, -1) && r() < d * 0.35) vesselBulb(g, gl, ox + 3 + Math.floor(r() * 10), oy, r);
           break;
         case 'chordae':
           if (air(0, 1) && r() < d * 0.3) chorda(g, gl, ox + 4 + Math.floor(r() * 8), oy + 16, 6 + Math.floor(r() * 14), r);

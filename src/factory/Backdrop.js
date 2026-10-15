@@ -312,6 +312,22 @@ const BACKDROPS = {
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) sf.blend(x, y, hexRgb('#140a08'), 0.45);
     return sf.canvas();
   },
+
+  // Sistema circulatorio: tejido granate y violeta, en penumbra, con una maraña de
+  // vasos rojos, azules y violetas de todos los grosores y algún coágulo.
+  circulatorio() {
+    const sf = surface();
+    const P = { lo: '#1a0410', mid: '#2e0818', hi: '#401028', membrane: '#22061a', cell: '#3a0a22', shine: '#8a2a4a', nucleus: '#5a0a2a' };
+    tissue(sf, P, 61, 4);
+    lobules(sf, 18, 62, P, { strength: 0.3, nucleus: false });
+    vessels(sf, 5, 63, '#5a0a1a', '#a01a30', { len: 220, thick: 3, branch: 0.03 });
+    vessels(sf, 5, 64, '#1a1a5a', '#3a4aa0', { len: 200, thick: 2, branch: 0.03 });
+    vessels(sf, 8, 65, '#4a1a6a', '#8a3ac0', { len: 140, thick: 1, branch: 0.05 });
+    const r = rng(66);
+    for (let n = 0; n < 10; n++) disc(sf, r() * S, r() * S, 2 + r() * 3, '#6a0a1a', '#b02a3a', '#3a0410'); // coágulos
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) sf.blend(x, y, hexRgb('#0e0208'), 0.3);
+    return sf.canvas();
+  },
 };
 
 export function paintBackdrop(biomeId) {

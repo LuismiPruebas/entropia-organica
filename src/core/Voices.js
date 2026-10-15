@@ -157,6 +157,16 @@ export const VOICES = {
     for (let i = 0; i < 14; i++) { const f = rnd(90, 220); a.voice(o, { f0: f, f1: f * 2, dur: 0.08, vol: 0.18, wave: 'sine', vibDepth: 0, formants: [[f * 1.5, 1.5, 1]], delay: 0.6 + Math.random() * 1.5 }); }
   },
 
+  // ---------------------------------------------------------------- Sistema circulatorio
+  // El latido llega a una charca: un golpe sordo y la sangre que se agolpa.
+  bloodSurge: (a, o) => {
+    a.knock(o, { f: 70, q: 2, dur: 0.18, vol: 0.5 });
+    air(a, o, { f0: 380, f1: 900, q: 1.6, dur: 0.35, vol: 0.22, attack: 0.03, release: 0.6, delay: 0.03 });
+  },
+  // Válvula: se abre con un chasquido húmedo y se cierra de golpe (el "lub-dub").
+  valveOpen: (a, o) => air(a, o, { f0: 600, f1: 1500, q: 3, dur: 0.12, vol: 0.25, attack: 0.01 }),
+  valveShut: (a, o) => { a.knock(o, { f: 95, q: 3, dur: 0.12, vol: 0.45 }); a.knock(o, { f: 420, q: 8, dur: 0.05, vol: 0.12, delay: 0.01 }); },
+
   eelHurt: (a, o) => a.voice(o, { pitch: [[0, 680], [0.3, 940], [1, 400]], dur: 0.26, vol: 0.4, breath: 0.5, formants: [[1400, 4, 1], [2600, 6, 0.4]], attack: 0.01 }),
 
   // ---------------------------------------------------------------- Escarabajo Rinoceronte
@@ -200,6 +210,7 @@ export const VOICE_GAIN = {
   vestigioBreath: 2.55, moan: 2.55, vestigioAlert: 2.15, vestigioHurt: 2.2,
   eelGurgle: 1, eelHurt: 1.8, leechHurt: 1.6,
   toadCroak: 2.6, toadHurt: 2.6, toadDie: 2.4,
+  bloodSurge: 1.6, valveOpen: 1.6, valveShut: 2,
   rhinoSnort: 3.4, rhinoRattle: 7.7, rhinoBellow: 3, rhinoHurt: 3.2, rhinoDie: 2.6,
   // Trampas y corrientes (entities/Traps.js).
   stakes: 2.2, boneCreak: 3.5, gust: 2.5,

@@ -94,4 +94,21 @@ export const BIOMES = {
     mapColor: '#c8b090',
     fragments: ['balistico', 'dermal', 'balistico'],
   },
+  // Sistema Circulatorio: los vasos por donde el Corazón empuja la sangre. Todo late al
+  // mismo pulso (entities/Blood.js): charcas que suben con cada golpe, arterias que
+  // escupen a presión, válvulas que se abren y se cierran y ventrículos que bombean.
+  circulatorio: {
+    name: 'Sistema Circulatorio',
+    palette: { flesh: '#8a1430', fleshLight: '#ff7a96', fleshDark: '#2a0410', vein: '#3a2a8a' },
+    material: 'vascular',
+    growth: 'capillaries',
+    growthDensity: 0.45,
+    bg: { base: '#22040e' },
+    camo: '#3a0a1c',
+    // Granate y escarlata, con capilares azules y violetas.
+    ambient: [0.2, 0.09, 0.13],
+    sound: { drone: 30.9, wave: 'sine', filter: 180, q: 1.2, lfo: 0.62, level: 0.03, bed: { freq: 300, q: 1, level: 0.016 }, layer: 'bloodstream' },
+    mapColor: '#e0306a',
+    fragments: ['dermal', 'balistico', 'ocular'],
+  },
 };

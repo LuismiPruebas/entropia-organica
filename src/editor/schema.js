@@ -124,6 +124,25 @@ export const KINDS = {
     label: 'Corriente de aire', color: '#90f0e0',
     make: (x, y) => ({ x, y, w: 4, h: 6, dir: 'up' }), box: (o) => [o.x, o.y, o.w, o.h], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => `aire ${o.dir}`,
   },
+  // Sistema circulatorio (entities/Blood.js): todo late al mismo pulso.
+  blood: {
+    label: 'Charca de sangre (late)', color: '#e0304a',
+    make: (x, y) => ({ x: [x, x + 8], top: y, bottom: y + 3, base: 0.4, surge: 0.3, flow: 'right' }),
+    box: (o) => { const [a, b] = rangeX(o); return [a, o.top, b - a + 1, o.bottom - o.top + 1]; },
+    move: (o, x, y) => { const [a, b] = rangeX(o); const h = o.bottom - o.top; o.x = [x, x + (b - a)]; o.top = y; o.bottom = y + h; }, text: (o) => `sangre ${o.flow ?? ''}`,
+  },
+  arteries: {
+    label: 'Arteria (chorro a presión)', color: '#ff6070',
+    make: (x, y) => ({ x, y, dir: 'up', power: 1 }), box: (o) => [o.x, o.y, 1, 1], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => `arteria ${o.dir}`,
+  },
+  heartValves: {
+    label: 'Válvula cardíaca (paso con ritmo)', color: '#ff90a0',
+    make: (x, y) => ({ x, y, h: 3, open: 0.5 }), box: (o) => [o.x, o.y, 1, o.h], move: (o, x, y) => { o.x = x; o.y = y; }, text: () => 'válvula',
+  },
+  ventricles: {
+    label: 'Ventrículo (decorado que bombea)', color: '#c02040',
+    make: (x, y) => ({ x, y, r: 28 }), box: (o) => { const t = Math.round((o.r ?? 28) / 16); return [o.x - t, o.y - t, t * 2 + 1, t * 2 + 1]; }, move: (o, x, y) => { const t = Math.round((o.r ?? 28) / 16); o.x = x + t; o.y = y + t; }, text: () => 'ventrículo',
+  },
   hints: {
     label: 'Pista (texto)', color: '#a0a0ff',
     make: (x, y) => ({ x, y, r: 3, text: 'Algo late aquí...' }), box: (o) => [o.x, o.y, 1, 1], move: (o, x, y) => { o.x = x; o.y = y; }, text: () => 'pista',
@@ -139,4 +158,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'blood', 'arteries', 'heartValves', 'ventricles', 'exits', 'hints', 'zones'];

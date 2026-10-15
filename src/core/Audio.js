@@ -544,6 +544,16 @@ const LAYERS = {
     }
   },
   // El Corazón: el latido lo llena todo.
+  // Sistema circulatorio: la sangre corre (un siseo que crece y se apaga) y, lejos,
+  // el "lub-dub" del corazón que lo empuja todo.
+  bloodstream(a, t) {
+    if (t % 5 === 0) a.ambient(Math.random() * 1.2 - 0.6, (o) => {
+      a.noise(o, { dur: 0.7, vol: 0.05, type: 'bandpass', f0: 220, f1: 520, q: 1.2 });
+      a.tone(o, { type: 'sine', f0: 58, f1: 40, dur: 0.2, vol: 0.12 });
+      a.tone(o, { type: 'sine', f0: 52, f1: 34, dur: 0.16, vol: 0.08, delay: 0.22 });
+    });
+    if (Math.random() < 0.04) a.ambient(Math.random() * 2 - 1, (o) => a.tone(o, { type: 'sine', f0: 140 + Math.random() * 120, f1: 300 + Math.random() * 200, dur: 0.07, vol: 0.03 }));
+  },
   heart(a, t) {
     if (t % 7 === 0) a.ambient(0, (o) => { a.tone(o, { type: 'sine', f0: 62, f1: 38, dur: 0.22, vol: 0.18 }); a.tone(o, { type: 'sine', f0: 55, f1: 34, dur: 0.18, vol: 0.12, delay: 0.24 }); });
   },

@@ -84,7 +84,7 @@ function update(e, t) {
 }
 
 const biomeName = (b) => BIOMES[b]?.name ?? b;
-const order = ['nervioso', 'pulmonar', 'digestivo', 'oseo', 'corazon'];
+const order = ['nervioso', 'pulmonar', 'digestivo', 'oseo', 'circulatorio', 'corazon'];
 const ids = Object.keys(ENEMIES).filter((id) => ENEMIES[id].creature && (!only || id === only));
 ids.sort((a, b) => order.indexOf(ENEMIES[a].biome) - order.indexOf(ENEMIES[b].biome) || !!ENEMIES[a].boss - !!ENEMIES[b].boss);
 

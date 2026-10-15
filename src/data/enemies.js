@@ -366,7 +366,7 @@ export const ENEMIES = {
   coro: {
     frag: 'balistico', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Coro de Carne',
-    biome: 'digestivo',
+    biome: 'circulatorio',
     creature: 'coro',
     gore: { blood: '#9a1020', flesh: ['#d89a80', '#8a2a3c', '#e8dcc8', '#c08068'] },
     voice: ['choirMoan'],
@@ -382,7 +382,7 @@ export const ENEMIES = {
     drop: { biomass: 25, fragments: 2, items: ['cyst'] },
     reward: {
       lore: ['MEMORIA: LOS QUE CANTABAN', 'En el laboratorio había otros como tú. Un caballo de carga, el que los vigilaba, los que no aguantaron el injerto. Cantaban para no dormirse. Cuando sellaron la sala, dicen que se les oyó cantar durante tres días.'],
-      text: 'El coro se calla. El Digestivo respira más hondo.',
+      text: 'El coro se calla. La sangre vuelve a correr sin tropiezos.',
     },
     sounds: { reveal: 'choirScream', aura: 'choirMoan', attack: 'choirSing', sing: 'choirSing', windup: 'choirRetch', vomit: 'choirVomit', summon: 'choirScream', shock: 'choirShock', hurt: 'choirHurt', die: 'choirDie' },
     auraPeriod: 4,

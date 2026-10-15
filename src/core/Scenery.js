@@ -395,7 +395,63 @@ function oseo() {
   };
 }
 
-const BUILDERS = { nervioso, pulmonar, digestivo, corazon, oseo };
+// Sistema circulatorio: arterias rojas y venas azules gruesas y brillantes que cruzan la
+// sala sin cortes (recorridos periódicos) y de las que brota una red de capilares de
+// colores que brilla tenue; glóbulos rojos a la deriva. Todo late con el corazón.
+function circulatorio() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const r = rng(71);
+  const W2 = (Math.PI * 2) / MID_W;
+  const path = (y0, amp, ph, h = 1) => { const p = []; for (let x = 0; x <= MID_W; x += 0.5) p.push([x, y0 + Math.sin(x * W2 * h + ph) * amp + Math.sin(x * W2 * 3 + ph * 2) * amp * 0.2]); return p; };
+  // Vaso grueso con volumen: borde oscuro, cuerpo, brillo húmedo arriba; dotW envuelve.
+  const vessel = (pts, R, pal, glowCol) => {
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+      const a = Math.atan2(y1 - y0, x1 - x0), nx = -Math.sin(a), ny = Math.cos(a);
+      for (let k = -R - 1; k <= R + 1; k += 0.5) {
+        const q = k / R;
+        const c = Math.abs(q) > 1 ? pal.out : q < -0.55 ? pal.light : q < -0.2 ? pal.mid : q < 0.6 ? pal.body : pal.dark;
+        dotW(g, x1 + nx * k, y1 + ny * k, c);
+      }
+      if (i % 3 === 0) dotW(gl, x1 + nx * (-R * 0.6), y1 + ny * (-R * 0.6), glowCol);
+    }
+  };
+  const ART = { out: '#2a0208', dark: '#6a0614', body: '#a8102a', mid: '#d8283e', light: '#ff8a9a' };
+  const VEN = { out: '#0a0a2a', dark: '#1a1a5a', body: '#2e3a9a', mid: '#4a5ac8', light: '#a0b0ff' };
+  // Capilares: ramas finas que salen de los vasos y se dividen, en rojo, azul y violeta.
+  const COLS = [['#7a1a2e', 'rgba(255,40,60,0.18)'], ['#2a3a8a', 'rgba(70,110,255,0.18)'], ['#5a2a8a', 'rgba(190,70,255,0.18)']];
+  const branch = (x, y, a, len, depth, ci) => {
+    const [col, gcol] = COLS[ci];
+    for (let i = 0; i < len; i++) {
+      x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.5;
+      dotW(g, x, y, col);
+      if (i % 2 === 0) dotW(gl, x, y, gcol);
+    }
+    if (depth > 0) for (const s of [-1, 1]) branch(x, y, a + s * (0.4 + r() * 0.5), len * 0.7, depth - 1, r() < 0.35 ? (ci + 1) % 3 : ci);
+  };
+  const vein = path(140, 16, 1.3), artery = path(60, 22, 0), artery2 = path(170, 8, 2.6, 2);
+  for (let n = 0; n < 5; n++) { const p = artery[Math.floor(r() * artery.length)]; branch(p[0], p[1] + 8, Math.PI / 2 + (r() - 0.5), 14 + r() * 10, 3, Math.floor(r() * 3)); }
+  for (let n = 0; n < 4; n++) { const p = vein[Math.floor(r() * vein.length)]; branch(p[0], p[1] - 7, -Math.PI / 2 + (r() - 0.5), 12 + r() * 10, 3, Math.floor(r() * 3)); }
+  vessel(artery2, 3, ART, 'rgba(255,40,60,0.3)');
+  vessel(vein, 7, VEN, 'rgba(90,120,255,0.35)');
+  vessel(artery, 9, ART, 'rgba(255,50,70,0.4)');
+  const [front, f] = canvas(FRONT_W, FRONT_H);
+  // Primer plano: lazos de vasos oscuros que asoman.
+  for (let x = 0; x < FRONT_W; x += 6 + Math.floor(r() * 8)) {
+    const h = 6 + Math.floor(r() * 22);
+    for (let i = 0; i < h; i++) { f.fillStyle = i > h - 2 ? '#5a0a1e' : '#22040e'; f.fillRect(x + Math.round(Math.sin(i * 0.3 + x) * 2), FRONT_H - i, 3, 1); }
+  }
+  return {
+    mid, midGlow: glow, front,
+    anim: {
+      heart: 1.6,
+      motes: { n: 34, colors: ['rgba(230,40,60,0.9)', 'rgba(255,110,130,0.7)', 'rgba(120,140,255,0.5)'], vx: 26, vy: 0, size: 2, wobble: 4, shape: 'cell' },
+    },
+  };
+}
+
+const BUILDERS = { nervioso, pulmonar, digestivo, corazon, oseo, circulatorio };
 
 // Ritmo de las paredes vivas de cada bioma (0..1).
 const RHYTHMS = {
@@ -403,6 +459,8 @@ const RHYTHMS = {
   pulmonar: (t) => 0.25 + 0.45 * (0.5 + 0.5 * Math.sin((t / 4.8) * Math.PI * 2)),
   digestivo: (t) => 0.3 + 0.45 * (0.5 + 0.5 * Math.sin(t * 1.4)), // contracciones lentas
   oseo: (t) => 0.2 + 0.25 * (0.5 + 0.5 * Math.sin(t * 0.7)), // un latido lento y seco
+  // Los capilares del circulatorio: golpe y caída lenta con rebote, al pulso de entities/Blood.js.
+  circulatorio: (t) => { const p = t % 1.6; return 0.15 + 0.85 * (Math.min(1, p / 0.06) * Math.exp(-p * 2.6) + 0.22 * Math.exp(-(((p - 0.42) / 0.09) ** 2))); },
   corazon: (t) => { const p = t % 1.05; return 0.2 + 0.8 * Math.max(Math.exp(-p * 9), p > 0.24 ? 0.6 * Math.exp(-(p - 0.24) * 10) : 0); },
 };
 
