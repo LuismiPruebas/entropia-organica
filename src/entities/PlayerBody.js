@@ -216,7 +216,11 @@ export class PlayerBody {
       // Hombreras de placas solapadas y espinillera.
       for (let i = 0; i < 3; i++) blob(tg, sh[0] - 3 + i * 2, sh[1] - 1 + (i === 1 ? -1 : 0), 2, 1.5, i === 1 ? C.plateL : C.plate, C.plateD);
       blob(tg, sh[0] + 4, sh[1], 2, 1.4, C.plate, C.plateD, C.plateL);
-      if (!has('pistones') && this.knee && this.feet?.[0]) {
+      if (has('pistones') && this.legs?.near) {
+        const { k: [kx, ky], a: [ax, ay] } = this.legs.near;
+        blob(tg, kx, ky - 1, 1.6, 1.3, C.plate, C.plateD, C.plateL);
+        seg(tg, kx + (ax - kx) * 0.3, ky + (ay - ky) * 0.3, kx + (ax - kx) * 0.7, ky + (ay - ky) * 0.7, C.plateL, 1);
+      } else if (this.knee && this.feet?.[0]) {
         const [kx, ky] = this.knee, [fx, fy] = this.feet[0], l = Math.hypot(fx - kx, fy - ky) || 1;
         seg(tg, kx + (fx - kx) / l, ky + (fy - ky) / l, kx + (fx - kx) / l * 4, ky + (fy - ky) / l * 4, C.plateL, 2);
       }
@@ -234,7 +238,10 @@ export class PlayerBody {
       // Circuitos cian que laten por la columna y bajan por las piernas.
       const path = [];
       for (let i = 0; i <= 6; i++) path.push([sh[0] - 2 + (hip[0] - sh[0]) * (i / 6), sh[1] + 1 + (hip[1] - sh[1]) * (i / 6)]);
-      path.push([hip[0] - 1, hip[1] + 3], [hip[0] - 1, hip[1] + 6], [hip[0] + 2, hip[1] + 4], [sh[0] + 3, sh[1] + 2], [sh[0] + 5, sh[1] + 2]);
+      const L = this.legs?.near;
+      if (L) for (const u of [0.35, 0.7, 1]) path.push([L.h[0] + (L.k[0] - L.h[0]) * u, L.h[1] + (L.k[1] - L.h[1]) * u]);
+      if (L) for (const u of [0.4, 0.8]) path.push([L.k[0] + (L.a[0] - L.k[0]) * u, L.k[1] + (L.a[1] - L.k[1]) * u]);
+      path.push([sh[0] + 3, sh[1] + 2], [sh[0] + 5, sh[1] + 2]);
       path.forEach(([x, y], i) => {
         const on = Math.sin(t * 5 - i * 0.7) > 0.1;
         px(tg, x, y, on ? C.cyan : '#1a6a7a');
@@ -333,6 +340,7 @@ export class PlayerBody {
     const [kx, ky] = ik(hx, hy, fx, fy - 1, 6, 6, -1);
     if (!far) this.knee = [kx, ky];
     (this.feet ??= [])[far ? 1 : 0] = [fx, fy]; // los espolones de las Garras van en la bota
+    (this.legs ??= {})[far ? 'far' : 'near'] = { h: [hx, hy], k: [kx, ky], a: [fx, fy - 1] };
     const col = far ? P.armor : P.armorM;
     limb(g, hx, hy, kx, ky, 3, col, far ? null : P.armorL);
     limb(g, kx, ky, fx, fy - 1, 3, col, far ? null : P.armorL);
@@ -514,7 +522,7 @@ export class PlayerBody {
     const hx = hip[0] + (far ? -1 : 1), hy = hip[1] + 1;
     const ph = phase + (far ? Math.PI : 0);
     let fx = hx + (far ? -2 : 3), fy = GROUND;
-    if (moving) { fx = hx + Math.sin(ph) * 4.5; fy = GROUND - Math.max(0, Math.cos(ph)) * 2.5; } // zancada corta y rápida
+    if (moving) { fx = hx + 1 + Math.sin(ph) * 6.5; fy = GROUND - Math.max(0, Math.cos(ph)) * 4; } // zancada amplia: el pie sube y pasa por delante
     if (air) { [fx, fy] = airFeet(hx, far, pose, c.hanging); fy -= 1; }
     if (pose.clinging) { // émbolos contra la pared, por turnos al trepar
       const k = c.climbing ? Math.sin(c.cl + (far ? 0 : Math.PI)) : 0;
@@ -522,14 +530,15 @@ export class PlayerBody {
     }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -2 : 5); fy = GROUND; } // agachado sobre los talones
     if (c.dashK > 0.3) { fx = hx + (far ? -8 : 8); fy = GROUND - (air ? 3 : 0) - (far ? 2 : 0); } // embestida: zancada
-    if (c.swim > 0.3 && air) { // nado con émbolos: patada de rana rápida y amplia que se dispara en la brazada
-      const k = Math.sin(c.t * (13 + c.stroke * 8) + (far ? Math.PI : 0));
-      fx = hx + 1 + k * 3.5 - c.stroke * 2;
-      fy = GROUND + 2 - Math.abs(k) * 2;
+    if (c.swim > 0.3 && air) { // nado con émbolos: patada amplia y alterna que se dispara en la brazada
+      const k = Math.sin(c.t * (11 + c.stroke * 8) + (far ? Math.PI : 0));
+      fx = hx - 1 + k * 5 - c.stroke * 2;
+      fy = GROUND - 2 - Math.max(0, k) * 3;
     }
-    const ax = fx - 3, ay = fy - 4;                                 // talón alzado
-    const [kx, ky] = ik(hx, hy, ax, ay, 5, 5, -1);                  // rodilla adelante
+    const ax = fx - 3, ay = fy - 3;                                 // talón alzado
+    const [kx, ky] = ik(hx, hy, ax, ay, 6, 6, -1);                  // rodilla adelante
     if (!far) this.knee = [kx, ky];
+    (this.legs ??= {})[far ? 'far' : 'near'] = { h: [hx, hy], k: [kx, ky], a: [ax, ay] };
     limb(g, hx, hy, kx, ky, 4, far ? P.muscleD : P.muscle, far ? null : '#e8b08a'); // muslo
     // Espinilla de acero con el émbolo hidráulico paralelo.
     limb(g, kx, ky, ax, ay, 2, far ? C.metalD : C.metal);
@@ -679,16 +688,23 @@ export class PlayerBody {
 
   // Masa tumoral: brota en el contorno del cuerpo, una más con cada mutación.
   #tumors(g, c, opts) {
-    const { sh, hip, head, breath, n } = c;
+    const { sh, hip, head, breath, n, moving, phase, t } = c;
+    const N = this.legs?.near, F = this.legs?.far;
+    const on = (L, a, b, u, dflt) => (L ? [L[a][0] + (L[b][0] - L[a][0]) * u, L[a][1] + (L[b][1] - L[a][1]) * u] : dflt);
     const spots = [
       [sh[0] - 4, sh[1]], [sh[0] + 5, sh[1] + 1], [hip[0] - 4, hip[1] - 3], [head[0] - 3, head[1] + 4],
-      [hip[0] - 2, hip[1] + 4], [sh[0] - 5, sh[1] + 5], [sh[0] + 2, sh[1] - 2], [hip[0] + 3, hip[1] + 6],
-      [sh[0] - 1, sh[1] + 8], [head[0] + 1, head[1] + 5], [hip[0] - 3, hip[1] + 8],
+      on(N, 'h', 'k', 0.5, [hip[0] - 2, hip[1] + 4]), [sh[0] - 5, sh[1] + 5], [sh[0] + 2, sh[1] - 2], on(N, 'k', 'a', 0.2, [hip[0] + 3, hip[1] + 6]),
+      [sh[0] - 1, sh[1] + 8], [head[0] + 1, head[1] + 5], on(N, 'k', 'a', 0.75, [hip[0] - 3, hip[1] + 8]),
     ];
+    const onLeg = new Set([4, 7, 10]); // estos van pegados a la pierna cercana: más pequeños, no tapan la zancada
+    // Bamboleo: la carne blanda se zarandea con el paso (y al nadar), con algo de retraso.
+    const shake = moving ? 0.8 : (c.swim ?? 0) > 0.3 ? 0.6 : 0;
+    const jig = (i) => [Math.round(-Math.sin(phase - 0.8 + i * 1.3) * shake), Math.round(Math.abs(Math.cos(phase - 0.8 + i * 1.3)) * shake + Math.sin(t * 2 + i) * 0.3)];
     const count = Math.min(spots.length, n + (opts.ghost ? 1 : 0));
     for (let i = 0; i < count; i++) {
-      const r = Math.min(2.8, 1 + (n - i) * 0.35) + (i % 3 === 0 ? breath * 0.4 : 0);
-      const x = spots[i][0], y = Math.min(spots[i][1], GROUND - 2); // agachado, no atraviesan el suelo
+      const r = Math.min(onLeg.has(i) ? 1.6 : 2.8, 1 + (n - i) * 0.35) + (i % 3 === 0 ? breath * 0.4 : 0);
+      const [jx, jy] = onLeg.has(i) ? [0, 0] : jig(i);
+      const x = spots[i][0] + jx, y = Math.min(spots[i][1] + jy, GROUND - 2); // agachado, no atraviesan el suelo
       g.globalAlpha = opts.ghost && i === count - 1 ? 0.4 : 1;
       blob(g, x, y, r + 0.8, r * 0.85 + 0.8, K);
       blob(g, x, y, r, r * 0.85, C.tumor, C.fleshD, C.tumorL);
