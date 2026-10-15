@@ -120,34 +120,47 @@ const MATERIALS = {
 };
 let MAT = 'fibrous';
 
-// --- Carne escamada (Digestivo) -------------------------------------------------
-// Escamas de carne como empedrado, calculadas en coordenadas del MUNDO (no por tile):
-// la textura es continua entre casillas. Cada escama es un abombado con luz arriba a
-// la izquierda, un brillo húmedo y una grieta oscura alrededor. depth 0..1 la apaga
+// --- Carne mucosa (Digestivo) ---------------------------------------------------
+// Lóbulos redondos de carne parda, de tamaños distintos, abombados (luz arriba a la
+// izquierda, brillo húmedo), embutidos en un tejido más oscuro de fibras onduladas:
+// carne, no piedra, en contraste con los tubos escamados del fondo. Se calcula en
+// coordenadas del MUNDO, así que es continua entre casillas. depth 0..1 la apaga
 // hacia el interior de la roca.
-const SCALE = 7; // px por escama (aprox.)
-const SCALE_PAL = ['#8a7622', '#7c6a1c', '#96822c', '#8a5e1e', '#73621a'].map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+const SCALE = 12; // px entre lóbulos (aprox.)
+const SCALE_PAL = ['#80562a', '#7a5026', '#86602c', '#7e4e2e'].map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+const TISSUE = [92, 60, 30];
 function scaleAt(X, Y) {
   const ci = Math.floor(X / SCALE), cj = Math.floor(Y / SCALE);
-  let f1 = 99, f2 = 99, id = 0, dx = 0, dy = 0;
+  // El lóbulo que más "cubre" el píxel (q más bajo = más dentro de su radio).
+  let q = 99, id = 0, dx = 0, dy = 0, rad = 1;
   for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
     const h = Math.abs(hash(i, j, 77));
-    // Filas desplazadas a medias (como ladrillo) y algo de jitter: escamas, no rejilla.
-    const sx = i * SCALE + (j & 1 ? SCALE / 2 : 0) + ((h % 97) / 97 - 0.5) * 3;
-    const sy = j * SCALE + (((h >> 7) % 89) / 89 - 0.5) * 3;
-    const ddx = X - sx, ddy = (Y - sy) * 1.15, d = Math.hypot(ddx, ddy);
-    if (d < f1) { f2 = f1; f1 = d; id = h; dx = ddx; dy = ddy; } else if (d < f2) f2 = d;
+    const sx = i * SCALE + (j & 1 ? SCALE / 2 : 0) + ((h % 97) / 97 - 0.5) * 6;
+    const sy = j * SCALE + (((h >> 7) % 89) / 89 - 0.5) * 6;
+    const r = SCALE * (0.36 + ((h >> 13) % 61) / 61 * 0.26);
+    const ddx = X - sx, ddy = (Y - sy) * 1.15, qq = Math.hypot(ddx, ddy) / r;
+    if (qq < q) { q = qq; id = h; dx = ddx; dy = ddy; rad = r; }
   }
-  return { edge: f2 - f1, id, dx, dy, f1 };
+  return { q, id, dx, dy, rad };
 }
 function scaleRGB(X, Y, depth = 0) {
   const s = scaleAt(X, Y);
-  if (s.edge < 1.1) return [36 - depth * 14, 24 - depth * 10, 8 - depth * 4];        // grieta
-  const base = SCALE_PAL[s.id % SCALE_PAL.length];
-  // Abombado: luz arriba-izquierda, sombra abajo-derecha; brillo húmedo cerca de la cresta.
-  const lit = Math.max(-1, Math.min(1, -(s.dx * 0.8 + s.dy) / (SCALE * 0.6)));
-  let k = 0.82 + lit * 0.32 - (s.edge < 2 ? 0.18 : 0);
-  if (lit > 0.55 && s.f1 > 1 && s.f1 < 3.2) k = 1.55;                             // brillo
+  let base, k;
+  if (s.q < 1) {
+    // Lóbulo: cúpula con luz arriba-izquierda, borde que se hunde y brillo húmedo.
+    base = SCALE_PAL[s.id % SCALE_PAL.length];
+    const z = Math.sqrt(1 - s.q * s.q), lit = -(s.dx * 0.7 + s.dy * 0.7) / s.rad;
+    k = 0.5 + z * 0.3 + lit * 0.26;
+    k = Math.round(k / 0.08) * 0.08;
+    // Brillo húmedo: media luna en el borde iluminado.
+    if (lit > 0.5 && s.q > 0.5 && s.q < 0.82) k = 1.2;
+  } else {
+    // Tejido de entre medias: fibras onduladas más oscuras y algún poro.
+    base = TISSUE;
+    const fib = Math.sin((Y * 0.8 + X * 0.25 + Math.sin(X / 6) * 2.5) / 1.6);
+    k = (fib > 0.4 ? 0.5 : 0.4) - Math.min(0.12, (s.q - 1) * 0.3);
+    if (Math.abs(hash(X, Y, 5)) % 1000 < 25) k = 0.25;
+  }
   k *= 1 - depth * 0.62;
   return [Math.min(255, base[0] * k), Math.min(255, base[1] * k), Math.min(255, base[2] * k)];
 }
@@ -326,12 +339,16 @@ function paintMasses(g, world) {
   const img = g.getImageData(0, 0, W, H), d = img.data;
   for (let cy = 0; cy < world.h; cy++) for (let cx = 0; cx < world.w; cx++) {
     const c = world.get(cx, cy);
-    if ((c !== '#' && c !== 'm') || D[cy * world.w + cx] < 2) continue; // el borde lo pinta su material
+    // El borde lo pinta su material; en el Digestivo la carne es una sola pieza (borde e
+    // interior con la misma profundidad continua: sin saltos de una casilla a otra).
+    const edge = D[cy * world.w + cx] < 2;
+    if ((c !== '#' && c !== 'm') || (edge && (MAT !== 'villous' || c === 'm'))) continue;
     for (let py = 0; py < TILE; py++) for (let pxl = 0; pxl < TILE; pxl++) {
       const x = cx * TILE + pxl, y = cy * TILE + py;
       const k = Math.min(1, Math.max(0, (deep[y * W + x] - 0.62) / 0.36));
       if (MAT === 'villous') {
-        const sc = scaleRGB(x, y, 0.2 + k * 0.7), i = (y * W + x) * 4;
+        const dv = Math.min(1, Math.max(0, (deep[y * W + x] - 0.5) / 0.46));
+        const sc = scaleRGB(x, y, dv * 0.85), i = (y * W + x) * 4;
         d[i] = sc[0]; d[i + 1] = sc[1]; d[i + 2] = sc[2]; d[i + 3] = 255;
         continue;
       }

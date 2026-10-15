@@ -21,7 +21,10 @@ function canvas(w, h) {
   return [c, c.getContext('2d')];
 }
 
-const dot = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x) % MID_W, Math.round(y), w, h); };
+const wrap = (v, n) => ((v % n) + n) % n;
+const dot = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(wrap(Math.round(x), MID_W), Math.round(y), w, h); };
+// Igual, pero envolviendo también en vertical (la textura se repite en ambos ejes).
+const dotW = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(wrap(Math.round(x), MID_W), wrap(Math.round(y), MID_H), w, h); };
 
 // Tubo grueso a lo largo de una curva (axones, arterias, bronquios).
 function tube(g, pts, thick, col, light) {
@@ -161,14 +164,18 @@ function pulmonar() {
 // Tubo escamado (Digestivo): carne empedrada a lo largo de un recorrido, con sombreado
 // cilíndrico (luz arriba, sombra abajo), grietas entre escamas y brillos húmedos. Las
 // escamas se calculan sobre el propio tubo (largo × ancho), así siguen su curva.
+// El recorrido es un lazo periódico (de x=0 a x=MID_W): el número de escamas a lo
+// largo se redondea a entero para que el final empalme con el principio sin corte.
 function scaledTube(g, pts, R, pal, seed) {
-  const cs = 5;                                            // px por escama
+  let L = 0;
+  for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  const N = Math.max(1, Math.round(L / 5)), cs = L / N;    // px por escama (exacto)
   const cell = (u, v) => {
-    const ci = Math.floor(u / cs), cj = Math.floor(v / cs);
+    const ci = Math.floor(u / cs), cj = Math.floor(v / 5);
     let f1 = 99, f2 = 99, id = 0, ddy = 0;
     for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
-      const h = Math.abs(Math.sin(i * 127.1 + j * 311.7 + seed) * 43758.5453) % 1;
-      const sx = i * cs + (j & 1 ? cs / 2 : 0) + (h - 0.5) * 2, sy = j * cs + (h * 7 % 1 - 0.5) * 2;
+      const h = Math.abs(Math.sin(wrap(i, N) * 127.1 + j * 311.7 + seed) * 43758.5453) % 1;
+      const sx = i * cs + (j & 1 ? cs / 2 : 0) + (h - 0.5) * 2, sy = j * 5 + (h * 7 % 1 - 0.5) * 2;
       const d = Math.hypot(u - sx, (v - sy) * 1.2);
       if (d < f1) { f2 = f1; f1 = d; id = h; ddy = v - sy; } else if (d < f2) f2 = d;
     }
@@ -181,7 +188,7 @@ function scaledTube(g, pts, R, pal, seed) {
     const a = Math.atan2(y1 - y0, x1 - x0), nx = -Math.sin(a), ny = Math.cos(a);
     for (let k = -R; k <= R; k += 0.7) {
       const q = k / R, round = Math.sqrt(Math.max(0, 1 - q * q));
-      const c = cell(len, k + R);
+      const c = cell(len % L, k + R);
       let col;
       if (Math.abs(q) > 0.93) col = pal.out;                                   // contorno
       else if (c.edge < 0.9) col = pal.crack;                                  // grieta
@@ -189,7 +196,7 @@ function scaledTube(g, pts, R, pal, seed) {
         const lit = round * 0.7 + (ny > 0 ? -q : q) * 0.35 + (c.ddy < 0 ? 0.12 : -0.1);
         col = lit > 0.86 && c.f1 < 2 ? pal.shine : lit > 0.62 ? pal.light : lit > 0.32 ? (c.id > 0.5 ? pal.mid : pal.mid2) : pal.dark;
       }
-      dot(g, x1 + nx * k, y1 + ny * k, col);
+      dotW(g, x1 + nx * k, y1 + ny * k, col);
     }
   }
 }
@@ -202,8 +209,10 @@ function digestivo() {
   const RUST = { out: '#1e0e06', crack: '#2c1408', dark: '#4a2410', mid: '#7a3e1c', mid2: '#6a3418', light: '#a85e2e', shine: '#e8a878' };
   // Tubo muscular grueso que serpentea de lado a lado, y una vena gruesa rojiza que lo
   // cruza (como en la referencia). Sin estela de luz: la carne se mueve, no se ilumina.
-  const path = (y0, amp, freq, ph) => { const p = []; for (let x = -24; x <= MID_W + 24; x += 0.6) p.push([x, y0 + Math.sin(x * freq + ph) * amp + Math.sin(x * freq * 2.7 + ph) * amp * 0.25]); return p; };
-  const vein = path(150, 26, 0.03, 2.1), tubeP = path(72, 30, 0.0245, 0);
+  // Recorridos periódicos (armónicos enteros del ancho): la textura se repite sin cortes.
+  const W2 = (Math.PI * 2) / MID_W;
+  const path = (y0, amp, ph) => { const p = []; for (let x = 0; x <= MID_W + 0.01; x += 0.5) p.push([x, y0 + Math.sin(x * W2 + ph) * amp + Math.sin(x * W2 * 3 + ph) * amp * 0.25]); return p; };
+  const vein = path(150, 22, 2.1), tubeP = path(72, 30, 0);
   scaledTube(g, vein, 9, RUST, 3);
   scaledTube(g, tubeP, 17, OLIVE, 1);
   // Goterones de mucosa colgando de la panza del tubo (hilo que se estira y gota).
@@ -214,7 +223,7 @@ function digestivo() {
     dot(gl, x, y + 16 + h, 'rgba(200,190,80,0.25)', 2, 2);
   }
   for (let k = 0; k < 8; k++) {
-    const i = Math.floor(r() * vein.length), [x, y] = vein[i], h = 3 + r() * 9;
+    const i = Math.floor(r() * vein.length), [x, y] = vein[i], h = 2 + r() * 5;
     for (let j = 0; j < h; j++) dot(g, x, y + 8 + j, '#9a5a2a');
     ball(g, x + 0.5, y + 9 + h, 1.4, '#9a5a2a', '#e8a878', '#4a2410');
   }
