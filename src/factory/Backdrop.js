@@ -249,45 +249,58 @@ const BACKDROPS = {
     return sf.canvas();
   },
 
-  // Territorio del Hueso: sepia, marfil y sangre seca. Hueso esponjoso con poros,
-  // costillas que asoman, un campo de espolones y vetas de sangre reseca.
+  // Territorio del Hueso: un osario en penumbra. Huesos largos con sus cabezas
+  // (fémures, húmeros) amontonados en todas direcciones, vértebras sueltas de lado y
+  // costillas en hileras paralelas; entre ellos, tejido sepia y sangre reseca.
   oseo() {
     const sf = surface();
-    const P = { lo: '#2e1a14', mid: '#4a2e22', hi: '#64402e', membrane: '#3a1a14', cell: '#5a3828', shine: '#a8866a', nucleus: '#6a2a1e' };
+    const P = { lo: '#24140f', mid: '#3a241a', hi: '#4e3222', membrane: '#3a1a14', cell: '#5a3828', shine: '#a8866a', nucleus: '#6a2a1e' };
     tissue(sf, P, 51, 4);
-    vessels(sf, 7, 13, '#6a1e16', '#9a3a2a', { len: 200, thick: 2, branch: 0.02 }); // sangre reseca
+    vessels(sf, 4, 13, '#5a1a12', '#7a2a1e', { len: 160, thick: 1, branch: 0.02 }); // sangre reseca
     const r = rng(19);
-    const bone = (hex) => hexRgb(hex);
-    // Discos de hueso esponjoso: marfil con poros hondos y borde sombreado.
-    for (let n = 0; n < 7; n++) {
-      const x0 = r() * S, y0 = r() * S, rad = 10 + r() * 12;
-      disc(sf, x0, y0, rad, '#b8a080', '#e8dcc0', '#7a604a', { k: 0.95 });
-      for (let k = 0; k < 9 + rad / 2; k++) {
-        const a = r() * Math.PI * 2, d = Math.sqrt(r()) * rad * 0.75;
-        disc(sf, x0 + Math.cos(a) * d, y0 + Math.sin(a) * d, 1.5 + r() * 2.2, '#4a2e22', '#6a4a36', '#2e1a14', { rim: '#8a6e54' });
+    const L = hexRgb('#a89070'), M = hexRgb('#7a644c'), D = hexRgb('#4a3426'), O = hexRgb('#1e120c');
+    // Pinta un punto de hueso con luz arriba-izquierda (q -1..1 a través del hueso).
+    const shade = (x, y, q, lit, k) => sf.blend(x, y, Math.abs(q) > 0.86 ? O : lit > 0.3 ? L : lit < -0.35 ? D : M, k);
+    const knob = (x0, y0, rad, k) => {
+      for (let y = -rad - 1; y <= rad + 1; y++) for (let x = -rad - 1; x <= rad + 1; x++) {
+        const d = Math.hypot(x, y) / rad;
+        if (d > 1.1) continue;
+        shade(x0 + x, y0 + y, d > 0.95 ? 1 : d * 0.5, (-x - y) / (rad * 1.4), k);
       }
-    }
-    // Costillas: arcos de marfil que entran y salen del tejido.
-    for (let n = 0; n < 6; n++) {
-      const cx = r() * S, cy = r() * S, rad = 26 + r() * 30, a0 = r() * Math.PI * 2, span = 1 + r() * 1.2;
-      for (let a = a0; a < a0 + span; a += 0.012) {
-        const x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad * 0.7;
-        for (let k = -3; k <= 3; k++) {
-          const c = k < -1 ? '#f0e4cc' : k > 1 ? '#7a604a' : '#c8b494';
-          sf.blend(x + Math.cos(a) * k, y + Math.sin(a) * k * 0.7, bone(c), 0.92);
-        }
-        if (Math.floor(a * 40) % 9 === 0) for (let k = -3; k <= 3; k++) sf.blend(x + Math.cos(a) * k, y + Math.sin(a) * k * 0.7, bone('#5a4030'), 0.6); // grietas
+    };
+    // Hueso largo: diáfisis recta y una cabeza doble en cada extremo.
+    const longBone = (x0, y0, ang, len, w, k) => {
+      const cs = Math.cos(ang), sn = Math.sin(ang), nx = -sn, ny = cs;
+      for (const e of [0, 1]) {
+        const ex = x0 + cs * len * e, ey = y0 + sn * len * e;
+        knob(ex + nx * w * 0.9, ey + ny * w * 0.9, w * 1.2, k);
+        knob(ex - nx * w * 0.9, ey - ny * w * 0.9, w * 1.2, k);
       }
-    }
-    // Campo de espolones: pinchos de hueso pequeños que brotan del tejido.
-    for (let n = 0; n < 60; n++) {
-      const x = r() * S, y = r() * S, h = 3 + r() * 6;
-      for (let i = 0; i < h; i++) {
-        const w = Math.max(0, Math.round((1 - i / h) * 2));
-        for (let k = -w; k <= w; k++) sf.blend(x + k, y - i, bone(k < 0 ? '#f0e4cc' : k > 0 ? '#8a7058' : '#c8b494'), 0.9);
+      for (let t = w; t <= len - w; t += 0.5) for (let q = -w; q <= w; q += 0.5) {
+        const waist = 1 - 0.25 * Math.sin((t / len) * Math.PI);           // más fina en el centro
+        if (Math.abs(q) > w * waist) continue;
+        shade(x0 + cs * t + nx * q, y0 + sn * t + ny * q, q / (w * waist), -(nx + ny) * (q / w), k);
       }
-      sf.blend(x, y + 1, bone('#2e1a14'), 0.5);
-    }
+    };
+    // Costillas en hilera: arcos paralelos, como una jaula derrumbada.
+    const ribRow = (x0, y0, n, k) => {
+      for (let i = 0; i < n; i++) for (let a = -1.3; a < 0.4; a += 0.01) {
+        const cx = x0 + i * 9, rad = 34 - i * 1.5, x = cx + Math.cos(a) * rad * 0.6, y = y0 + Math.sin(a) * rad;
+        for (let q = -1.5; q <= 1.5; q += 0.5) shade(x + q, y, q / 1.5, -q, k);
+      }
+    };
+    // Vértebra suelta de lado: cuerpo, arco y apófisis.
+    const vertebra = (x0, y0, k) => {
+      for (let y = -4; y <= 4; y++) for (let x = -6; x <= 6; x++) shade(x0 + x, y0 + y, Math.max(Math.abs(x) / 6, Math.abs(y) / 4.3), -y / 4, k);
+      knob(x0 - 1, y0 - 6, 3, k);
+      sf.blend(x0 - 1, y0 - 6, O, k);
+      for (let i = 0; i < 9; i++) for (let q = -1; q <= 1; q++) shade(x0 - 2 - i * 0.6 + q, y0 - 9 - i, q, -q, k);
+    };
+    for (let n = 0; n < 3; n++) ribRow(r() * S, r() * S, 5, 0.55);
+    for (let n = 0; n < 9; n++) longBone(r() * S, r() * S, r() * Math.PI * 2, 40 + r() * 50, 2.5 + r() * 1.5, 0.7);
+    for (let n = 0; n < 8; n++) vertebra(r() * S, r() * S, 0.75);
+    // Sombra de ambiente: que no compitan con el plano medio.
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) sf.blend(x, y, hexRgb('#1a0e0a'), 0.28);
     return sf.canvas();
   },
 };

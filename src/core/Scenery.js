@@ -275,43 +275,88 @@ function corazon() {
   };
 }
 
-// Territorio del Hueso: costillas gigantes que se arquean sobre la sala y una columna
-// vertebral por la que corre un pulso rojo de médula; polvo de hueso que cae.
+// Territorio del Hueso: una columna vertebral de lado (vértebras con sus apófisis y
+// discos) de la que cuelga una caja torácica de costillas; polvo de hueso que cae.
 function oseo() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
   const r = rng(53);
-  // Costillas: arcos gruesos de marfil, sombreados, con grietas.
-  for (const [cx, cy, rad, a0, a1] of [[40, 210, 120, -2.6, -1.4], [150, 230, 140, -2.4, -1.2], [230, -30, 110, 0.9, 2.1]]) {
-    for (let a = a0; a < a1; a += 0.004) {
-      const x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad;
-      for (let k = -5; k <= 5; k++) {
-        const c = k < -2 ? '#efe2c6' : k > 2 ? '#7a6048' : '#c4ae8c';
-        dot(g, x + Math.cos(a) * k, y + Math.sin(a) * k, c);
+  const IV = { out: '#2e1e16', dark: '#7a6048', mid: '#c4ae8c', light: '#efe2c6', crack: '#4a3226' };
+  const FAR = { out: '#1e130e', dark: '#4a3a2c', mid: '#6e5a44', light: '#8e7a62', crack: '#2e2018' };
+  // Hueso a lo largo de un recorrido: grosor w(s), luz arriba-izquierda, contorno.
+  const boneAlong = (pts, wAt, pal, tipCol) => {
+    for (const pass of [0, 1]) for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+      const a = Math.atan2(y1 - y0, x1 - x0), nx = -Math.sin(a), ny = Math.cos(a);
+      const s = i / pts.length, w = wAt(s);
+      for (let k = -w - pass + 1; k <= w + 1 - pass; k += 0.5) {
+        let c = pal.out;
+        if (pass) {
+          const q = k / w, lit = -(nx * q) - (ny * q);                  // el lado que mira arriba-izquierda, claro
+          c = lit > 0.35 ? pal.light : lit < -0.4 ? pal.dark : pal.mid;
+          if (tipCol && s > 0.84) c = lit > 0.3 ? '#c8aca0' : '#8a6a62';   // cartílago costal en la punta
+        }
+        dotW(g, x1 + nx * k, y1 + ny * k, c);
       }
-      if (Math.floor(a * 300) % 23 === 0) for (let k = -5; k <= 5; k++) dot(g, x + Math.cos(a) * k, y + Math.sin(a) * k, '#4a3226');
     }
+  };
+  // Columna vertebral de lado, continua de borde a borde (10 vértebras por vuelta).
+  const N = 10, step = MID_W / N;
+  const spineY = (x) => 50 + Math.sin((x / MID_W) * Math.PI * 2) * 6;
+  // Costillas (detrás de la columna): de cada vértebra cuelga un par que baja y se
+  // curva hacia delante, como la jaula del tórax vista de lado. La del lado de allá,
+  // más oscura y desplazada.
+  for (const far of [true, false]) for (let i = 0; i < N; i++) {
+    const x0 = i * step + (far ? 7 : 2), y0 = spineY(x0) + 5;
+    const len = 92 + ((i * 37) % 5) * 6, bow = 30 + ((i * 13) % 3) * 4;
+    const pts = [];
+    // Sale hacia atrás, se abre hacia delante en un arco amplio y la punta vuelve.
+    for (let j = 0; j <= 90; j++) { const s = j / 90; pts.push([x0 - Math.sin(s * 3.2) * 4 + Math.sin(s * 2.5) * bow - s * 14, y0 + len * Math.pow(s, 0.9)]); }
+    boneAlong(pts, (s) => (far ? 1.6 : 2.1) * (1 - s * 0.3), far ? FAR : IV, !far);
   }
-  // Columna vertebral en diagonal: vértebras con apófisis y discos rojos entre ellas.
-  const spine = [];
-  for (let i = 0; i <= 260; i++) { const t = i / 260; spine.push([t * MID_W * 1.1 - 10, 150 - t * 110 + Math.sin(t * 6) * 8]); }
-  for (let i = 0; i < spine.length; i += 13) {
-    const [x, y] = spine[i];
-    ball(g, x, y, 6, '#c4ae8c', '#f4ead4', '#7a6048', '#4a3226');
-    dot(g, x - 1, y - 8, '#c4ae8c', 3, 4); dot(g, x - 1, y - 9, '#efe2c6', 1, 4); // apófisis
-    const [nx, ny] = spine[Math.min(spine.length - 1, i + 6)];
-    ball(g, nx, ny, 3, '#8a2a20', '#c85a46', '#4a1410'); // disco
+  // Vértebras: cuerpo con cintura, arco con el agujero de la médula, apófisis espinosa
+  // inclinada hacia atrás y apófisis transversa; discos rojizos entre ellas.
+  for (let i = 0; i < N; i++) {
+    const x = i * step + step / 2, y = spineY(x);
+    // Apófisis espinosa (detrás del cuerpo).
+    const sp = []; for (let j = 0; j <= 20; j++) { const s = j / 20; sp.push([x - 2 - s * 9, y - 8 - s * 18]); }
+    boneAlong(sp, (s) => 3 * (1 - s * 0.6), IV);
+    // Apófisis transversa: un muñón hacia delante y arriba.
+    const tp = []; for (let j = 0; j <= 10; j++) { const s = j / 10; tp.push([x + 2 + s * 6, y - 7 - s * 4]); }
+    boneAlong(tp, () => 1.6, IV);
+    // Arco neural con el agujero vertebral.
+    ball(g, x - 1, y - 8, 4.2, IV.mid, IV.light, IV.dark, IV.out);
+    ball(g, x - 1, y - 8, 1.8, '#1e120c', '#3a2418', '#140a08');
+    // Cuerpo: bloque redondeado con cintura, luz arriba.
+    for (let dy = -6; dy <= 6; dy++) {
+      const half = 8 - (Math.abs(dy) < 3 ? 1 : 0) - (Math.abs(dy) === 6 ? 1 : 0);
+      for (let dx = -half - 1; dx <= half + 1; dx++) {
+        const edge = Math.abs(dx) > half || Math.abs(dy) === 6;
+        const c = edge ? IV.out : dy < -3 ? IV.light : dy > 3 ? IV.dark : dx > half - 2 ? IV.dark : IV.mid;
+        dotW(g, x + dx, y + dy, c);
+      }
+    }
+    dotW(g, x - 6, y - 4, IV.light, 4, 1);                                    // brillo
+    if (i % 3 === 0) { dotW(g, x + 2, y - 2, IV.crack, 1, 3); dotW(g, x + 3, y + 1, IV.crack); } // grieta
+    // Disco intervertebral.
+    const dx0 = x + step / 2;
+    for (let dy = -5; dy <= 5; dy++) dotW(g, dx0 - 1, spineY(dx0) + dy, Math.abs(dy) === 5 ? '#2a1410' : dy < -2 ? '#9a4a3a' : '#6a2a20', 3, 1);
   }
+  // Polvo de hueso pegado a la columna.
+  for (let k = 0; k < 20; k++) dotW(g, r() * MID_W, spineY(0) + 10 + r() * 120, '#5a4636');
   const [front, f] = canvas(FRONT_W, FRONT_H);
-  // Espolones de hueso en primer plano, sepia oscuro.
-  for (let x = 0; x < FRONT_W; x += 5) {
-    const h = 6 + Math.floor(Math.abs(Math.sin(x * 0.09)) * 20 + r() * 6);
-    for (let i = 0; i < h; i++) { const w = Math.max(1, Math.round((1 - i / h) * 3)); f.fillStyle = i > h - 3 ? '#5a4232' : '#2e1c14'; f.fillRect(x - Math.floor(w / 2), FRONT_H - i, w, 1); }
+  // Primer plano: puntas de costilla que asoman, curvas, en sepia oscuro.
+  for (let x = 4; x < FRONT_W; x += 11 + Math.floor(r() * 6)) {
+    const h = 10 + Math.floor(r() * 22), bend = (r() < 0.5 ? -1 : 1) * (3 + r() * 5);
+    for (let i = 0; i < h; i++) {
+      const s = i / h, w = Math.max(1, Math.round((1 - s * 0.7) * 3)), xx = x + Math.round(Math.sin(s * 1.6) * bend);
+      f.fillStyle = i > h - 3 ? '#5a4232' : '#2e1c14';
+      f.fillRect(xx - Math.floor(w / 2), FRONT_H - i, w, 1);
+    }
   }
   return {
     mid, midGlow: glow, front,
     anim: {
-      flow: { path: spine, color: [255, 90, 70], size: 3, alpha: 0.28 },
       motes: { n: 34, colors: ['rgba(240,225,200,0.5)', 'rgba(200,170,140,0.4)'], vx: 2, vy: 7, size: 1, wobble: 3 },
     },
   };
