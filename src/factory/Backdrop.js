@@ -299,8 +299,17 @@ const BACKDROPS = {
     for (let n = 0; n < 3; n++) ribRow(r() * S, r() * S, 5, 0.55);
     for (let n = 0; n < 9; n++) longBone(r() * S, r() * S, r() * Math.PI * 2, 40 + r() * 50, 2.5 + r() * 1.5, 0.7);
     for (let n = 0; n < 8; n++) vertebra(r() * S, r() * S, 0.75);
-    // Sombra de ambiente: que no compitan con el plano medio.
-    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) sf.blend(x, y, hexRgb('#1a0e0a'), 0.28);
+    // Musgo de sangre que cubre a manchas los huesos amontonados.
+    const moss = [hexRgb('#4a0a10'), hexRgb('#6a1218'), hexRgb('#8a1e24')];
+    for (let n = 0; n < 16; n++) {
+      const x0 = r() * S, y0 = r() * S, rad = 6 + r() * 12;
+      for (let k = 0; k < rad * rad * 1.2; k++) {
+        const a = r() * Math.PI * 2, d = Math.sqrt(r()) * rad;
+        sf.blend(x0 + Math.cos(a) * d, y0 + Math.sin(a) * d * 0.7, moss[Math.floor(r() * 3)], 0.55 * (1 - d / rad) + 0.2);
+      }
+    }
+    // Sombra de ambiente: el fondo bien atrás, para que las paredes se despeguen de él.
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) sf.blend(x, y, hexRgb('#140a08'), 0.45);
     return sf.canvas();
   },
 };

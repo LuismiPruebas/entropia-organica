@@ -306,20 +306,46 @@ function oseo() {
   // Costillas (detrás de la columna): de cada vértebra cuelga un par que baja y se
   // curva hacia delante, como la jaula del tórax vista de lado. La del lado de allá,
   // más oscura y desplazada.
+  const ribs = { true: [], false: [] };
   for (const far of [true, false]) for (let i = 0; i < N; i++) {
     const x0 = i * step + (far ? 7 : 2), y0 = spineY(x0) + 5;
     const len = 92 + ((i * 37) % 5) * 6, bow = 30 + ((i * 13) % 3) * 4;
+    // Algunas costillas están rotas: acaban a medio camino en una punta astillada.
+    const broken = !far && (i === 2 || i === 7) ? 0.5 + (i % 3) * 0.08 : far && i === 4 ? 0.6 : 1;
     const pts = [];
     // Sale hacia atrás, se abre hacia delante en un arco amplio y la punta vuelve.
-    for (let j = 0; j <= 90; j++) { const s = j / 90; pts.push([x0 - Math.sin(s * 3.2) * 4 + Math.sin(s * 2.5) * bow - s * 14, y0 + len * Math.pow(s, 0.9)]); }
-    boneAlong(pts, (s) => (far ? 1.6 : 2.1) * (1 - s * 0.3), far ? FAR : IV, !far);
+    for (let j = 0; j <= 90 * broken; j++) { const s = j / 90; pts.push([x0 - Math.sin(s * 3.2) * 4 + Math.sin(s * 2.5) * bow - s * 14, y0 + len * Math.pow(s, 0.9)]); }
+    ribs[far].push(pts);
   }
+  ribs.true.forEach((pts) => boneAlong(pts, (s) => 1.6 * (1 - s * 0.3), FAR, false));
+  // Pellejos: piel reseca tendida entre algunas costillas, rasgada por abajo y con agujeros.
+  for (const i of [0, 4, 8]) {
+    const A = ribs.false[i], B = ribs.false[(i + 1) % N], wrapX = i + 1 === N ? MID_W : 0;
+    const n = Math.min(A.length, B.length);
+    const end = Math.floor(n * (0.45 + (i % 3) * 0.08));
+    for (let j = Math.floor(n * 0.08); j < end; j++) {
+      const [ax, ay] = A[j], [bx, by] = B[j], bxx = bx + wrapX;
+      const steps = Math.max(1, Math.round(bxx - ax));
+      const rag = j > end - 6 ? Math.abs(Math.sin(j * 1.7 + i)) : 0;          // borde de abajo rasgado
+      for (let q = 1; q < steps; q++) {
+        const u = q / steps;
+        if (rag > 0.5 && (q + j) % 3) continue;
+        if ((i === 4 && Math.hypot(u - 0.45, (j - end * 0.6) / 6) < 0.12)) continue; // agujero
+        const sag = Math.sin(u * Math.PI) * 3;                                  // la piel cuelga
+        const c = u < 0.2 ? '#b88a6e' : u > 0.8 ? '#6a3a2e' : ((j + q) % 7 === 0 ? '#8a2a20' : '#94604c');
+        dotW(g, ax + (bxx - ax) * u, ay + (by - ay) * u + sag, c);
+      }
+    }
+  }
+  ribs.false.forEach((pts) => boneAlong(pts, (s) => 2.1 * (1 - s * 0.3), IV, pts.length > 80));
   // Vértebras: cuerpo con cintura, arco con el agujero de la médula, apófisis espinosa
   // inclinada hacia atrás y apófisis transversa; discos rojizos entre ellas.
   for (let i = 0; i < N; i++) {
     const x = i * step + step / 2, y = spineY(x);
+    // Cada vértebra distinta: tamaño, largo e inclinación de la apófisis (una, rota).
+    const sv = 0.85 + ((i * 7) % 4) * 0.08, spL = (i === 6 ? 0.45 : 0.75 + ((i * 3) % 5) * 0.1) * 18, lean = 7 + ((i * 5) % 4) * 2;
     // Apófisis espinosa (detrás del cuerpo).
-    const sp = []; for (let j = 0; j <= 20; j++) { const s = j / 20; sp.push([x - 2 - s * 9, y - 8 - s * 18]); }
+    const sp = []; for (let j = 0; j <= 20; j++) { const s = j / 20; sp.push([x - 2 - s * lean, y - 8 * sv - s * spL]); }
     boneAlong(sp, (s) => 3 * (1 - s * 0.6), IV);
     // Apófisis transversa: un muñón hacia delante y arriba.
     const tp = []; for (let j = 0; j <= 10; j++) { const s = j / 10; tp.push([x + 2 + s * 6, y - 7 - s * 4]); }
@@ -328,16 +354,23 @@ function oseo() {
     ball(g, x - 1, y - 8, 4.2, IV.mid, IV.light, IV.dark, IV.out);
     ball(g, x - 1, y - 8, 1.8, '#1e120c', '#3a2418', '#140a08');
     // Cuerpo: bloque redondeado con cintura, luz arriba.
-    for (let dy = -6; dy <= 6; dy++) {
-      const half = 8 - (Math.abs(dy) < 3 ? 1 : 0) - (Math.abs(dy) === 6 ? 1 : 0);
+    const hh = Math.round(6 * sv);
+    for (let dy = -hh; dy <= hh; dy++) {
+      const half = Math.round(8 * sv) - (Math.abs(dy) < 3 ? 1 : 0) - (Math.abs(dy) === hh ? 1 : 0);
       for (let dx = -half - 1; dx <= half + 1; dx++) {
-        const edge = Math.abs(dx) > half || Math.abs(dy) === 6;
+        const edge = Math.abs(dx) > half || Math.abs(dy) === hh;
         const c = edge ? IV.out : dy < -3 ? IV.light : dy > 3 ? IV.dark : dx > half - 2 ? IV.dark : IV.mid;
         dotW(g, x + dx, y + dy, c);
       }
     }
     dotW(g, x - 6, y - 4, IV.light, 4, 1);                                    // brillo
     if (i % 3 === 0) { dotW(g, x + 2, y - 2, IV.crack, 1, 3); dotW(g, x + 3, y + 1, IV.crack); } // grieta
+    // Musgo de sangre sobre algunas vértebras.
+    if (i % 3 !== 1) for (let k = -5; k <= 5; k++) {
+      const h = 1 + ((k * 7 + i * 3) % 3 + 3) % 3;
+      dotW(g, x + k, y - hh - h, '#5a0e14', 1, h);
+      if ((k + i) % 3 === 0) dotW(g, x + k, y - hh - h, '#a82a32');
+    }
     // Disco intervertebral.
     const dx0 = x + step / 2;
     for (let dy = -5; dy <= 5; dy++) dotW(g, dx0 - 1, spineY(dx0) + dy, Math.abs(dy) === 5 ? '#2a1410' : dy < -2 ? '#9a4a3a' : '#6a2a20', 3, 1);

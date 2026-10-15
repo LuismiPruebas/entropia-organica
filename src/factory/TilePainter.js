@@ -955,6 +955,43 @@ function ribStub(g, x, y, dir, r) {
   }
 }
 
+// Musgo de sangre: matas aterciopeladas rojo oscuro con las puntas claras, sobre un
+// suelo (crece hacia arriba) y algo de él trepando por la cara de la pared.
+function bloodMoss(g, gl, x0, y, w, r) {
+  for (let i = 0; i < w; i++) {
+    const h = 1 + Math.floor(r() * 3) + (i > 1 && i < w - 2 ? 1 : 0);
+    px(g, x0 + i, y - h, '#3a080c', 1, h);
+    px(g, x0 + i, y - h, r() < 0.5 ? '#8a1a22' : '#6a1018', 1, Math.max(1, h - 1));
+    if (r() < 0.35) px(g, x0 + i, y - h, '#c8404a');                     // punta clara
+    if (r() < 0.5) px(g, x0 + i, y + Math.floor(r() * 3), r() < 0.5 ? '#5a0e14' : '#7a1a1e'); // trepa por la cara
+  }
+  if (r() < 0.3) { const bx = x0 + 1 + Math.floor(r() * Math.max(1, w - 2)); px(g, bx, y - 3, '#e05a5a'); px(gl, bx, y - 3, 'rgba(200,40,50,0.35)'); } // espora
+}
+// Hebras de musgo de sangre colgando de un techo.
+function mossStrand(g, x, y, len, r) {
+  for (let i = 0; i < len; i++) {
+    const xx = x + (Math.sin(i * 0.9 + x) > 0.5 ? 1 : 0);
+    px(g, xx, y + i, i % 3 === 0 ? '#8a1a22' : '#5a0e14');
+  }
+  px(g, x - 1, y, '#3a080c', 3, 1);
+  if (r() < 0.5) px(g, x, y + len, '#c8404a');
+}
+// Pellejo: tira de piel reseca que cuelga, ancha arriba y rasgada abajo, con algún
+// agujero; luz por la izquierda.
+function skinFlap(g, x, y, len, w, r) {
+  for (let i = 0; i < len; i++) {
+    const k = i / len, ww = Math.max(1, Math.round(w * (1 - k * 0.55)));
+    const off = Math.round(Math.sin(i * 0.35 + x) * 0.8);
+    if (k > 0.75 && r() < 0.35) continue;                                  // rasgado
+    px(g, x + off - 1, y + i, '#3a1a14', ww + 2, 1);
+    px(g, x + off, y + i, '#b88a6e', ww, 1);
+    px(g, x + off, y + i, '#e0b898');                                      // canto iluminado
+    if (ww > 2) px(g, x + off + ww - 1, y + i, '#7a4a3a');                // sombra
+  }
+  if (len > 6 && w > 3) px(g, x + 1, y + Math.floor(len * 0.45), '#2a0e0a', 1, 2); // agujero
+  if (r() < 0.4) px(g, x + 1, y + 1, '#8a2a20', 1, 3);                     // mancha de sangre seca
+}
+
 function paintGrowths(g, gl, world, biome) {
   const d = biome.growthDensity ?? 0.4;
   for (let cy = 0; cy < world.h; cy++) {
@@ -987,7 +1024,13 @@ function paintGrowths(g, gl, world, biome) {
           break;
         case 'spurs':
           if (side && r() < d * 0.35) ribStub(g, left ? ox : ox + 16, oy + 3 + Math.floor(r() * 8), left ? -1 : 1, r);
-          if (air(0, 1) && r() < d * 0.2) chorda(g, gl, ox + 4 + Math.floor(r() * 8), oy + 16, 4 + Math.floor(r() * 8), r);
+          if (air(0, 1) && r() < d * 0.15) chorda(g, gl, ox + 4 + Math.floor(r() * 8), oy + 16, 4 + Math.floor(r() * 8), r);
+          // Musgo de sangre y pellejos: el osario no está limpio.
+          if (air(0, -1) && r() < d * 1.3) bloodMoss(g, gl, ox + Math.floor(r() * 6), oy, 5 + Math.floor(r() * 8), r);
+          if (air(0, 1) && r() < d * 0.6) mossStrand(g, ox + 2 + Math.floor(r() * 12), oy + 16, 2 + Math.floor(r() * 7), r);
+          if (air(0, 1) && r() < d * 0.45) skinFlap(g, ox + 2 + Math.floor(r() * 9), oy + 15, 5 + Math.floor(r() * 12), 3 + Math.floor(r() * 3), r);
+          if (side && r() < d * 0.3) skinFlap(g, left ? ox - 2 : ox + 14, oy + Math.floor(r() * 4), 6 + Math.floor(r() * 8), 2 + Math.floor(r() * 2), r);
+          if (side && r() < d * 0.5) for (let k = 0; k < 6; k++) px(g, (left ? ox : ox + 13) + Math.floor(r() * 3), oy + Math.floor(r() * 16), r() < 0.5 ? '#5a0e14' : '#7a1a1e'); // musgo en la cara
           break;
         case 'chordae':
           if (air(0, 1) && r() < d * 0.3) chorda(g, gl, ox + 4 + Math.floor(r() * 8), oy + 16, 6 + Math.floor(r() * 14), r);
