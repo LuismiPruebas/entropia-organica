@@ -402,7 +402,7 @@ export const ENEMIES = {
     boss: true,
     music: 'coro',
     exposedBonus: 1.6, // al caer de un salto queda aturdido y la panza al aire
-    hp: 320, w: 46, h: 30,
+    hp: 320, w: 64, h: 42,
     light: { color: [0.36, 0.32, 0.42], r: 190 }, // luz cenicienta: que no se confunda con el ácido
     contactDamage: 12,
     leapDamage: 18,   // el topetazo del salto

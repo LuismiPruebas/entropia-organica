@@ -1247,7 +1247,7 @@ export const BEHAVIORS = {
       e.vx = e.onGround ? e.dir * 18 * (0.4 + 0.6 * Math.max(0, Math.sin(e.t * 4))) : e.vx;
       const minions = g.room.enemies.filter((m) => m.minion && m.alive).length;
       // Pegado a ti: el bocado (la cabeza sale disparada con las fauces abiertas).
-      if (Math.abs(dx) < 50 && Math.abs(p.cy - e.cy) < 28 && e.biteCool <= 0 && e.onGround) {
+      if (Math.abs(dx) < 62 && Math.abs(p.cy - e.cy) < 34 && e.biteCool <= 0 && e.onGround) {
         e.state = 'biteWind'; e.timer = enraged ? 0.22 : 0.32; e.vx = 0; e.biteK = 0;
         g.audio.play('eelGurgle', e);
       } else if (e.broodCool <= 0 && minions < (enraged ? 4 : 2)) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; g.audio.play(d.sounds.summon, e); }
@@ -1290,8 +1290,8 @@ export const BEHAVIORS = {
       const k = 1 - e.timer / 0.5;
       e.biteK = k < 0.25 ? k / 0.25 : k < 0.5 ? 1 : 1 - (k - 0.5) / 0.5;
       if (!e.hitDone && e.biteK > 0.6) {
-        const reach = 14 + 22 * e.biteK;
-        const box = { x: e.dir > 0 ? e.x + e.w : e.x - reach, y: e.y - 4, w: reach, h: e.h + 4 };
+        const reach = 16 + 24 * e.biteK;
+        const box = { x: e.dir > 0 ? e.x + e.w : e.x - reach, y: e.y - 10, w: reach, h: e.h + 10 };
         if (overlap(p, box)) { e.hitDone = true; g.hurtPlayer(d.biteDamage ?? 16, e.cx, d.name); g.shake = Math.max(g.shake, 4); }
       }
       if (e.timer <= 0) { e.state = 'sit'; e.biteK = 0; e.timer = enraged ? 0.6 : 1.1; e.biteCool = enraged ? 1.8 : 2.8; }
