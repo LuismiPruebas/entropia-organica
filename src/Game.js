@@ -497,6 +497,7 @@ export class Game {
     for (const h of this.room.hazards) h.update(dt);
     for (const n of this.room.nodules) n.update(dt);
     for (const l of this.room.lamps ?? []) l.update(dt);
+    for (const h of this.room.hooks ?? []) h.update(dt);
     for (const s of this.room.sacs) s.update(dt);
     this.room.sacs = this.room.sacs.filter((s) => s.alive);
     this.room.nodules = this.room.nodules.filter((n) => n.alive);

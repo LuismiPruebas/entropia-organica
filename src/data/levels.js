@@ -3,7 +3,7 @@
 //  #  pared orgánica          X  membrana agrietada (se rompe con Embestida)
 //  .  aire                    ^  espinas óseas (daño; inmune con Piel III)
 //  ~  ácido gástrico          v  abismo (daño y vuelves al último suelo firme)
-//  o  esfínter de anclaje     N  Nodo Seguro (checkpoint, curar, mutar)
+//  o  garfio de anclaje       N  Nodo Seguro (checkpoint, curar, mutar)
 //  b  biomasa   B  batería   S  hueso   O  filtro de oxígeno
 //  Q  quiste (+20 biomasa máx)   h  tejido sano (recupera integridad corrupta)
 //  g  Timo Necrótico: cada uno, un paso permanente de tolerancia al rechazo; el último del mundo lo anula
@@ -1761,7 +1761,7 @@ export const LEVELS = {
       { x: 28, y: 11, r: 3, text: 'Una articulación: cartílago liso y resbaladizo. Abajo,  las repisas bajan como vértebras.' },
       { x: 4, y: 39, r: 3, text: 'Una chimenea lisa sube por la pared. Sin algo con que agarrarse,  no hay manera.' },
       { x: 27, y: 39, r: 2, text: 'La pared late: un esfínter cerrado a cal y canto.' },
-      { x: 23, y: 6, r: 3, text: 'Un abismo entre las dos orillas. Del techo cuelgan dos esfínteres de anclaje.' },
+      { x: 23, y: 6, r: 3, text: 'Un abismo entre las dos orillas. Del techo cuelgan dos garfios de hueso.' },
     ],
   },
   O8: {

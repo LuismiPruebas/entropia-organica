@@ -21,10 +21,13 @@ const GRAPPLE_RANGE = 135;
 // Tendón como cuerda de péndulo: te balanceas desde el anclaje.
 const ROPE_MIN = 18;        // longitud mínima (pegado al esfínter)
 const ROPE_REEL = 110;      // px/s al recoger (W) o soltar (S) cuerda
-const ROPE_YANK = 230;      // tirón inicial al engancharte (px/s durante ROPE_YANK_TIME)
-const ROPE_YANK_TIME = 0.12;
-const SWING_PUMP = 330;     // aceleración de A/D al bombear el balanceo
-const SWING_DRAG = 0.1;     // rozamiento del aire en el balanceo (por segundo)
+const ROPE_YANK = 520;      // al engancharte, la cuerda se recoge deprisa (px/s) hasta ROPE_COMFY
+const ROPE_COMFY = [42, 74]; // longitud cómoda para columpiarse (mín, máx)
+const SWING_PUMP = 520;     // aceleración de A/D al bombear, a lo largo del arco
+const SWING_KEEP = 140;     // sin tocar nada, el péndulo no se apaga (empuje suave en su sentido)
+const SWING_DRAG = 0.05;    // rozamiento del aire en el balanceo (por segundo)
+const SWING_KICK = 150;     // empujón al engancharte casi parado (hacia donde miras)
+const CATCH_TIME = 0.9;     // tras soltarte, este rato te enganchas solo al siguiente garfio
 const SWING_MAX = 460;
 const RELEASE_BOOST = 130;  // impulso hacia arriba al soltarte con Espacio
 const TENDON_DAMAGE = 8;   // arponear a una criatura
@@ -170,7 +173,7 @@ export class Player {
     this.lastTapTime = -1;
     this.clinging = 0;
     this.wallLock = 0;
-    this.rope = null;      // { x, y, len, yank } cuerda tendida hasta un anclaje
+    this.rope = null;      // { x, y, len, comfy } cuerda tendida hasta un garfio
     this.tendonShow = 0;
     this.tendonTarget = null;
     this.fireCd = 0;
@@ -325,6 +328,7 @@ export class Player {
     }
 
     // --- Habilidades de mutación ---
+    this.#hookScan(dt);
     if (input.hit('KeyQ', 'Mouse2') && st.has('grapple')) this.#tryGrapple();
     const dashDir = this.#dashRequest(input, dir);
     if (dashDir && st.has('dash') && this.dashCd <= 0 && !this.rope) {
@@ -351,11 +355,11 @@ export class Player {
     if (this.rope) {
       // Recoger o soltar cuerda; al engancharte, un tirón te recoge un tramo.
       const r = this.rope;
-      r.yank -= dt;
-      if (r.yank > 0) r.len -= ROPE_YANK * dt;
+      if (r.len > r.comfy) r.len = Math.max(r.comfy, r.len - ROPE_YANK * dt);
       if (up) r.len -= ROPE_REEL * dt;
       else if (down) r.len += ROPE_REEL * dt;
       r.len = Math.max(ROPE_MIN, Math.min(GRAPPLE_RANGE, r.len));
+      if (up || down) r.comfy = r.len;                              // lo que elijas con W/S se respeta
     }
     if (this.dash > 0) {
       this.dash -= dt;
@@ -376,8 +380,21 @@ export class Player {
       // Tras soltarte del péndulo, el control en el aire apenas frena la inercia.
       this.flung = Math.max(0, (this.flung ?? 0) - dt);
       if (this.rope && !this.onGround) {
-        // Balanceo: A/D bombean el péndulo; la cuerda convierte el empuje en arco.
-        this.vx += dir * SWING_PUMP * dt;
+        // Balanceo: A/D empujan a lo largo del arco (tangente a la cuerda). Sin tocar
+        // nada, un empuje suave en el sentido del vaivén lo mantiene vivo.
+        const r = this.rope, ax = this.cx - r.x, ay = this.y + HAND_Y - r.y, d = Math.hypot(ax, ay) || 1;
+        let tx = -ay / d, ty = ax / d;                               // tangente
+        const below = ay > 0;
+        if (dir) {
+          if (tx * dir < 0) { tx = -tx; ty = -ty; }
+          const k = below ? 1 : 0.4;                                 // por encima del garfio empuja menos
+          this.vx += tx * SWING_PUMP * k * dt;
+          this.vy += ty * SWING_PUMP * k * dt;
+        } else if (below) {
+          const along = this.vx * tx + this.vy * ty, sgn = Math.sign(along) || this.facing * Math.sign(tx);
+          this.vx += tx * sgn * SWING_KEEP * dt;
+          this.vy += ty * sgn * SWING_KEEP * dt;
+        }
         this.vx *= 1 - SWING_DRAG * dt;
         this.vy *= 1 - SWING_DRAG * dt;
       } else if (this.flung > 0 && Math.abs(this.vx) > speed && Math.sign(this.vx) === (dir || Math.sign(this.vx))) {
@@ -736,11 +753,14 @@ export class Player {
   }
 
   #releaseRope(jump) {
+    this.lastAnchor = this.rope ? { x: this.rope.x, y: this.rope.y } : null;
+    this.catchT = jump ? CATCH_TIME : 0;
     this.rope = null;
     this.jumpBuf = 0;
     this.airJumps = 1; // soltarte devuelve el doble salto: combina
     if (jump) {
       this.vy = Math.max(-SWING_MAX, Math.min(this.vy - RELEASE_BOOST, -JUMP_V * 0.5));
+      if (Math.abs(this.vx) > 40) this.vx += Math.sign(this.vx) * 60;     // sale despedido hacia donde iba
       this.flung = 0.6;
       this.game.audio.play('whip', this);
     }
@@ -760,7 +780,7 @@ export class Player {
   }
 
   // El Tendón busca lo más alineado con la mira:
-  //   anchor  esfínter de anclaje (o): tiende una cuerda y te balanceas (péndulo)
+  //   anchor  garfio de hueso (o): tiende una cuerda y te balanceas (péndulo)
   //   seal    esfínter sellado (Y): lo desgarras y se abre
   //   armor   coraza de un Acorazado: se la arrancas
   //   flesh   cualquier otra criatura pequeña: la arponeas, la hieres y la arrastras hacia ti
@@ -779,10 +799,14 @@ export class Player {
     for (const c of candidates) {
       const d = Math.hypot(c.x - from.x, c.y - from.y);
       if (d > GRAPPLE_RANGE) continue;
-      let da = Math.abs(Math.atan2(c.y - from.y, c.x - from.x) - this.aim);
+      // Los garfios, con teclado, se buscan hacia arriba y delante en un cono amplio
+      // (la mira de teclado es horizontal); con ratón o mando manda la mira.
+      const keysAnchor = c.kind === 'anchor' && this.aimMode !== 'mouse' && this.aimMode !== 'pad' && !this.lock;
+      const ref = keysAnchor ? Math.atan2(-1, 0.75 * this.facing) : this.aim;
+      let da = Math.abs(Math.atan2(c.y - from.y, c.x - from.x) - ref);
       if (da > Math.PI) da = Math.PI * 2 - da;
       // Agarrado a una pared (W trepa, no apunta), los sellos se buscan en cualquier dirección.
-      if (da > (c.kind === 'seal' && this.clinging ? Math.PI : 0.6)) continue;
+      if (da > (c.kind === 'seal' && this.clinging ? Math.PI : keysAnchor ? 1.25 : c.kind === 'anchor' ? 0.9 : 0.6)) continue;
       // Un tile sólido tapa su propio centro: se mira hasta su cara visible.
       const k = c.kind === 'seal' ? Math.max(0, 1 - 10 / d) : 1;
       if (!w.lineOfSight(from.x, from.y, from.x + (c.x - from.x) * k, from.y + (c.y - from.y) * k)) continue;
@@ -818,13 +842,51 @@ export class Player {
       }
       g.audio.play('tear', this);
     } else {
-      // Tiende la cuerda desde la mano; un tirón inicial te recoge un tramo.
-      const d = Math.hypot(best.x - from.x, best.y - from.y);
-      this.rope = { x: best.x, y: best.y, len: d, yank: ROPE_YANK_TIME };
-      this.airJumps = 1;
-      this.dash = 0;
-      g.audio.play('tear', this);
+      this.#attach(best);
     }
+  }
+
+  // Engancharse a un garfio: la cuerda se recoge deprisa hasta una longitud cómoda, se
+  // conserva el impulso y, si ibas casi parado, un empujón arranca el vaivén.
+  #attach(a) {
+    const from = { x: this.cx, y: this.y + HAND_Y };
+    const d = Math.hypot(a.x - from.x, a.y - from.y);
+    const comfy = Math.max(ROPE_COMFY[0], Math.min(ROPE_COMFY[1], d * 0.7));
+    this.rope = { x: a.x, y: a.y, len: d, comfy };
+    this.airJumps = 1;
+    this.dash = 0;
+    this.catchT = 0;
+    if (Math.hypot(this.vx, this.vy) < 120 && !this.onGround) this.vx += (Math.sign(a.x - from.x) || this.facing) * SWING_KICK;
+    if (this.onGround) { this.vy = -120; this.onGround = false; }        // desde el suelo, despega
+    this.tendonTarget = { x: a.x, y: a.y };
+    this.tendonShow = 0.2;
+    this.reachT = 0;
+    this.game.audio.play('tear', this);
+  }
+
+  // El garfio que cogería el Tendón ahora mismo (lo marca su halo) y, recién soltado
+  // de otro, el enganche automático al siguiente que tengas delante.
+  #hookScan(dt) {
+    const g = this.game, w = g.world;
+    this.hookTarget = null;
+    this.catchT = Math.max(0, (this.catchT ?? 0) - dt);
+    if (!g.state.has('grapple') || this.rope || !g.room.anchors.length) return;
+    const from = { x: this.cx, y: this.y + HAND_Y };
+    const keys = this.aimMode !== 'mouse' && this.aimMode !== 'pad' && !this.lock;
+    const ref = keys ? Math.atan2(-1, 0.75 * this.facing) : this.aim;
+    let best = null, bestScore = Infinity, ahead = null, aheadD = Infinity;
+    for (const a of g.room.anchors) {
+      const dx = a.x - from.x, dy = a.y - from.y, d = Math.hypot(dx, dy);
+      if (d > GRAPPLE_RANGE || !w.lineOfSight(from.x, from.y, a.x, a.y)) continue;
+      let da = Math.abs(Math.atan2(dy, dx) - ref);
+      if (da > Math.PI) da = Math.PI * 2 - da;
+      if (da <= (keys ? 1.25 : 0.9) && da * 100 + d * 0.2 < bestScore) { bestScore = da * 100 + d * 0.2; best = a; }
+      // Para el enganche automático: por delante en el sentido en que vuelas y por encima.
+      const same = this.lastAnchor && this.lastAnchor.x === a.x && this.lastAnchor.y === a.y;
+      if (!same && dy < 4 && Math.sign(dx) === Math.sign(this.vx) && Math.abs(this.vx) > 30 && d < aheadD) { aheadD = d; ahead = a; }
+    }
+    this.hookTarget = best;
+    if (this.catchT > 0 && ahead && g.state.abilityWorks('grapple')) this.#attach(ahead);
   }
 
   #weapon(dt) {

@@ -10,7 +10,7 @@ export const TILES = [
   { c: '~', name: 'Ácido gástrico', color: '#3f8f2a' },
   { c: '^', name: 'Espinas óseas', color: '#d8c8a8' },
   { c: 'v', name: 'Abismo', color: '#000000' },
-  { c: 'o', name: 'Esfínter de anclaje (Tendón)', color: '#c86070' },
+  { c: 'o', name: 'Garfio de anclaje (Tendón)', color: '#c86070' },
   { c: 'N', name: 'Nodo Seguro (útero)', color: '#3aff8a' },
   { c: 'X', name: 'Membrana agrietada (Embestida)', color: '#b04a6a' },
   { c: 'Y', name: 'Esfínter sellado (Tendón)', color: '#e07a9a' },

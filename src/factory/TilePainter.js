@@ -826,23 +826,6 @@ function paintVoid(g, gl, cx, cy, ox, oy) {
   px(gl, ox, oy + 9, 'rgba(110,10,25,0.4)', 16, 7);
 }
 
-function paintAnchor(g, gl, ox, oy) {
-  const cx = ox + 8, cy = oy + 8;
-  for (let y = -6; y <= 6; y++) {
-    for (let x = -6; x <= 6; x++) {
-      const d = Math.hypot(x, y);
-      if (d <= 6) px(g, cx + x, cy + y, d > 4.5 ? C.fleshDark : d > 2.5 ? C.fleshLight : '#1a0408');
-    }
-  }
-  // Pliegues radiales del esfínter.
-  for (let a = 0; a < 6; a++) {
-    const ang = (a / 6) * Math.PI * 2;
-    px(g, Math.round(cx + Math.cos(ang) * 4), Math.round(cy + Math.sin(ang) * 4), C.flesh);
-  }
-  px(g, ox + 7, oy - 4, C.fleshDark, 2, 4); // cordón que lo cuelga
-  px(gl, cx - 1, cy - 1, 'rgba(255,90,120,0.6)', 3, 3);
-}
-
 export function paintRoom(world, biome) {
   // La paleta del bioma sobrescribe la base (tejido); el material, la pared.
   Object.assign(C, BASE_C, biome?.palette ?? {});
@@ -881,12 +864,8 @@ export function paintRoom(world, biome) {
   organicPass(g, pl, world);
   if (biome) paintGrowths(g, gl, world, biome);
   for (const hole of findHoles(world)) paintOrifice(g, gl, hole);
-  // Objetos que sobresalen de su tile (los Nodos son ahora úteros vivos: entities/Womb.js).
-  for (let cy = 0; cy < world.h; cy++) {
-    for (let cx = 0; cx < world.w; cx++) {
-      if (world.get(cx, cy) === 'o') paintAnchor(g, gl, cx * TILE, cy * TILE);
-    }
-  }
+  // Los Nodos son úteros vivos (entities/Womb.js) y los anclajes 'o', garfios animados
+  // (entities/Hook.js): no se pintan en el fondo.
   return { color, glow, pulse };
 }
 
