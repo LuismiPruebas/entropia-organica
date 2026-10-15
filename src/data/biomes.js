@@ -23,7 +23,7 @@ export const BIOMES = {
     bg: { base: '#2a1238' },
     camo: '#3a1648', // las criaturas sin alumbrar se tiñen de esto
     // Violeta y magenta: la penumbra deja ver el tejido nervioso.
-    ambient: [0.19, 0.14, 0.22],
+    ambient: [0.25, 0.19, 0.29],
     // Silencio habitado: sin zumbido de fondo; de vez en cuando emergen chasquidos,
     // notas de cristal, gemidos metálicos o susurros.
     sound: { drone: 43.6, wave: 'sine', filter: 120, q: 1, lfo: 0.1, level: 0, bed: { freq: 2400, q: 2, level: 0.004 }, layer: 'emergent' },

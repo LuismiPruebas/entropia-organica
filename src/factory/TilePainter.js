@@ -88,7 +88,7 @@ export function paintPhotoTexture(world, cells) {
 const MATERIALS = {
   // Sistema Nervioso (violeta y magenta): haces de fibras estriadas con vainas de mielina.
   fibrous: {
-    base: ['#7a2a62', '#8a3472', '#6a2256'], groove: '#3e1438', deep: '#2e1030',
+    base: ['#9a3a80', '#aa4690', '#8a3072'], groove: '#4a1844', deep: '#36123a',
     myelin: '#c070b0', light: '#f0a8e0', outline: '#2a0c28',
     pulse: null, // sin venas que laten: su azul se confundía con los impulsos de las neuronas del fondo
   },
@@ -295,7 +295,7 @@ function paintOrifice(g, gl, { x0, x1, row, dir }) {
 // vetas de grasa, fibras y venas continuas entre tiles. near = junto al borde,
 // far = lo más hondo; marble = vetas; fat = grasa; vein = venas oscuras.
 const MASS = {
-  fibrous: { near: '#7a2a66', far: '#4e1a4c', marble: '#a8448a', fat: '#d898c8', vein: '#4a2a80' },
+  fibrous: { near: '#92387c', far: '#5e2258', marble: '#bc54a0', fat: '#e8a8d8', vein: '#5a3290' },
   spongy: { near: '#2a7a70', far: '#1c5a56', marble: '#44a094', fat: '#e8909e', vein: '#8a3050' },
   villous: { near: '#9a6018', far: '#6c4210', marble: '#bc8632', fat: '#f4c868', vein: '#7a4060' },
   osseous: { near: '#8a6a50', far: '#5a3e2e', marble: '#b09070', fat: '#e0d0b0', vein: '#6a2018' },
