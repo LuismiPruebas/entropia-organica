@@ -233,6 +233,13 @@ export class Player {
 
   // Del lienzo del cuerpo al mundo (reflejado si mira a la izquierda).
   #bodyToWorld({ x, y }) {
+    // Nadando, el sprite va inclinado (this.tilt, en torno a su centro): el ojo y la
+    // boca del arma giran con él.
+    const tl = this.tilt ?? 0;
+    if (tl) {
+      const dx = x + 0.5 - BODY_W / 2, dy = y + 0.5 - BODY_H / 2, cs = Math.cos(tl), sn = Math.sin(tl);
+      x = BODY_W / 2 + dx * cs - dy * sn - 0.5; y = BODY_H / 2 + dx * sn + dy * cs - 0.5;
+    }
     const left = Math.round(this.cx - BODY_W / 2), top = Math.round(this.y + this.h - BODY_H);
     return { x: left + (this.facing > 0 ? x : BODY_W - 1 - x) + 0.5, y: top + y + 0.5 };
   }
@@ -1021,8 +1028,11 @@ export class Player {
     // Nado: la pose entra y sale suave; la brazada se apaga en medio segundo.
     this.swimK = Math.max(0, Math.min(1, (this.swimK ?? 0) + (this.swimming ? 1 : -1) * dt * 6));
     this.strokeT = Math.max(0, (this.strokeT ?? 0) - dt * 2);
+    // Nadando, todo el cuerpo se tumba hacia delante (con cualquier mutación); la mira
+    // se compensa para que el arma siga apuntando donde apuntas.
+    this.tilt = this.swimK * 0.5;
     this.body.render(st.mutations, {
-      t: this.anim, dt, aim, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: this.crouchK, dash: this.dashK, swim: this.swimK, stroke: this.strokeT,
+      t: this.anim, dt, aim: aim - this.tilt, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: this.crouchK, dash: this.dashK, swim: this.swimK, stroke: this.strokeT,
       vx: this.vx * this.facing, vy: this.vy,
       onGround: this.onGround, clinging: !!this.clinging, rope, reach, charge: this.charge,
       weapon: st.weaponId, recoil: this.recoil ?? 0, armRaise: this.#armRaise(dt),
@@ -1042,6 +1052,7 @@ export class Player {
     for (const m of [this.mesh, this.selfMesh, this.glowMesh]) {
       placeMesh(m, x, y, BODY_W, BODY_H);
       m.scale.x = this.facing * (1 + 0.14 * (this.dashK ?? 0)); // al lanzarse, la silueta se estira hacia delante
+      m.rotation.z = -this.tilt * this.facing;                       // nadando, tumbado hacia delante
     }
     // Arco del golpe: aparece al salir el brazo y se desvanece, siempre por delante.
     const pk = this.punch / MELEE_TIME; // 1 al empezar, 0 al acabar

@@ -94,10 +94,11 @@ function airFeet(hx, far, pose, hanging) {
   return [hx + (far ? -3 : 4), GROUND - 1];
 }
 
-// Mano del brazo trasero al nadar: en cada brazada barre de arriba-delante hacia
-// abajo-atrás; entre brazadas chapotea suave. `r` es lo que alcanza el brazo.
+// Mano del brazo trasero al nadar: en cada brazada alcanza arriba-delante y tira hacia
+// abajo-atrás (empuja el agua); entre brazadas rema suave por delante. `r` es lo que
+// alcanza el brazo.
 function swimHand(s, c, r) {
-  const a = c.stroke > 0 ? -2.3 + (1 - c.stroke) * 3.4 : 1.4 + Math.sin(c.t * 4) * 0.5;
+  const a = c.stroke > 0 ? -0.9 + (1 - c.stroke) * 3.2 : 0.7 + Math.sin(c.t * 4) * 0.5;
   return [s[0] + Math.cos(a) * r, s[1] + Math.sin(a) * r];
 }
 
@@ -149,7 +150,7 @@ export class PlayerBody {
     // Nado (pose.swim 0..1, pose.stroke 1→0 tras cada brazada): el cuerpo se echa hacia
     // delante; brazos, piernas, émbolos y tentáculo se mueven según lo que tengas.
     const swim = pose.swim ?? 0, stroke = pose.stroke ?? 0;
-    const lean = (hanging ? pose.rope.x * 3 : moving ? (ninja ? 2.5 : 1.5) : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 5 + swim * 2; // se abalanza: el torso casi en horizontal
+    const lean = (hanging ? pose.rope.x * 3 : moving ? (ninja ? 2.5 : 1.5) : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 5 + swim * 0.5; // se abalanza (al nadar, Player inclina el sprite entero)
     // Agachado (pose.crouch 0..1): la cadera baja casi al suelo, el tronco se encoge y
     // se echa hacia delante; las rodillas se doblan con un pie adelantado.
     const crouch = pose.crouch ?? 0;
@@ -212,7 +213,10 @@ export class PlayerBody {
       // Hombreras de placas solapadas y espinillera.
       for (let i = 0; i < 3; i++) blob(tg, sh[0] - 3 + i * 2, sh[1] - 1 + (i === 1 ? -1 : 0), 2, 1.5, i === 1 ? C.plateL : C.plate, C.plateD);
       blob(tg, sh[0] + 4, sh[1], 2, 1.4, C.plate, C.plateD, C.plateL);
-      if (!has('pistones') && this.knee) seg(tg, this.knee[0], this.knee[1] + 1, this.knee[0] - 0.5, this.knee[1] + 4, C.plateL, 2);
+      if (!has('pistones') && this.knee && this.feet?.[0]) {
+        const [kx, ky] = this.knee, [fx, fy] = this.feet[0], l = Math.hypot(fx - kx, fy - ky) || 1;
+        seg(tg, kx + (fx - kx) / l, ky + (fy - ky) / l, kx + (fx - kx) / l * 4, ky + (fy - ky) / l * 4, C.plateL, 2);
+      }
     });
     part('quitina2', (tg) => {
       // Púas dorsales que rompen la espalda, inclinadas hacia arriba.
@@ -314,10 +318,10 @@ export class PlayerBody {
     if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 5 : 2); }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -4 : 4); fy = GROUND; } // agachado: un pie adelantado
     if (c.dashK > 0.3) { fx = hx + (far ? -9 : 7); fy = GROUND - (air ? 3 : 0) - (far ? 2 : 0); } // embestida: zancada, la pierna de atrás estirada
-    if (c.swim > 0.3 && air) { // nado: patada alterna; en la brazada, estiradas hacia atrás
-      const k = Math.sin(c.t * 9 + (far ? Math.PI : 0));
-      fx = hx - 5 + (far ? -1 : 1) + k * 2 - c.stroke * 4;
-      fy = GROUND - 6 + k * 1.5 + c.stroke * 2;
+    if (c.swim > 0.3 && air) { // nado: piernas estiradas y patada alterna; más rápida en la brazada
+      const k = Math.sin(c.t * (9 + c.stroke * 8) + (far ? Math.PI : 0));
+      fx = hx - 1 + (far ? -1 : 1) + k * 2.5 - c.stroke;
+      fy = GROUND - 1 - Math.abs(k) * 1.5;
     }
     if (pose.land > 0 && !air) { fx = hx + (far ? -3 : 3); }            // pies abiertos al caer
     const [kx, ky] = ik(hx, hy, fx, fy - 1, 6, 6, -1);
@@ -428,7 +432,12 @@ export class PlayerBody {
     const rest = hang + (c.aim - hang) * raise;
     const aim = k > 0 ? rest * (1 - k) : rest;
     const s = [sh[0] + 3, sh[1] + 1];
-    const hand = [s[0] + Math.cos(aim) * (7 + k * 6), s[1] + Math.sin(aim) * (7 + k * 6)];
+    let hand = [s[0] + Math.cos(aim) * (7 + k * 6), s[1] + Math.sin(aim) * (7 + k * 6)];
+    if (c.swim > 0.3 && c.air && !c.hanging && raise < 0.5 && k <= 0) {
+      // Brazada a contratiempo: cuando el de atrás tira, este se estira al frente.
+      const a = c.stroke > 0 ? 2.3 - (1 - c.stroke) * 3.2 : 0.4 + Math.sin(c.t * 4 + Math.PI) * 0.5;
+      hand = [s[0] + Math.cos(a) * 7, s[1] + Math.sin(a) * 7];
+    }
     const el = ik(s[0], s[1], hand[0], hand[1], 4, 4, 1);
     limb(g, s[0], s[1], el[0], el[1], 2, P.armorM, P.armorL);
     limb(g, el[0], el[1], hand[0], hand[1], 2, P.muscle);
@@ -503,10 +512,10 @@ export class PlayerBody {
     if (pose.clinging) { fx = hx + 4; fy = GROUND - (far ? 6 : 3); }
     if (c.crouch > 0.3 && !air && !pose.clinging) { fx = hx + (far ? -2 : 5); fy = GROUND; } // agachado sobre los talones
     if (c.dashK > 0.3) { fx = hx + (far ? -8 : 8); fy = GROUND - (air ? 3 : 0) - (far ? 2 : 0); } // embestida: zancada
-    if (c.swim > 0.3 && air) { // nado con émbolos: patada rápida y amplia que se dispara en la brazada
-      const k = Math.sin(c.t * 13 + (far ? Math.PI : 0));
-      fx = hx - 5 + k * 3 - c.stroke * 6;
-      fy = GROUND - 7 + k * 2 + c.stroke * 3;
+    if (c.swim > 0.3 && air) { // nado con émbolos: patada de rana rápida y amplia que se dispara en la brazada
+      const k = Math.sin(c.t * (13 + c.stroke * 8) + (far ? Math.PI : 0));
+      fx = hx + 1 + k * 3.5 - c.stroke * 2;
+      fy = GROUND + 2 - Math.abs(k) * 2;
     }
     const ax = fx - 3, ay = fy - 4;                                 // talón alzado
     const [kx, ky] = ik(hx, hy, ax, ay, 5, 5, -1);                  // rodilla adelante
