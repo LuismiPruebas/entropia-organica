@@ -47,12 +47,12 @@ export const BIOMES = {
   },
   digestivo: {
     name: 'Sistema Digestivo',
-    palette: { flesh: '#a8701e', fleshLight: '#ffe08a', fleshDark: '#5a3408', vein: '#8a3a5a' },
+    palette: { flesh: '#8a7622', fleshLight: '#e8d070', fleshDark: '#3a2a0c', vein: '#7a4a1e' },
     material: 'villous',
-    growth: 'villi',
+    growth: 'mucus', // goterones de mucosa colgando de los techos
     growthDensity: 0.5,
     bg: { base: '#4a2a0c' },
-    camo: '#5a3a12',
+    camo: '#4a3e10',
     // Ámbar, mostaza y oliva, con la bilis verde-amarilla como acento.
     ambient: [0.21, 0.17, 0.12],
     // Tripa viva: un retumbo grave y húmedo, peristalsis que gorgotea y fluidos.

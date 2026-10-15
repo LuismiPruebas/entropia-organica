@@ -100,9 +100,10 @@ const MATERIALS = {
   },
   // Digestivo (ámbar y mostaza): mucosa intestinal con pliegues, criptas y vellosidades.
   villous: {
-    base: ['#a8701e', '#b87e26', '#966018'], groove: '#5a3408', deep: '#4a2a0a',
-    myelin: '#e0a840', light: '#ffe08a', tissue: '#8a4a2a', outline: '#3a2006',
-    pulse: 'rgba(200,240,90,0.75)',
+    base: ['#8a7622', '#7c6a1c', '#96822c'], groove: '#3a2a0c', deep: '#2e2208',
+    myelin: '#c8b040', light: '#e8d070', tissue: '#8a5e1e', outline: '#24180a',
+    mucus: '#b8a830', mucusL: '#f0e48a',
+    pulse: null, // sin venas que laten: la estela de luz no encajaba
   },
   // Territorio del Hueso (sepia y marfil): hueso compacto con poros y grietas.
   osseous: {
@@ -119,11 +120,51 @@ const MATERIALS = {
 };
 let MAT = 'fibrous';
 
+// --- Carne escamada (Digestivo) -------------------------------------------------
+// Escamas de carne como empedrado, calculadas en coordenadas del MUNDO (no por tile):
+// la textura es continua entre casillas. Cada escama es un abombado con luz arriba a
+// la izquierda, un brillo húmedo y una grieta oscura alrededor. depth 0..1 la apaga
+// hacia el interior de la roca.
+const SCALE = 7; // px por escama (aprox.)
+const SCALE_PAL = ['#8a7622', '#7c6a1c', '#96822c', '#8a5e1e', '#73621a'].map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+function scaleAt(X, Y) {
+  const ci = Math.floor(X / SCALE), cj = Math.floor(Y / SCALE);
+  let f1 = 99, f2 = 99, id = 0, dx = 0, dy = 0;
+  for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
+    const h = Math.abs(hash(i, j, 77));
+    // Filas desplazadas a medias (como ladrillo) y algo de jitter: escamas, no rejilla.
+    const sx = i * SCALE + (j & 1 ? SCALE / 2 : 0) + ((h % 97) / 97 - 0.5) * 3;
+    const sy = j * SCALE + (((h >> 7) % 89) / 89 - 0.5) * 3;
+    const ddx = X - sx, ddy = (Y - sy) * 1.15, d = Math.hypot(ddx, ddy);
+    if (d < f1) { f2 = f1; f1 = d; id = h; dx = ddx; dy = ddy; } else if (d < f2) f2 = d;
+  }
+  return { edge: f2 - f1, id, dx, dy, f1 };
+}
+function scaleRGB(X, Y, depth = 0) {
+  const s = scaleAt(X, Y);
+  if (s.edge < 1.1) return [36 - depth * 14, 24 - depth * 10, 8 - depth * 4];        // grieta
+  const base = SCALE_PAL[s.id % SCALE_PAL.length];
+  // Abombado: luz arriba-izquierda, sombra abajo-derecha; brillo húmedo cerca de la cresta.
+  const lit = Math.max(-1, Math.min(1, -(s.dx * 0.8 + s.dy) / (SCALE * 0.6)));
+  let k = 0.82 + lit * 0.32 - (s.edge < 2 ? 0.18 : 0);
+  if (lit > 0.55 && s.f1 > 1 && s.f1 < 3.2) k = 1.55;                             // brillo
+  k *= 1 - depth * 0.62;
+  return [Math.min(255, base[0] * k), Math.min(255, base[1] * k), Math.min(255, base[2] * k)];
+}
+function paintScales(g, ox, oy, w, h, depth = 0) {
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const [r, gg, b] = scaleRGB(ox + x, oy + y, depth);
+    g.fillStyle = `rgb(${r | 0},${gg | 0},${b | 0})`;
+    g.fillRect(ox + x, oy + y, 1, 1);
+  }
+}
+
 function paintWall(g, world, cx, cy, ox, oy) {
   const m = MATERIALS[MAT], r = rng(hash(cx, cy, 1));
   const open = (dx, dy) => !isWallChar(world.get(cx + dx, cy + dy));
   const top = open(0, -1), left = open(-1, 0), right = open(1, 0);
   const exposed = top || open(0, 1) || left || right;
+  if (!exposed && MAT === 'villous') { paintScales(g, ox, oy, TILE, TILE, 0.35); return; }
   if (!exposed) {
     px(g, ox, oy, m.deep, TILE, TILE);
     if (r() < 0.3) px(g, ox + 2 + Math.floor(r() * 12), oy + 2 + Math.floor(r() * 12), m.groove, 2, 1);
@@ -152,17 +193,8 @@ function paintWall(g, world, cx, cy, ox, oy) {
       }
     }
   } else if (MAT === 'villous') {
-    // Mucosa con pliegues circulares (bandas onduladas) y criptas.
-    for (let y = 0; y < 16; y++) {
-      const wave = Math.round(Math.sin((ox + y * 5) / 11) * 1.5);
-      const band = Math.floor((y + wave + cy * 16) / 3) % 3;
-      px(g, ox, oy + y, band === 0 ? m.groove : m.base[band], 16, 1);
-    }
-    for (let k = 0; k < 3; k++) {
-      const x = ox + 2 + Math.floor(r() * 11), y = oy + 2 + Math.floor(r() * 11);
-      px(g, x, y, m.groove, 2, 2);
-      px(g, x, y, m.light);
-    }
+    // Carne escamada como empedrado (continua entre casillas: coordenadas del mundo).
+    paintScales(g, ox, oy, TILE, TILE, 0);
   } else if (MAT === 'osseous') {
     // Hueso compacto: marfil moteado con poros hondos de borde claro y alguna grieta.
     px(g, ox, oy, m.base[Math.floor(r() * 3)], TILE, TILE);
@@ -190,7 +222,7 @@ function paintWall(g, world, cx, cy, ox, oy) {
   // Borde superior vivo y sombras laterales.
   if (top) {
     px(g, ox, oy, m.groove, 16, 1);
-    px(g, ox, oy + 1, m.light, 16, 1);
+    if (MAT !== 'villous') px(g, ox, oy + 1, m.light, 16, 1); // las escamas ya tienen su brillo
   }
   if (left) px(g, ox, oy, m.outline, 1, 16);
   if (right) px(g, ox + 15, oy, m.outline, 1, 16);
@@ -298,6 +330,11 @@ function paintMasses(g, world) {
     for (let py = 0; py < TILE; py++) for (let pxl = 0; pxl < TILE; pxl++) {
       const x = cx * TILE + pxl, y = cy * TILE + py;
       const k = Math.min(1, Math.max(0, (deep[y * W + x] - 0.62) / 0.36));
+      if (MAT === 'villous') {
+        const sc = scaleRGB(x, y, 0.2 + k * 0.7), i = (y * W + x) * 4;
+        d[i] = sc[0]; d[i + 1] = sc[1]; d[i + 2] = sc[2]; d[i + 3] = 255;
+        continue;
+      }
       let col = [near[0] + (far[0] - near[0]) * k, near[1] + (far[1] - near[1]) * k, near[2] + (far[2] - near[2]) * k];
       const mixc = (c2, a) => { col = [col[0] + (c2[0] - col[0]) * a, col[1] + (c2[1] - col[1]) * a, col[2] + (c2[2] - col[2]) * a]; };
       // Vetas: crestas del ruido deformado; grasa en las manchas altas; venas finas.
@@ -468,13 +505,11 @@ function growUp(g, ox, y, r, m) {
       px(g, ox + x, y - h, r() < 0.5 ? m.light : m.tissue, 1, h);
     }
   } else if (MAT === 'villous') {
-    // Vellosidades: dedos de mucosa con la punta clara.
-    for (let k = 0; k < 3; k++) {
-      if (r() < 0.35) continue;
-      const x = ox + 1 + Math.floor(r() * 12), h = 3 + Math.floor(r() * 5);
-      px(g, x, y - h, m.base[0], 2, h);
-      px(g, x, y - h, m.light, 2, 1);
-      px(g, x + 1, y - h + 1, m.groove, 1, h - 1);
+    // Película de mucosa sobre el suelo: un charquito brillante de vez en cuando.
+    if (r() < 0.35) {
+      const x = ox + 1 + Math.floor(r() * 9), w = 3 + Math.floor(r() * 5);
+      px(g, x, y - 1, m.mucus, w, 1);
+      px(g, x + 1, y - 1, m.mucusL, Math.max(1, w - 3), 1);
     }
   } else if (MAT === 'osseous') {
     // Espolones: pinchos de hueso cortos (no hieren).
@@ -513,10 +548,14 @@ function growDown(g, ox, y, r, m) {
       px(g, x + 1, y + 1, m.light, 1, h - 1);
     }
   } else if (MAT === 'villous') {
-    if (r() < 0.5) {
-      const x = ox + 2 + Math.floor(r() * 11), len = 3 + Math.floor(r() * 4);
-      px(g, x, y, m.base[1], 2, len);
-      px(g, x, y + len, m.light, 2, 1);
+    for (let k = 0; k < 2; k++) {
+      if (r() < 0.45) continue;
+      const x = ox + 1 + Math.floor(r() * 13), len = 2 + Math.floor(r() * 7);
+      px(g, x, y, m.outline, 2, 1);
+      px(g, x, y, m.mucus, 1, len);                         // hilo
+      px(g, x - 1, y + len, m.outline, 3, 3);               // gota
+      px(g, x - 1, y + len, m.mucus, 2, 2);
+      px(g, x - 1, y + len, m.mucusL);                      // brillo de la gota
     }
   } else if (MAT === 'osseous') {
     // Astillas de hueso colgando del techo, con un goterón de sangre seca.
@@ -876,6 +915,24 @@ function hangingVillus(g, x, y, r) {
   px(g, x + 2, y, '#5a3408', 1, len);
   px(g, x, y + len, '#ffe08a', 3, 1);
 }
+// Goterón de mucosa que cuelga del techo: un hilo que se estira, se adelgaza y acaba
+// en una gota gruesa y brillante (a veces una segunda gota a medio caer).
+function mucusDrip(g, gl, x, y, r) {
+  const len = 5 + Math.floor(r() * 12);
+  px(g, x - 1, y, '#24180a', 4, 2);                       // donde nace, en la escama
+  px(g, x, y, '#b8a830', 2, 2);
+  for (let i = 2; i < len; i++) {
+    const w = i < len * 0.4 ? 2 : 1;                     // se adelgaza
+    px(g, x, y + i, '#24180a', w + 1, 1);
+    px(g, x, y + i, i % 3 ? '#b8a830' : '#d8c860', w, 1);
+  }
+  // La gota.
+  px(g, x - 1, y + len, '#24180a', 4, 4);
+  px(g, x - 1, y + len, '#b8a830', 3, 3);
+  px(g, x - 1, y + len, '#f0e48a');
+  px(gl, x, y + len + 1, 'rgba(220,210,90,0.35)');
+  if (r() < 0.3) { px(g, x, y + len + 6, '#b8a830', 1, 2); px(g, x, y + len + 6, '#f0e48a'); }
+}
 // Poro de la mucosa que gotea bilis verde-amarilla.
 function bilePore(g, gl, x, y, r) {
   px(g, x - 1, y, '#5a3408', 3, 2);
@@ -923,6 +980,10 @@ function paintGrowths(g, gl, world, biome) {
         case 'alveoli':
           if (side && r() < d * 0.45) ciliaTuft(g, left ? ox : ox + 16, oy, left ? -1 : 1, r);
           if (air(0, 1) && r() < d * 0.3) hangingSac(g, gl, ox + 4 + Math.floor(r() * 8), oy + 16, r);
+          break;
+        case 'mucus':
+          if (air(0, 1) && r() < d * 0.45) mucusDrip(g, gl, ox + 3 + Math.floor(r() * 10), oy + 16, r);
+          if (air(0, 1) && r() < d * 0.15) bilePore(g, gl, ox + 4 + Math.floor(r() * 8), oy + 16, r);
           break;
         case 'villi':
           if (air(0, 1) && r() < d * 0.5) hangingVillus(g, ox + 2 + Math.floor(r() * 10), oy + 16, r);

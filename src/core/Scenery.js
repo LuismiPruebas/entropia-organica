@@ -158,46 +158,82 @@ function pulmonar() {
   return { mid, midGlow: glow, front, anim: { breathe: 4.8, motes: { n: 26, colors: ['rgba(190,170,255,0.8)', 'rgba(170,255,230,0.6)'], vx: 4, vy: -3, size: 1, wobble: 6 } } };
 }
 
+// Tubo escamado (Digestivo): carne empedrada a lo largo de un recorrido, con sombreado
+// cilíndrico (luz arriba, sombra abajo), grietas entre escamas y brillos húmedos. Las
+// escamas se calculan sobre el propio tubo (largo × ancho), así siguen su curva.
+function scaledTube(g, pts, R, pal, seed) {
+  const cs = 5;                                            // px por escama
+  const cell = (u, v) => {
+    const ci = Math.floor(u / cs), cj = Math.floor(v / cs);
+    let f1 = 99, f2 = 99, id = 0, ddy = 0;
+    for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
+      const h = Math.abs(Math.sin(i * 127.1 + j * 311.7 + seed) * 43758.5453) % 1;
+      const sx = i * cs + (j & 1 ? cs / 2 : 0) + (h - 0.5) * 2, sy = j * cs + (h * 7 % 1 - 0.5) * 2;
+      const d = Math.hypot(u - sx, (v - sy) * 1.2);
+      if (d < f1) { f2 = f1; f1 = d; id = h; ddy = v - sy; } else if (d < f2) f2 = d;
+    }
+    return { edge: f2 - f1, id, f1, ddy };
+  };
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    const step = Math.hypot(x1 - x0, y1 - y0); len += step;
+    const a = Math.atan2(y1 - y0, x1 - x0), nx = -Math.sin(a), ny = Math.cos(a);
+    for (let k = -R; k <= R; k += 0.7) {
+      const q = k / R, round = Math.sqrt(Math.max(0, 1 - q * q));
+      const c = cell(len, k + R);
+      let col;
+      if (Math.abs(q) > 0.93) col = pal.out;                                   // contorno
+      else if (c.edge < 0.9) col = pal.crack;                                  // grieta
+      else {
+        const lit = round * 0.7 + (ny > 0 ? -q : q) * 0.35 + (c.ddy < 0 ? 0.12 : -0.1);
+        col = lit > 0.86 && c.f1 < 2 ? pal.shine : lit > 0.62 ? pal.light : lit > 0.32 ? (c.id > 0.5 ? pal.mid : pal.mid2) : pal.dark;
+      }
+      dot(g, x1 + nx * k, y1 + ny * k, col);
+    }
+  }
+}
+
 function digestivo() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
   const r = rng(31);
-  // Asas de intestino: un tubo grueso ámbar con haustras (pliegues) que serpentea y se
-  // enrosca; por él pasa la onda peristáltica (anim.flow).
-  const path = [];
-  for (let i = 0; i <= 420; i++) {
-    const t = i / 420;
-    path.push([((t * MID_W * 1.4) % (MID_W + 40)) - 20 + Math.sin(t * 9) * 18, 60 + Math.sin(t * Math.PI * 3) * 40 + Math.cos(t * 7) * 14]);
+  const OLIVE = { out: '#1e1606', crack: '#2c2008', dark: '#4a3e10', mid: '#7a6a1c', mid2: '#6c5c18', light: '#a8962e', shine: '#e8d878' };
+  const RUST = { out: '#1e0e06', crack: '#2c1408', dark: '#4a2410', mid: '#7a3e1c', mid2: '#6a3418', light: '#a85e2e', shine: '#e8a878' };
+  // Tubo muscular grueso que serpentea de lado a lado, y una vena gruesa rojiza que lo
+  // cruza (como en la referencia). Sin estela de luz: la carne se mueve, no se ilumina.
+  const path = (y0, amp, freq, ph) => { const p = []; for (let x = -24; x <= MID_W + 24; x += 0.6) p.push([x, y0 + Math.sin(x * freq + ph) * amp + Math.sin(x * freq * 2.7 + ph) * amp * 0.25]); return p; };
+  const vein = path(150, 26, 0.03, 2.1), tubeP = path(72, 30, 0.0245, 0);
+  scaledTube(g, vein, 9, RUST, 3);
+  scaledTube(g, tubeP, 17, OLIVE, 1);
+  // Goterones de mucosa colgando de la panza del tubo (hilo que se estira y gota).
+  for (let k = 0; k < 16; k++) {
+    const i = Math.floor(r() * tubeP.length), [x, y] = tubeP[i], h = 4 + r() * 16;
+    for (let j = 0; j < h; j++) dot(g, x, y + 15 + j, j % 3 ? '#b8a830' : '#d8c860', j < h * 0.4 ? 2 : 1, 1);
+    ball(g, x + 0.5, y + 16 + h, 1.8, '#b8a830', '#f0e48a', '#6a5e14');
+    dot(gl, x, y + 16 + h, 'rgba(200,190,80,0.25)', 2, 2);
   }
-  ringedTube(g, path, 14, '#c0862c', '#ffd890', '#7a4a10', '#8a5414', 9);
-  // Vellosidades en racimos que asoman por abajo.
-  for (let k = 0; k < 14; k++) {
-    const bx = r() * MID_W, by = MID_H - 10 - r() * 40, h = 14 + r() * 18;
-    for (let y = 0; y < h; y++) {
-      const w = 2.5 - (y / h) * 0.6, sway = Math.sin(y * 0.2 + k) * 1.2;
-      for (let x = -Math.ceil(w); x <= Math.ceil(w); x++) dot(g, bx + x + sway, by - y, x < 0 ? '#f0c060' : x > 1 ? '#7a5014' : '#c89030');
-    }
-    ball(g, bx, by - h, 3, '#e8b448', '#fff0b0', '#9a6a1e');
+  for (let k = 0; k < 8; k++) {
+    const i = Math.floor(r() * vein.length), [x, y] = vein[i], h = 3 + r() * 9;
+    for (let j = 0; j < h; j++) dot(g, x, y + 8 + j, '#9a5a2a');
+    ball(g, x + 0.5, y + 9 + h, 1.4, '#9a5a2a', '#e8a878', '#4a2410');
   }
-  // Gotas de bilis verde-amarilla, brillantes.
-  for (let k = 0; k < 12; k++) {
-    const bx = r() * MID_W, by = r() * MID_H;
-    ball(g, bx, by, 2 + r() * 2.5, '#a8c838', '#f0ffa0', '#5a7a18');
-    dot(gl, bx - 1, by - 1, 'rgba(210,255,90,0.35)', 2, 2);
+  // Algunas burbujas de bilis pegadas a la carne (pocas: el protagonista es el tubo).
+  for (let k = 0; k < 6; k++) {
+    const bx = r() * MID_W, by = 20 + r() * (MID_H - 40);
+    ball(g, bx, by, 1.5 + r() * 1.5, '#a8b030', '#f0f090', '#5a6018');
   }
   const [front, f] = canvas(FRONT_W, FRONT_H);
-  // Vellosidades en primer plano, ámbar oscuro.
-  f.fillStyle = '#3a2008'; f.fillRect(0, FRONT_H - 6, FRONT_W, 6);
-  for (let x = 0; x < FRONT_W; x += 7) {
-    const h = 8 + (x * 7) % 16;
-    f.fillStyle = '#3a2008'; f.fillRect(x, FRONT_H - 6 - h, 4, h);
-    f.fillStyle = '#6a4210'; f.fillRect(x, FRONT_H - 6 - h, 4, 2);
+  // Primer plano: bultos escamados oscuros y goterones que cuelgan.
+  for (let x = 0; x < FRONT_W; x += 9) {
+    const h = 6 + ((x * 7) % 13), w = 7 + ((x * 3) % 5);
+    f.fillStyle = '#1e1606'; f.fillRect(x, FRONT_H - h, w, h);
+    f.fillStyle = '#3a300c'; f.fillRect(x + 1, FRONT_H - h, w - 2, 1);
   }
   return {
     mid, midGlow: glow, front,
     anim: {
-      flow: { path, color: [255, 220, 120] },
-      motes: { n: 18, colors: ['rgba(220,255,110,0.7)', 'rgba(255,230,140,0.5)'], vx: 0, vy: -9, size: 2, wobble: 3, shape: 'bubble' },
+      motes: { n: 14, colors: ['rgba(220,220,110,0.55)', 'rgba(240,220,140,0.4)'], vx: 0, vy: -7, size: 2, wobble: 3, shape: 'bubble' },
     },
   };
 }

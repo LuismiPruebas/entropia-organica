@@ -3,7 +3,7 @@
 // grises: el tono más hondo sigue siendo un color) y sus motivos:
 //   nervioso   tejido violeta con neuronas estrelladas, glía y axones mielinizados
 //   pulmonar   parénquima turquesa cuajado de alvéolos con capilares coral
-//   digestivo  mucosa ámbar con un bosque de vellosidades, criptas y gotas de bilis
+//   digestivo  carne escamada como empedrado (oliva y ocre), venas rojizas y goterones de mucosa
 //   corazon    músculo carmesí estriado, con discos intercalares y capilares
 // Todo lo que se repite usa coordenadas envueltas (módulo del tamaño), así los bordes
 // encajan. Ver Visual.setBiome (fondo lejano) y core/Scenery.js (plano medio).
@@ -206,43 +206,23 @@ const BACKDROPS = {
 
   // Digestivo: ámbar, mostaza y oliva. Vellosidades, criptas y gotas de bilis.
   digestivo() {
+    // Pared del tubo digestivo a lo lejos: carne escamada como empedrado (oliva y ocre,
+    // con escamas rojizas sueltas), grietas oscuras, brillo húmedo y goterones de
+    // mucosa. Más apagada que las paredes de delante, para que no compita con ellas.
     const sf = surface();
-    const P = { lo: '#4a2a0c', mid: '#7a4a18', hi: '#a06a24', membrane: '#5a3010', cell: '#b07a2a', shine: '#f0c868', nucleus: '#6a3a10' };
+    const P = { lo: '#1e1806', mid: '#3a3010', hi: '#54461a', membrane: '#140f04', cell: '#6a5a1c', shine: '#b8a648', nucleus: '#3a2a10' };
     tissue(sf, P, 31, 3);
-    lobules(sf, 10, 6, P, { strength: 0.4, nucleus: false, membrane: 0.1 });
+    lobules(sf, 26, 6, P, { strength: 1, nucleus: false, membrane: 0.22 });
+    // Una segunda capa, más grande y rojiza en manchas (venas gruesas bajo la mucosa).
+    lobules(sf, 12, 9, { membrane: '#1a0c06', cell: '#5a2e14', shine: '#a8643a', nucleus: '#000' }, { strength: 0.35, nucleus: false, membrane: 0.12 });
     const r = rng(13);
-    // Bosque de vellosidades: dedos de mucosa que se afinan hacia una punta en bulbo,
-    // ladeados y ondulados, cilíndricos (luz a la izquierda, sombra a la derecha). Las
-    // filas de atrás son más hondas y apagadas; las de delante, más claras.
-    const rows = 5;
-    for (let row = 0; row < rows; row++) {
-      const back = 1 - row / (rows - 1); // 1 = la fila más lejana
-      const shade = (hex) => mix(hexRgb(hex), hexRgb('#5a3410'), back * 0.45);
-      const L = shade('#ffd27a'), M = shade('#d09838'), D = shade('#8a5418'), T = shade('#fff0b0'), O = shade('#4a2808');
-      for (let i = 0; i < 10; i++) {
-        const fx = i * (S / 10) + (row % 2) * 13 + r() * 9, base = row * (S / rows) + S / rows + r() * 8;
-        const h = 30 + r() * 26, w0 = 5 + r() * 2.5, lean = (r() - 0.5) * 0.5, ph = r() * 6;
-        for (let y = 0; y < h; y++) {
-          const t = y / h;
-          const half = w0 * (1 - t * 0.45) + (t > 0.82 ? Math.sin(((t - 0.82) / 0.18) * Math.PI) * 1.8 : 0);
-          const cxo = lean * y + Math.sin(y * 0.11 + ph) * 1.6;
-          for (let x = -Math.ceil(half) - 1; x <= Math.ceil(half) + 1; x++) {
-            const ax = Math.abs(x);
-            const px0 = fx + x + cxo, py0 = base - y;
-            if (ax > half + 0.6) continue;
-            if (ax > half - 0.4) { sf.blend(px0, py0, O, 0.85); continue; }
-            const u = x / half;
-            const col = t > 0.9 ? T : u < -0.5 ? L : u > 0.45 ? D : M;
-            sf.blend(px0, py0, col, 0.95);
-          }
-        }
-      }
+    // Goterones de mucosa colgando, con la gota abajo.
+    for (let n = 0; n < 26; n++) {
+      const x = r() * S, y = r() * S, h = 6 + r() * 18;
+      for (let j = 0; j < h; j++) sf.blend(x, y + j, hexRgb(j % 3 ? '#7a6a20' : '#9a8a30'), 0.85);
+      disc(sf, x, y + h, 1.6, '#8a7a26', '#d8c860', '#3a3010');
     }
-    // Criptas: hoyos ámbar hondo (no negros).
-    for (let n = 0; n < 22; n++) disc(sf, r() * S, r() * S, 2 + r() * 2, '#5a3008', '#7a4a14', '#3e2006');
-    vessels(sf, 6, 8, '#8a3a5a', '#c06a80', { len: 140, thick: 1 });
-    // Gotas de bilis verde-amarilla, brillantes.
-    for (let n = 0; n < 18; n++) disc(sf, r() * S, r() * S, 2 + r() * 3, '#a8c030', '#f0ff90', '#6a8018');
+    vessels(sf, 5, 8, '#5a2a14', '#8a4a24', { len: 160, thick: 2 });
     return sf.canvas();
   },
 
