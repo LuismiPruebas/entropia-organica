@@ -9,6 +9,7 @@ import { paintRoom } from '../factory/TilePainter.js';
 import { reach } from '../../tools/reach.mjs';
 import { TILES, TILE_BY_CHAR, SOLID, KINDS, ENEMY_TYPES, ENEMIES } from './schema.js';
 import { patchLevels } from './serialize.js';
+import { enemyThumb } from './EnemyThumbs.js';
 
 const $ = (id) => document.getElementById(id);
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -291,6 +292,49 @@ function renameRoom(oldId, newId) {
   renderRoomList(); renderRoomPanel(); drawMap(); draw();
 }
 
+// Un enemigo dibujado con su aspecto, apoyado (centrado) en el fondo de su caja.
+function drawEnemy(o, z, alpha) {
+  const th = enemyThumb(o.type);
+  if (!th) return;
+  const [bx, by, bw, bh] = KINDS.enemies.box(o, room()), k = z / 16;
+  const dw = th.w * k, dh = th.h * k;
+  g.globalAlpha = alpha;
+  g.drawImage(th.canvas, (bx + bw / 2) * z - dw / 2, (by + bh) * z - dh, dw, dh);
+  g.globalAlpha = 1;
+}
+// ---------------------------------------------------------------- bestiario (panel)
+const BIOME_ORDER = ['nervioso', 'pulmonar', 'digestivo', 'oseo', 'circulatorio', 'corazon'];
+function renderBestiary() {
+  const box = $('bestiary');
+  if (!box) return;
+  const ids = Object.keys(ENEMIES).filter((id) => ENEMIES[id].creature);
+  ids.sort((a, b) => BIOME_ORDER.indexOf(ENEMIES[a].biome) - BIOME_ORDER.indexOf(ENEMIES[b].biome) || !!ENEMIES[a].boss - !!ENEMIES[b].boss);
+  let html = '', last = null;
+  for (const id of ids) {
+    const d = ENEMIES[id];
+    if (d.biome !== last) { last = d.biome; html += `<h5 style="color:${BIOMES[d.biome]?.mapColor ?? '#ccc'}">${(BIOMES[d.biome]?.name ?? d.biome).toUpperCase()}</h5>`; }
+    html += `<button data-en="${id}" class="${S.enemyType === id && S.tool === 'place' && S.kind === 'enemies' ? 'on' : ''}" title="${d.name} (${id}) · ${d.w}×${d.h}px · ${d.behavior}"><span class="th" data-th="${id}"></span><span class="${d.boss ? 'boss' : ''}">${d.name}${d.boss ? ' · JEFE' : ''}</span></button>`;
+  }
+  box.innerHTML = html;
+  for (const el of box.querySelectorAll('[data-th]')) {
+    const th = enemyThumb(el.dataset.th);
+    if (!th) continue;
+    const k = Math.max(0.25, Math.min(3, Math.floor(Math.min(84 / th.w, 52 / th.h) * 4) / 4));
+    const c = document.createElement('canvas');
+    c.width = th.w; c.height = th.h;
+    c.style.width = th.w * k + 'px'; c.style.height = th.h * k + 'px';
+    c.getContext('2d').drawImage(th.canvas, 0, 0);
+    el.appendChild(c);
+  }
+  for (const b of box.querySelectorAll('[data-en]')) b.onclick = () => {
+    S.enemyType = b.dataset.en; S.kind = 'enemies'; S.noduleLux = false;
+    $('kind').value = 'enemies';
+    setTool('place');
+    for (const o of box.querySelectorAll('[data-en]')) o.classList.toggle('on', o === b);
+    $('msg').textContent = `Colocando ${ENEMIES[S.enemyType].name}: clic en la sala (clic derecho sobre uno lo borra).`;
+  };
+}
+
 function draw() {
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.fillStyle = '#0a0709';
@@ -400,6 +444,7 @@ function draw() {
     if (!K.box) continue;
     (r[kind] ?? []).forEach((o, i) => {
       const color = kind === 'zones' ? (o.color ?? K.color) : K.color;
+      if (kind === 'enemies') drawEnemy(o, z, 1);
       drawBox(kind, o, i, color, K.text?.(o));
       // Ruta de las plataformas móviles; radio de las pistas.
       if (kind === 'movers') {
@@ -434,6 +479,8 @@ function draw() {
   }
   drawPlacing(z, r);
   drawLinking(z, r);
+  // Fantasma del enemigo que se va a colocar.
+  if (S.tool === 'place' && S.kind === 'enemies' && S.hover && S.enemyType) drawEnemy({ type: S.enemyType, x: S.hover[0], y: S.hover[1] }, z, 0.55);
   drawArea(z);
   // Rectángulo en curso.
   if (S.drag?.rect) {
@@ -538,6 +585,7 @@ cv.addEventListener('mousedown', (e) => {
       if (S.kind === 'links' && !spotOk(room(), x, y - (PH - 1))) { $('msg').textContent = 'Ahí no cabe el punto: necesita el hueco del personaje (1×2), sin muro y dentro de la sala. Mejor usa "Crear conexión" en el panel de la sala.'; S.undo[S.id]?.pop(); return; }
       const o = K.make(x, y, room());
       if (S.kind === 'nodules' && S.noduleLux) o.push('luz'); // desde la paleta: nódulo lumínico
+      if (S.kind === 'enemies' && S.enemyType) o.type = S.enemyType; // el elegido en el Bestiario
       if (o) { (room()[S.kind] ??= []).push(o); S.sel = { kind: S.kind, index: room()[S.kind].length - 1 }; }
       else if (S.kind === 'pods') S.sel = { kind: 'pods', index: room().pods.at.length - 1 };
       touch(); renderInspector(); return;
@@ -1431,6 +1479,7 @@ addEventListener('keydown', (e) => {
 
 // ---------------------------------------------------------------- arranque
 $('save').onclick = save;
+renderBestiary();
 // Selector de mapa: cambia el mundo activo (el del juego también) y recarga.
 $('world').innerHTML = Object.entries(WORLDS).map(([id, w]) => `<option value="${id}"${id === WORLD_ID ? ' selected' : ''}>${w.name}</option>`).join('');
 $('world').onchange = (e) => {
