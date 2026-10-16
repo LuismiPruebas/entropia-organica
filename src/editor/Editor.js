@@ -583,7 +583,7 @@ cv.addEventListener('mousedown', (e) => {
   }
   if (S.linking && ['place', 'placeDest'].includes(S.linking.stage) && S.linking.room === S.id) {
     if (e.button === 2) { S.linking = null; $('msg').textContent = 'Conexión cancelada.'; renderRoomPanel(); draw(); return; }
-    linkingClick(x, y); draw(); return;
+    S.linkDrag = { from: [x, y] }; S.drag = { linkDrag: true }; draw(); return;
   }
   if (S.placing) {
     if (e.button === 2) { S.placing = null; $('msg').textContent = 'Nueva sala cancelada.'; draw(); return; }
@@ -643,6 +643,7 @@ addEventListener('mousemove', (e) => {
   const d = S.drag;
   if (!d) { if (e.target === cv) draw(); return; }
   if (d.placing) return;
+  if (d.linkDrag) { draw(); return; }
   if (d.roomMove) {
     // Por celdas enteras: la sala sigue al ratón y las vecinas se quedan donde están.
     const dcx = Math.round((e.clientX - d.sx) / (CELL[0] * S.zoom)), dcy = Math.round((e.clientY - d.sy) / (CELL[1] * S.zoom));
@@ -678,6 +679,12 @@ addEventListener('mousemove', (e) => {
 addEventListener('mouseup', () => {
   const d = S.drag;
   S.drag = null;
+  if (d?.linkDrag && S.linkDrag) {
+    const from = S.linkDrag.from, to = S.hover ?? from;
+    S.linkDrag = null;
+    linkingClick(to[0], to[1], from[0] === to[0] && from[1] === to[1] ? null : dragRect(from, to));
+    draw(); return;
+  }
   if (d?.areaSel) { renderInspector(); return; }
   if (d?.roomMove) {
     const r = room();
@@ -889,6 +896,7 @@ function field(label, value, onset, type) {
       else v = el.value;
       el.classList.remove('bad');
       snapshot(); onset(v); touch();
+      if (S.id) renderRoomPanel();                         // p. ej. la lista de Conexiones
     };
   });
   return `<label>${label}${input}</label>`;
@@ -1184,13 +1192,44 @@ function makeReciprocal(roomId, l, on) {
   touch(); renderRoomPanel(); renderInspector();
 }
 // Clic en el lienzo durante el asistente: pone el punto (si el sitio vale).
-function linkingClick(x, y) {
-  const L = S.linking, r = room(), top = y - (PH - 1);
-  if (!spotOk(r, x, top)) { $('msg').textContent = 'Ahí no cabe: el punto necesita el hueco del personaje (1×2), sin muro y dentro de la sala.'; return true; }
+// El punto que se pondría al hacer clic en (x, y): en un hueco del borde, el hueco entero
+// (un solo paso aunque sea grande); en otro sitio, el hueco del personaje (1×2).
+function pointRect(r, x, y) {
+  const Wd = r.grid[0].length, Hd = r.grid.length, open = (c) => c !== undefined && !SOLID.has(c) && !TILE_BY_CHAR[c]?.slope && !TILE_BY_CHAR[c]?.ceil;
+  if ((x === 0 || x === Wd - 1) && open(r.grid[y]?.[x])) {
+    let a = y, b = y;
+    while (a > 0 && open(r.grid[a - 1][x])) a--;
+    while (b < Hd - 1 && open(r.grid[b + 1][x])) b++;
+    if (b - a + 1 >= PH) return { x, y: a, w: 1, h: b - a + 1 };
+  }
+  if ((y === 0 || y === Hd - 1) && open(r.grid[y]?.[x])) {
+    let a = x, b = x;
+    while (a > 0 && open(r.grid[y][a - 1])) a--;
+    while (b < Wd - 1 && open(r.grid[y][b + 1])) b++;
+    const yy = y === 0 ? 0 : Hd - 2;
+    const two = [...Array(b - a + 1)].every((_, i) => open(r.grid[y === 0 ? 1 : Hd - 2]?.[a + i]));
+    return { x: a, y: two ? yy : y, w: b - a + 1, h: two ? 2 : 1 };
+  }
+  return { x, y: y - (PH - 1), w: PW, h: PH };
+}
+// Rectángulo de un arrastre (mínimo, el del personaje: si es más bajo, crece hacia arriba).
+function dragRect(a, b) {
+  const x = Math.min(a[0], b[0]), w = Math.abs(a[0] - b[0]) + 1;
+  let y = Math.min(a[1], b[1]), h = Math.abs(a[1] - b[1]) + 1;
+  if (h < PH) { y -= PH - h; h = PH; }
+  return { x, y, w, h };
+}
+// ¿Vale ese sitio para un punto? Dentro de la sala y todo hueco (sin muro ni rampa); en
+// un hueco de borde de 1 fila (techo o suelo) basta con esa fila.
+const rectOk = (r, q) => spotOk(r, q.x, q.y, q.w, q.h);
+function linkingClick(x, y, rect = null) {
+  const L = S.linking, r = room(), q = rect ?? pointRect(r, x, y);
+  if (!rectOk(r, q)) { $('msg').textContent = 'Ahí no cabe: el punto necesita al menos el hueco del personaje (1×2), sin muro y dentro de la sala.'; return true; }
+  const top = q.y;
   if (L.stage === 'place') {
     snapshot();
     const id = newLinkId(r);
-    (r.links ??= []).push({ id, x, y: top, w: PW, h: PH, to: '', toLink: '', trigger: atEdge(r, x, top) ? 'touch' : 'use', look: atEdge(r, x, top) ? 'hidden' : 'portal' });
+    (r.links ??= []).push({ id, x: q.x, y: top, w: q.w, h: q.h, to: '', toLink: '', trigger: atEdge(r, q.x, top, q.w, q.h) ? 'touch' : 'use', look: atEdge(r, q.x, top, q.w, q.h) ? 'hidden' : 'portal' });
     S.sel = { kind: 'links', index: r.links.length - 1 };
     S.linking = { stage: 'dest', room: S.id, link: id };
     touch(); renderRoomPanel(); renderInspector();
@@ -1200,7 +1239,7 @@ function linkingClick(x, y) {
   if (L.stage === 'placeDest') {
     snapshot();
     const id = newLinkId(r);
-    (r.links ??= []).push({ id, x, y: top, w: PW, h: PH, to: '', toLink: '', trigger: atEdge(r, x, top) ? 'touch' : 'use', look: atEdge(r, x, top) ? 'hidden' : 'portal' });
+    (r.links ??= []).push({ id, x: q.x, y: top, w: q.w, h: q.h, to: '', toLink: '', trigger: atEdge(r, q.x, top, q.w, q.h) ? 'touch' : 'use', look: atEdge(r, q.x, top, q.w, q.h) ? 'hidden' : 'portal' });
     const from = linkOf(L.from.room, L.from.link);
     from.to = S.id; from.toLink = id;
     S.dirty.add(L.from.room);
@@ -1214,11 +1253,11 @@ function linkingClick(x, y) {
 function drawLinking(z, r) {
   const L = S.linking;
   if (!L || !['place', 'placeDest'].includes(L.stage) || L.room !== S.id || !S.hover) return;
-  const [x, y] = S.hover, top = y - (PH - 1), ok = spotOk(r, x, top);
-  g.fillStyle = ok ? 'rgba(64,224,255,0.3)' : 'rgba(255,60,80,0.3)'; g.fillRect(x * z, top * z, PW * z, PH * z);
-  g.strokeStyle = ok ? '#40e0ff' : '#ff3c50'; g.lineWidth = 2; g.strokeRect(x * z + 1, top * z + 1, PW * z - 2, PH * z - 2);
+  const [x, y] = S.hover, q = S.linkDrag ? dragRect(S.linkDrag.from, S.hover) : pointRect(r, x, y), ok = rectOk(r, q);
+  g.fillStyle = ok ? 'rgba(64,224,255,0.3)' : 'rgba(255,60,80,0.3)'; g.fillRect(q.x * z, q.y * z, q.w * z, q.h * z);
+  g.strokeStyle = ok ? '#40e0ff' : '#ff3c50'; g.lineWidth = 2; g.strokeRect(q.x * z + 1, q.y * z + 1, q.w * z - 2, q.h * z - 2);
   g.fillStyle = ok ? '#40e0ff' : '#ff8a96'; g.font = 'bold 12px monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
-  g.fillText(ok ? (L.stage === 'place' ? 'punto de conexión' : 'llegada') : 'no cabe aquí', x * z + PW * z + 4, top * z);
+  g.fillText(ok ? `${L.stage === 'place' ? 'punto de conexión' : 'llegada'} ${q.w}×${q.h}` : 'no cabe aquí', (q.x + q.w) * z + 4, q.y * z);
 }
 
 function renderRoomPanel() {
