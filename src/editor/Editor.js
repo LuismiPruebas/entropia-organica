@@ -354,6 +354,14 @@ function draw() {
     g.font = 'bold 11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(`→ ${ex.to}`, bx + bw / 2, by + bh / 2);
   }
+  // Dónde se aparece al llegar a un punto (si no es sobre el propio punto).
+  for (const l of r.links ?? []) if (l.arrive) {
+    const [ax, ay] = l.arrive;
+    g.strokeStyle = '#3aff8a'; g.lineWidth = 2; g.setLineDash([3, 3]);
+    g.strokeRect(ax * z + 1, (ay - 1) * z + 1, z - 2, 2 * z - 2); g.setLineDash([]);
+    g.fillStyle = '#3aff8a'; g.font = '10px monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
+    g.fillText(`llegada ${l.id}`, ax * z, (ay - 1) * z - 1);
+  }
   // Puntos de conexión con destino: el mismo distintivo que una salida ("→ sala"). Pegados
   // al borde, la pestaña sale por fuera del borde, como las salidas de siempre.
   for (const [i, l] of (r.links ?? []).entries()) {
@@ -659,6 +667,7 @@ function linkFields(o) {
   h += field('se activa', { v: LINK_TRIGGER[o.trigger ?? 'use'], options: Object.values(LINK_TRIGGER) }, (v) => { o.trigger = Object.keys(LINK_TRIGGER).find((k) => LINK_TRIGGER[k] === v); }, 'select');
   h += field('aspecto', { v: LINK_LOOK[o.look ?? 'portal'], options: Object.values(LINK_LOOK) }, (v) => { o.look = Object.keys(LINK_LOOK).find((k) => LINK_LOOK[k] === v); }, 'select');
   h += field('tamaño [ancho, alto] (casillas)', [o.w ?? 1, o.h ?? 2], (v) => { o.w = Math.max(1, v[0]); o.h = Math.max(1, v[1]); });
+  h += field('al llegar aquí, aparece en [x, y] (vacío: sobre el punto)', o.arrive ?? '', (v) => { if (Array.isArray(v) && v.length === 2) o.arrive = v; else delete o.arrive; });
   // Estado de la conexión, en claro.
   const back = o.to && o.toLink && (S.rooms[o.to]?.links ?? []).find((l) => l.id === o.toLink);
   const two = back && back.to === S.id && back.toLink === o.id;

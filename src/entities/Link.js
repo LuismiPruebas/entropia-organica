@@ -7,6 +7,8 @@ import { canvasSprite } from './Puzzles.js';
 //   · to/toLink: adónde lleva. Sin `to` es solo un punto de llegada (para un viaje de ida).
 //   · trigger: 'touch' te lleva al entrar en él; 'use' pide [E] delante.
 //   · look: 'portal' se ve (un orificio de carne que late); 'hidden' no se ve (pasos invisibles).
+//   · arrive: [x, y] opcional: dónde se aparece al llegar a este punto (p. ej. en la repisa
+//     junto a un hueco de techo o de suelo, en vez de dentro del propio hueco).
 // Ida y vuelta = dos puntos que se apuntan entre sí. Se llega con los pies en su fila de abajo.
 export class LinkPoint {
   constructor(game, def) {
@@ -53,5 +55,6 @@ export class LinkPoint {
 // Dónde se aparece al llegar a un punto (pies en su fila de abajo, columna central).
 export function linkArrival(roomDef, linkId) {
   const l = (roomDef?.links ?? []).find((k) => k.id === linkId);
+  if (l?.arrive) return [...l.arrive];
   return l ? [l.x + Math.floor(((l.w ?? 1) - 1) / 2), l.y + (l.h ?? 2) - 1] : null;
 }
