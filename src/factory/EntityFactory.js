@@ -12,6 +12,7 @@ import { Womb } from '../entities/Womb.js';
 import { FluidPool, Mouth, Drip } from '../entities/Hazards.js';
 import { Lamp } from '../entities/Lamp.js';
 import { Hook } from '../entities/Hook.js';
+import { LinkPoint } from '../entities/Link.js';
 import { BloodPool, Artery, HeartValve, Ventricle } from '../entities/Blood.js';
 import { BoneTrap, Wind } from '../entities/Traps.js';
 import { Nodule } from '../entities/Nodule.js';
@@ -119,6 +120,8 @@ export class EntityFactory {
     room.lamps = (def.lamps ?? []).map((d) => new Lamp(g, d, def.biome));
     // Garfios de hueso donde se engancha el Tendón (casillas 'o').
     room.hooks = room.anchors.map((a) => new Hook(g, a));
+    // Puntos de conexión (entities/Link.js): llevan a otro punto, en esta sala o en otra.
+    room.links = (def.links ?? []).map((d) => new LinkPoint(g, d));
     // Nódulos óseos (vuelven a crecer al descansar en un Nodo).
     room.nodules = (def.nodules ?? [])
       .filter(([x, y]) => !g.state.nodules.has(`${id}:${x},${y}`))
@@ -276,6 +279,7 @@ export class EntityFactory {
     for (const n of room.nodules ?? []) if (n.alive) n.dispose();
     for (const l of room.lamps ?? []) l.dispose();
     for (const h of room.hooks ?? []) h.dispose();
+    for (const l of room.links ?? []) l.dispose();
     for (const s of room.sacs ?? []) if (s.alive) s.dispose();
     for (const m of room.photo ?? []) m.view?.dispose();
     for (const p of room.pickups) p.dispose();

@@ -150,6 +150,18 @@ export const KINDS = {
     label: 'Ventrículo (decorado que bombea)', color: '#c02040',
     make: (x, y) => ({ x, y, r: 28 }), box: (o) => { const t = Math.round((o.r ?? 28) / 16); return [o.x - t, o.y - t, t * 2 + 1, t * 2 + 1]; }, move: (o, x, y) => { const t = Math.round((o.r ?? 28) / 16); o.x = x + t; o.y = y + t; }, text: () => 'ventrículo',
   },
+  // Punto de conexión (entities/Link.js): lleva a otro punto de cualquier sala, o es
+  // solo un punto de llegada (sin destino). Ida y vuelta: dos puntos que se apuntan.
+  links: {
+    label: 'Punto de conexión (lleva a otro punto)', color: '#40e0ff',
+    make: (x, y, room) => {
+      const used = new Set((room.links ?? []).map((l) => l.id));
+      let n = 1; while (used.has('p' + n)) n++;
+      return { id: 'p' + n, x, y: y - 1, w: 1, h: 2, to: '', toLink: '', trigger: 'use', look: 'portal' };
+    },
+    box: (o) => [o.x, o.y, o.w ?? 1, o.h ?? 2], move: (o, x, y) => { o.x = x; o.y = y; },
+    text: (o) => (o.to ? `${o.id} → ${o.to}${o.toLink ? '·' + o.toLink : ''}` : `${o.id} (llegada)`),
+  },
   hints: {
     label: 'Pista (texto)', color: '#a0a0ff',
     make: (x, y) => ({ x, y, r: 3, text: 'Algo late aquí...' }), box: (o) => [o.x, o.y, 1, 1], move: (o, x, y) => { o.x = x; o.y = y; }, text: () => 'pista',
@@ -165,4 +177,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'blood', 'arteries', 'heartValves', 'ventricles', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];

@@ -23,6 +23,7 @@ import { MUTATIONS, FRAGMENTS, LINES } from './data/mutations.js';
 import { BIOMES } from './data/biomes.js';
 import { LEVELS } from './data/levels.js';
 import { ITEMS } from './state/State.js';
+import { linkArrival } from './entities/Link.js';
 
 const CONE_HALF = Math.PI / 6;
 // Alcance del haz del ojo: corto sin mutar; la línea del Ojo lo alarga (mod lightRange).
@@ -206,6 +207,7 @@ export class Game {
     // Con varias salidas en el mismo lado, `at` indica el tramo (filas o columnas) de cada una.
     const along = Math.floor((side === 'left' || side === 'right' ? p.cy : p.cx) / TILE);
     const exit = this.room.def.exits.find((e) => e.side === side && (!e.at || (along >= e.at[0] && along <= e.at[1])));
+    if (exit?.toLink) return this.#travel(exit.to, exit.toLink, exit.spawn);
     if (!exit) {
       p.x = Math.max(0, Math.min(w.pixelW - p.w, p.x));
       p.y = Math.max(-p.h / 2, Math.min(w.pixelH - p.h, p.y));
@@ -445,6 +447,18 @@ export class Game {
       }
     }
 
+    // Puntos de conexión: al tocarlos, o con [E] delante, llevan a su destino. Al llegar a
+    // un punto no se dispara hasta salir de él (si no, el de vuelta te devolvería).
+    const link = (this.room.links ?? []).find((l) => l.def.to && overlap(p, l.rect));
+    if (this.linkLock && !(this.room.links ?? []).some((l) => l.def.id === this.linkLock && overlap(p, l.rect))) this.linkLock = null;
+    // (el bloqueo solo frena los de tocar: los de [E] nunca se disparan solos)
+    const useLink = link && (link.def.trigger ?? 'touch') === 'use';
+    if (link && (useLink || link.def.id !== this.linkLock)) {
+      if (!useLink) return this.#travel(link.def.to, link.def.toLink, link.def.spawn);
+      const key = this.pad.active ? '[TRIANGULO/Y]' : this.touch.active ? '[USAR]' : '[E]';
+      this.hud.setPrompt(`${key} ATRAVESAR`);
+      if (input.hit('KeyE')) return this.#travel(link.def.to, link.def.toLink, link.def.spawn);
+    }
     const node = this.room.nodes.find((n) => overlap(p, n));
     if (node) {
       const cp = st.checkpoint;
@@ -455,7 +469,7 @@ export class Game {
       const key = this.pad.active ? '[TRIANGULO/Y]' : this.touch.active ? '[USAR]' : '[E]';
       this.hud.setPrompt(st.dna.size ? `${key} ASIMILAR EL ADN EN EL UTERO` : `${key} USAR NODO SEGURO`);
       if (input.hit('KeyE')) return this.openNode();
-    } else {
+    } else if (!(link && (useLink || link.def.id !== this.linkLock))) {
       this.hud.setPrompt('');
     }
 
@@ -498,6 +512,7 @@ export class Game {
     for (const n of this.room.nodules) n.update(dt);
     for (const l of this.room.lamps ?? []) l.update(dt);
     for (const h of this.room.hooks ?? []) h.update(dt);
+    for (const l of this.room.links ?? []) l.update(dt);
     for (const s of this.room.sacs) s.update(dt);
     this.room.sacs = this.room.sacs.filter((s) => s.alive);
     this.room.nodules = this.room.nodules.filter((n) => n.alive);
@@ -776,6 +791,16 @@ export class Game {
     const k = snap ? 1 : Math.min(1, dt * 8);
     cam.x += (tx - cam.x) * k;
     cam.y += (ty - cam.y) * k;
+  }
+
+  // Viaje a un punto de conexión (o a unas coordenadas): la misma transición que una salida.
+  #travel(to, toLink, spawn) {
+    if (!LEVELS[to]) return;
+    const at = (toLink && linkArrival(LEVELS[to], toLink)) ?? spawn ?? START.spawn;
+    this.linkLock = toLink ?? null;
+    this.mode = 'transition';
+    this.transition = { t: 0, exit: { to, spawn: at }, loaded: false };
+    this.audio.play('womb', this.player);
   }
 
   #updateTransition(dt) {

@@ -404,6 +404,17 @@ function draw() {
   // Inicio del juego y punto de prueba.
   if (S.start.room === S.id) mark(S.start.spawn, '#3aff8a', 'INICIO');
   if (S.testSpawn) mark(S.testSpawn, '#ff8a3a', 'PRUEBA');
+  // Puntos de conexión: una línea discontinua hasta su destino.
+  for (const l of r.links ?? []) {
+    if (!l.to || !l.toLink) continue;
+    const t = S.rooms[l.to], d = (t?.links ?? []).find((k) => k.id === l.toLink);
+    if (!t?.map || !d || !r.map) continue;
+    const ax = (l.x + (l.w ?? 1) / 2) * z, ay = (l.y + (l.h ?? 2) / 2) * z;
+    const bx = ((t.map[0] - r.map[0]) * CELL[0] + d.x + (d.w ?? 1) / 2) * z, by = ((t.map[1] - r.map[1]) * CELL[1] + d.y + (d.h ?? 2) / 2) * z;
+    g.strokeStyle = '#40e0ff'; g.lineWidth = 2; g.setLineDash([6, 4]);
+    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#40e0ff'; g.beginPath(); g.arc(bx, by, 4, 0, Math.PI * 2); g.fill();
+  }
   drawPlacing(z, r);
   // Rectángulo en curso.
   if (S.drag?.rect) {
@@ -625,6 +636,72 @@ function field(label, value, onset, type) {
   });
   return `<label>${label}${input}</label>`;
 }
+// ---------------------------------------------------------------- puntos de conexión
+const LINK_TRIGGER = { use: 'con [E] delante (puerta, portal)', touch: 'al tocarlo (paso directo)' };
+const LINK_LOOK = { portal: 'portal de carne (se ve)', hidden: 'invisible' };
+function linkFields(o) {
+  const rooms = ['', ...Object.keys(S.rooms)];
+  const targets = ['', ...(S.rooms[o.to]?.links ?? []).filter((l) => !(o.to === S.id && l === o)).map((l) => l.id)];
+  let h = field('nombre del punto', o.id, (v) => renameLink(o, v));
+  h += field('lleva a la sala (vacío: solo punto de llegada)', { v: o.to ?? '', options: rooms }, (v) => { o.to = v; if (!v || !(S.rooms[v]?.links ?? []).some((l) => l.id === o.toLink)) o.toLink = ''; renderInspector(); }, 'select');
+  if (o.to) h += field('punto de destino', { v: o.toLink ?? '', options: targets }, (v) => { o.toLink = v; renderInspector(); }, 'select');
+  if (o.to && !targets.slice(1).length) h += `<p class="dim">La sala ${o.to} no tiene puntos: ábrela y pon uno (o pulsa "Crear el punto de llegada").</p>`;
+  h += field('se activa', { v: LINK_TRIGGER[o.trigger ?? 'use'], options: Object.values(LINK_TRIGGER) }, (v) => { o.trigger = Object.keys(LINK_TRIGGER).find((k) => LINK_TRIGGER[k] === v); }, 'select');
+  h += field('aspecto', { v: LINK_LOOK[o.look ?? 'portal'], options: Object.values(LINK_LOOK) }, (v) => { o.look = Object.keys(LINK_LOOK).find((k) => LINK_LOOK[k] === v); }, 'select');
+  h += field('tamaño [ancho, alto] (casillas)', [o.w ?? 1, o.h ?? 2], (v) => { o.w = Math.max(1, v[0]); o.h = Math.max(1, v[1]); });
+  // Estado de la conexión, en claro.
+  const back = o.to && o.toLink && (S.rooms[o.to]?.links ?? []).find((l) => l.id === o.toLink);
+  const two = back && back.to === S.id && back.toLink === o.id;
+  h += `<p style="color:${!o.to ? '#aaa' : two ? '#3aff8a' : '#ffd23f'};font-size:11px">${!o.to ? 'Solo punto de llegada (no lleva a ningún sitio).' : !o.toLink ? `Lleva a la sala ${o.to} (sin punto: se aparece en su inicio).` : two ? `Ida y vuelta con ${o.to} · ${o.toLink}.` : `Solo de ida: ${o.to} · ${o.toLink} no vuelve aquí.`}</p>`;
+  h += '<div class="row">';
+  if (o.to && !o.toLink) h += '<button id="lk-mk">Crear el punto de llegada allí</button>';
+  if (back && !two) h += '<button id="lk-back">Crear la vuelta (ida y vuelta)</button>';
+  if (two) h += '<button id="lk-oneway">Dejar solo de ida</button>';
+  if (o.to) h += '<button id="lk-go">Ir al destino</button>';
+  return h + '</div>';
+}
+function wireLinkButtons(o) {
+  const r = room(), here = S.id;
+  if ($('lk-back')) $('lk-back').onclick = () => {
+    const t = S.rooms[o.to].links.find((l) => l.id === o.toLink);
+    snapshot(); t.to = here; t.toLink = o.id; S.dirty.add(o.to); touch(); renderInspector();
+  };
+  if ($('lk-oneway')) $('lk-oneway').onclick = () => {
+    const t = S.rooms[o.to].links.find((l) => l.id === o.toLink);
+    snapshot(); t.to = ''; t.toLink = ''; S.dirty.add(o.to); touch(); renderInspector();
+  };
+  if ($('lk-mk')) $('lk-mk').onclick = () => {
+    // Un punto de llegada en la otra sala, sobre el primer suelo libre que encuentre.
+    const t = S.rooms[o.to], used = new Set((t.links ?? []).map((l) => l.id));
+    let n = 1; while (used.has('p' + n)) n++;
+    let at = [1, 1];
+    for (let y = 1; y < t.grid.length - 1 && at[1] === 1; y++) for (let x = 1; x < t.grid[0].length - 1; x++) {
+      if (!SOLID.has(t.grid[y][x]) && !SOLID.has(t.grid[y - 1][x]) && SOLID.has(t.grid[y + 1][x])) { at = [x, y]; break; }
+    }
+    snapshot();
+    (t.links ??= []).push({ id: 'p' + n, x: at[0], y: at[1] - 1, w: 1, h: 2, to: '', toLink: '', trigger: 'use', look: 'portal' });
+    o.toLink = 'p' + n; S.dirty.add(o.to); touch(); renderInspector();
+    $('msg').textContent = `Punto ${'p' + n} creado en ${o.to}. Pulsa "Ir al destino" para colocarlo donde quieras.`;
+  };
+  if ($('lk-go')) $('lk-go').onclick = () => {
+    const to = o.to, id = o.toLink;
+    openRoom(to);
+    const i = (room().links ?? []).findIndex((l) => l.id === id);
+    if (i >= 0) { S.sel = { kind: 'links', index: i }; S.tool = 'select'; renderInspector(); draw(); }
+  };
+}
+// Cambiar el nombre de un punto también cambia los que llegaban a él.
+function renameLink(o, v) {
+  v = String(v).trim();
+  if (!v || v === o.id) return;
+  if ((room().links ?? []).some((l) => l !== o && l.id === v)) { alert('Ya hay un punto con ese nombre en esta sala.'); return; }
+  for (const [id, rr] of Object.entries(S.rooms)) {
+    for (const l of rr.links ?? []) if (l.to === S.id && l.toLink === o.id) { l.toLink = v; S.dirty.add(id); }
+    for (const ex of rr.exits ?? []) if (ex.to === S.id && ex.toLink === o.id) { ex.toLink = v; S.dirty.add(id); }
+  }
+  o.id = v;
+}
+
 function renderInspector() {
   const box = $('inspector');
   const o = selected();
@@ -636,16 +713,20 @@ function renderInspector() {
   // Luminarias: el tercer valor es el largo del pingajo en píxeles.
   if (kind === 'lamps') html += field('largo (px)', o[2] ?? 10, (v) => { o[2] = Math.max(2, Math.round(v)); }, 'number');
   if (kind === 'nodules') html += field('tipo', { v: o[2] === 'luz' ? 'luz (suelta célula)' : 'óseo (suelta hueso)', options: ['óseo (suelta hueso)', 'luz (suelta célula)'] }, (nv) => { if (nv.startsWith('luz')) o[2] = 'luz'; else o.length = 2; }, 'select');
+  else if (kind === 'links') html += linkFields(o);
   else for (const [k, v] of Object.entries(o)) {
+    if (kind === 'exits' && k === 'toLink') continue;
     if (kind === 'enemies' && k === 'type') html += field('tipo', { v, options: ENEMY_TYPES }, (nv) => { o.type = nv; }, 'select');
     else if (kind === 'exits' && k === 'to') html += field('lleva a', { v, options: Object.keys(S.rooms) }, (nv) => { o.to = nv; }, 'select');
     else if (kind === 'exits' && k === 'side') html += field('lado', { v, options: ['left', 'right', 'top', 'bottom'] }, (nv) => { o.side = nv; }, 'select');
     else html += field(k, v, (nv) => { o[k] = nv; });
   }
+  if (kind === 'exits') html += field('llega al punto (opcional: en vez de "spawn")', { v: o.toLink ?? '', options: ['', ...(S.rooms[o.to]?.links ?? []).map((l) => l.id)] }, (nv) => { if (nv) o.toLink = nv; else delete o.toLink; }, 'select');
   if (kind === 'enemies') html += `<p class="dim">${ENEMIES[o.type]?.name ?? ''} · ${ENEMIES[o.type]?.w}x${ENEMIES[o.type]?.h}px · ${ENEMIES[o.type]?.behavior}</p>`;
   if (kind === 'pods') html += field('abre la compuerta', room().pods.opens, (v) => { room().pods.opens = v; }) + field('orden (índices)', room().pods.order, (v) => { room().pods.order = v; });
   html += `<div class="row"><button id="del">Eliminar</button><button id="dup">Duplicar</button></div>`;
   box.innerHTML = html;
+  if (kind === 'links') wireLinkButtons(o);
   $('del').onclick = deleteSelected;
   $('dup').onclick = () => {
     if (kind === 'pods') return;
@@ -930,6 +1011,13 @@ function validate() {
     if (r.pods && !gates.has(r.pods.opens)) add(id, `sacos en orden que abren una compuerta inexistente (${r.pods.opens})`);
     for (const v of [...(r.valves ?? []), ...(r.floats ?? [])]) if (!r.fluids?.[v.pool]) add(id, `válvula o balsa ligada a la cubeta ${v.pool}, que no existe`);
   }
+  for (const [id, r] of Object.entries(S.rooms)) {
+    for (const l of r.links ?? []) {
+      if (l.to && !S.rooms[l.to]) add(id, `el punto ${l.id} lleva a una sala que no existe (${l.to})`);
+      else if (l.to && l.toLink && !(S.rooms[l.to].links ?? []).some((k) => k.id === l.toLink)) add(id, `el punto ${l.id} lleva a ${l.to}·${l.toLink}, que no existe`);
+    }
+    for (const ex of r.exits ?? []) if (ex.toLink && !(S.rooms[ex.to]?.links ?? []).some((k) => k.id === ex.toLink)) add(id, `la salida ${ex.side} llega a ${ex.to}·${ex.toLink}, que no existe`);
+  }
   if (!S.rooms[S.start.room]) add('INICIO', 'la sala de inicio no existe');
   $('problems').innerHTML = out.length ? out.map(([rid, m]) => `<button class="pb" data-id="${rid}">${rid}: ${m}</button>`).join('') : '<p class="ok">Sin problemas.</p>';
   for (const b of document.querySelectorAll('#problems .pb')) b.onclick = () => S.rooms[b.dataset.id] && openRoom(b.dataset.id);
@@ -1083,4 +1171,4 @@ openRoom(S.start.room);
 validate();
 
 // Depuración desde la consola (y pruebas automáticas): el estado y algunas acciones.
-window.__editor = { S, looseEnds, connectLoose, createRoomAt, openRoom };
+window.__editor = { S, looseEnds, connectLoose, createRoomAt, openRoom, renderInspector, draw };

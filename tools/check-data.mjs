@@ -50,7 +50,7 @@ for (const [id, lv] of Object.entries(LEVELS)) {
   for (const [x, y] of lv.nodules ?? []) {
     if (SOLID.has(cell(id, x, y)) || !SOLID.has(cell(id, x, y + 1))) fail(`nódulo en [${x},${y}] sin hueco o sin suelo`);
   }
-  for (const ex of lv.exits) {
+  for (const ex of lv.exits ?? []) {
     if (!LEVELS[ex.to]) { fail(`salida hacia sala inexistente ${ex.to}`); continue; }
     const [x, y] = ex.spawn;
     if (SOLID.has(cell(ex.to, x, y))) fail(`spawn de ${ex.side}->${ex.to} [${x},${y}] es sólido`);
@@ -78,6 +78,13 @@ for (const [id, lv] of Object.entries(LEVELS)) {
     // La sala de destino debe tener una salida de vuelta.
     if (!LEVELS[ex.to].exits.some((b) => b.to === id)) fail(`${ex.to} no tiene salida de vuelta a ${id}`);
   }
+}
+for (const [id, lv] of Object.entries(LEVELS)) {
+  for (const l of lv.links ?? []) {
+    if (l.to && !LEVELS[l.to]) fail(`${id}: el punto ${l.id} lleva a una sala que no existe (${l.to})`);
+    else if (l.to && l.toLink && !(LEVELS[l.to].links ?? []).some((k) => k.id === l.toLink)) fail(`${id}: el punto ${l.id} lleva a ${l.to}·${l.toLink}, que no existe`);
+  }
+  for (const ex of lv.exits ?? []) if (ex.toLink && !(LEVELS[ex.to]?.links ?? []).some((k) => k.id === ex.toLink)) fail(`${id}: la salida ${ex.side} llega a ${ex.to}·${ex.toLink}, que no existe`);
 }
 if (SOLID.has(cell(START.room, ...START.spawn))) fail('el spawn inicial es sólido');
 if (SOLID.has(cell(START.room, START.spawn[0], START.spawn[1] - 1))) fail('el spawn inicial no deja sitio a la cabeza');
