@@ -43,7 +43,6 @@ export const LEVELS = {
   A: {
     name: 'Conducto Nervioso',
     biome: 'nervioso',
-    lamps: [[40, 2, 13], [18, 4, 13]], // luminarias colgantes
     map: [0, 2, 3, 1],
     grid: [
       '###########################################..###',
@@ -66,14 +65,15 @@ export const LEVELS = {
       { type: 'ojo', x: 32, y: 3 },
     ],
     nodules: [[12, 10], [29, 11, 'luz']],
-    exits: [
-      { side: 'top', at: [43, 44], to: 'A2', spawn: [41, 39] },
+    links: [
+      { id: 'p1', x: 43, y: 0, w: 2, h: 2, to: 'A2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [44, 4] },
     ],
     hints: [
       { x: 3, y: 11, r: 3, text: 'Una cápsula médica abandonada, reventada desde dentro. Lo que llevaba se arrastró más arriba, hacia la médula.' },
       { x: 44, y: 4, r: 2, text: 'ADN asimilable: llévalo al útero del Nodo y muta.' },
       { x: 43, y: 3, r: 2, text: 'Una grieta en el techo. Corriente de aire... desde arriba.' },
     ],
+    lamps: [[40, 2, 13], [18, 4, 13]],
   },
   A2: {
     name: 'Ganglio Basal',
@@ -104,7 +104,7 @@ export const LEVELS = {
       '##########................######################',
       '##########...................###################',
       '...................................#############',
-      '................B...................############',
+      '#...............B...................############',
       '######################..............############',
       '###################.................############',
       '#############.........................##########',
@@ -131,9 +131,7 @@ export const LEVELS = {
     nodules: [[14, 31], [30, 20], [30, 5], [25, 39, 'luz'], [16, 16, 'luz'], [20, 24]],
     links: [
       { id: 'p1', x: 0, y: 23, w: 1, h: 2, to: 'A3', toLink: 'p1', trigger: 'touch', look: 'hidden' },
-    ],
-    exits: [
-      { side: 'bottom', at: [43, 44], to: 'A', spawn: [44, 4] },
+      { id: 'p2', x: 43, y: 40, w: 2, h: 2, to: 'A', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [41, 39] },
     ],
     hints: [
       { x: 6, y: 38, r: 3, text: 'Restos de la cápsula médica: dentro late ADN. Cógelo y asimílalo en el útero de un Nodo (E): tu brazo aprenderá a disparar.' },
@@ -170,7 +168,7 @@ export const LEVELS = {
       '################################',
     ],
     links: [
-      { id: 'p1', x: 31, y: 9, w: 1, h: 2, to: 'A2', toLink: 'p1', trigger: 'touch', look: 'hidden' },
+      { id: 'p1', x: 31, y: 9, w: 1, h: 2, to: '', toLink: '', trigger: 'touch', look: 'hidden' },
     ],
   },
 };
