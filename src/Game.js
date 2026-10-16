@@ -454,10 +454,10 @@ export class Game {
     // (el bloqueo solo frena los de tocar: los de [E] nunca se disparan solos)
     const useLink = link && (link.def.trigger ?? 'touch') === 'use';
     if (link && (useLink || link.def.id !== this.linkLock)) {
-      if (!useLink) return this.#travel(link.def.to, link.def.toLink, link.def.spawn);
+      if (!useLink) return this.#travel(link.def.to, link.def.toLink, link.def.spawn, link.visible);
       const key = this.pad.active ? '[TRIANGULO/Y]' : this.touch.active ? '[USAR]' : '[E]';
       this.hud.setPrompt(`${key} ATRAVESAR`);
-      if (input.hit('KeyE')) return this.#travel(link.def.to, link.def.toLink, link.def.spawn);
+      if (input.hit('KeyE')) return this.#travel(link.def.to, link.def.toLink, link.def.spawn, link.visible);
     }
     const node = this.room.nodes.find((n) => overlap(p, n));
     if (node) {
@@ -794,13 +794,13 @@ export class Game {
   }
 
   // Viaje a un punto de conexión (o a unas coordenadas): la misma transición que una salida.
-  #travel(to, toLink, spawn) {
+  #travel(to, toLink, spawn, portal = false) {
     if (!LEVELS[to]) return;
     const at = (toLink && linkArrival(LEVELS[to], toLink)) ?? spawn ?? START.spawn;
     this.linkLock = toLink ?? null;
     this.mode = 'transition';
     this.transition = { t: 0, exit: { to, spawn: at }, loaded: false };
-    this.audio.play('womb', this.player);
+    if (portal) this.audio.play('womb', this.player); // cruzar un hueco entre salas no suena: un portal sí
   }
 
   #updateTransition(dt) {

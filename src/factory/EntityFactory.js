@@ -12,6 +12,7 @@ import { Womb } from '../entities/Womb.js';
 import { FluidPool, Mouth, Drip } from '../entities/Hazards.js';
 import { Lamp } from '../entities/Lamp.js';
 import { Hook } from '../entities/Hook.js';
+import { roomConnections } from '../data/connections.js';
 import { LinkPoint } from '../entities/Link.js';
 import { BloodPool, Artery, HeartValve, Ventricle } from '../entities/Blood.js';
 import { BoneTrap, Wind } from '../entities/Traps.js';
@@ -32,7 +33,7 @@ export function roomTier(id) {
   const depth = { [START.room]: 0 }, queue = [START.room];
   while (queue.length) {
     const r = queue.shift();
-    for (const ex of LEVELS[r]?.exits ?? []) if (depth[ex.to] === undefined) { depth[ex.to] = depth[r] + 1; queue.push(ex.to); }
+    for (const ex of roomConnections(LEVELS[r])) if (depth[ex.to] === undefined) { depth[ex.to] = depth[r] + 1; queue.push(ex.to); }
   }
   return Math.min(1, (depth[id] ?? TIER_DEPTH) / TIER_DEPTH);
 }

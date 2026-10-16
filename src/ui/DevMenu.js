@@ -1,5 +1,6 @@
 import { MUTATIONS, LINES, ROMAN, FRAGMENTS } from '../data/mutations.js';
 import { LEVELS, START, WORLDS, WORLD_ID, setWorld } from '../data/levels.js';
+import { roomConnections, connectionArrival } from '../data/connections.js';
 import { BIOMES } from '../data/biomes.js';
 import { PICKUPS } from '../entities/Pickup.js';
 import { MenuNav } from './MenuNav.js';
@@ -18,7 +19,7 @@ const ITEMS = [
 function roomSpawns() {
   const spawns = { [START.room]: START.spawn };
   for (const lv of Object.values(LEVELS)) {
-    for (const ex of lv.exits) spawns[ex.to] ??= ex.spawn;
+    for (const c of roomConnections(lv)) spawns[c.to] ??= connectionArrival(LEVELS, c);
   }
   return spawns;
 }

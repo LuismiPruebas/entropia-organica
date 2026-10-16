@@ -790,6 +790,17 @@ function spotOk(r, x, y, w = PW, h = PH) {
   for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const c = r.grid[yy][xx]; if (SOLID.has(c) || TILE_BY_CHAR[c]?.slope) return false; }
   return true;
 }
+// Un punto ya puesto vale si está dentro de la sala y tiene algún paso (libre, o que se abre:
+// membrana, esfínter, fotosensible). Al crear uno, spotOk exige el hueco limpio del personaje.
+function spotUsable(r, l) {
+  let open = false;
+  for (let y = l.y; y < l.y + (l.h ?? PH); y++) for (let x = l.x; x < l.x + (l.w ?? PW); x++) {
+    const c = r.grid[y]?.[x];
+    if (c === undefined) return false;
+    if (!SOLID.has(c) || 'XYf'.includes(c)) open = true;
+  }
+  return open;
+}
 // Los que llegan a puntos de esta sala desde otras sin vuelta: [fromRoom, fromLink, toLink].
 function incoming(roomId) {
   const out = [];
@@ -1139,7 +1150,7 @@ function validate() {
   for (const [id, r] of Object.entries(S.rooms)) {
     for (const l of r.links ?? []) {
       if (!l.to && !arrivals(id, l)) add(id, `el punto ${l.id} no lleva a ningún sitio (sin destino): elige su destino en Conexiones o bórralo`);
-      if (!spotOk(r, l.x, l.y, l.w ?? PW, l.h ?? PH)) add(id, `el punto ${l.id} está fuera de la sala o sobre muro en [${l.x},${l.y}]: muévelo o bórralo`);
+      if (!spotUsable(r, l)) add(id, `el punto ${l.id} está fuera de la sala o tapado por muro en [${l.x},${l.y}]: muévelo o bórralo`);
       if (l.to && !S.rooms[l.to]) add(id, `el punto ${l.id} lleva a una sala que no existe (${l.to})`);
       else if (l.to && l.toLink && !(S.rooms[l.to].links ?? []).some((k) => k.id === l.toLink)) add(id, `el punto ${l.id} lleva a ${l.to}·${l.toLink}, que no existe`);
     }

@@ -1,4 +1,5 @@
 import { LEVELS } from '../data/levels.js';
+import { roomConnections } from '../data/connections.js';
 import { BIOMES } from '../data/biomes.js';
 import { DNA_CHARS } from '../data/mutations.js';
 import { caps } from './Hud.js';
@@ -41,7 +42,7 @@ export class MapView {
     const visited = new Set([...st.visited, ...st.mapRevealed]);
     const adjacent = new Set();
     if (st.has('map2')) {
-      for (const id of visited) for (const ex of LEVELS[id].exits) if (!visited.has(ex.to)) adjacent.add(ex.to);
+      for (const id of visited) for (const ex of roomConnections(LEVELS[id])) if (!visited.has(ex.to)) adjacent.add(ex.to);
     }
     return { visited, adjacent };
   }
@@ -81,9 +82,18 @@ export class MapView {
     // Conexiones entre salas conocidas.
     g.fillStyle = '#6a6a7a';
     for (const id of visited) {
-      for (const ex of LEVELS[id].exits) {
+      for (const ex of roomConnections(LEVELS[id])) {
         if (!visited.has(ex.to) && !adjacent.has(ex.to)) continue;
         const lv = LEVELS[id], [x, y, w, h] = rect(lv);
+        if (ex.x !== undefined && !ex.side) {
+          // Punto de conexión: la marca en su sitio (fuera del borde si está pegado a él).
+          const W0 = lv.grid[0].length, H0 = lv.grid.length;
+          const fx = (ex.x + ex.w / 2) / W0, fy = (ex.y + ex.h / 2) / H0;
+          const px = ex.x === 0 ? x - 2 : ex.x + ex.w >= W0 ? x + w : x + w * fx - 1;
+          const py = ex.y === 0 ? y - 2 : ex.y + ex.h >= H0 ? y + h : y + h * fy - 1;
+          g.fillRect(px, py, 2, 2);
+          continue;
+        }
         const horiz = ex.side === 'left' || ex.side === 'right';
         const at = ex.at ? Math.min(1, (ex.at[0] + ex.at[1]) / 2 / (horiz ? lv.grid.length : lv.grid[0].length)) : 0.5;
         if (ex.side === 'right') g.fillRect(x + w, y + h * at - 1, 2, 2);

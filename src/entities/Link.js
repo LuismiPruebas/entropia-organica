@@ -52,9 +52,5 @@ export class LinkPoint {
   dispose() { this.spr?.dispose(); }
 }
 
-// Dónde se aparece al llegar a un punto (pies en su fila de abajo, columna central).
-export function linkArrival(roomDef, linkId) {
-  const l = (roomDef?.links ?? []).find((k) => k.id === linkId);
-  if (l?.arrive) return [...l.arrive];
-  return l ? [l.x + Math.floor(((l.w ?? 1) - 1) / 2), l.y + (l.h ?? 2) - 1] : null;
-}
+// Dónde se aparece al llegar a un punto: data/connections.js.
+export { linkArrival } from '../data/connections.js';

@@ -44,7 +44,6 @@ export const LEVELS = {
   A: {
     name: 'Conducto Nervioso',
     biome: 'nervioso',
-    lamps: [[40, 2, 13], [18, 4, 13]], // luminarias colgantes
     map: [0, 2, 3, 1],
     grid: [
       '###########################################..###',
@@ -67,14 +66,15 @@ export const LEVELS = {
       { type: 'ojo', x: 32, y: 3 },
     ],
     nodules: [[12, 10], [29, 11, 'luz']],
-    exits: [
-      { side: 'top', at: [43, 44], to: 'A2', spawn: [41, 39] },
+    links: [
+      { id: 'p1', x: 43, y: 0, w: 2, h: 2, to: 'A2', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [44, 4] },
     ],
     hints: [
       { x: 3, y: 11, r: 3, text: 'Una cápsula médica abandonada, reventada desde dentro. Lo que llevaba se arrastró más arriba, hacia la médula.' },
       { x: 44, y: 4, r: 2, text: 'ADN asimilable: llévalo al útero del Nodo y muta.' },
       { x: 43, y: 3, r: 2, text: 'Una grieta en el techo. Corriente de aire... desde arriba.' },
     ],
+    lamps: [[40, 2, 13], [18, 4, 13]],
   },
 
   // Catedral vertical de nervio: se sube en zigzag por lenguas que nacen de las paredes.
@@ -82,7 +82,6 @@ export const LEVELS = {
   A2: {
     name: 'Ganglio Basal',
     biome: 'nervioso',
-    lamps: [[28, 1, 10], [17, 19, 13], [26, 29, 12], [5, 34, 16], [39, 34, 10]], // luminarias colgantes
     map: [0, -1, 3, 3],
     grid: [
       '##################################zz############',
@@ -134,16 +133,17 @@ export const LEVELS = {
       { type: 'enjambre', x: 20, y: 14 },
     ],
     nodules: [[14, 31], [30, 20], [30, 5], [25, 39, 'luz'], [16, 16, 'luz'], [20, 24]],
-    exits: [
-      { side: 'bottom', at: [43, 44], to: 'A', spawn: [44, 4] },
-      { side: 'left', to: 'A3', spawn: [13, 24] },
-      { side: 'top', at: [34, 35], to: 'A6', spawn: [48, 10] },
+    links: [
+      { id: 'p1', x: 43, y: 40, w: 2, h: 2, to: 'A', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [41, 39] },
+      { id: 'p2', x: 0, y: 23, w: 1, h: 2, to: 'A3', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [3, 24] },
+      { id: 'p3', x: 34, y: 0, w: 2, h: 2, to: 'A6', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [33, 5] },
     ],
     hints: [
       { x: 6, y: 38, r: 3, text: 'Restos de la cápsula médica: dentro late ADN. Cógelo y asimílalo en el útero de un Nodo (E): tu brazo aprenderá a disparar.' },
       { x: 20, y: 8, r: 3, text: 'Un ganglio arrancado de algo enorme. Todavía recuerda caminos.' },
       { x: 4, y: 24, r: 2, text: 'Una médula hueca baja hacia la oscuridad.' },
     ],
+    lamps: [[28, 1, 10], [17, 19, 13], [26, 29, 12], [5, 34, 16], [39, 34, 10]],
   },
 
   // La Médula: un canal que serpentea hacia abajo entre vértebras alternas. Abajo, el
@@ -151,7 +151,6 @@ export const LEVELS = {
   A3: {
     name: 'Médula Espinal',
     biome: 'nervioso',
-    lamps: [[6, 15, 12], [11, 30, 16], [4, 43, 14], [2, 54, 11]], // luminarias colgantes
     map: [-1, -1, 1, 5],
     grid: [
       '#######ff#######',
@@ -231,19 +230,20 @@ export const LEVELS = {
     ],
     nodules: [[3, 63], [2, 12], [3, 49, 'luz'], [12, 8]],
     hidden: [[4, 31]],
-    exits: [
-      { side: 'right', at: [23, 24], to: 'A2', spawn: [3, 24] },
-      { side: 'left', at: [37, 38], to: 'A5', spawn: [29, 10] },
-      { side: 'left', at: [11, 12], to: 'O1', spawn: [30, 12] },
-      { side: 'top', at: [7, 8], to: 'A6', spawn: [5, 10] },
-      { side: 'right', at: [66, 67], to: 'A4', spawn: [2, 11] },
-      { side: 'bottom', at: [1, 2], to: 'A7', spawn: [33, 4] },
+    links: [
+      { id: 'p1', x: 15, y: 23, w: 1, h: 2, to: 'A2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [13, 24] },
+      { id: 'p2', x: 0, y: 37, w: 1, h: 2, to: 'A5', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [2, 38] },
+      { id: 'p3', x: 0, y: 11, w: 1, h: 2, to: 'O1', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [1, 12] },
+      { id: 'p4', x: 7, y: 0, w: 2, h: 2, to: 'A6', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [3, 3] },
+      { id: 'p5', x: 15, y: 66, w: 1, h: 2, to: 'A4', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [13, 67] },
+      { id: 'p6', x: 1, y: 68, w: 2, h: 2, to: 'A7', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [3, 67] },
     ],
     hints: [
       { x: 3, y: 38, r: 2, text: 'Un esfínter sellado en la pared. Algo tira de él desde el otro lado.' },
       { x: 9, y: 66, r: 3, text: 'Un útero junto a la base de la médula. Más allá se oye un zumbido eléctrico.' },
       { x: 5, y: 66, r: 2, text: 'Una membrana agrietada tapa un rincón. Corre aire frío hacia abajo.' },
     ],
+    lamps: [[6, 15, 12], [11, 30, 16], [4, 43, 14], [2, 54, 11]],
   },
 
   // Arena del Ganglio Madre en dos alturas: el suelo de la caverna y un anillo de
@@ -252,7 +252,6 @@ export const LEVELS = {
   A4: {
     name: 'Plexo Sacro',
     biome: 'nervioso',
-    lamps: [[24, 13, 16], [4, 14, 13], [38, 19, 12], [20, 2, 15]], // luminarias colgantes
     map: [0, 3, 3, 2],
     grid: [
       '################################################',
@@ -285,21 +284,22 @@ export const LEVELS = {
       '################################################',
     ],
     sacs: [
-      { x: 14, y: 20, item: 'B', until: 'gangliomadre' }, // era un fragmento óseo: aquí solo se ganan las piernas
+      { x: 14, y: 20, item: 'B', until: 'gangliomadre' },
     ],
     enemies: [
       { type: 'gangliomadre', x: 18, y: 16 },
       { type: 'neurona', x: 32, y: 7 },
     ],
     nodules: [[20, 25], [8, 25], [15, 11, 'luz'], [35, 17, 'luz'], [6, 18]],
-    exits: [
-      { side: 'left', to: 'A3', spawn: [13, 67] },
-      { side: 'right', to: 'B2', spawn: [5, 11] },
+    links: [
+      { id: 'p1', x: 0, y: 10, w: 1, h: 2, to: 'A3', toLink: 'p5', trigger: 'touch', look: 'hidden', arrive: [2, 11] },
+      { id: 'p2', x: 47, y: 24, w: 1, h: 2, to: 'B2', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [44, 25] },
     ],
     hints: [
       { x: 34, y: 24, r: 3, text: 'Otra membrana agrietada. Detrás se oye respirar.' },
       { x: 24, y: 10, r: 2, text: 'Poros pálidos en esta estalactita...' },
     ],
+    lamps: [[24, 13, 16], [4, 14, 13], [38, 19, 12], [20, 2, 15]],
   },
 
   // Cavidad secreta tras el sello lateral de la Médula: cortina fotosensible, una sima sin
@@ -347,9 +347,9 @@ export const LEVELS = {
     ],
     nodules: [[20, 10], [5, 10]],
     hidden: [[1, 10], [11, 7]],
-    exits: [
-      { side: 'right', to: 'A3', spawn: [2, 38] },
-      { side: 'left', at: [9, 10], to: 'O6', spawn: [78, 11] },
+    links: [
+      { id: 'p1', x: 31, y: 9, w: 1, h: 2, to: 'A3', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [29, 10] },
+      { id: 'p2', x: 0, y: 9, w: 1, h: 2, to: 'O6', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [1, 10] },
     ],
     hints: [
       { x: 25, y: 10, r: 3, text: 'El tejido de la pared se estremece con la luz.' },
@@ -365,7 +365,6 @@ export const LEVELS = {
   A6: {
     name: 'Fibra Nerviosa',
     biome: 'nervioso',
-    lamps: [[7, 3, 11], [41, 3, 15], [58, 3, 14], [92, 3, 8]], // luminarias colgantes
     secret: true,
     map: [-1, -2, 6, 1],
     grid: [
@@ -392,10 +391,10 @@ export const LEVELS = {
     ],
     nodules: [[4, 10], [40, 10], [74, 8], [93, 10], [60, 10, 'luz'], [21, 8, 'luz'], [54, 5]],
     hidden: [[14, 3], [30, 5]],
-    exits: [
-      { side: 'bottom', at: [7, 8], to: 'A3', spawn: [3, 3] },
-      { side: 'bottom', at: [50, 51], to: 'A2', spawn: [33, 5] },
-      { side: 'bottom', at: [88, 91], to: 'B5', spawn: [6, 11] },
+    links: [
+      { id: 'p1', x: 7, y: 12, w: 2, h: 2, to: 'A3', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [5, 10] },
+      { id: 'p2', x: 50, y: 12, w: 2, h: 2, to: 'A2', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [48, 10] },
+      { id: 'p3', x: 88, y: 12, w: 4, h: 2, to: 'B5', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [86, 10] },
     ],
     hints: [
       { x: 8, y: 8, r: 4, text: 'Un nervio hueco, envuelto en mielina. Corre en las dos direcciones.' },
@@ -403,6 +402,7 @@ export const LEVELS = {
       { x: 61, y: 8, r: 2, text: 'Un esfínter sellado. Más allá, la fibra sigue bajando.' },
       { x: 87, y: 10, r: 3, text: 'La sima cae hacia el aire húmedo de los pulmones. No hay vuelta por aquí.' },
     ],
+    lamps: [[7, 3, 11], [41, 3, 15], [58, 3, 14], [92, 3, 8]],
   },
 
   // Bajo la Médula, dos galerías entre raíces nerviosas. Un ganglio reflejo en la galería
@@ -411,7 +411,6 @@ export const LEVELS = {
   A7: {
     name: 'Cauda Equina',
     biome: 'nervioso',
-    lamps: [[14, 2, 13], [37, 3, 15], [19, 17, 11], [34, 16, 7]], // luminarias colgantes
     map: [-3, 4, 3, 2],
     grid: [
       '################################....############',
@@ -457,15 +456,16 @@ export const LEVELS = {
     pads: [
       { x: 8, y: 11, hold: 1.2, opens: 'reflejo', time: 8 },
     ],
-    exits: [
-      { side: 'top', at: [32, 35], to: 'A3', spawn: [3, 67] },
-      { side: 'right', to: 'T1', spawn: [2, 11] },
+    links: [
+      { id: 'p1', x: 32, y: 0, w: 4, h: 2, to: 'A3', toLink: 'p6', trigger: 'touch', look: 'hidden', arrive: [33, 4] },
+      { id: 'p2', x: 47, y: 24, w: 1, h: 2, to: 'T1', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [46, 25] },
     ],
     hints: [
       { x: 33, y: 4, r: 3, text: 'Bajo la Médula, las raíces nerviosas cuelgan como una cola de caballo.' },
       { x: 8, y: 11, r: 2, text: 'Un ganglio reflejo. Quédate quieto encima... algo, lejos, responde.' },
       { x: 42, y: 24, r: 3, text: 'Una compuerta de músculo. Se abre con el reflejo... y no espera.' },
     ],
+    lamps: [[14, 2, 13], [37, 3, 15], [19, 17, 11], [34, 16, 7]],
   },
 
   // ======================= CAVIDAD PULMONAR =======================
@@ -506,10 +506,10 @@ export const LEVELS = {
       { x: 2, y: 2, w: 4, h: 13, dir: 'up' },
       { x: 30, y: 11, w: 2, h: 8, dir: 'up' },
     ],
-    exits: [
-      { side: 'bottom', to: 'B2', spawn: [32, 3] },
-      { side: 'top', to: 'B5', spawn: [6, 11] },
-      { side: 'right', to: 'C', spawn: [1, 12] },
+    links: [
+      { id: 'p1', x: 30, y: 17, w: 2, h: 2, to: 'B2', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [28, 14] },
+      { id: 'p2', x: 1, y: 0, w: 6, h: 2, to: 'B5', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [9, 14] },
+      { id: 'p3', x: 43, y: 3, w: 1, h: 3, to: 'C', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [42, 5] },
     ],
     hints: [
       { x: 33, y: 14, r: 3, text: 'La cornisa está demasiado alta. Tus pulmones no bastan... aún.' },
@@ -550,11 +550,14 @@ export const LEVELS = {
     ],
     nodules: [[7, 11], [35, 11], [31, 3]],
     hidden: [[31, 7]],
-    exits: [
-      { side: 'left', to: 'A4', spawn: [44, 25] },
-      { side: 'right', to: 'B3', spawn: [1, 11] },
-      { side: 'top', to: 'B', spawn: [28, 14] },
-      { side: 'bottom', at: [1, 4], to: 'T1', spawn: [9, 11] },
+    winds: [
+      { x: 30, y: 0, w: 2, h: 4, dir: 'up' },
+    ],
+    links: [
+      { id: 'p1', x: 0, y: 10, w: 1, h: 2, to: 'A4', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [5, 11] },
+      { id: 'p2', x: 43, y: 10, w: 1, h: 2, to: 'B3', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [42, 11] },
+      { id: 'p3', x: 1, y: 0, w: 4, h: 2, to: 'B', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [32, 3] },
+      { id: 'p4', x: 1, y: 12, w: 4, h: 2, to: 'T1', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [5, 11] },
     ],
     hints: [
       { x: 8, y: 11, r: 3, text: 'Sacos de esporas. Si te acercas, revientan. Mejor de lejos.' },
@@ -562,15 +565,11 @@ export const LEVELS = {
       { x: 31, y: 7, r: 2, text: 'Corriente de aire desde arriba: el pozo sube a la gran cavidad.' },
     ],
     lamps: [[6, 1, 10], [23, 1, 9]],
-    winds: [
-      { x: 30, y: 0, w: 2, h: 4, dir: 'up' },
-    ],
   },
 
   B3: {
     name: 'Alvéolo Central',
     biome: 'pulmonar',
-    lamps: [[2, 1, 10]], // luminarias colgantes
     map: [6, 2, 2, 1],
     grid: [
       '################################',
@@ -588,24 +587,26 @@ export const LEVELS = {
       '################################',
       '################################',
     ],
-    sacs: [{ x: 15, y: 3, item: '*', until: 'matriarca' }],
+    sacs: [
+      { x: 15, y: 3, item: '*', until: 'matriarca' },
+    ],
     enemies: [
       { type: 'matriarca', x: 17, y: 11, crawl: [[27.5, 11.25], [1.75, 11.25], [1.75, 1.75], [30.25, 1.75], [30.25, 5.25]] },
     ],
     nodules: [[29, 5], [7, 11], [23, 11], [15, 3, 'luz']],
-    exits: [
-      { side: 'left', to: 'B2', spawn: [42, 11] },
-      { side: 'right', to: 'B4', spawn: [1, 13] },
+    links: [
+      { id: 'p1', x: 0, y: 10, w: 1, h: 2, to: 'B2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 11] },
+      { id: 'p2', x: 31, y: 10, w: 1, h: 2, to: 'B4', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [30, 11] },
     ],
     hints: [
       { x: 27, y: 11, r: 2, text: 'La pared derecha tiene poros pálidos. Rehúye la luz.' },
     ],
+    lamps: [[2, 1, 10]],
   },
 
   B4: {
     name: 'Diafragma',
     biome: 'pulmonar',
-    lamps: [[15, 1, 15], [2, 1, 14]], // luminarias colgantes
     map: [8, 2, 3, 1],
     grid: [
       '####################################',
@@ -633,15 +634,16 @@ export const LEVELS = {
     ],
     nodules: [[6, 13], [29, 13]],
     hidden: [[3, 7], [33, 3]],
-    exits: [
-      { side: 'left', to: 'B3', spawn: [30, 11] },
-      { side: 'bottom', at: [30, 31], to: 'B7', spawn: [30, 3] },
+    links: [
+      { id: 'p1', x: 0, y: 12, w: 1, h: 2, to: 'B3', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 13] },
+      { id: 'p2', x: 30, y: 14, w: 2, h: 2, to: 'B7', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [28, 13] },
     ],
     hints: [
       { x: 8, y: 13, r: 3, text: 'El diafragma: un abismo que respira. Pilares de hueso lo cruzan: salta, clávate en ellos con las garras y trepa hasta arriba.' },
       { x: 30, y: 13, r: 3, text: 'Algo late arriba, a la derecha. Desde lo alto del último pilar, salta y remata con el doble salto.' },
       { x: 3, y: 12, r: 2, text: 'Algo late en la oscuridad de esa repisa. Tu ojo podría desvelarlo.' },
     ],
+    lamps: [[15, 1, 15], [2, 1, 14]],
   },
 
   // La Tráquea: el gran circuito de anclajes. Encadena el Tendón y usa la honda
@@ -676,10 +678,10 @@ export const LEVELS = {
     winds: [
       { x: 9, y: 5, w: 22, h: 7, dir: 'swap', force: 110, period: 6 },
     ],
-    exits: [
-      { side: 'bottom', to: 'B', spawn: [9, 14] },
-      { side: 'top', at: [44, 45], to: 'B6', spawn: [16, 19] },
-      { side: 'top', at: [5, 6], to: 'A6', spawn: [86, 10] },
+    links: [
+      { id: 'p1', x: 2, y: 12, w: 4, h: 2, to: 'B', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [6, 11] },
+      { id: 'p2', x: 44, y: 0, w: 2, h: 2, to: 'B6', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [44, 3] },
+      { id: 'p3', x: 5, y: 0, w: 2, h: 2, to: 'A6', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [6, 11] },
     ],
     hints: [
       { x: 6, y: 11, r: 3, text: 'La tráquea respira: el aire entra y sale a bocanadas sobre la sima.' },
@@ -695,7 +697,6 @@ export const LEVELS = {
   B6: {
     name: 'Saco Alveolar Olvidado',
     biome: 'pulmonar',
-    lamps: [[7, 1, 15], [24, 1, 14]], // luminarias colgantes
     secret: true,
     map: [4, -2, 2, 2],
     grid: [
@@ -730,14 +731,15 @@ export const LEVELS = {
     ],
     nodules: [[25, 14], [4, 9], [3, 19, 'luz']],
     hidden: [[27, 5]],
-    exits: [
-      { side: 'bottom', to: 'B5', spawn: [44, 3] },
+    links: [
+      { id: 'p1', x: 13, y: 20, w: 2, h: 2, to: 'B5', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [16, 19] },
     ],
     hints: [
       { x: 17, y: 19, r: 3, text: 'El saco sube hasta perderse. Los esfínteres del techo marcan el camino.' },
       { x: 4, y: 9, r: 3, text: 'Un sello de músculo cierra el bronquiolo de arriba.' },
       { x: 20, y: 5, r: 2, text: 'El septo del fondo se retrae con la luz.' },
     ],
+    lamps: [[7, 1, 15], [24, 1, 14]],
   },
 
   // El conducto linfático que corre bajo los dos primeros sistemas: un tubo largo y
@@ -776,11 +778,11 @@ export const LEVELS = {
       { x: 37, y: 2, w: 4, h: 9, dir: 'up' },
       { x: 2, y: 0, w: 6, h: 12, dir: 'up' },
     ],
-    exits: [
-      { side: 'left', to: 'A7', spawn: [46, 25] },
-      { side: 'right', to: 'B7', spawn: [2, 11] },
-      { side: 'bottom', at: [59, 60], to: 'T2', spawn: [10, 5] },
-      { side: 'top', at: [2, 7], to: 'B2', spawn: [5, 11] },
+    links: [
+      { id: 'p1', x: 0, y: 9, w: 1, h: 3, to: 'A7', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [2, 11] },
+      { id: 'p2', x: 79, y: 9, w: 1, h: 3, to: 'B7', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [77, 11] },
+      { id: 'p3', x: 59, y: 12, w: 2, h: 2, to: 'T2', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [58, 11] },
+      { id: 'p4', x: 2, y: 0, w: 6, h: 2, to: 'B2', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [9, 11] },
     ],
     hints: [
       { x: 39, y: 11, r: 2, text: 'Aquí el aire sube con fuerza hacia lo alto.' },
@@ -797,7 +799,6 @@ export const LEVELS = {
   B7: {
     name: 'Hilio Pulmonar',
     biome: 'pulmonar',
-    lamps: [[9, 2, 8], [26, 2, 7]], // luminarias colgantes
     map: [8, 3, 3, 1],
     grid: [
       '##############################..########',
@@ -820,24 +821,26 @@ export const LEVELS = {
       { type: 'colonia', x: 21, y: 11 },
     ],
     nodules: [[4, 11], [22, 11], [13, 11, 'luz']],
-    gates: [{ id: 'hilio', x: 34, y: 9, h: 3 }],
+    gates: [
+      { id: 'hilio', x: 34, y: 9, h: 3 },
+    ],
     pods: { opens: 'hilio', at: [[10, 2], [18, 3], [25, 2]], order: [1, 2, 0] },
-    exits: [
-      { side: 'left', to: 'T1', spawn: [77, 11] },
-      { side: 'top', at: [30, 31], to: 'B4', spawn: [28, 13] },
-      { side: 'right', to: 'V1', spawn: [1, 10] },
+    links: [
+      { id: 'p1', x: 0, y: 10, w: 1, h: 2, to: 'T1', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [2, 11] },
+      { id: 'p2', x: 30, y: 0, w: 2, h: 2, to: 'B4', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [30, 3] },
+      { id: 'p3', x: 39, y: 9, w: 1, h: 2, to: 'V1', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [37, 11] },
     ],
     hints: [
       { x: 14, y: 10, r: 4, text: 'Tres sacos vitelinos laten por turnos. Fíjate en el orden.' },
       { x: 32, y: 10, r: 2, text: 'Una compuerta de músculo, cerrada a cal y canto.' },
     ],
+    lamps: [[9, 2, 8], [26, 2, 7]],
   },
 
   // Arena de la Quimera: la cisterna donde desemboca la linfa, bajo el Conducto Torácico.
   T2: {
     name: 'Cisterna del Quilo',
     biome: 'pulmonar',
-    lamps: [[18, 1, 10], [35, 1, 9], [5, 1, 13]], // luminarias colgantes
     map: [5, 4, 4, 1],
     grid: [
       '##########..########################################',
@@ -857,19 +860,23 @@ export const LEVELS = {
       '####################################################',
       '####################################################',
     ],
-    enemies: [{ type: 'quimera', x: 38, y: 13 }],
+    enemies: [
+      { type: 'quimera', x: 38, y: 13 },
+    ],
     nodules: [[48, 13, 'luz']],
-    exits: [{ side: 'top', at: [10, 11], to: 'T1', spawn: [58, 11] }],
+    links: [
+      { id: 'p1', x: 10, y: 0, w: 2, h: 2, to: 'T1', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [10, 5] },
+    ],
     hints: [
       { x: 10, y: 5, r: 3, text: 'Huele a perro mojado. Y a algo más.' },
     ],
+    lamps: [[18, 1, 10], [35, 1, 9], [5, 1, 13]],
   },
 
   // ===================== SISTEMA DIGESTIVO =====================
   C: {
     name: 'Esófago',
     biome: 'digestivo',
-    lamps: [[43, 1, 15], [15, 2, 12], [27, 4, 12]], // luminarias colgantes
     map: [6, 1, 3, 1],
     grid: [
       '##############################################Y#',
@@ -895,9 +902,12 @@ export const LEVELS = {
     ],
     nodules: [[18, 12], [25, 9], [10, 12], [41, 12]],
     hidden: [[24, 12]],
-    // La Glándula controla esta cubeta: la inunda al contraerse.
-    fluids: [{ x: [10, 27], top: 11, bottom: 12, manual: true }],
-    // Bocas del techo de la arena: escupen mientras la Glándula viva.
+    gates: [
+      { id: 'frontera', x: 2, y: 10, h: 3, until: 'matriarca' },
+    ],
+    fluids: [
+      { x: [10, 27], top: 11, bottom: 12, manual: true },
+    ],
     mouths: [
       { x: 12, y: 3, dir: 'down', period: 5.5, duration: 1.2 },
       { x: 25, y: 3, dir: 'down', period: 5.5, duration: 1.2, phase: 2.7 },
@@ -906,10 +916,10 @@ export const LEVELS = {
       { x: 33, y: 0, period: 2.2 },
       { x: 37, y: 0, period: 2.6, phase: 1.1 },
     ],
-    exits: [
-      { side: 'left', to: 'B', spawn: [42, 5] },
-      { side: 'right', to: 'D', spawn: [1, 13] },
-      { side: 'top', to: 'C2', spawn: [38, 12] },
+    links: [
+      { id: 'p1', x: 0, y: 10, w: 1, h: 3, to: 'B', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [1, 12] },
+      { id: 'p2', x: 47, y: 10, w: 1, h: 3, to: 'D', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [46, 12] },
+      { id: 'p3', x: 46, y: 0, w: 1, h: 2, to: 'C2', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [46, 12] },
     ],
     hints: [
       { x: 6, y: 12, r: 3, text: 'Una membrana agrietada. Con más fuerza en las piernas podrías reventarla.' },
@@ -917,13 +927,12 @@ export const LEVELS = {
       { x: 30, y: 12, r: 2, text: 'Esfínteres colgantes sobre el abismo... si tuvieras con qué agarrarte.' },
       { x: 45, y: 12, r: 2, text: 'La pared derecha sube hasta un esfínter sellado en el techo.' },
     ],
-    gates: [{ id: 'frontera', x: 2, y: 10, h: 3, until: 'matriarca' }],
+    lamps: [[43, 1, 15], [15, 2, 12], [27, 4, 12]],
   },
 
   C2: {
     name: 'Fundus Gástrico',
     biome: 'digestivo',
-    lamps: [[18, 1, 10], [35, 1, 9]], // luminarias colgantes
     map: [6, 0, 3, 1],
     grid: [
       '############################################',
@@ -956,24 +965,24 @@ export const LEVELS = {
       { x: 18, y: 0, dir: 'down', period: 3.8, duration: 1.1, phase: 1.5 },
     ],
     drips: [
-      { x: 12, y: 0, period: 2.0 },
+      { x: 12, y: 0, period: 2 },
       { x: 24, y: 0, period: 1.8, phase: 0.6 },
       { x: 30, y: 0, period: 2.4, phase: 1.3 },
     ],
-    exits: [
-      { side: 'bottom', to: 'C', spawn: [46, 12] },
-      { side: 'right', to: 'C3', spawn: [1, 12] },
+    links: [
+      { id: 'p1', x: 40, y: 15, w: 2, h: 2, to: 'C', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [38, 12] },
+      { id: 'p2', x: 43, y: 11, w: 1, h: 2, to: 'C3', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [42, 12] },
     ],
     hints: [
       { x: 36, y: 12, r: 3, text: 'Cubetas de ácido gástrico. Algo se mueve bajo la superficie.' },
       { x: 4, y: 12, r: 2, text: 'La pared tiene una boca. Escupe a ritmo: espera a que se cierre.' },
     ],
+    lamps: [[18, 1, 10], [35, 1, 9]],
   },
 
   C3: {
     name: 'Intestino Delgado',
     biome: 'digestivo',
-    lamps: [[14, 1, 10], [31, 1, 9]], // luminarias colgantes
     map: [9, 0, 3, 1],
     grid: [
       '##########################YY########',
@@ -1000,8 +1009,9 @@ export const LEVELS = {
       { type: 'acorazado', x: 8, y: 12 },
     ],
     nodules: [[31, 12], [5, 12], [24, 8], [11, 12, 'luz']],
-    // El intestino se llena y se vacía: sube, aguanta, drena y queda seco.
-    fluids: [{ x: [1, 34], top: 10, bottom: 12, period: 14, phase: 6 }],
+    fluids: [
+      { x: [1, 34], top: 10, bottom: 12, period: 14, phase: 6 },
+    ],
     mouths: [
       { x: 19, y: 0, dir: 'down', period: 5, duration: 1.3 },
     ],
@@ -1009,22 +1019,22 @@ export const LEVELS = {
       { x: 9, y: 0, period: 2.1 },
       { x: 28, y: 0, period: 2.5, phase: 0.9 },
     ],
-    exits: [
-      { side: 'left', to: 'C2', spawn: [42, 12] },
-      { side: 'right', to: 'C4', spawn: [1, 11] },
-      { side: 'top', to: 'C5', spawn: [16, 21] },
+    links: [
+      { id: 'p1', x: 0, y: 11, w: 1, h: 2, to: 'C2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 12] },
+      { id: 'p2', x: 35, y: 11, w: 1, h: 2, to: 'C4', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [34, 12] },
+      { id: 'p3', x: 26, y: 0, w: 2, h: 2, to: 'C5', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [24, 8] },
     ],
     hints: [
       { x: 4, y: 12, r: 3, text: 'El intestino se contrae. Cuando gorgotee, sube a las repisas.' },
       { x: 31, y: 13, r: 3, text: 'Algo late en lo más alto de la pared derecha.' },
       { x: 26, y: 8, r: 2, text: 'Un conducto se abre en el techo. El pilar se puede escalar.' },
     ],
+    lamps: [[14, 1, 10], [31, 1, 9]],
   },
 
   C4: {
     name: 'Cloaca',
     biome: 'digestivo',
-    lamps: [[10, 1, 10], [27, 1, 9]], // luminarias colgantes
     map: [12, 0, 2, 1],
     grid: [
       '##################################',
@@ -1047,30 +1057,31 @@ export const LEVELS = {
       { type: 'ojo', x: 22, y: 1 },
     ],
     nodules: [[24, 11], [5, 11], [17, 11], [13, 6, 'luz']],
-    // Se inunda hasta las repisas altas; los peldaños del medio quedan bajo el ácido.
-    fluids: [{ x: [1, 32], top: 8, bottom: 11, period: 12, phase: 2 }],
+    fluids: [
+      { x: [1, 32], top: 8, bottom: 11, period: 12, phase: 2 },
+    ],
     mouths: [
-      { x: 33, y: 4, dir: 'left', period: 4.2, duration: 1.0 },
+      { x: 33, y: 4, dir: 'left', period: 4.2, duration: 1 },
     ],
     drips: [
       { x: 6, y: 0, period: 1.9 },
       { x: 15, y: 0, period: 2.3, phase: 0.7 },
     ],
-    exits: [
-      { side: 'left', to: 'C3', spawn: [34, 12] },
-      { side: 'bottom', to: 'C6', spawn: [4, 6] },
-      { side: 'right', to: 'C7', spawn: [2, 4] },
+    links: [
+      { id: 'p1', x: 0, y: 10, w: 1, h: 2, to: 'C3', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 11] },
+      { id: 'p2', x: 30, y: 12, w: 2, h: 2, to: 'C6', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [28, 11] },
+      { id: 'p3', x: 33, y: 2, w: 1, h: 2, to: 'C7', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [28, 6] },
     ],
     hints: [
       { x: 5, y: 11, r: 3, text: 'La cloaca se llena hasta el borde. Sube cuando oigas el gorgoteo.' },
     ],
+    lamps: [[10, 1, 10], [27, 1, 9]],
   },
 
   // La Vesícula: un pozo vertical que se inunda desde abajo. Sube antes que el ácido.
   C5: {
     name: 'Vesícula Biliar',
     biome: 'digestivo',
-    lamps: [[23, 1, 15], [7, 4, 8]], // luminarias colgantes
     map: [10, -2, 2, 2],
     grid: [
       '############################',
@@ -1103,7 +1114,9 @@ export const LEVELS = {
       { type: 'ojo', x: 6, y: 1 },
     ],
     nodules: [[19, 21], [24, 11], [11, 8, 'luz']],
-    fluids: [{ x: [1, 26], top: 7, bottom: 21, period: 22, phase: 4 }],
+    fluids: [
+      { x: [1, 26], top: 7, bottom: 21, period: 22, phase: 4 },
+    ],
     mouths: [
       { x: 27, y: 9, dir: 'left', period: 4, duration: 1.1 },
       { x: 0, y: 16, dir: 'right', period: 4.6, duration: 1.2, phase: 2 },
@@ -1113,12 +1126,13 @@ export const LEVELS = {
       { x: 21, y: 12, period: 2.6, phase: 1 },
       { x: 6, y: 3, period: 1.9, phase: 0.5 },
     ],
-    exits: [
-      { side: 'bottom', to: 'C3', spawn: [24, 8] },
+    links: [
+      { id: 'p1', x: 13, y: 22, w: 2, h: 2, to: 'C3', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [16, 21] },
     ],
     hints: [
       { x: 16, y: 21, r: 3, text: 'La bilis sube por el pozo. No te quedes abajo.' },
     ],
+    lamps: [[23, 1, 15], [7, 4, 8]],
   },
 
   // Cavidad secreta bajo la Cloaca (pozo de C4). Un saco que se inunda a ritmo: se
@@ -1127,7 +1141,6 @@ export const LEVELS = {
   C6: {
     name: 'Divertículo',
     biome: 'digestivo',
-    lamps: [[19, 1, 15], [17, 12, 12]], // luminarias colgantes
     secret: true,
     map: [12, 1, 2, 1],
     grid: [
@@ -1159,7 +1172,9 @@ export const LEVELS = {
     ],
     nodules: [[14, 4], [1, 6], [9, 12, 'luz']],
     hidden: [[17, 10]],
-    fluids: [{ x: [7, 30], top: 8, bottom: 16, period: 18, phase: 9 }],
+    fluids: [
+      { x: [7, 30], top: 8, bottom: 16, period: 18, phase: 9 },
+    ],
     mouths: [
       { x: 31, y: 12, dir: 'left', period: 4.4, duration: 1.1 },
       { x: 19, y: 0, dir: 'down', period: 3.6, duration: 0.9, phase: 1.2 },
@@ -1168,14 +1183,15 @@ export const LEVELS = {
       { x: 10, y: 0, period: 2.2 },
       { x: 25, y: 0, period: 2.7, phase: 1 },
     ],
-    exits: [
-      { side: 'top', to: 'C4', spawn: [28, 11] },
-      { side: 'right', at: [2, 4], to: 'C10', spawn: [1, 4] },
+    links: [
+      { id: 'p1', x: 3, y: 0, w: 2, h: 2, to: 'C4', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [4, 6] },
+      { id: 'p2', x: 31, y: 2, w: 1, h: 3, to: 'C10', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [30, 4] },
     ],
     hints: [
       { x: 4, y: 6, r: 3, text: 'Un saco que se llena. Cuando gorgotea, el ácido sube hasta media altura: sube antes.' },
       { x: 15, y: 4, r: 3, text: 'La pared del fondo está agrietada. La repisa larga da carrerilla de sobra.' },
     ],
+    lamps: [[19, 1, 15], [17, 12, 12]],
   },
 
   // Una poza de mucosa: ni las Garras se agarran. Una pústula la inunda un rato y las
@@ -1183,7 +1199,6 @@ export const LEVELS = {
   C7: {
     name: 'Duodeno',
     biome: 'digestivo',
-    lamps: [[15, 1, 15], [32, 1, 14]], // luminarias colgantes
     map: [14, 0, 3, 1],
     grid: [
       '##..################################..##',
@@ -1207,22 +1222,34 @@ export const LEVELS = {
       { type: 'ojo', x: 20, y: 1 },
     ],
     nodules: [[3, 4], [7, 14, 'luz']],
-    fluids: [{ x: [7, 32], top: 6, bottom: 14, manual: true, start: 0 }],
     valves: [
       { x: 39, y: 3, dir: 'left', pool: 0, action: 'fill', time: 11 },
       { x: 33, y: 13, dir: 'left', pool: 0, action: 'fill', time: 11 },
     ],
-    floats: [{ x: [8, 10], pool: 0 }, { x: [13, 15], pool: 0 }, { x: [18, 20], pool: 0 }, { x: [23, 25], pool: 0 }, { x: [28, 31], pool: 0 }],
-    drips: [{ x: 12, y: 0, period: 2.4 }, { x: 27, y: 0, period: 2.9, phase: 1 }],
-    exits: [
-      { side: 'left', to: 'C4', spawn: [28, 6] },
-      { side: 'top', at: [36, 37], to: 'C8', spawn: [4, 5] },
-      { side: 'top', at: [2, 3], to: 'C9', spawn: [3, 21] },
+    floats: [
+      { x: [8, 10], pool: 0 },
+      { x: [13, 15], pool: 0 },
+      { x: [18, 20], pool: 0 },
+      { x: [23, 25], pool: 0 },
+      { x: [28, 31], pool: 0 },
+    ],
+    fluids: [
+      { x: [7, 32], top: 6, bottom: 14, manual: true, start: 0 },
+    ],
+    drips: [
+      { x: 12, y: 0, period: 2.4 },
+      { x: 27, y: 0, period: 2.9, phase: 1 },
+    ],
+    links: [
+      { id: 'p1', x: 0, y: 3, w: 1, h: 2, to: 'C4', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [2, 4] },
+      { id: 'p2', x: 36, y: 0, w: 2, h: 2, to: 'C8', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [36, 4] },
+      { id: 'p3', x: 2, y: 0, w: 2, h: 2, to: 'C9', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [3, 4] },
     ],
     hints: [
       { x: 3, y: 4, r: 3, text: 'Una poza de mucosa: ni las garras hacen presa. Al fondo de la galería, una pústula a punto de reventar.' },
       { x: 19, y: 13, r: 4, text: 'Atrapado en el fondo... otra pústula en la pared.' },
     ],
+    lamps: [[15, 1, 15], [32, 1, 14]],
   },
 
   // Cavidad secreta: una ampolla de ácido estancado sobre un tesoro. Un esfínter
@@ -1230,7 +1257,6 @@ export const LEVELS = {
   C8: {
     name: 'Ampolla Rectal',
     biome: 'digestivo',
-    lamps: [[15, 1, 15]], // luminarias colgantes
     secret: true,
     map: [16, -1, 2, 1],
     grid: [
@@ -1254,14 +1280,19 @@ export const LEVELS = {
       { type: 'anguila', x: 22, y: 11 },
     ],
     nodules: [[2, 5]],
-    fluids: [{ x: [15, 28], top: 6, bottom: 12, manual: true, start: 1 }],
-    valves: [{ x: 29, y: 4, dir: 'left', pool: 0, action: 'drain' }],
-    exits: [
-      { side: 'bottom', at: [6, 7], to: 'C7', spawn: [36, 4] },
+    valves: [
+      { x: 29, y: 4, dir: 'left', pool: 0, action: 'drain' },
+    ],
+    fluids: [
+      { x: [15, 28], top: 6, bottom: 12, manual: true, start: 1 },
+    ],
+    links: [
+      { id: 'p1', x: 6, y: 12, w: 2, h: 2, to: 'C7', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [4, 5] },
     ],
     hints: [
       { x: 4, y: 5, r: 3, text: 'Ácido estancado. Al fondo, un esfínter hinchado retiene el vertido.' },
     ],
+    lamps: [[15, 1, 15]],
   },
 
   // Arena del Coro: un recodo alto del colon sobre el Duodeno. Las repisas salvan del
@@ -1303,8 +1334,8 @@ export const LEVELS = {
     fluids: [
       { x: [10, 42], top: 19, bottom: 21, period: 14, phase: 3 },
     ],
-    exits: [
-      { side: 'bottom', at: [4, 5], to: 'C7', spawn: [3, 4] },
+    links: [
+      { id: 'p1', x: 4, y: 22, w: 2, h: 2, to: 'C7', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [3, 21] },
     ],
     hints: [
       { x: 6, y: 20, r: 3, text: 'Croar hondo, como de algo que respira bajo el ácido. Y un chapoteo de muchas bocas pequeñas.' },
@@ -1346,9 +1377,10 @@ export const LEVELS = {
     winds: [
       { x: 44, y: 5, w: 2, h: 9, dir: 'up' },
     ],
-    exits: [
-      { side: 'left', to: 'C6', spawn: [30, 4] },
-      { side: 'bottom', at: [40, 41], to: 'C11', spawn: [40, 11] },
+    links: [
+      { id: 'p1', x: 0, y: 2, w: 1, h: 3, to: 'C6', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 4] },
+      { id: 'p2', x: 40, y: 12, w: 2, h: 2, to: 'C11', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [43, 4] },
+      { id: 'p3', x: 43, y: 3, w: 1, h: 2, to: '', toLink: '', trigger: 'touch', look: 'hidden' },
     ],
     hints: [
       { x: 3, y: 4, r: 3, text: 'Un yeyuno anegado de ácido. Algo se mueve bajo la superficie. Arriba, una pústula de drenaje palpita.' },
@@ -1375,25 +1407,34 @@ export const LEVELS = {
       '#############################################..#',
       '#############################################..#',
     ],
-    lamps: [[12, 1, 10], [30, 1, 14]],
-    enemies: [{ type: 'vestigio', x: 20, y: 11 }],
-    // Una cubeta seca con balsas de grasa: las pústulas la llenan un rato y las balsas
-    // suben hasta la repisa alta (premio y corriente de vuelta a C10).
-    fluids: [{ x: [5, 42], top: 2, bottom: 11, manual: true, start: 0 }],
+    enemies: [
+      { type: 'vestigio', x: 20, y: 11 },
+    ],
     valves: [
       { x: 6, y: 10, dir: 'right', pool: 0, action: 'fill', time: 16 },
       { x: 38, y: 10, dir: 'left', pool: 0, action: 'fill', time: 16 },
     ],
-    floats: [{ x: [9, 12], pool: 0 }, { x: [17, 20], pool: 0 }, { x: [25, 28], pool: 0 }, { x: [33, 36], pool: 0 }],
-    winds: [{ x: 44, y: 0, w: 2, h: 4, dir: 'up' }],
-    exits: [
-      { side: 'top', at: [44, 45], to: 'C10', spawn: [43, 4] },
-      { side: 'top', at: [40, 41], to: 'C10', spawn: [43, 4] },
-      { side: 'bottom', at: [45, 46], to: 'V2', spawn: [46, 6] },
+    floats: [
+      { x: [9, 12], pool: 0 },
+      { x: [17, 20], pool: 0 },
+      { x: [25, 28], pool: 0 },
+      { x: [33, 36], pool: 0 },
+    ],
+    fluids: [
+      { x: [5, 42], top: 2, bottom: 11, manual: true, start: 0 },
+    ],
+    winds: [
+      { x: 44, y: 0, w: 2, h: 4, dir: 'up' },
+    ],
+    links: [
+      { id: 'p1', x: 44, y: 0, w: 2, h: 2, to: 'C10', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [40, 11] },
+      { id: 'p2', x: 40, y: 0, w: 2, h: 2, to: 'C10', toLink: 'p3', trigger: 'touch', look: 'hidden' },
+      { id: 'p3', x: 45, y: 12, w: 2, h: 2, to: 'V2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [43, 11] },
     ],
     hints: [
       { x: 40, y: 11, r: 3, text: 'Una cubeta seca. Las balsas de grasa esperan en el fondo... y en las paredes, pústulas hinchadas.' },
     ],
+    lamps: [[12, 1, 10], [30, 1, 14]],
   },
 
   // =================== SISTEMA CIRCULATORIO ===================
@@ -1402,7 +1443,6 @@ export const LEVELS = {
   V1: {
     name: 'Vena Pulmonar',
     biome: 'circulatorio',
-    lamps: [[12, 2, 10], [32, 2, 8]],
     map: [11, 3, 3, 1],
     grid: [
       '################################################',
@@ -1420,23 +1460,34 @@ export const LEVELS = {
       '##############....................######..######',
       '########################################..######',
     ],
-    enemies: [{ type: 'larva', x: 20, y: 12 }, { type: 'larva', x: 28, y: 12 }, { type: 'celula', x: 31, y: 5 }],
-    blood: [{ x: [14, 33], top: 8, bottom: 12, base: 0.45, surge: 0.35, flow: 'right' }],
-    arteries: [{ x: 35, y: 11, dir: 'up', power: 1.15 }, { x: 22, y: 3, dir: 'down', power: 0.8, phase: 0.5 }],
-    ventricles: [{ x: 10, y: 5, r: 26 }],
-    exits: [
-      { side: 'left', to: 'B7', spawn: [37, 11] },
-      { side: 'right', to: 'V2', spawn: [3, 5] },
-      { side: 'bottom', at: [40, 41], to: 'V3', spawn: [40, 10] },
+    enemies: [
+      { type: 'larva', x: 20, y: 12 },
+      { type: 'larva', x: 28, y: 12 },
+      { type: 'celula', x: 31, y: 5 },
+    ],
+    blood: [
+      { x: [14, 33], top: 8, bottom: 12, base: 0.45, surge: 0.35, flow: 'right' },
+    ],
+    arteries: [
+      { x: 35, y: 11, dir: 'up', power: 1.15 },
+      { x: 22, y: 3, dir: 'down', power: 0.8, phase: 0.5 },
+    ],
+    ventricles: [
+      { x: 10, y: 5, r: 26 },
+    ],
+    links: [
+      { id: 'p1', x: 0, y: 9, w: 1, h: 2, to: 'B7', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [1, 10] },
+      { id: 'p2', x: 47, y: 4, w: 1, h: 2, to: 'V2', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [44, 5] },
+      { id: 'p3', x: 40, y: 12, w: 2, h: 2, to: 'V3', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [42, 10] },
     ],
     hints: [
       { x: 8, y: 10, r: 4, text: 'Todo late aquí. La sangre sube con cada golpe y te arrastra... y vuelve a calmarse.' },
     ],
+    lamps: [[12, 2, 10], [32, 2, 8]],
   },
   V2: {
     name: 'Aorta',
     biome: 'circulatorio',
-    lamps: [[12, 2, 10], [38, 2, 9], [55, 2, 8]],
     map: [14, 3, 4, 1],
     grid: [
       '#############################################..#################',
@@ -1454,23 +1505,33 @@ export const LEVELS = {
       '####################..######################################..##',
       '####################..######################################..##',
     ],
-    enemies: [{ type: 'larva', x: 26, y: 11 }, { type: 'larva', x: 40, y: 11 }, { type: 'enjambre', x: 37, y: 3 }],
-    blood: [{ x: [9, 58], top: 5, bottom: 11, base: 0.4, surge: 0.3, flow: 'right' }],
-    arteries: [{ x: 25, y: 12, dir: 'up' }, { x: 40, y: 12, dir: 'up', phase: 0.8 }, { x: 52, y: 1, dir: 'down', power: 0.9, phase: 0.4 }],
-    exits: [
-      { side: 'left', to: 'V1', spawn: [44, 5] },
-      { side: 'top', at: [45, 46], to: 'C11', spawn: [43, 11] },
-      { side: 'bottom', at: [20, 21], to: 'V4', spawn: [20, 11] },
-      { side: 'bottom', at: [60, 61], to: 'V5', spawn: [12, 3] },
+    enemies: [
+      { type: 'larva', x: 26, y: 11 },
+      { type: 'larva', x: 40, y: 11 },
+      { type: 'enjambre', x: 37, y: 3 },
+    ],
+    blood: [
+      { x: [9, 58], top: 5, bottom: 11, base: 0.4, surge: 0.3, flow: 'right' },
+    ],
+    arteries: [
+      { x: 25, y: 12, dir: 'up' },
+      { x: 40, y: 12, dir: 'up', phase: 0.8 },
+      { x: 52, y: 1, dir: 'down', power: 0.9, phase: 0.4 },
+    ],
+    links: [
+      { id: 'p1', x: 0, y: 4, w: 1, h: 2, to: 'V1', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [3, 5] },
+      { id: 'p2', x: 45, y: 0, w: 2, h: 2, to: 'C11', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [46, 6] },
+      { id: 'p3', x: 20, y: 12, w: 2, h: 2, to: 'V4', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [18, 6] },
+      { id: 'p4', x: 60, y: 12, w: 2, h: 2, to: 'V5', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [62, 7] },
     ],
     hints: [
       { x: 5, y: 5, r: 4, text: 'La aorta. Cada latido es una riada: espera a que se calme o déjate llevar.' },
     ],
+    lamps: [[12, 2, 10], [38, 2, 9], [55, 2, 8]],
   },
   V3: {
     name: 'Ventrículo Derecho',
     biome: 'circulatorio',
-    lamps: [[24, 1, 12]],
     map: [11, 4, 3, 2],
     grid: [
       '########################################..######',
@@ -1502,23 +1563,37 @@ export const LEVELS = {
       '################################################',
       '################################################',
     ],
-    enemies: [{ type: 'larva', x: 14, y: 24 }, { type: 'larva', x: 34, y: 24 }, { type: 'celula', x: 22, y: 8 }, { type: 'celula', x: 10, y: 12 }],
-    blood: [{ x: [1, 46], top: 12, bottom: 25, base: 0.15, surge: 0.55 }],
-    arteries: [{ x: 0, y: 18, dir: 'right', power: 0.9 }, { x: 47, y: 21, dir: 'left', power: 0.9, phase: 0.8 }],
-    heartValves: [{ x: 46, y: 9, h: 2, open: 0.45 }],
-    ventricles: [{ x: 14, y: 8, r: 40 }],
-    exits: [
-      { side: 'top', at: [40, 41], to: 'V1', spawn: [42, 10] },
-      { side: 'right', to: 'V4', spawn: [2, 11] },
+    enemies: [
+      { type: 'larva', x: 14, y: 24 },
+      { type: 'larva', x: 34, y: 24 },
+      { type: 'celula', x: 22, y: 8 },
+      { type: 'celula', x: 10, y: 12 },
+    ],
+    blood: [
+      { x: [1, 46], top: 12, bottom: 25, base: 0.15, surge: 0.55 },
+    ],
+    arteries: [
+      { x: 0, y: 18, dir: 'right', power: 0.9 },
+      { x: 47, y: 21, dir: 'left', power: 0.9, phase: 0.8 },
+    ],
+    heartValves: [
+      { x: 46, y: 9, h: 2, open: 0.45 },
+    ],
+    ventricles: [
+      { x: 14, y: 8, r: 40 },
+    ],
+    links: [
+      { id: 'p1', x: 40, y: 0, w: 2, h: 2, to: 'V1', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [40, 10] },
+      { id: 'p2', x: 47, y: 9, w: 1, h: 2, to: 'V4', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [44, 10] },
     ],
     hints: [
       { x: 42, y: 10, r: 3, text: 'Una válvula. Se abre con cada latido y se cierra de golpe: cruza con el pulso.' },
     ],
+    lamps: [[24, 1, 12]],
   },
   V4: {
     name: 'Lecho Capilar',
     biome: 'circulatorio',
-    lamps: [[24, 2, 8]],
     map: [14, 4, 3, 1],
     grid: [
       '####################..##########################',
@@ -1536,19 +1611,29 @@ export const LEVELS = {
       '################################################',
       '################################################',
     ],
-    enemies: [{ type: 'enjambre', x: 24, y: 6 }, { type: 'celula', x: 10, y: 9 }, { type: 'celula', x: 38, y: 10 }],
-    arteries: [{ x: 8, y: 12, dir: 'up', power: 0.6 }, { x: 44, y: 12, dir: 'up', power: 1 }],
-    heartValves: [{ x: 16, y: 8, h: 4, open: 0.5 }, { x: 32, y: 8, h: 4, open: 0.4, phase: 0.8 }],
-    exits: [
-      { side: 'left', to: 'V3', spawn: [44, 10] },
-      { side: 'top', at: [20, 21], to: 'V2', spawn: [18, 6] },
-      { side: 'right', to: 'V5', spawn: [3, 10] },
+    enemies: [
+      { type: 'enjambre', x: 24, y: 6 },
+      { type: 'celula', x: 10, y: 9 },
+      { type: 'celula', x: 38, y: 10 },
     ],
+    arteries: [
+      { x: 8, y: 12, dir: 'up', power: 0.6 },
+      { x: 44, y: 12, dir: 'up', power: 1 },
+    ],
+    heartValves: [
+      { x: 16, y: 8, h: 4, open: 0.5 },
+      { x: 32, y: 8, h: 4, open: 0.4, phase: 0.8 },
+    ],
+    links: [
+      { id: 'p1', x: 0, y: 9, w: 1, h: 2, to: 'V3', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [2, 11] },
+      { id: 'p2', x: 20, y: 0, w: 2, h: 2, to: 'V2', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [20, 11] },
+      { id: 'p3', x: 47, y: 9, w: 1, h: 2, to: 'V5', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [45, 11] },
+    ],
+    lamps: [[24, 2, 8]],
   },
   V5: {
     name: 'Cámara del Coro',
     biome: 'circulatorio',
-    lamps: [[24, 1, 10]],
     map: [17, 4, 3, 2],
     grid: [
       '############..##################################',
@@ -1580,22 +1665,32 @@ export const LEVELS = {
       '################################################',
       '################################################',
     ],
-    enemies: [{ type: 'coro', x: 24, y: 25 }],
-    blood: [{ x: [1, 10], top: 21, bottom: 25, base: 0.35, surge: 0.5 }, { x: [37, 46], top: 21, bottom: 25, base: 0.35, surge: 0.5, phase: 0.8 }],
-    arteries: [{ x: 0, y: 16, dir: 'right' }, { x: 47, y: 16, dir: 'left', phase: 0.8 }],
-    ventricles: [{ x: 10, y: 8, r: 30 }, { x: 37, y: 8, r: 30, phase: 0.8 }],
-    exits: [
-      { side: 'left', to: 'V4', spawn: [45, 11] },
-      { side: 'top', at: [12, 13], to: 'V2', spawn: [62, 7] },
+    enemies: [
+      { type: 'coro', x: 24, y: 25 },
     ],
+    blood: [
+      { x: [1, 10], top: 21, bottom: 25, base: 0.35, surge: 0.5 },
+      { x: [37, 46], top: 21, bottom: 25, base: 0.35, surge: 0.5, phase: 0.8 },
+    ],
+    arteries: [
+      { x: 0, y: 16, dir: 'right' },
+      { x: 47, y: 16, dir: 'left', phase: 0.8 },
+    ],
+    ventricles: [
+      { x: 10, y: 8, r: 30 },
+      { x: 37, y: 8, r: 30, phase: 0.8 },
+    ],
+    links: [
+      { id: 'p1', x: 0, y: 9, w: 1, h: 2, to: 'V4', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [3, 10] },
+      { id: 'p2', x: 12, y: 0, w: 2, h: 2, to: 'V2', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [12, 3] },
+    ],
+    lamps: [[24, 1, 10]],
   },
 
   // ========================== EL CORAZÓN ==========================
   D: {
     name: 'El Corazón',
     biome: 'corazon',
-    lamps: [[5, 1, 15]], // luminarias colgantes
-    heartSeal: true, // el sello (Y) exige todas las líneas de órganos a nivel I (Game.breakMembrane)
     map: [9, 1, 2, 1],
     grid: [
       '########################',
@@ -1615,20 +1710,20 @@ export const LEVELS = {
       '######~~~~~~~~##########',
       '########################',
     ],
-    // La última prueba combina todo: ácido, membrana (embestida), pared (garras),
-    // anclaje y sello (tendón).
     enemies: [
       { type: 'vestigio', x: 19, y: 13 },
       { type: 'vestigio', x: 14, y: 5 },
     ],
     nodules: [[16, 5]],
-    exits: [
-      { side: 'left', to: 'C', spawn: [46, 12] },
+    links: [
+      { id: 'p1', x: 0, y: 12, w: 1, h: 2, to: 'C', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 13] },
     ],
     hints: [
       { x: 3, y: 13, r: 3, text: 'Late. Te está esperando. Arriba, tras el sello.' },
       { x: 21, y: 13, r: 2, text: 'La pared sube hasta lo alto. Trepa y salta a la repisa.' },
     ],
+    lamps: [[5, 1, 15]],
+    heartSeal: true,
   },
   // ===================== TERRITORIO DEL HUESO =====================
   // Detrás de la Médula Espinal (A3): una región de hueso compacto y esponjoso,
@@ -1637,7 +1732,6 @@ export const LEVELS = {
   O1: {
     name: 'Foramen Óseo',
     biome: 'oseo',
-    lamps: [[25, 3, 11]], // luminarias colgantes
     map: [-3, -1, 2, 1],
     grid: [
       '################################',
@@ -1663,19 +1757,19 @@ export const LEVELS = {
     traps: [
       { x: 19, y: 12, n: 2, dir: 'up' },
     ],
-    exits: [
-      { side: 'right', at: [11, 12], to: 'A3', spawn: [1, 12] },
-      { side: 'left', at: [11, 12], to: 'O2', spawn: [30, 26] },
+    links: [
+      { id: 'p1', x: 31, y: 11, w: 1, h: 2, to: 'A3', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [30, 12] },
+      { id: 'p2', x: 0, y: 11, w: 1, h: 2, to: 'O2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 12] },
     ],
     hints: [
       { x: 11, y: 12, r: 2, text: 'Unos alveolos que alguien dejó atrás. Si aún no respiras dos veces, ahora puedes.' },
       { x: 29, y: 12, r: 3, text: 'Detrás de la médula,  el hueso. Aquí todo cruje bajo los pies.' },
     ],
+    lamps: [[25, 3, 11]],
   },
   O2: {
     name: 'Caja Torácica',
     biome: 'oseo',
-    lamps: [[15, 2, 8], [28, 7, 12], [13, 13, 9], [19, 31, 7]], // luminarias colgantes
     map: [-5, -2, 2, 3],
     grid: [
       '################################',
@@ -1727,20 +1821,20 @@ export const LEVELS = {
       { type: 'acechador', x: 22, y: 14 },
     ],
     nodules: [[25, 35], [19, 14, 'luz'], [20, 25, 'luz'], [13, 31]],
-    exits: [
-      { side: 'bottom', at: [6, 7], to: 'O6', spawn: [51, 5] },
-      { side: 'right', at: [25, 26], to: 'O1', spawn: [1, 12] },
-      { side: 'left', at: [8, 9], to: 'O3', spawn: [46, 9] },
-      { side: 'left', at: [37, 38], to: 'O4', spawn: [46, 10] },
+    links: [
+      { id: 'p1', x: 6, y: 40, w: 2, h: 2, to: 'O6', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [9, 38] },
+      { id: 'p2', x: 31, y: 25, w: 1, h: 2, to: 'O1', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [30, 26] },
+      { id: 'p3', x: 0, y: 8, w: 1, h: 2, to: 'O3', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 9] },
+      { id: 'p4', x: 0, y: 37, w: 1, h: 2, to: 'O4', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [1, 38] },
     ],
     hints: [
       { x: 27, y: 26, r: 3, text: 'Una caja torácica del tamaño de una catedral. Las costillas sirven de escalones.' },
     ],
+    lamps: [[15, 2, 8], [28, 7, 12], [13, 13, 9], [19, 31, 7]],
   },
   O3: {
     name: 'Médula Roja',
     biome: 'oseo',
-    lamps: [[22, 1, 10], [39, 1, 9], [31, 11, 13], [45, 19, 11]], // luminarias colgantes
     map: [-8, -2, 3, 2],
     grid: [
       '##############################.#################',
@@ -1778,19 +1872,19 @@ export const LEVELS = {
       { type: 'vestigio', x: 32, y: 9 },
     ],
     nodules: [[10, 26], [28, 9, 'luz'], [4, 17, 'luz'], [22, 26]],
-    exits: [
-      { side: 'left', at: [3, 4], to: 'O8', spawn: [28, 4] },
-      { side: 'right', at: [8, 9], to: 'O2', spawn: [1, 9] },
+    links: [
+      { id: 'p1', x: 0, y: 3, w: 1, h: 2, to: 'O8', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [4, 4] },
+      { id: 'p2', x: 47, y: 8, w: 1, h: 2, to: 'O2', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [46, 9] },
     ],
     hints: [
       { x: 2, y: 4, r: 2, text: 'La pared de la repisa es fina y tiembla con la luz.' },
       { x: 44, y: 9, r: 3, text: 'Hueso esponjoso: médula roja entre las trabéculas. Algo late arriba,  a la izquierda,  pegado a la pared.' },
     ],
+    lamps: [[22, 1, 10], [39, 1, 9], [31, 11, 13], [45, 19, 11]],
   },
   O4: {
     name: 'Osario',
     biome: 'oseo',
-    lamps: [[7, 2, 8], [41, 2, 12]], // luminarias colgantes
     map: [-8, 0, 3, 1],
     grid: [
       '################################################',
@@ -1818,20 +1912,20 @@ export const LEVELS = {
       { x: 17, y: 10, n: 2, dir: 'up', period: 3.2 },
       { x: 31, y: 10, n: 2, dir: 'up', period: 3.2, phase: 1.6 },
     ],
-    exits: [
-      { side: 'right', at: [9, 10], to: 'O2', spawn: [1, 38] },
-      { side: 'left', at: [9, 10], to: 'O5', spawn: [30, 10] },
+    links: [
+      { id: 'p1', x: 47, y: 9, w: 1, h: 2, to: 'O2', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [46, 10] },
+      { id: 'p2', x: 0, y: 9, w: 1, h: 2, to: 'O5', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [2, 10] },
     ],
     hints: [
       { x: 24, y: 10, r: 3, text: 'El suelo del osario está erizado de juntas rotas. Escucha cómo crujen antes de saltar.' },
       { x: 44, y: 10, r: 3, text: 'Un osario. Los que no terminaron de digerirse vinieron aquí a esperar.' },
       { x: 4, y: 10, r: 3, text: 'La pared del fondo suena hueca.' },
     ],
+    lamps: [[7, 2, 8], [41, 2, 12]],
   },
   O5: {
     name: 'Fémur Hueco',
     biome: 'oseo',
-    lamps: [[15, 4, 14]], // luminarias colgantes
     secret: true,
     map: [-10, 0, 2, 1],
     grid: [
@@ -1850,12 +1944,13 @@ export const LEVELS = {
       '################################',
       '################################',
     ],
-    exits: [
-      { side: 'right', at: [9, 10], to: 'O4', spawn: [2, 10] },
+    links: [
+      { id: 'p1', x: 31, y: 9, w: 1, h: 2, to: 'O4', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [30, 10] },
     ],
     hints: [
       { x: 28, y: 10, r: 3, text: 'Dentro de un fémur. Alguien guardó aquí lo que no quería que se pudriera.' },
     ],
+    lamps: [[15, 4, 14]],
   },
 
   O6: {
@@ -1888,10 +1983,10 @@ export const LEVELS = {
     traps: [
       { x: 21, y: 11, n: 3, dir: 'up' },
     ],
-    exits: [
-      { side: 'top', at: [54, 55], to: 'O2', spawn: [9, 38] },
-      { side: 'left', at: [10, 11], to: 'O7', spawn: [29, 11] },
-      { side: 'right', at: [10, 11], to: 'A5', spawn: [1, 10] },
+    links: [
+      { id: 'p1', x: 54, y: 0, w: 2, h: 2, to: 'O2', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [51, 5] },
+      { id: 'p2', x: 0, y: 10, w: 1, h: 2, to: 'O7', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [2, 11] },
+      { id: 'p3', x: 79, y: 10, w: 1, h: 2, to: 'A5', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [78, 11] },
     ],
     hints: [
       { x: 51, y: 5, r: 3, text: 'Un canal que recorre el hueso por dentro,  de punta a punta. Las paredes se cierran en membranas: embístelas.' },
@@ -1902,7 +1997,6 @@ export const LEVELS = {
   O7: {
     name: 'Cartílago Articular',
     biome: 'oseo',
-    lamps: [[6, 1, 10], [23, 1, 9], [27, 13, 9], [20, 26, 7]], // luminarias colgantes
     map: [-10, 1, 2, 3],
     grid: [
       '################################',
@@ -1958,8 +2052,8 @@ export const LEVELS = {
     traps: [
       { x: 22, y: 10, n: 3, dir: 'down', len: 2 },
     ],
-    exits: [
-      { side: 'right', at: [10, 11], to: 'O6', spawn: [2, 11] },
+    links: [
+      { id: 'p1', x: 31, y: 10, w: 1, h: 2, to: 'O6', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [29, 11] },
     ],
     hints: [
       { x: 28, y: 11, r: 3, text: 'Una articulación: cartílago liso y resbaladizo. Abajo,  las repisas bajan como vértebras.' },
@@ -1967,11 +2061,11 @@ export const LEVELS = {
       { x: 27, y: 39, r: 2, text: 'La pared late: un esfínter cerrado a cal y canto.' },
       { x: 23, y: 6, r: 3, text: 'Un abismo entre las dos orillas. Del techo cuelgan dos garfios de hueso.' },
     ],
+    lamps: [[6, 1, 10], [23, 1, 9], [27, 13, 9], [20, 26, 7]],
   },
   O8: {
     name: 'Cámara de los Osteoclastos',
     biome: 'oseo',
-    lamps: [[8, 2, 13], [20, 21, 14], [20, 9, 12]], // luminarias colgantes
     secret: true,
     map: [-10, -2, 2, 2],
     grid: [
@@ -2011,12 +2105,13 @@ export const LEVELS = {
     ],
     nodules: [[18, 19, 'luz']],
     hidden: [[12, 10]],
-    exits: [
-      { side: 'right', at: [3, 4], to: 'O3', spawn: [4, 4] },
+    links: [
+      { id: 'p1', x: 31, y: 3, w: 1, h: 2, to: 'O3', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [28, 4] },
     ],
     hints: [
       { x: 27, y: 4, r: 3, text: 'Aquí el hueso se come a sí mismo: las lagunas del suelo son mordiscos.' },
       { x: 12, y: 10, r: 3, text: 'Algo late en la repisa,  más allá de donde llega la vista.' },
     ],
+    lamps: [[8, 2, 13], [20, 21, 14], [20, 9, 12]],
   },
 };
