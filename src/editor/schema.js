@@ -160,7 +160,7 @@ export const KINDS = {
       return { id: 'p' + n, x, y: y - 1, w: 1, h: 2, to: '', toLink: '', trigger: 'use', look: 'portal' };
     },
     box: (o) => [o.x, o.y, o.w ?? 1, o.h ?? 2], move: (o, x, y) => { o.x = x; o.y = y; },
-    text: (o) => (o.to ? `${o.id} → ${o.to}${o.toLink ? '·' + o.toLink : ''}` : `${o.id} (llegada)`),
+    text: (o) => (o.to ? o.id : `${o.id} (sin destino)`), // el destino lo rotula Editor como una salida ("→ sala")
   },
   hints: {
     label: 'Pista (texto)', color: '#a0a0ff',

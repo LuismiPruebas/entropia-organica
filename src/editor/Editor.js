@@ -354,6 +354,21 @@ function draw() {
     g.font = 'bold 11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(`→ ${ex.to}`, bx + bw / 2, by + bh / 2);
   }
+  // Puntos de conexión con destino: el mismo distintivo que una salida ("→ sala"). Pegados
+  // al borde, la pestaña sale por fuera del borde, como las salidas de siempre.
+  for (const [i, l] of (r.links ?? []).entries()) {
+    if (!l.to) continue;
+    const w0 = l.w ?? PW, h0 = l.h ?? PH, sel = S.sel?.kind === 'links' && S.sel.index === i;
+    let bx = l.x * z, by = l.y * z, bw = w0 * z, bh = h0 * z;
+    if (l.x === 0) [bx, bw] = [-z, z];
+    else if (l.x + w0 === W()) [bx, bw] = [W() * z, z];
+    else if (l.y === 0) [by, bh] = [-z, z];
+    else if (l.y + h0 === H()) [by, bh] = [H() * z, z];
+    g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(bx, by, bw, bh);
+    g.fillStyle = sel ? '#ffd23f' : '#3aff8a';
+    g.font = 'bold 11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(`${isReciprocal(S.id, l) ? '⇄' : '→'} ${l.to}`, bx + bw / 2, by + bh / 2);
+  }
   // Elementos.
   const drawBox = (kind, o, i, color, label) => {
     const K = KINDS[kind];
@@ -776,6 +791,9 @@ function incoming(roomId) {
   }
   return out;
 }
+const arrivals = (roomId, l) => Object.values(S.rooms).some((o) => (o.links ?? []).some((k) => k.to === roomId && k.toLink === l.id) || (o.exits ?? []).some((e) => e.to === roomId && e.toLink === l.id));
+// Un punto pegado al borde de la sala es un paso: se cruza al tocarlo y no se ve.
+const atEdge = (r, x, y, w = PW, h = PH) => x === 0 || y === 0 || x + w === r.grid[0].length || y + h === r.grid.length;
 function connectionsHtml(r) {
   const L = S.linking;
   let h = `<h4>Conexiones</h4>`;
@@ -783,9 +801,10 @@ function connectionsHtml(r) {
   const links = r.links ?? [];
   if (!links.length && !(r.exits ?? []).length) h += '<div class="dim" style="font-size:11px">Esta sala no tiene conexiones. Un hueco en el borde no es una conexión: solo cuenta lo que conectes aquí.</div>';
   links.forEach((l, i) => {
-    const st = !l.to ? ['sin destino', '#aaa'] : !l.toLink ? [`→ ${l.to} (a su inicio)`, '#ffd23f'] : isReciprocal(S.id, l) ? [`⇄ ${l.to} · ${l.toLink} · ida y vuelta`, '#3aff8a'] : [`→ ${l.to} · ${l.toLink} · solo ida`, '#40e0ff'];
+    const st = !l.to ? (arrivals(S.id, l) ? ['punto de llegada', '#aaa'] : ['⚠ sin destino: no hace nada', '#ffd23f']) : !l.toLink ? [`→ ${l.to} (a su inicio)`, '#ffd23f'] : isReciprocal(S.id, l) ? [`⇄ ${l.to} · ${l.toLink} · ida y vuelta`, '#3aff8a'] : [`→ ${l.to} · ${l.toLink} · solo ida`, '#40e0ff'];
     const sel = S.sel?.kind === 'links' && S.sel.index === i;
     h += `<button class="ex${sel ? ' on' : ''}" data-lsel="${i}" style="text-align:left"><b>${l.id}</b> (${l.x},${l.y + (l.h ?? PH) - 1}) <span style="color:${st[1]}">${st[0]}</span></button>`;
+    if (!l.to && !sel && !incoming(S.id).some(([, , t]) => t === l) && !arrivals(S.id, l)) h += `<div class="row"><button data-lredo="${i}" style="color:#ffd23f">⚠ Sin destino: elegir destino</button></div>`;
     if (sel) h += `<div class="row"><button data-lview="${i}">Ver</button><button data-lredo="${i}">Cambiar destino</button><button data-ldel="${i}" style="color:#ff8a96">Borrar</button>${l.to && l.toLink && !isReciprocal(S.id, l) && linkOf(l.to, l.toLink) ? `<button data-lrec="${i}">Hacer recíproco</button>` : ''}${isReciprocal(S.id, l) ? `<button data-lone="${i}">Dejar solo ida</button>` : ''}</div>`;
   });
   // Pasos por el borde (salidas de toda la vida): también son conexiones.
@@ -911,7 +930,7 @@ function linkingClick(x, y) {
   if (L.stage === 'place') {
     snapshot();
     const id = newLinkId(r);
-    (r.links ??= []).push({ id, x, y: top, w: PW, h: PH, to: '', toLink: '', trigger: 'use', look: 'portal' });
+    (r.links ??= []).push({ id, x, y: top, w: PW, h: PH, to: '', toLink: '', trigger: atEdge(r, x, top) ? 'touch' : 'use', look: atEdge(r, x, top) ? 'hidden' : 'portal' });
     S.sel = { kind: 'links', index: r.links.length - 1 };
     S.linking = { stage: 'dest', room: S.id, link: id };
     touch(); renderRoomPanel(); renderInspector();
@@ -921,7 +940,7 @@ function linkingClick(x, y) {
   if (L.stage === 'placeDest') {
     snapshot();
     const id = newLinkId(r);
-    (r.links ??= []).push({ id, x, y: top, w: PW, h: PH, to: '', toLink: '', trigger: 'use', look: 'portal' });
+    (r.links ??= []).push({ id, x, y: top, w: PW, h: PH, to: '', toLink: '', trigger: atEdge(r, x, top) ? 'touch' : 'use', look: atEdge(r, x, top) ? 'hidden' : 'portal' });
     const from = linkOf(L.from.room, L.from.link);
     from.to = S.id; from.toLink = id;
     S.dirty.add(L.from.room);
@@ -1110,6 +1129,7 @@ function validate() {
   }
   for (const [id, r] of Object.entries(S.rooms)) {
     for (const l of r.links ?? []) {
+      if (!l.to && !arrivals(id, l)) add(id, `el punto ${l.id} no lleva a ningún sitio (sin destino): elige su destino en Conexiones o bórralo`);
       if (!spotOk(r, l.x, l.y, l.w ?? PW, l.h ?? PH)) add(id, `el punto ${l.id} está fuera de la sala o sobre muro en [${l.x},${l.y}]: muévelo o bórralo`);
       if (l.to && !S.rooms[l.to]) add(id, `el punto ${l.id} lleva a una sala que no existe (${l.to})`);
       else if (l.to && l.toLink && !(S.rooms[l.to].links ?? []).some((k) => k.id === l.toLink)) add(id, `el punto ${l.id} lleva a ${l.to}·${l.toLink}, que no existe`);
