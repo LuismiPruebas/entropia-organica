@@ -350,9 +350,22 @@ function draw() {
     if (ex.side === 'top') [bx, by, bw, bh] = [a * z, -z, (b - a + 1) * z, z];
     if (ex.side === 'bottom') [bx, by, bw, bh] = [a * z, H() * z, (b - a + 1) * z, z];
     g.fillRect(bx, by, bw, bh);
-    g.fillStyle = S.sel?.kind === 'exits' && S.sel.index === i ? '#ffd23f' : '#fff';
-    g.font = '11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = S.sel?.kind === 'exits' && S.sel.index === i ? '#ffd23f' : '#3aff8a';
+    g.font = 'bold 11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(`→ ${ex.to}`, bx + bw / 2, by + bh / 2);
+  }
+  // Huecos del borde que no llevan a ninguna parte (en amarillo).
+  for (const le of looseEnds(r)) {
+    let bx, by, bw, bh;
+    const n = le.j - le.i + 1;
+    if (le.side === 'left') [bx, by, bw, bh] = [-z * 2, le.i * z, z * 2, n * z];
+    if (le.side === 'right') [bx, by, bw, bh] = [W() * z, le.i * z, z * 2, n * z];
+    if (le.side === 'top') [bx, by, bw, bh] = [le.i * z, -z * 2, n * z, z * 2];
+    if (le.side === 'bottom') [bx, by, bw, bh] = [le.i * z, H() * z, n * z, z * 2];
+    g.fillStyle = 'rgba(255,210,63,0.35)'; g.fillRect(bx, by, bw, bh);
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+    g.fillStyle = '#ffd23f'; g.font = 'bold 11px monospace'; g.textAlign = 'left'; g.textBaseline = 'top';
+    g.fillText(le.target ? `sin salida (→ ${le.target[0]}?)` : 'sin salida', bx + bw + 4, by);
   }
   // Elementos.
   const drawBox = (kind, o, i, color, label) => {
@@ -675,10 +688,21 @@ function renderRoomPanel() {
   html += `<h4>Ampliar / recortar</h4><div class="grid4">${['top', 'bottom', 'left', 'right'].map((s) => `<span>${{ top: 'arriba', bottom: 'abajo', left: 'izquierda', right: 'derecha' }[s]}</span><button data-rs="${s}" data-n="-1">−1</button><button data-rs="${s}" data-n="1">+1</button><button data-rs="${s}" data-n="${s === 'top' || s === 'bottom' ? CELL[1] : CELL[0]}">+celda</button>`).join('')}</div>`;
   html += `<h4>Salidas</h4>`;
   (r.exits ?? []).forEach((ex, i) => { html += `<button class="ex${S.sel?.kind === 'exits' && S.sel.index === i ? ' on' : ''}" data-ex="${i}">${ex.side}${ex.at ? ` [${ex.at.join('-')}]` : ''} → ${ex.to} (${ex.spawn.join(',')})</button>`; });
+  const loose = looseEnds(r);
+  if (loose.length) {
+    html += `<h4 style="color:#ffd23f">Huecos sin conectar</h4>`;
+    loose.forEach((le, i) => {
+      const where = { left: 'izquierda', right: 'derecha', top: 'arriba', bottom: 'abajo' }[le.side];
+      html += le.target
+        ? `<button data-conn="${i}" title="Crea la salida aquí y la de vuelta en ${le.target[0]}">Conectar ${where} [${le.i}-${le.j}] con ${le.target[0]}</button>`
+        : `<div class="dim" style="font-size:11px">${where} [${le.i}-${le.j}]: no hay ninguna sala al otro lado (crea una ahí o cierra el hueco)</div>`;
+    });
+  }
   html += `<div class="row"><button id="addexit">+ salida</button><button id="setstart">Inicio del juego aquí (punto de prueba)</button></div>`;
   box.innerHTML = html;
   $('fitmap').onclick = () => { snapshot(); r.map = [r.map?.[0] ?? 0, r.map?.[1] ?? 0, cells[0], cells[1]]; touch(); renderRoomPanel(); drawMap(); };
   for (const b of box.querySelectorAll('[data-rs]')) b.onclick = () => resize(b.dataset.rs, Number(b.dataset.n));
+  for (const b of box.querySelectorAll('[data-conn]')) b.onclick = () => connectLoose(loose[Number(b.dataset.conn)]);
   for (const b of box.querySelectorAll('[data-ex]')) b.onclick = () => { S.sel = { kind: 'exits', index: Number(b.dataset.ex) }; renderInspector(); renderRoomPanel(); draw(); };
   $('addexit').onclick = () => {
     snapshot();
@@ -714,6 +738,58 @@ S.mapPad ??= 3;
 let GHOST = null;                        // salas del mapa original (calco)
 import('../data/worlds/original.js').then((m) => { GHOST = m.LEVELS; drawMap(); }).catch(() => {});
 // Huecos del borde de una sala sin salida definida: [{ side, cell: [cx, cy] }] en celdas del mapa.
+// Coordenadas globales en casillas: la sala empieza en su celda de mapa.
+const gx0 = (o) => o.map[0] * CELL[0], gy0 = (o) => o.map[1] * CELL[1];
+function roomAtTile(gx, gy, except) {
+  return Object.entries(S.rooms).find(([, o]) => o !== except && o.map && o.grid && gx >= gx0(o) && gy >= gy0(o) && gx < gx0(o) + o.grid[0].length && gy < gy0(o) + o.grid.length) ?? null;
+}
+const OPP = { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
+const isOpen = (c) => c !== undefined && !SOLID.has(c);
+// Punto de llegada al entrar en la sala o por el lado `side`, tramo [a, b]: sobre suelo firme.
+function arrivalSpawn(o, side, a, b) {
+  const H0 = o.grid.length, W0 = o.grid[0].length, t = (x, y) => o.grid[y]?.[x];
+  const stands = (x, y) => isOpen(t(x, y)) && isOpen(t(x, y - 1)) && !isOpen(t(x, y + 1));
+  if (side === 'left' || side === 'right') {
+    const cols = side === 'left' ? [1, 2, 3, 4] : [W0 - 2, W0 - 3, W0 - 4, W0 - 5];
+    for (const x of cols) for (let y = a; y < H0 - 1; y++) if (stands(x, y)) return [x, y];
+    return [cols[0], b];
+  }
+  if (side === 'top') {
+    const mid = Math.floor((a + b) / 2);
+    for (let y = 1; y < H0 - 1; y++) if (stands(mid, y)) return [mid, y];
+    return [mid, 1];
+  }
+  // Desde abajo: una repisa junto al hueco (si no, encima del hueco).
+  for (let d = 1; d < W0; d++) for (const x of [a - d, b + d]) for (let y = H0 - 2; y > H0 - 8; y--) if (x > 0 && x < W0 - 1 && stands(x, y)) return [x, y];
+  return [Math.floor((a + b) / 2), H0 - 2];
+}
+// Conecta un hueco de la sala abierta con la sala de al lado: una salida en cada una
+// (con su llegada sobre suelo firme). Si en la otra el borde está cerrado, se abre ahí
+// el hueco del borde (y se avisa por si hay pared detrás).
+function connectLoose(le) {
+  const r = room(), [tid, o] = le.target;
+  const horiz = le.side === 'left' || le.side === 'right';
+  // Tramo equivalente en la otra sala (filas o columnas en sus coordenadas).
+  const off = horiz ? gy0(r) - gy0(o) : gx0(r) - gx0(o);
+  const len = horiz ? o.grid.length : o.grid[0].length;
+  const a = Math.max(0, le.i + off), b = Math.min(len - 1, le.j + off);
+  const os = OPP[le.side];
+  snapshot();
+  // Abre el borde de la otra sala si hace falta.
+  let carved = 0;
+  const rows = o.grid.map((row) => row.split(''));
+  for (let k = a; k <= b; k++) {
+    const [x, y] = os === 'left' ? [0, k] : os === 'right' ? [rows[0].length - 1, k] : os === 'top' ? [k, 0] : [k, rows.length - 1];
+    if (!isOpen(rows[y][x])) { rows[y][x] = '.'; carved++; }
+  }
+  if (carved) { o.grid = rows.map((row) => row.join('')); CTX_CACHE.delete(tid); }
+  (r.exits ??= []).push({ side: le.side, at: [le.i, le.j], to: tid, spawn: arrivalSpawn(o, os, a, b) });
+  (o.exits ??= []).push({ side: os, at: [a, b], to: S.id, spawn: arrivalSpawn(r, le.side, le.i, le.j) });
+  S.dirty.add(tid);
+  touch(); renderRoomPanel(); drawMap();
+  $('msg').textContent = `Conectada: ${S.id} ${le.side} ⇄ ${tid} ${os}.${carved ? ` En ${tid} se ha abierto el borde (${carved} casillas): si hay pared detrás, cávala para que se pueda pasar.` : ''}`;
+}
+
 function looseEnds(r) {
   if (!r.map || !r.grid) return [];
   const H0 = r.grid.length, W0 = r.grid[0].length, out = [];
@@ -729,10 +805,12 @@ function looseEnds(r) {
       let j = i; while (j + 1 < cells.length && open(cells[j + 1])) j++;
       const has = (r.exits ?? []).some((e) => e.side === side && (!e.at || (e.at[0] <= j && e.at[1] >= i)));
       if (!has) {
-        const mid = (i + j) / 2, horiz = side === 'left' || side === 'right';
-        const cx = horiz ? r.map[0] + (side === 'left' ? -1 : r.map[2]) : r.map[0] + Math.floor(mid / CELL[0]);
-        const cy = horiz ? r.map[1] + Math.floor(mid / CELL[1]) : r.map[1] + (side === 'top' ? -1 : r.map[3]);
-        out.push({ side, cell: [cx, cy] });
+        const mid = Math.floor((i + j) / 2), horiz = side === 'left' || side === 'right';
+        // Casilla (global) justo al otro lado del hueco, y la sala que la contiene.
+        const gx = horiz ? (side === 'left' ? gx0(r) - 1 : gx0(r) + W0) : gx0(r) + mid;
+        const gy = horiz ? gy0(r) + mid : (side === 'top' ? gy0(r) - 1 : gy0(r) + H0);
+        const target = roomAtTile(gx, gy, r);
+        out.push({ side, i, j, cell: [Math.floor(gx / CELL[0]), Math.floor(gy / CELL[1])], target });
       }
       i = j + 1;
     }
@@ -1003,3 +1081,6 @@ renderPalette();
 fitCanvas();
 openRoom(S.start.room);
 validate();
+
+// Depuración desde la consola (y pruebas automáticas): el estado y algunas acciones.
+window.__editor = { S, looseEnds, connectLoose, createRoomAt, openRoom };
