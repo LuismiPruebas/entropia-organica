@@ -16,6 +16,16 @@
     header { grid-column: 1 / 4; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: #1d1219; border-bottom: 1px solid var(--line); }
     header h1 { font-size: 14px; margin: 0 12px 0 0; color: #ff6a7a; letter-spacing: 1px; }
     header .sp { flex: 1; }
+    /* Barra de arriba en una sola línea: nada se parte; si no cabe, se desplaza en horizontal. */
+    header { overflow-x: auto; overflow-y: hidden; }
+    header > * { white-space: nowrap; flex-shrink: 0; }
+    header h1 { white-space: nowrap; }
+    header { gap: 4px; }
+    header h1 { font-size: 12px; margin-right: 6px; }
+    header button { padding: 4px 6px; }
+    header label { display: flex; align-items: center; gap: 4px; }
+    header label input[type=checkbox] { margin: 0; }
+    header label select { display: inline-block; width: auto; margin: 0; }
     aside { overflow: auto; background: var(--panel); border-right: 1px solid var(--line); padding: 8px; }
     aside.right { border-right: 0; border-left: 1px solid var(--line); }
     main { position: relative; overflow: hidden; }
@@ -58,11 +68,11 @@
     <button id="duproom">Duplicar sala</button>
     <button id="delroom">Eliminar sala</button>
     <span class="sp"></span>
-    <label style="margin:0;color:var(--ink)"><input id="view" type="checkbox"> vista de juego (G)</label>
+    <label style="margin:0;color:var(--ink)"><input id="view" type="checkbox"> vista juego (G)</label>
     <button id="reach" title="Mayús+clic en un suelo para elegir el origen">Alcance</button>
     <label style="margin:0"><input id="rdouble" type="checkbox" checked> doble salto</label>
-    <label style="margin:0"><input id="ropen" type="checkbox" checked> membranas abiertas</label>
-    <button id="reach-clear">Quitar alcance</button>
+    <label style="margin:0"><input id="ropen" type="checkbox" checked title="Alcance: membranas abiertas"> membranas</label>
+    <button id="reach-clear" title="Quitar el alcance">Quitar</button>
     <button id="validate">Validar</button>
     <button id="test" title="Abre el juego en esta sala con los cambios sin guardar (punto de prueba: Alt+clic)">Probar ▶</button>
     <button id="pickfile" title="Elegir el archivo del mapa (src/data/worlds/…); el editor lo recuerda por mapa">Archivo…</button>
