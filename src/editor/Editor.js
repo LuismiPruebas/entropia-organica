@@ -614,13 +614,25 @@ function renderTools() {
   $('brush').oninput = () => { S.brush = Number($('brush').value); $('brush-v').textContent = S.brush; };
   setTool('brush');
 }
+// Silueta de una rampa (SVG): pared bajo la recta (suelo) o sobre ella (techo).
+function slopeIcon(t, size, wall, air) {
+  const q = (v) => (v / 16) * size;
+  const pts = t.slope ? [[0, q(t.slope[0])], [size, q(t.slope[1])], [size, size], [0, size]]
+    : [[0, 0], [size, 0], [size, q(t.ceil[1])], [0, q(t.ceil[0])]];
+  return `<svg width="${size}" height="${size}" style="display:inline-block;vertical-align:middle;background:${air}"><polygon points="${pts.map((p) => p.join(',')).join(' ')}" fill="${wall}"/></svg>`;
+}
 function renderPalette() {
   const bc = biomeColors(room()?.biome);
+  const cur = TILE_BY_CHAR[S.tile];
   // Al final, accesos a elementos que se buscan junto a los objetos (los nódulos no son
   // casillas: pulsarlos pasa a "Colocar elementos" con ese nódulo).
   const extras = [['nodule', 'Nódulo óseo (elemento: suelta hueso)', '#e8dcc8', 'n'], ['noduleLux', 'Nódulo lumínico (elemento: suelta célula)', '#ffd23f', 'n*'], ['lamp', 'Luminaria colgante (elemento: luz tenue)', '#9affc8', 'l']];
-  $('palette').innerHTML = TILES.map((t) => `<button class="sw${t.c === S.tile ? ' on' : ''}" data-c="${t.c}" title="${t.name}"><i style="background:${t.c === '#' ? bc.wall : t.c === '.' ? bc.air : t.color}"></i><b>${t.c}</b><span>${t.name}</span></button>`).join('')
+  // Con una rampa elegida: la pieza en grande y cómo voltearla o reflejarla (T también voltea).
+  const piece = cur?.slope || cur?.ceil ? `<div class="piece">${slopeIcon(cur, 42, bc.wall, bc.air)}<div><b>${cur.name}</b><div class="row"><button id="pc-flip" title="Rampa de techo ⇄ de suelo (tecla T)">⇅ Voltear (${cur.ceil ? 'suelo' : 'techo'})</button><button id="pc-mirror" title="Que suba o baje hacia el otro lado">⇆ Espejo</button></div></div></div>` : '';
+  $('palette').innerHTML = piece + TILES.map((t) => `<button class="sw${t.c === S.tile ? ' on' : ''}" data-c="${t.c}" title="${t.name}">${t.slope || t.ceil ? slopeIcon(t, 14, bc.wall, bc.air) : `<i style="background:${t.c === '#' ? bc.wall : t.c === '.' ? bc.air : t.color}"></i>`}<b>${t.c}</b><span>${t.name}</span></button>`).join('')
     + extras.map(([id, name, col, mark]) => `<button class="sw${S.tool === 'place' && (id === 'lamp' ? S.kind === 'lamps' : S.kind === 'nodules' && !!S.noduleLux === (id === 'noduleLux')) ? ' on' : ''}" data-el="${id}" title="${name}"><i style="background:${col}"></i><b>${mark}</b><span>${name}</span></button>`).join('');
+  if ($('pc-flip')) $('pc-flip').onclick = () => { S.tile = FLIP[S.tile]; renderPalette(); };
+  if ($('pc-mirror')) $('pc-mirror').onclick = () => { S.tile = MIRROR[S.tile]; renderPalette(); };
   for (const b of document.querySelectorAll('#palette .sw')) b.onclick = () => {
     if (b.dataset.el) {
       S.kind = b.dataset.el === 'lamp' ? 'lamps' : 'nodules';
@@ -1264,6 +1276,8 @@ function duplicateRoom() {
 
 // Voltear una rampa (suelo ⇄ techo): la misma forma, reflejada en vertical.
 const FLIP = { '/': 'J', J: '/', k: 'L', L: 'k', a: 'r', r: 'a', A: 'R', R: 'A', E: 'w', w: 'E', e: 'W', W: 'e' };
+// Espejo (izquierda ⇄ derecha): la rampa sube o baja hacia el otro lado.
+const MIRROR = { '/': 'k', k: '/', a: 'e', e: 'a', A: 'E', E: 'A', J: 'L', L: 'J', r: 'W', W: 'r', R: 'w', w: 'R' };
 
 // ---------------------------------------------------------------- teclado
 const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
