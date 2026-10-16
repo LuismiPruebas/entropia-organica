@@ -1,8 +1,8 @@
 // Editor de niveles de Entropía Orgánica (editor.html).
-// Carga las salas de data/levels.js, permite pintar tiles, colocar elementos, etiquetar
+// Carga las salas del mapa activo (data/levels.js elige el mundo de data/worlds/), permite pintar tiles, colocar elementos, etiquetar
 // zonas, ampliar o crear salas, comprobar el alcance con la física real y guardar de
-// vuelta en levels.js (solo las salas tocadas) o probar en el juego sin guardar.
-import { LEVELS, START } from '../data/levels.js';
+// vuelta en el archivo del mapa (src/data/worlds/<id>.js) (solo las salas tocadas) o probar en el juego sin guardar.
+import { LEVELS, START, WORLDS, WORLD_ID, setWorld } from '../data/levels.js';
 import { BIOMES } from '../data/biomes.js';
 import { TileWorld } from '../core/Physics.js';
 import { paintRoom } from '../factory/TilePainter.js';
@@ -620,7 +620,7 @@ function validate() {
 }
 
 // ---------------------------------------------------------------- probar y guardar
-// El archivo levels.js elegido se recuerda entre sesiones (IndexedDB guarda el
+// El archivo de cada mapa elegido se recuerda entre sesiones (IndexedDB guarda el
 // identificador del archivo, no su contenido).
 function handleStore(mode, fn) {
   return new Promise((resolve) => {
@@ -635,8 +635,13 @@ function handleStore(mode, fn) {
     };
   });
 }
-const loadHandle = () => handleStore('readonly', (st) => st.get('levels')).catch(() => null);
-const saveHandle = (h) => handleStore('readwrite', (st) => st.put(h, 'levels')).catch(() => null);
+// Cada mundo recuerda su propio archivo (src/data/worlds/<id>.js).
+const HANDLE_KEY = `world:${WORLD_ID}`;
+const WORLD_FILE = `${WORLD_ID}.js`;
+const loadHandle = () => handleStore('readonly', (st) => st.get(HANDLE_KEY)).catch(() => null);
+const saveHandle = (h) => handleStore('readwrite', (st) => st.put(h, HANDLE_KEY)).catch(() => null);
+// ¿Es este texto el archivo del mundo que se está editando? (nunca el selector levels.js)
+const isWorldFile = (text) => text.includes(`export const WORLD = '${WORLD_ID}'`) && text.includes('export const LEVELS');
 
 function test() {
   const changed = {};
@@ -662,13 +667,17 @@ async function save() {
     }
     if (!S.fileHandle && window.showOpenFilePicker) {
       // id: el selector se abre en la última carpeta usada.
-      [S.fileHandle] = await showOpenFilePicker({ id: 'linfa-levels', types: [{ description: 'levels.js', accept: { 'text/javascript': ['.js'] } }] });
-      saveHandle(S.fileHandle);
+      alert(`Elige el archivo del mapa «${WORLDS[WORLD_ID].name}»: src/data/worlds/${WORLD_FILE}`);
+      [S.fileHandle] = await showOpenFilePicker({ id: 'linfa-world', types: [{ description: WORLD_FILE, accept: { 'text/javascript': ['.js'] } }] });
     }
     let text;
     if (S.fileHandle) text = await (await S.fileHandle.getFile()).text();
-    else text = await (await fetch('src/data/levels.js', { cache: 'no-store' })).text();
-    if (!text.includes('export const LEVELS')) throw new Error('Ese archivo no es src/data/levels.js');
+    else text = await (await fetch(`src/data/worlds/${WORLD_FILE}`, { cache: 'no-store' })).text();
+    if (!isWorldFile(text)) {
+      S.fileHandle = null;
+      throw new Error(`ese archivo no es el del mapa «${WORLDS[WORLD_ID].name}». Elige src/data/worlds/${WORLD_FILE} (no levels.js).`);
+    }
+    if (S.fileHandle) saveHandle(S.fileHandle);
     const out = patchLevels(text, changed, [...S.removed], startChanged);
     if (S.fileHandle) {
       const w = await S.fileHandle.createWritable();
@@ -677,8 +686,8 @@ async function save() {
     } else {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([out], { type: 'text/javascript' }));
-      a.download = 'levels.js'; a.click();
-      $('msg').textContent = 'Tu navegador no deja escribir archivos: se ha descargado levels.js. Sustituye src/data/levels.js por él.';
+      a.download = WORLD_FILE; a.click();
+      $('msg').textContent = `Tu navegador no deja escribir archivos: se ha descargado ${WORLD_FILE}. Sustituye src/data/worlds/${WORLD_FILE} por él.`;
     }
     S.dirty.clear(); S.removed.clear();
     renderRoomList();
@@ -698,7 +707,7 @@ function newRoom() {
   openRoom(id);
 }
 function deleteRoom() {
-  if (!S.id || !confirm(`¿Eliminar la sala ${S.id}? (al guardar se quitará de levels.js)`)) return;
+  if (!S.id || !confirm(`¿Eliminar la sala ${S.id}? (al guardar se quitará del mapa)`)) return;
   S.removed.add(S.id); S.dirty.delete(S.id);
   delete S.rooms[S.id];
   S.id = null;
@@ -730,10 +739,19 @@ addEventListener('keydown', (e) => {
 
 // ---------------------------------------------------------------- arranque
 $('save').onclick = save;
+// Selector de mapa: cambia el mundo activo (el del juego también) y recarga.
+$('world').innerHTML = Object.entries(WORLDS).map(([id, w]) => `<option value="${id}"${id === WORLD_ID ? ' selected' : ''}>${w.name}</option>`).join('');
+$('world').onchange = (e) => {
+  if (S.dirty.size && !confirm('Hay cambios sin guardar en este mapa. ¿Cambiar de mapa igualmente?')) { e.target.value = WORLD_ID; return; }
+  setWorld(e.target.value);
+  location.reload();
+};
+$('save').textContent = `Guardar en ${WORLD_FILE}`;
 $('pickfile').onclick = async () => {
-  if (!window.showOpenFilePicker) { alert('Este navegador no permite elegir archivos para escribir: al guardar se descargará levels.js.'); return; }
+  if (!window.showOpenFilePicker) { alert(`Este navegador no permite elegir archivos para escribir: al guardar se descargará ${WORLD_FILE}.`); return; }
   try {
-    [S.fileHandle] = await showOpenFilePicker({ id: 'linfa-levels', types: [{ description: 'levels.js', accept: { 'text/javascript': ['.js'] } }] });
+    [S.fileHandle] = await showOpenFilePicker({ id: 'linfa-world', types: [{ description: WORLD_FILE, accept: { 'text/javascript': ['.js'] } }] });
+    if (!isWorldFile(await (await S.fileHandle.getFile()).text())) { S.fileHandle = null; alert(`Ese no es el archivo del mapa «${WORLDS[WORLD_ID].name}»: elige src/data/worlds/${WORLD_FILE}.`); return; }
     await saveHandle(S.fileHandle);
     $('msg').textContent = `Se guardará en ${S.fileHandle.name} (recordado para las próximas veces).`;
   } catch { /* cancelado */ }

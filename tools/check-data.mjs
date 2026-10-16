@@ -1,10 +1,14 @@
 // Valida los datos del juego: filas de igual ancho, salidas y spawns coherentes,
-// enemigos y sprites existentes. Uso: npm run check
-import { LEVELS, START } from '../src/data/levels.js';
+// enemigos y sprites existentes. Uso: npm run check  ·  node tools/check-data.mjs mapa2
 import { ENEMIES } from '../src/data/enemies.js';
 import { SPRITES } from '../src/data/sprites.js';
 import { BIOMES } from '../src/data/biomes.js';
 import { TileWorld, TILE, isSlope } from '../src/core/Physics.js';
+
+// Mundo a validar: node tools/check-data.mjs [original|mapa2|...] (por defecto, el original).
+if (process.argv[2]) process.env.LINFA_WORLD = process.argv[2];
+const { LEVELS, START, WORLD_ID } = await import('../src/data/levels.js');
+console.log('Mundo: ' + WORLD_ID);
 
 const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm']);
 let errors = 0;

@@ -1,7 +1,6 @@
-// MUNDO GUARDADO: «original» — copia del mapa tal como estaba el 2026-10-16 (41 salas, 6 biomas).
-// Es una instantánea: el juego sigue leyendo src/data/levels.js. Sirve de base para el
-// sistema de varios mundos (elegir mapa desde el editor o el menú de desarrollo).
-
+// MUNDO «original»: el mapa completo del juego (41 salas, 6 biomas).
+// Se elige con el selector de mundos (src/data/levels.js).
+//
 // Mapa del Metroidvania. Cada sala es una cuadrícula ASCII de tiles de 16px.
 //
 //  #  pared orgánica          X  membrana agrietada (se rompe con Embestida)
@@ -33,6 +32,8 @@
 // Mecanismos (entities/Puzzles.js): `gates` compuertas-esfínter, `pads` ganglios
 // reflejo, `pods` sacos vitelinos que se revientan en orden, `valves` pústulas que
 // llenan o vacían una cubeta de `fluids` y `floats` balsas que flotan en ella.
+
+export const WORLD = 'original'; // el editor comprueba que guarda en el mundo correcto
 
 export const START = { room: 'A', spawn: [6, 11] };
 

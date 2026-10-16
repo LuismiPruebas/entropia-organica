@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, ROMAN, FRAGMENTS } from '../data/mutations.js';
-import { LEVELS, START } from '../data/levels.js';
+import { LEVELS, START, WORLDS, WORLD_ID, setWorld } from '../data/levels.js';
 import { BIOMES } from '../data/biomes.js';
 import { PICKUPS } from '../entities/Pickup.js';
 import { MenuNav } from './MenuNav.js';
@@ -103,6 +103,10 @@ export class DevMenu {
         st.biomassBase = 100;
         st.integrity = st.maxIntegrity;
         break;
+      case 'world':
+        // Cambia el mapa activo (también el del editor) y vuelve a empezar en él.
+        if (arg !== WORLD_ID && confirm(`¿Cambiar al mapa «${WORLDS[arg].name}»? Se reinicia la partida.`)) { setWorld(arg); location.href = location.pathname + '?play'; }
+        return;
       case 'room': {
         const spawns = roomSpawns();
         g.loadRoom(arg, spawns[arg] ?? [1, 1]);
@@ -156,6 +160,7 @@ export class DevMenu {
         ${btn('ext', `+1 extensor (${st.extenders})`)}
         ${btn('bosses', `Revivir jefes (${st.bosses.size} derrotados)`)}
       </section>
+      <section><h3>Mapa</h3>${Object.entries(WORLDS).map(([id, w]) => btn(`world:${id}`, w.name, id === WORLD_ID)).join("")}</section>
       <section><h3>Viajar a sala</h3>${rooms}</section>`;
     this.nav.restore();
   }

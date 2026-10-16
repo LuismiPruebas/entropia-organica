@@ -53,6 +53,7 @@
 <body>
   <header>
     <h1>EDITOR DE NIVELES</h1>
+    <label style="margin:0;color:var(--ink)" title="Mapa que se edita y se juega (cada uno en src/data/worlds/)">mapa <select id="world"></select></label>
     <button id="newroom">Nueva sala</button>
     <button id="duproom">Duplicar sala</button>
     <button id="delroom">Eliminar sala</button>
@@ -64,8 +65,8 @@
     <button id="reach-clear">Quitar alcance</button>
     <button id="validate">Validar</button>
     <button id="test" title="Abre el juego en esta sala con los cambios sin guardar (punto de prueba: Alt+clic)">Probar ▶</button>
-    <button id="pickfile" title="Elegir otro levels.js (el editor recuerda el último)">Archivo…</button>
-    <button id="save" class="primary" title="Ctrl+S">Guardar en levels.js</button>
+    <button id="pickfile" title="Elegir el archivo del mapa (src/data/worlds/…); el editor lo recuerda por mapa">Archivo…</button>
+    <button id="save" class="primary" title="Ctrl+S">Guardar</button>
   </header>
 
   <aside>
