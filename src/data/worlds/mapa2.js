@@ -78,7 +78,6 @@ export const LEVELS = {
   A2: {
     name: 'Ganglio Basal',
     biome: 'nervioso',
-    lamps: [[28, 1, 10], [17, 19, 13], [26, 29, 12], [5, 34, 16], [39, 34, 10]], // luminarias colgantes
     map: [0, -1, 3, 3],
     grid: [
       '##################################zz############',
@@ -130,6 +129,9 @@ export const LEVELS = {
       { type: 'enjambre', x: 20, y: 14 },
     ],
     nodules: [[14, 31], [30, 20], [30, 5], [25, 39, 'luz'], [16, 16, 'luz'], [20, 24]],
+    links: [
+      { id: 'p1', x: 0, y: 23, w: 1, h: 2, to: 'A3', toLink: 'p1', trigger: 'touch', look: 'hidden' },
+    ],
     exits: [
       { side: 'bottom', at: [43, 44], to: 'A', spawn: [44, 4] },
     ],
@@ -138,6 +140,7 @@ export const LEVELS = {
       { x: 20, y: 8, r: 3, text: 'Un ganglio arrancado de algo enorme. Todavía recuerda caminos.' },
       { x: 4, y: 24, r: 2, text: 'Una médula hueca baja hacia la oscuridad.' },
     ],
+    lamps: [[28, 1, 10], [17, 19, 13], [26, 29, 12], [5, 34, 16], [39, 34, 10]],
   },
 
   A3: {
@@ -165,6 +168,9 @@ export const LEVELS = {
       '################################',
       '################################',
       '################################',
+    ],
+    links: [
+      { id: 'p1', x: 31, y: 9, w: 1, h: 2, to: 'A2', toLink: 'p1', trigger: 'touch', look: 'hidden' },
     ],
   },
 };
