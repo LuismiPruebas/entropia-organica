@@ -551,28 +551,113 @@ function renderRoomList() {
 const refreshRoomList = () => renderRoomList();
 
 const mv = $('map'), mg = mv.getContext('2d');
+// Mapa del mundo como plano de obra: las salas, un margen de celdas libres alrededor
+// (S.mapPad, con la rueda o −/+), la cuadrícula de celdas, los huecos de borde que aún
+// no llevan a ninguna sala (en amarillo: por ahí se sigue construyendo) y, si se pide,
+// el mapa original de fondo como calco. Clic en una sala la abre; en una celda vacía la
+// elige para la próxima "Nueva sala".
+S.mapPad ??= 3;
+let GHOST = null;                        // salas del mapa original (calco)
+import('../data/worlds/original.js').then((m) => { GHOST = m.LEVELS; drawMap(); }).catch(() => {});
+// Huecos del borde de una sala sin salida definida: [{ side, cell: [cx, cy] }] en celdas del mapa.
+function looseEnds(r) {
+  if (!r.map || !r.grid) return [];
+  const H0 = r.grid.length, W0 = r.grid[0].length, out = [];
+  const open = (c) => c !== undefined && !SOLID.has(c) && c !== '#';
+  const sides = {
+    left: Array.from({ length: H0 }, (_, i) => r.grid[i][0]), right: Array.from({ length: H0 }, (_, i) => r.grid[i][W0 - 1]),
+    top: [...r.grid[0]], bottom: [...r.grid[H0 - 1]],
+  };
+  for (const [side, cells] of Object.entries(sides)) {
+    let i = 0;
+    while (i < cells.length) {
+      if (!open(cells[i])) { i++; continue; }
+      let j = i; while (j + 1 < cells.length && open(cells[j + 1])) j++;
+      const has = (r.exits ?? []).some((e) => e.side === side && (!e.at || (e.at[0] <= j && e.at[1] >= i)));
+      if (!has) {
+        const mid = (i + j) / 2, horiz = side === 'left' || side === 'right';
+        const cx = horiz ? r.map[0] + (side === 'left' ? -1 : r.map[2]) : r.map[0] + Math.floor(mid / CELL[0]);
+        const cy = horiz ? r.map[1] + Math.floor(mid / CELL[1]) : r.map[1] + (side === 'top' ? -1 : r.map[3]);
+        out.push({ side, cell: [cx, cy] });
+      }
+      i = j + 1;
+    }
+  }
+  return out;
+}
 function drawMap() {
   const rects = Object.entries(S.rooms).filter(([, r]) => r.map).map(([id, r]) => [id, ...r.map]);
-  if (!rects.length) return;
-  const minX = Math.min(...rects.map((r) => r[1])), minY = Math.min(...rects.map((r) => r[2]));
-  const maxX = Math.max(...rects.map((r) => r[1] + r[3])), maxY = Math.max(...rects.map((r) => r[2] + r[4]));
-  const k = Math.min(mv.width / (maxX - minX + 1), mv.height / (maxY - minY + 1));
+  const ghost = $('map-ghost')?.checked && GHOST ? Object.entries(GHOST).filter(([, r]) => r.map).map(([id, r]) => [id, ...r.map]) : [];
+  const all = rects.concat(ghost);
+  if (!all.length) return;
+  const P = S.mapPad;
+  const minX = Math.min(...all.map((r) => r[1])) - P, minY = Math.min(...all.map((r) => r[2])) - P;
+  const maxX = Math.max(...all.map((r) => r[1] + r[3])) + P, maxY = Math.max(...all.map((r) => r[2] + r[4])) + P;
+  const k = Math.min(mv.width / (maxX - minX), mv.height / (maxY - minY));
+  const ox = (mv.width - (maxX - minX) * k) / 2, oy = (mv.height - (maxY - minY) * k) / 2;
+  const X = (x) => ox + (x - minX) * k, Y = (y) => oy + (y - minY) * k;
   mg.fillStyle = '#0a0709'; mg.fillRect(0, 0, mv.width, mv.height);
-  S.mapXform = { minX, minY, k };
+  S.mapXform = { minX, minY, k, ox, oy };
+  // Cuadrícula de celdas (y los ejes 0,0 un poco más marcados).
+  mg.lineWidth = 1;
+  for (let x = Math.ceil(minX); x <= maxX; x++) { mg.strokeStyle = x === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)'; mg.beginPath(); mg.moveTo(Math.round(X(x)) + 0.5, 0); mg.lineTo(Math.round(X(x)) + 0.5, mv.height); mg.stroke(); }
+  for (let y = Math.ceil(minY); y <= maxY; y++) { mg.strokeStyle = y === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)'; mg.beginPath(); mg.moveTo(0, Math.round(Y(y)) + 0.5); mg.lineTo(mv.width, Math.round(Y(y)) + 0.5); mg.stroke(); }
+  // Calco del original: contornos grises con su nombre.
+  for (const [id, x, y, w, h] of ghost) {
+    mg.strokeStyle = 'rgba(200,190,200,0.35)'; mg.setLineDash([2, 2]);
+    mg.strokeRect(X(x) + 1.5, Y(y) + 1.5, w * k - 3, h * k - 3);
+    mg.setLineDash([]);
+    if (k > 9) { mg.fillStyle = 'rgba(200,190,200,0.45)'; mg.font = '8px monospace'; mg.fillText(id, X(x) + 3, Y(y) + 9); }
+  }
+  // Celda elegida para la próxima sala.
+  if (S.newCell) { mg.strokeStyle = '#3aff8a'; mg.lineWidth = 2; mg.strokeRect(X(S.newCell[0]) + 1, Y(S.newCell[1]) + 1, k - 2, k - 2); mg.lineWidth = 1; }
   for (const [id, x, y, w, h] of rects) {
     const r = S.rooms[id];
-    mg.fillStyle = (BIOMES[r.biome]?.mapColor ?? '#888') + (id === S.id ? 'ff' : '66');
-    mg.fillRect((x - minX + 0.5) * k + 1, (y - minY + 0.5) * k + 1, w * k - 2, h * k - 2);
-    if (k > 10) { mg.fillStyle = '#000'; mg.font = '9px monospace'; mg.fillText(id, (x - minX + 0.5) * k + 3, (y - minY + 0.5) * k + 10); }
+    mg.fillStyle = (BIOMES[r.biome]?.mapColor ?? '#888') + (id === S.id ? 'ff' : '88');
+    mg.fillRect(X(x) + 1, Y(y) + 1, w * k - 2, h * k - 2);
+    if (k > 9) { mg.fillStyle = '#000'; mg.font = '9px monospace'; mg.fillText(id, X(x) + 3, Y(y) + 10); }
+  }
+  // Huecos sin conectar: un punto amarillo en la celda a la que darían.
+  for (const [, r] of Object.entries(S.rooms)) for (const le of looseEnds(r)) {
+    const [cx, cy] = le.cell;
+    mg.fillStyle = '#ffd23f';
+    mg.beginPath(); mg.arc(X(cx + 0.5), Y(cy + 0.5), Math.max(2, k * 0.18), 0, Math.PI * 2); mg.fill();
   }
 }
-mv.onclick = (e) => {
-  const t = S.mapXform; if (!t) return;
+const mapCell = (e) => {
+  const t = S.mapXform; if (!t) return null;
   const rc = mv.getBoundingClientRect();
-  const mx = (e.clientX - rc.left) / t.k + t.minX - 0.5, my = (e.clientY - rc.top) / t.k + t.minY - 0.5;
-  const hit = Object.entries(S.rooms).find(([, r]) => r.map && mx >= r.map[0] && my >= r.map[1] && mx < r.map[0] + r.map[2] && my < r.map[1] + r.map[3]);
-  if (hit) openRoom(hit[0]);
+  const sx = mv.width / rc.width, sy = mv.height / rc.height;
+  return [Math.floor(((e.clientX - rc.left) * sx - t.ox) / t.k + t.minX), Math.floor(((e.clientY - rc.top) * sy - t.oy) / t.k + t.minY)];
 };
+const roomAtCell = ([mx, my]) => Object.entries(S.rooms).find(([, r]) => r.map && mx >= r.map[0] && my >= r.map[1] && mx < r.map[0] + r.map[2] && my < r.map[1] + r.map[3]);
+mv.onclick = (e) => {
+  const c = mapCell(e); if (!c) return;
+  const hit = roomAtCell(c);
+  if (hit) { S.newCell = null; openRoom(hit[0]); return; }
+  S.newCell = c;
+  $('map-info').textContent = `Celda ${c[0]}, ${c[1]} elegida: "Nueva sala" la pondrá ahí.`;
+  drawMap();
+};
+mv.onmousemove = (e) => {
+  const c = mapCell(e); if (!c) return;
+  const hit = roomAtCell(c);
+  const ghost = GHOST && $('map-ghost')?.checked ? Object.entries(GHOST).find(([, r]) => r.map && c[0] >= r.map[0] && c[1] >= r.map[1] && c[0] < r.map[0] + r.map[2] && c[1] < r.map[1] + r.map[3]) : null;
+  $('map-info').textContent = `celda ${c[0]}, ${c[1]} · ${hit ? `${hit[0]} · ${hit[1].name}` : 'libre'}${ghost ? ` · en el original: ${ghost[0]} ${ghost[1].name}` : ''}`;
+};
+mv.onwheel = (e) => { e.preventDefault(); S.mapPad = Math.max(1, Math.min(30, S.mapPad + (e.deltaY > 0 ? 2 : -2))); drawMap(); };
+$('map-out').onclick = () => { S.mapPad = Math.min(30, S.mapPad + 3); drawMap(); };
+$('map-in').onclick = () => { S.mapPad = Math.max(1, S.mapPad - 3); drawMap(); };
+// ⤢: el mapa en grande, flotando sobre la zona de dibujo (el lienzo se ajusta a su tamaño en pantalla).
+function mapBig(on) {
+  mv.classList.toggle('big', on);
+  const rc = mv.getBoundingClientRect();
+  mv.width = on ? Math.round(rc.width) : 214; mv.height = on ? Math.round(rc.height) : 150;
+  drawMap();
+}
+$('map-big').onclick = () => mapBig(!mv.classList.contains('big'));
+addEventListener('keydown', (e) => { if (e.code === 'Escape' && mv.classList.contains('big')) mapBig(false); });
+$('map-ghost').onchange = drawMap;
 
 function openRoom(id) {
   S.id = id;
@@ -702,7 +787,10 @@ function newRoom() {
   const w = cw * CELL[0], h = ch * CELL[1];
   const grid = Array.from({ length: h }, (_, y) => (y === 0 || y === h - 1 ? '#'.repeat(w) : '#' + '.'.repeat(w - 2) + '#'));
   const biome = room()?.biome ?? 'nervioso';
-  S.rooms[id] = { name: 'Sala nueva', biome, map: [0, 0, cw, ch], grid, exits: [] };
+  // En la celda elegida en el mapa del mundo (o junto a la sala abierta).
+  const at = S.newCell ?? (room()?.map ? [room().map[0] + room().map[2], room().map[1]] : [0, 0]);
+  S.rooms[id] = { name: 'Sala nueva', biome, map: [at[0], at[1], cw, ch], grid, exits: [] };
+  S.newCell = null;
   S.dirty.add(id);
   openRoom(id);
 }
