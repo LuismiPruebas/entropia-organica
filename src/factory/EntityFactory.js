@@ -122,7 +122,7 @@ export class EntityFactory {
     // Garfios de hueso donde se engancha el Tendón (casillas 'o').
     room.hooks = room.anchors.map((a) => new Hook(g, a));
     // Puntos de conexión (entities/Link.js): llevan a otro punto, en esta sala o en otra.
-    room.links = (def.links ?? []).map((d) => new LinkPoint(g, d));
+    room.links = (def.links ?? []).map((d) => new LinkPoint(g, d, world));
     // Nódulos óseos (vuelven a crecer al descansar en un Nodo).
     room.nodules = (def.nodules ?? [])
       .filter(([x, y]) => !g.state.nodules.has(`${id}:${x},${y}`))

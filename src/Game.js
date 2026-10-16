@@ -206,7 +206,9 @@ export class Game {
     if (!side) return;
     // Con varias salidas en el mismo lado, `at` indica el tramo (filas o columnas) de cada una.
     const along = Math.floor((side === 'left' || side === 'right' ? p.cy : p.cx) / TILE);
-    const exit = this.room.def.exits.find((e) => e.side === side && (!e.at || (along >= e.at[0] && along <= e.at[1])));
+    const pass = (this.room.links ?? []).find((l) => l.def.to && (l.def.trigger ?? 'touch') === 'touch' && l.edge === side && along >= l.span[0] && along <= l.span[1]);
+    if (pass) return this.#travel(pass.def.to, pass.def.toLink, pass.def.spawn, pass.visible);
+    const exit = (this.room.def.exits ?? []).find((e) => e.side === side && (!e.at || (along >= e.at[0] && along <= e.at[1])));
     if (exit?.toLink) return this.#travel(exit.to, exit.toLink, exit.spawn);
     if (!exit) {
       p.x = Math.max(0, Math.min(w.pixelW - p.w, p.x));
@@ -449,7 +451,9 @@ export class Game {
 
     // Puntos de conexión: al tocarlos, o con [E] delante, llevan a su destino. Al llegar a
     // un punto no se dispara hasta salir de él (si no, el de vuelta te devolvería).
-    const link = (this.room.links ?? []).find((l) => l.def.to && overlap(p, l.rect));
+    const isTouch = (l) => (l.def.trigger ?? 'touch') === 'touch';
+    const centerIn = (r) => p.cx >= r.x && p.cx < r.x + r.w && p.cy >= r.y && p.cy < r.y + r.h;
+    const link = (this.room.links ?? []).find((l) => l.def.to && (isTouch(l) ? !l.edge && centerIn(l.rect) : overlap(p, l.rect)));
     if (this.linkLock && !(this.room.links ?? []).some((l) => l.def.id === this.linkLock && overlap(p, l.rect))) this.linkLock = null;
     // (el bloqueo solo frena los de tocar: los de [E] nunca se disparan solos)
     const useLink = link && (link.def.trigger ?? 'touch') === 'use';

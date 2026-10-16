@@ -10,11 +10,19 @@ import { canvasSprite } from './Puzzles.js';
 //   · arrive: [x, y] opcional: dónde se aparece al llegar a este punto (p. ej. en la repisa
 //     junto a un hueco de techo o de suelo, en vez de dentro del propio hueco).
 // Ida y vuelta = dos puntos que se apuntan entre sí. Se llega con los pies en su fila de abajo.
+// Un punto "al tocarlo" pegado al borde de la sala es un paso: funciona como las salidas de
+// siempre, solo al salir de verdad por ese borde (el centro del cuerpo fuera de la sala) a
+// la altura del punto. Uno en mitad de la sala se activa cuando el centro del cuerpo entra.
 export class LinkPoint {
-  constructor(game, def) {
+  constructor(game, def, world) {
     this.game = game;
     this.def = def;
     this.rect = { x: def.x * TILE, y: def.y * TILE, w: (def.w ?? 1) * TILE, h: (def.h ?? 2) * TILE };
+    const w = def.w ?? 1, h = def.h ?? 2;
+    if (world) {
+      this.edge = def.x === 0 ? 'left' : def.x + w >= world.w ? 'right' : def.y === 0 ? 'top' : def.y + h >= world.h ? 'bottom' : null;
+      this.span = this.edge === 'left' || this.edge === 'right' ? [def.y, def.y + h - 1] : [def.x, def.x + w - 1];
+    }
     this.t = Math.random() * 6;
     this.visible = def.look !== 'hidden' && !!def.to;
     if (this.visible) {
