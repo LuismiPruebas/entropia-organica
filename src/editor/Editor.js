@@ -354,19 +354,6 @@ function draw() {
     g.font = 'bold 11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(`→ ${ex.to}`, bx + bw / 2, by + bh / 2);
   }
-  // Huecos del borde que no llevan a ninguna parte (en amarillo).
-  for (const le of looseEnds(r)) {
-    let bx, by, bw, bh;
-    const n = le.j - le.i + 1;
-    if (le.side === 'left') [bx, by, bw, bh] = [-z * 2, le.i * z, z * 2, n * z];
-    if (le.side === 'right') [bx, by, bw, bh] = [W() * z, le.i * z, z * 2, n * z];
-    if (le.side === 'top') [bx, by, bw, bh] = [le.i * z, -z * 2, n * z, z * 2];
-    if (le.side === 'bottom') [bx, by, bw, bh] = [le.i * z, H() * z, n * z, z * 2];
-    g.fillStyle = 'rgba(255,210,63,0.35)'; g.fillRect(bx, by, bw, bh);
-    g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
-    g.fillStyle = '#ffd23f'; g.font = 'bold 11px monospace'; g.textAlign = 'left'; g.textBaseline = 'top';
-    g.fillText(le.target ? `sin salida (→ ${le.target[0]}?)` : 'sin salida', bx + bw + 4, by);
-  }
   // Elementos.
   const drawBox = (kind, o, i, color, label) => {
     const K = KINDS[kind];
@@ -510,6 +497,7 @@ cv.addEventListener('mousedown', (e) => {
     if (S.tool === 'place' && !hit && !erase) {
       snapshot();
       const K = KINDS[S.kind];
+      if (S.kind === 'links' && !spotOk(room(), x, y - (PH - 1))) { $('msg').textContent = 'Ahí no cabe el punto: necesita el hueco del personaje (1×2), sin muro y dentro de la sala. Mejor usa "Crear conexión" en el panel de la sala.'; S.undo[S.id]?.pop(); return; }
       const o = K.make(x, y, room());
       if (S.kind === 'nodules' && S.noduleLux) o.push('luz'); // desde la paleta: nódulo lumínico
       if (o) { (room()[S.kind] ??= []).push(o); S.sel = { kind: S.kind, index: room()[S.kind].length - 1 }; }
@@ -554,6 +542,7 @@ addEventListener('mousemove', (e) => {
       const K = KINDS[S.sel.kind];
       const [bx, by, bw, bh] = K.box(o, r);
       if (S.sel.kind === 'enemies') K.move(o, o.x + dx, o.y + dy, r);
+      else if (S.sel.kind === 'links') { if (spotOk(r, bx + dx, by + dy, bw, bh)) K.move(o, bx + dx, by + dy, r); else return; }
       else K.move(o, bx + dx, by + dy, r);
     }
     touch(); renderInspector();
@@ -792,12 +781,19 @@ function connectionsHtml(r) {
   let h = `<h4>Conexiones</h4>`;
   // Puntos de esta sala.
   const links = r.links ?? [];
-  if (!links.length) h += '<div class="dim" style="font-size:11px">Esta sala no tiene puntos de conexión.</div>';
+  if (!links.length && !(r.exits ?? []).length) h += '<div class="dim" style="font-size:11px">Esta sala no tiene conexiones. Un hueco en el borde no es una conexión: solo cuenta lo que conectes aquí.</div>';
   links.forEach((l, i) => {
     const st = !l.to ? ['sin destino', '#aaa'] : !l.toLink ? [`→ ${l.to} (a su inicio)`, '#ffd23f'] : isReciprocal(S.id, l) ? [`⇄ ${l.to} · ${l.toLink} · ida y vuelta`, '#3aff8a'] : [`→ ${l.to} · ${l.toLink} · solo ida`, '#40e0ff'];
     const sel = S.sel?.kind === 'links' && S.sel.index === i;
     h += `<button class="ex${sel ? ' on' : ''}" data-lsel="${i}" style="text-align:left"><b>${l.id}</b> (${l.x},${l.y + (l.h ?? PH) - 1}) <span style="color:${st[1]}">${st[0]}</span></button>`;
-    if (sel) h += `<div class="row"><button data-lredo="${i}">Cambiar destino</button>${l.to && l.toLink && !isReciprocal(S.id, l) && linkOf(l.to, l.toLink) ? `<button data-lrec="${i}">Hacer recíproco</button>` : ''}${isReciprocal(S.id, l) ? `<button data-lone="${i}">Dejar solo ida</button>` : ''}</div>`;
+    if (sel) h += `<div class="row"><button data-lview="${i}">Ver</button><button data-lredo="${i}">Cambiar destino</button><button data-ldel="${i}" style="color:#ff8a96">Borrar</button>${l.to && l.toLink && !isReciprocal(S.id, l) && linkOf(l.to, l.toLink) ? `<button data-lrec="${i}">Hacer recíproco</button>` : ''}${isReciprocal(S.id, l) ? `<button data-lone="${i}">Dejar solo ida</button>` : ''}</div>`;
+  });
+  // Pasos por el borde (salidas de toda la vida): también son conexiones.
+  (r.exits ?? []).forEach((ex, i) => {
+    const sel = S.sel?.kind === 'exits' && S.sel.index === i;
+    const where = { left: 'izquierda', right: 'derecha', top: 'arriba', bottom: 'abajo' }[ex.side];
+    h += `<button class="ex${sel ? ' on' : ''}" data-ex="${i}" style="text-align:left"><b>borde ${where}</b>${ex.at ? ` [${ex.at.join('-')}]` : ''} <span style="color:#40e0ff">→ ${ex.to}${ex.toLink ? ' · ' + ex.toLink : ''}</span></button>`;
+    if (sel) h += `<div class="row"><button data-exdel="${i}" style="color:#ff8a96">Borrar</button></div>`;
   });
   // Llegan aquí sin vuelta: se puede hacer recíproco.
   for (const [fromId, fl, tl] of incoming(S.id)) h += `<div style="font-size:11px;margin:3px 0">Llega a <b>${tl.id}</b> desde ${fromId} · ${fl.id} (solo ida) <button data-inc="${fromId}|${fl.id}|${tl.id}">Hacer recíproco</button></div>`;
@@ -838,6 +834,13 @@ function wireConnections(r) {
   $('lk-new').onclick = () => { S.linking = { stage: 'place', room: S.id }; setTool('select'); renderRoomPanel(); $('msg').textContent = 'Crear conexión: haz clic donde irá el punto (Esc cancela).'; draw(); };
   for (const b of box.querySelectorAll('[data-lsel]')) b.onclick = () => { S.sel = { kind: 'links', index: Number(b.dataset.lsel) }; renderInspector(); renderRoomPanel(); draw(); };
   for (const b of box.querySelectorAll('[data-lredo]')) b.onclick = () => { S.linking = { stage: 'dest', room: S.id, link: r.links[Number(b.dataset.lredo)].id }; renderRoomPanel(); };
+  for (const b of box.querySelectorAll('[data-ldel]')) b.onclick = () => deleteLink(S.id, Number(b.dataset.ldel));
+  for (const b of box.querySelectorAll('[data-lview]')) b.onclick = () => viewLink(r.links[Number(b.dataset.lview)]);
+  for (const b of box.querySelectorAll('[data-exdel]')) b.onclick = () => {
+    const ex = r.exits[Number(b.dataset.exdel)];
+    if (!confirm(`¿Borrar el paso por el borde hacia ${ex.to}? (Se mantiene la salida de vuelta en ${ex.to}, si la hay: bórrala allí si quieres.)`)) return;
+    snapshot(); r.exits.splice(Number(b.dataset.exdel), 1); S.sel = null; touch(); renderRoomPanel(); renderInspector(); drawMap();
+  };
   for (const b of box.querySelectorAll('[data-lrec]')) b.onclick = () => { const l = r.links[Number(b.dataset.lrec)]; makeReciprocal(S.id, l, true); };
   for (const b of box.querySelectorAll('[data-lone]')) b.onclick = () => { const l = r.links[Number(b.dataset.lone)]; makeReciprocal(S.id, l, false); };
   for (const b of box.querySelectorAll('[data-inc]')) b.onclick = () => { const [fr, fl] = b.dataset.inc.split('|'); makeReciprocal(fr, linkOf(fr, fl), true); };
@@ -868,6 +871,29 @@ function wireWizard(box) {
       renderRoomPanel(); draw();
     }
   };
+}
+// Borra un punto; los que llevaban a él se quedan sin destino (no se rompe nada).
+function deleteLink(roomId, i) {
+  const r = S.rooms[roomId], l = r.links[i];
+  if (!confirm(`¿Borrar el punto ${l.id}${l.to ? ` (lleva a ${l.to})` : ''}?`)) return;
+  snapshot();
+  r.links.splice(i, 1);
+  if (!r.links.length) delete r.links;
+  for (const [id, o] of Object.entries(S.rooms)) {
+    for (const k of o.links ?? []) if (k.to === roomId && k.toLink === l.id) { k.to = ''; k.toLink = ''; S.dirty.add(id); }
+    for (const ex of o.exits ?? []) if (ex.to === roomId && ex.toLink === l.id) { delete ex.toLink; S.dirty.add(id); }
+  }
+  S.sel = null;
+  touch(); renderRoomPanel(); renderInspector(); drawMap();
+  $('msg').textContent = `Punto ${l.id} borrado.`;
+}
+// Selecciona un punto y centra la vista en él.
+function viewLink(l) {
+  const i = (room().links ?? []).indexOf(l);
+  if (i < 0) return;
+  S.sel = { kind: 'links', index: i };
+  S.pan = { x: cv.width / 2 - (l.x + 0.5) * S.zoom, y: cv.height / 2 - (l.y + 1) * S.zoom };
+  renderInspector(); renderRoomPanel(); draw();
 }
 // Recíproco: el punto de destino apunta de vuelta (o deja de hacerlo).
 function makeReciprocal(roomId, l, on) {
@@ -929,33 +955,13 @@ function renderRoomPanel() {
   html += `<div class="row"><button id="fitmap" title="Ancho y alto del mapa según el tamaño de la sala">Ajustar mapa al tamaño</button></div>`;
   html += `<h4>Ampliar / recortar</h4><div class="grid4">${['top', 'bottom', 'left', 'right'].map((s) => `<span>${{ top: 'arriba', bottom: 'abajo', left: 'izquierda', right: 'derecha' }[s]}</span><button data-rs="${s}" data-n="-1">−1</button><button data-rs="${s}" data-n="1">+1</button><button data-rs="${s}" data-n="${s === 'top' || s === 'bottom' ? CELL[1] : CELL[0]}">+celda</button>`).join('')}</div>`;
   html += connectionsHtml(r);
-  html += `<h4 style="margin-top:10px">Salidas por el borde</h4>`;
-  if (!(r.exits ?? []).length) html += '<div class="dim" style="font-size:11px">Ninguna.</div>';
-  (r.exits ?? []).forEach((ex, i) => { html += `<button class="ex${S.sel?.kind === 'exits' && S.sel.index === i ? ' on' : ''}" data-ex="${i}">${ex.side}${ex.at ? ` [${ex.at.join('-')}]` : ''} → ${ex.to}${ex.toLink ? ' · ' + ex.toLink : ` (${(ex.spawn ?? []).join(',')})`}</button>`; });
-  const loose = looseEnds(r);
-  if (loose.length) {
-    html += `<h4 style="color:#ffd23f">Huecos sin conectar</h4>`;
-    loose.forEach((le, i) => {
-      const where = { left: 'izquierda', right: 'derecha', top: 'arriba', bottom: 'abajo' }[le.side];
-      html += le.target
-        ? `<button data-conn="${i}" title="Crea la salida aquí y la de vuelta en ${le.target[0]}">Conectar ${where} [${le.i}-${le.j}] con ${le.target[0]}</button>`
-        : `<div class="dim" style="font-size:11px">${where} [${le.i}-${le.j}]: no hay ninguna sala al otro lado (crea una ahí o cierra el hueco)</div>`;
-    });
-  }
-  html += `<div class="row"><button id="addexit">+ salida de borde</button><button id="setstart">Inicio del juego aquí (punto de prueba)</button></div>`;
+  html += `<div class="row"><button id="setstart">Inicio del juego aquí (punto de prueba)</button></div>`;
   box.innerHTML = html;
   $('fitmap').onclick = () => { snapshot(); r.map = [r.map?.[0] ?? 0, r.map?.[1] ?? 0, cells[0], cells[1]]; touch(); renderRoomPanel(); drawMap(); };
   for (const b of box.querySelectorAll('[data-rs]')) b.onclick = () => resize(b.dataset.rs, Number(b.dataset.n));
-  for (const b of box.querySelectorAll('[data-conn]')) b.onclick = () => connectLoose(loose[Number(b.dataset.conn)]);
   wireConnections(r);
 
   for (const b of box.querySelectorAll('[data-ex]')) b.onclick = () => { S.sel = { kind: 'exits', index: Number(b.dataset.ex) }; renderInspector(); renderRoomPanel(); draw(); };
-  $('addexit').onclick = () => {
-    snapshot();
-    (r.exits ??= []).push({ side: 'right', at: [Math.floor(H() / 2) - 1, Math.floor(H() / 2)], to: Object.keys(S.rooms)[0], spawn: [1, 1] });
-    S.sel = { kind: 'exits', index: r.exits.length - 1 };
-    touch(); renderInspector(); renderRoomPanel();
-  };
   $('setstart').onclick = () => {
     if (!S.testSpawn) { alert('Marca antes un punto con Alt+clic.'); return; }
     S.start = { room: S.id, spawn: [...S.testSpawn] };
@@ -984,85 +990,6 @@ S.mapPad ??= 3;
 let GHOST = null;                        // salas del mapa original (calco)
 import('../data/worlds/original.js').then((m) => { GHOST = m.LEVELS; drawMap(); }).catch(() => {});
 // Huecos del borde de una sala sin salida definida: [{ side, cell: [cx, cy] }] en celdas del mapa.
-// Coordenadas globales en casillas: la sala empieza en su celda de mapa.
-const gx0 = (o) => o.map[0] * CELL[0], gy0 = (o) => o.map[1] * CELL[1];
-function roomAtTile(gx, gy, except) {
-  return Object.entries(S.rooms).find(([, o]) => o !== except && o.map && o.grid && gx >= gx0(o) && gy >= gy0(o) && gx < gx0(o) + o.grid[0].length && gy < gy0(o) + o.grid.length) ?? null;
-}
-const OPP = { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
-const isOpen = (c) => c !== undefined && !SOLID.has(c);
-// Punto de llegada al entrar en la sala o por el lado `side`, tramo [a, b]: sobre suelo firme.
-function arrivalSpawn(o, side, a, b) {
-  const H0 = o.grid.length, W0 = o.grid[0].length, t = (x, y) => o.grid[y]?.[x];
-  const stands = (x, y) => isOpen(t(x, y)) && isOpen(t(x, y - 1)) && !isOpen(t(x, y + 1));
-  if (side === 'left' || side === 'right') {
-    const cols = side === 'left' ? [1, 2, 3, 4] : [W0 - 2, W0 - 3, W0 - 4, W0 - 5];
-    for (const x of cols) for (let y = a; y < H0 - 1; y++) if (stands(x, y)) return [x, y];
-    return [cols[0], b];
-  }
-  if (side === 'top') {
-    const mid = Math.floor((a + b) / 2);
-    for (let y = 1; y < H0 - 1; y++) if (stands(mid, y)) return [mid, y];
-    return [mid, 1];
-  }
-  // Desde abajo: una repisa junto al hueco (si no, encima del hueco).
-  for (let d = 1; d < W0; d++) for (const x of [a - d, b + d]) for (let y = H0 - 2; y > H0 - 8; y--) if (x > 0 && x < W0 - 1 && stands(x, y)) return [x, y];
-  return [Math.floor((a + b) / 2), H0 - 2];
-}
-// Conecta un hueco de la sala abierta con la sala de al lado: una salida en cada una
-// (con su llegada sobre suelo firme). Si en la otra el borde está cerrado, se abre ahí
-// el hueco del borde (y se avisa por si hay pared detrás).
-function connectLoose(le) {
-  const r = room(), [tid, o] = le.target;
-  const horiz = le.side === 'left' || le.side === 'right';
-  // Tramo equivalente en la otra sala (filas o columnas en sus coordenadas).
-  const off = horiz ? gy0(r) - gy0(o) : gx0(r) - gx0(o);
-  const len = horiz ? o.grid.length : o.grid[0].length;
-  const a = Math.max(0, le.i + off), b = Math.min(len - 1, le.j + off);
-  const os = OPP[le.side];
-  snapshot();
-  // Abre el borde de la otra sala si hace falta.
-  let carved = 0;
-  const rows = o.grid.map((row) => row.split(''));
-  for (let k = a; k <= b; k++) {
-    const [x, y] = os === 'left' ? [0, k] : os === 'right' ? [rows[0].length - 1, k] : os === 'top' ? [k, 0] : [k, rows.length - 1];
-    if (!isOpen(rows[y][x])) { rows[y][x] = '.'; carved++; }
-  }
-  if (carved) { o.grid = rows.map((row) => row.join('')); CTX_CACHE.delete(tid); }
-  (r.exits ??= []).push({ side: le.side, at: [le.i, le.j], to: tid, spawn: arrivalSpawn(o, os, a, b) });
-  (o.exits ??= []).push({ side: os, at: [a, b], to: S.id, spawn: arrivalSpawn(r, le.side, le.i, le.j) });
-  S.dirty.add(tid);
-  touch(); renderRoomPanel(); drawMap();
-  $('msg').textContent = `Conectada: ${S.id} ${le.side} ⇄ ${tid} ${os}.${carved ? ` En ${tid} se ha abierto el borde (${carved} casillas): si hay pared detrás, cávala para que se pueda pasar.` : ''}`;
-}
-
-function looseEnds(r) {
-  if (!r.map || !r.grid) return [];
-  const H0 = r.grid.length, W0 = r.grid[0].length, out = [];
-  const open = (c) => c !== undefined && !SOLID.has(c) && c !== '#';
-  const sides = {
-    left: Array.from({ length: H0 }, (_, i) => r.grid[i][0]), right: Array.from({ length: H0 }, (_, i) => r.grid[i][W0 - 1]),
-    top: [...r.grid[0]], bottom: [...r.grid[H0 - 1]],
-  };
-  for (const [side, cells] of Object.entries(sides)) {
-    let i = 0;
-    while (i < cells.length) {
-      if (!open(cells[i])) { i++; continue; }
-      let j = i; while (j + 1 < cells.length && open(cells[j + 1])) j++;
-      const has = (r.exits ?? []).some((e) => e.side === side && (!e.at || (e.at[0] <= j && e.at[1] >= i)));
-      if (!has) {
-        const mid = Math.floor((i + j) / 2), horiz = side === 'left' || side === 'right';
-        // Casilla (global) justo al otro lado del hueco, y la sala que la contiene.
-        const gx = horiz ? (side === 'left' ? gx0(r) - 1 : gx0(r) + W0) : gx0(r) + mid;
-        const gy = horiz ? gy0(r) + mid : (side === 'top' ? gy0(r) - 1 : gy0(r) + H0);
-        const target = roomAtTile(gx, gy, r);
-        out.push({ side, i, j, cell: [Math.floor(gx / CELL[0]), Math.floor(gy / CELL[1])], target });
-      }
-      i = j + 1;
-    }
-  }
-  return out;
-}
 function drawMap() {
   const rects = Object.entries(S.rooms).filter(([, r]) => r.map).map(([id, r]) => [id, ...r.map]);
   const ghost = $('map-ghost')?.checked && GHOST ? Object.entries(GHOST).filter(([, r]) => r.map).map(([id, r]) => [id, ...r.map]) : [];
@@ -1095,11 +1022,16 @@ function drawMap() {
     mg.fillRect(X(x) + 1, Y(y) + 1, w * k - 2, h * k - 2);
     if (k > 9) { mg.fillStyle = '#000'; mg.font = '9px monospace'; mg.fillText(id, X(x) + 3, Y(y) + 10); }
   }
-  // Huecos sin conectar: un punto amarillo en la celda a la que darían.
-  for (const [, r] of Object.entries(S.rooms)) for (const le of looseEnds(r)) {
-    const [cx, cy] = le.cell;
-    mg.fillStyle = '#ffd23f';
-    mg.beginPath(); mg.arc(X(cx + 0.5), Y(cy + 0.5), Math.max(2, k * 0.18), 0, Math.PI * 2); mg.fill();
+  // Conexiones entre salas: una línea entre los centros de las salas unidas.
+  const ctr = (o) => [X(o.map[0] + o.map[2] / 2), Y(o.map[1] + o.map[3] / 2)];
+  mg.strokeStyle = 'rgba(64,224,255,0.7)'; mg.lineWidth = 1.5;
+  for (const [, r] of Object.entries(S.rooms)) {
+    for (const t of [...(r.links ?? []).map((l) => l.to), ...(r.exits ?? []).map((e) => e.to)]) {
+      const o = S.rooms[t];
+      if (!t || !o?.map || !r.map || o === r) continue;
+      const [ax, ay] = ctr(r), [bx, by] = ctr(o);
+      mg.beginPath(); mg.moveTo(ax, ay); mg.lineTo(bx, by); mg.stroke();
+    }
   }
 }
 const mapCell = (e) => {
@@ -1178,6 +1110,7 @@ function validate() {
   }
   for (const [id, r] of Object.entries(S.rooms)) {
     for (const l of r.links ?? []) {
+      if (!spotOk(r, l.x, l.y, l.w ?? PW, l.h ?? PH)) add(id, `el punto ${l.id} está fuera de la sala o sobre muro en [${l.x},${l.y}]: muévelo o bórralo`);
       if (l.to && !S.rooms[l.to]) add(id, `el punto ${l.id} lleva a una sala que no existe (${l.to})`);
       else if (l.to && l.toLink && !(S.rooms[l.to].links ?? []).some((k) => k.id === l.toLink)) add(id, `el punto ${l.id} lleva a ${l.to}·${l.toLink}, que no existe`);
     }
@@ -1336,4 +1269,4 @@ openRoom(S.start.room);
 validate();
 
 // Depuración desde la consola (y pruebas automáticas): el estado y algunas acciones.
-window.__editor = { S, looseEnds, connectLoose, createRoomAt, openRoom, renderInspector, draw, linkingClick };
+window.__editor = { S, createRoomAt, openRoom, renderInspector, draw, linkingClick, deleteLink };

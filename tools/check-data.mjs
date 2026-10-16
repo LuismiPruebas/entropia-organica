@@ -81,6 +81,11 @@ for (const [id, lv] of Object.entries(LEVELS)) {
 }
 for (const [id, lv] of Object.entries(LEVELS)) {
   for (const l of lv.links ?? []) {
+    // Dentro de la sala y sin muro en su hueco (el del personaje: 1x2 por defecto).
+    for (let y = l.y; y < l.y + (l.h ?? 2); y++) for (let x = l.x; x < l.x + (l.w ?? 1); x++) {
+      const c = cell(id, x, y);
+      if (c === undefined || SOLID.has(c)) { fail(`${id}: el punto ${l.id} está fuera de la sala o sobre muro en [${x},${y}]`); y = Infinity; break; }
+    }
     if (l.to && !LEVELS[l.to]) fail(`${id}: el punto ${l.id} lleva a una sala que no existe (${l.to})`);
     else if (l.to && l.toLink && !(LEVELS[l.to].links ?? []).some((k) => k.id === l.toLink)) fail(`${id}: el punto ${l.id} lleva a ${l.to}·${l.toLink}, que no existe`);
   }
