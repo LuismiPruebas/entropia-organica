@@ -434,6 +434,7 @@ function draw() {
   }
   drawPlacing(z, r);
   drawLinking(z, r);
+  drawArea(z);
   // Rectángulo en curso.
   if (S.drag?.rect) {
     const [x0, y0] = S.drag.from, [x1, y1] = S.drag.to;
@@ -517,6 +518,13 @@ cv.addEventListener('mousedown', (e) => {
     draw();
     return;
   }
+  // Con la herramienta Zona, Alt es copiar (no el punto de prueba).
+  if (S.tool === 'area') {
+    if (S.float?.pasting) { S.float.pasting = false; dropFloat(); return; }
+    if (e.button === 2) { S.area = null; S.float = null; draw(); renderInspector(); return; }
+    if (S.area && inRect(areaRect(S.area), x, y)) { liftArea(e.altKey); S.drag = { areaMove: true, from: [x, y] }; draw(); return; }
+    S.area = { x0: x, y0: y, x1: x, y1: y }; S.drag = { areaSel: true }; draw(); renderInspector(); return;
+  }
   // Alt+clic: punto de prueba · Mayús+clic: origen del alcance.
   if (e.altKey) { S.testSpawn = [x, y]; draw(); return; }
   if (e.shiftKey && S.tool !== 'rect') { S.reachStart = [x, y]; computeReach(); return; }
@@ -555,9 +563,12 @@ addEventListener('mousemove', (e) => {
   const [x, y] = toTile(e);
   if (e.target === cv) { S.hover = [x, y]; $('status').textContent = `${S.id}  ·  tile ${x}, ${y}  ·  ${TILE_BY_CHAR[getTile(x, y)]?.name ?? getTile(x, y)}  ·  celda de mapa ${Math.floor(x / CELL[0])}, ${Math.floor(y / CELL[1])}`; }
   if (S.placing && e.target === cv) { S.placing.cell = cellOf(room(), x, y); draw(); if (!S.drag) return; }
+  if (S.float?.pasting && e.target === cv) { S.float.x = x; S.float.y = y; draw(); return; }
   const d = S.drag;
   if (!d) { if (e.target === cv) draw(); return; }
   if (d.placing) return;
+  if (d.areaSel) { S.area.x1 = x; S.area.y1 = y; draw(); return; }
+  if (d.areaMove && S.float) { S.float.dx = x - d.from[0]; S.float.dy = y - d.from[1]; draw(); return; }
   if (d.pan) { S.pan.x = d.px + e.clientX - d.sx; S.pan.y = d.py + e.clientY - d.sy; draw(); return; }
   if (d.paint) { paintAt(x, y, d.c, S.brush, S.tool === 'blob' || S.tool === 'erase'); touch(); return; }
   if (d.rect) { d.to = [x, y]; draw(); return; }
@@ -581,6 +592,8 @@ addEventListener('mousemove', (e) => {
 addEventListener('mouseup', () => {
   const d = S.drag;
   S.drag = null;
+  if (d?.areaSel) { renderInspector(); return; }
+  if (d?.areaMove) { dropFloat(); return; }
   if (d?.placing && S.placing) {
     // Un clic deja el tamaño mínimo; un arrastre, el espacio marcado.
     if (S.placing.from && S.placing.cell && S.placing.from[0] === S.placing.cell[0] && S.placing.from[1] === S.placing.cell[1]) S.placing.from = null;
@@ -600,10 +613,124 @@ addEventListener('mouseup', () => {
 const TOOLS = [
   ['brush', 'Pincel', 'B'], ['erase', 'Goma (borra a aire)', 'X'], ['blob', 'Masa orgánica (pincel redondo)', 'O'], ['rect', 'Rectángulo', 'R'],
   ['fill', 'Relleno', 'F'], ['pick', 'Cuentagotas', 'I'], ['place', 'Colocar elementos', 'E'], ['select', 'Seleccionar y mover', 'V'],
+  ['area', 'Zona: mover o copiar casillas', 'M'],
 ];
+// ---------------------------------------------------------------- zona (mover o copiar)
+// Con la herramienta Zona se arrastra un rectángulo de casillas; arrastrando desde dentro
+// se mueve el bloque entero (con lo que hay en él: objetos, enemigos, puntos, luces...);
+// con Alt se copia. El hueco que deja se rellena con pared o aire (S.areaFill). Supr lo
+// borra; Ctrl+C / Ctrl+V copian y pegan (también en otra sala). Esc suelta la selección.
+S.areaFill ??= '#';
+const areaRect = (a) => [Math.min(a.x0, a.x1), Math.min(a.y0, a.y1), Math.abs(a.x1 - a.x0) + 1, Math.abs(a.y1 - a.y0) + 1];
+const inRect = ([x, y, w, h], px, py) => px >= x && py >= y && px < x + w && py < y + h;
+// Los elementos cuya esquina cae dentro de la zona: [{ kind, o }] (y los sacos en orden).
+function elementsIn(rc) {
+  const r = room(), out = [];
+  for (const [kind, K] of Object.entries(KINDS)) {
+    if (!K.box || kind === 'exits') continue;
+    for (const o of r[kind] ?? []) { const [bx, by] = K.box(o, r); if (inRect(rc, bx, by)) out.push({ kind, o }); }
+  }
+  for (const p of r.pods?.at ?? []) if (inRect(rc, p[0], p[1])) out.push({ kind: 'pods', o: p });
+  return out;
+}
+function moveElement({ kind, o }, dx, dy) {
+  if (kind === 'pods') { o[0] += dx; o[1] += dy; return; }
+  const K = KINDS[kind], r = room(), [bx, by] = K.box(o, r);
+  if (kind === 'enemies') K.move(o, o.x + dx, o.y + dy, r); else K.move(o, bx + dx, by + dy, r);
+}
+// Levanta las casillas de la zona (y sus elementos) para moverlas o copiarlas.
+function liftArea(copy) {
+  const rc = areaRect(S.area), [x, y, w, h] = rc;
+  snapshot();
+  const tiles = Array.from({ length: h }, (_, j) => Array.from({ length: w }, (_, i) => getTile(x + i, y + j)));
+  let elems = elementsIn(rc);
+  if (copy) {
+    // Copiar: los elementos se duplican (los originales se quedan).
+    const r = room();
+    elems = elems.filter((e) => e.kind !== 'pods').map(({ kind, o }) => { const c = clone(o); if (kind === 'links') c.id = newLinkId(r) + 'c'; (r[kind] ??= []).push(c); return { kind, o: c }; });
+  } else for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) setTile(x + i, y + j, S.areaFill);
+  S.float = { tiles, elems, x, y, w, h, dx: 0, dy: 0, copy };
+}
+// Suelta el bloque en su sitio nuevo.
+function dropFloat() {
+  const F = S.float;
+  if (!F) return;
+  for (let j = 0; j < F.h; j++) for (let i = 0; i < F.w; i++) setTile(F.x + F.dx + i, F.y + F.dy + j, F.tiles[j][i]);
+  for (const e of F.elems) moveElement(e, F.dx, F.dy);
+  S.area = { x0: F.x + F.dx, y0: F.y + F.dy, x1: F.x + F.dx + F.w - 1, y1: F.y + F.dy + F.h - 1 };
+  S.float = null;
+  touch(); renderInspector();
+}
+function areaPanel() {
+  if (S.tool !== 'area') return '';
+  if (!S.area && !S.clip) return '<p class="dim">Zona: arrastra para seleccionar casillas. Luego arrastra desde dentro para moverlas (Alt: copiar).</p>';
+  let h = '<h3>Zona</h3>';
+  if (S.area) { const [x, y, w, h0] = areaRect(S.area); h += `<p class="dim">${w}×${h0} casillas en [${x},${y}] · ${elementsIn([x, y, w, h0]).length} elementos dentro</p>`; }
+  h += `<p class="dim">Arrastra desde dentro para moverla · Alt+arrastrar copia · Supr la borra · Ctrl+C / Ctrl+V copia y pega (también en otra sala) · Esc la suelta.</p>`;
+  h += field('el hueco que deja (al mover o borrar) se rellena con', { v: S.areaFill === '#' ? 'pared' : 'aire', options: ['pared', 'aire'] }, (v) => { S.areaFill = v === 'pared' ? '#' : '.'; }, 'select');
+  if (S.area) h += '<div class="row"><button id="ar-del">Borrar la zona</button><button id="ar-copy">Copiar (Ctrl+C)</button></div>';
+  if (S.clip) h += `<div class="row"><button id="ar-paste">Pegar ${S.clip.w}×${S.clip.h} (Ctrl+V)</button></div>`;
+  return h;
+}
+function wireAreaPanel() {
+  if ($('ar-del')) $('ar-del').onclick = () => areaDelete();
+  if ($('ar-copy')) $('ar-copy').onclick = () => areaCopy();
+  if ($('ar-paste')) $('ar-paste').onclick = () => areaPaste();
+}
+function areaDelete() {
+  if (!S.area) return;
+  const [x, y, w, h] = areaRect(S.area);
+  snapshot();
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) setTile(x + i, y + j, S.areaFill);
+  touch(); renderInspector();
+}
+function areaCopy() {
+  if (!S.area) return;
+  const [x, y, w, h] = areaRect(S.area);
+  S.clip = { w, h, tiles: Array.from({ length: h }, (_, j) => Array.from({ length: w }, (_, i) => getTile(x + i, y + j))), elems: elementsIn([x, y, w, h]).filter((e) => e.kind !== 'pods').map(({ kind, o }) => ({ kind, o: clone(o), at: KINDS[kind].box(o, room()).slice(0, 2).map((v, k) => v - [x, y][k]) })) };
+  $('msg').textContent = `Zona copiada (${w}×${h}). Ctrl+V la pega donde tengas el ratón (en esta sala o en otra).`;
+  renderInspector();
+}
+function areaPaste() {
+  if (!S.clip) return;
+  const [hx, hy] = S.hover ?? [1, 1], c = S.clip, r = room();
+  snapshot();
+  const elems = c.elems.map(({ kind, o, at }) => { const k = clone(o); if (kind === 'links') k.id = newLinkId(r) + 'c'; (r[kind] ??= []).push(k); const K = KINDS[kind], [bx, by] = K.box(k, r); const e = { kind, o: k }; moveElement(e, hx + at[0] - bx, hy + at[1] - by); return e; });
+  S.area = { x0: hx, y0: hy, x1: hx + c.w - 1, y1: hy + c.h - 1 };
+  S.float = { tiles: c.tiles, elems, x: hx, y: hy, w: c.w, h: c.h, dx: 0, dy: 0, copy: true, pasting: true };
+  $('msg').textContent = 'Pegando: mueve el ratón y haz clic donde quieras dejarla (Esc cancela).';
+  draw();
+}
+function drawArea(z) {
+  if (S.tool !== 'area') return;
+  const F = S.float;
+  if (F) {
+    g.globalAlpha = 0.75;
+    const bc = biomeColors(room().biome);
+    for (let j = 0; j < F.h; j++) for (let i = 0; i < F.w; i++) {
+      const c = F.tiles[j][i], t = TILE_BY_CHAR[c];
+      g.fillStyle = c === '#' ? bc.wall : c === '.' || t?.item || t?.slope || t?.ceil ? bc.air : t?.color ?? '#ff00ff';
+      g.fillRect((F.x + F.dx + i) * z, (F.y + F.dy + j) * z, z, z);
+    }
+    g.globalAlpha = 1;
+    g.strokeStyle = '#3aff8a'; g.lineWidth = 2; g.setLineDash([6, 4]);
+    g.strokeRect((F.x + F.dx) * z + 1, (F.y + F.dy) * z + 1, F.w * z - 2, F.h * z - 2); g.setLineDash([]);
+    return;
+  }
+  if (!S.area) return;
+  const [x, y, w, h] = areaRect(S.area);
+  g.fillStyle = 'rgba(255,210,63,0.12)'; g.fillRect(x * z, y * z, w * z, h * z);
+  g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.setLineDash([6, 4]);
+  g.strokeRect(x * z + 1, y * z + 1, w * z - 2, h * z - 2); g.setLineDash([]);
+  g.fillStyle = '#ffd23f'; g.font = 'bold 11px monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
+  g.fillText(`${w}×${h}`, x * z + 2, y * z - 2);
+}
+
 function setTool(t) {
+  if (t !== 'area' && S.area) { S.area = null; S.float = null; }
   S.tool = t;
   for (const b of document.querySelectorAll('[data-tool]')) b.classList.toggle('on', b.dataset.tool === t);
+  if (typeof renderInspector === 'function' && S.id) renderInspector();
   $('kind-row').style.display = t === 'place' ? '' : 'none';
 }
 function renderTools() {
@@ -743,6 +870,7 @@ function renameLink(o, v) {
 function renderInspector() {
   const box = $('inspector');
   const o = selected();
+  if (S.tool === 'area') { box.innerHTML = areaPanel(); wireAreaPanel(); return; }
   if (!o) { box.innerHTML = '<p class="dim">Selecciona un elemento (V) o coloca uno nuevo (E). Clic derecho borra.</p>'; return; }
   const kind = S.sel.kind;
   let html = `<h3>${KINDS[kind]?.label ?? kind} <span class="dim">#${S.sel.index}</span></h3>`;
@@ -1286,6 +1414,12 @@ addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); undo(e.shiftKey); return; }
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') { e.preventDefault(); undo(true); return; }
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') { e.preventDefault(); save(); return; }
+  if (S.tool === 'area') {
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC') { e.preventDefault(); areaCopy(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV') { e.preventDefault(); areaPaste(); return; }
+    if ((e.code === 'Delete' || e.code === 'Backspace') && S.area) { areaDelete(); return; }
+    if (e.code === 'Escape') { if (S.float?.pasting) undo(); S.area = null; S.float = null; draw(); renderInspector(); return; }
+  }
   const t = TOOLS.find(([, , k]) => `Key${k}` === e.code);
   if (t) setTool(t[0]);
   if (e.code === 'Delete' || e.code === 'Backspace') deleteSelected();
