@@ -3,7 +3,8 @@
 import { ENEMIES } from '../src/data/enemies.js';
 import { SPRITES } from '../src/data/sprites.js';
 import { BIOMES } from '../src/data/biomes.js';
-import { TileWorld, TILE, isSlope } from '../src/core/Physics.js';
+import { TileWorld, TILE, SLOPES } from '../src/core/Physics.js';
+const isSlope = (ch) => ch in SLOPES; // solo las de suelo sirven de suelo
 
 // Mundo a validar: node tools/check-data.mjs [original|mapa2|...] (por defecto, el original).
 if (process.argv[2]) process.env.LINFA_WORLD = process.argv[2];

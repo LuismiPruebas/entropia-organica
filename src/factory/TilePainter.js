@@ -1,4 +1,4 @@
-import { TILE, isSlope, slopeSurface } from '../core/Physics.js';
+import { TILE, isSlope, slopeSolidAt } from '../core/Physics.js';
 
 // Pinta procedimentalmente cada sala: un mundo de carne, con el tejido, la paleta y
 // los brotes propios de su bioma (data/biomes.js). Nada mecánico: solo el
@@ -446,9 +446,9 @@ function tileMask(world, fn, div) {
     const c = world.get(cx, cy);
     if (!fn(c)) continue;
     if (isSlope(c)) {
-      // Pendiente: cada celda de la máscara, según su centro quede bajo la recta.
+      // Rampa (de suelo o de techo): cada celda de la máscara, según su centro quede del lado sólido.
       for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
-        if ((y + 0.5) * div >= slopeSurface(c, (x + 0.5) * div)) mask[(cy * T + y) * W + cx * T + x] = 1;
+        if (slopeSolidAt(c, (x + 0.5) * div, (y + 0.5) * div)) mask[(cy * T + y) * W + cx * T + x] = 1;
       }
       continue;
     }

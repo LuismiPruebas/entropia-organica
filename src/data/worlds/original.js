@@ -21,6 +21,8 @@
 //  /  rampa 45° que sube a la derecha    k  rampa 45° que sube a la izquierda
 //  aA rampa suave (22,5°) que sube a la derecha (mitad baja + mitad alta)
 //  Ee rampa suave que sube a la izquierda (mitad alta + mitad baja); debajo, pared
+//  J  techo 45° que baja a la derecha     L  techo 45° que baja a la izquierda
+//  rR techo suave que baja a la derecha   wW techo suave que baja a la izquierda; encima, pared
 //
 // Los huecos en los bordes de la sala son salidas (también en techo y suelo);
 // `exits` dice a dónde llevan. Si un lado tiene varias, `at` indica el tramo de

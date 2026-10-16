@@ -24,6 +24,13 @@ export const TILES = [
   { c: 'A', name: 'Rampa suave ↗ (mitad alta)', color: '#8a3a58', slope: [8, 0] },
   { c: 'E', name: 'Rampa suave ↖ (mitad alta)', color: '#8a3a58', slope: [0, 8] },
   { c: 'e', name: 'Rampa suave ↖ (mitad baja)', color: '#8a3a58', slope: [8, 16] },
+  // Rampas de techo (las de suelo volteadas: pared por encima de la recta). T voltea.
+  { c: 'J', name: 'Techo 45° (baja a la derecha)', color: '#8a3a58', ceil: [0, 16] },
+  { c: 'L', name: 'Techo 45° (baja a la izquierda)', color: '#8a3a58', ceil: [16, 0] },
+  { c: 'r', name: 'Techo suave ↘ (mitad alta)', color: '#8a3a58', ceil: [0, 8] },
+  { c: 'R', name: 'Techo suave ↘ (mitad baja)', color: '#8a3a58', ceil: [8, 16] },
+  { c: 'w', name: 'Techo suave ↙ (mitad baja)', color: '#8a3a58', ceil: [16, 8] },
+  { c: 'W', name: 'Techo suave ↙ (mitad alta)', color: '#8a3a58', ceil: [8, 0] },
   { c: 'b', name: 'Biomasa', color: '#e07a98', item: true },
   { c: 'B', name: 'Célula lumínica (batería)', color: '#ffd23f', item: true },
   { c: 'S', name: 'Hueso', color: '#e8dcc8', item: true },

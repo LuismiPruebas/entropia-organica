@@ -307,7 +307,7 @@ function draw() {
     const bc = biomeColors(r.biome);
     for (let y = 0; y < H(); y++) for (let x = 0; x < W(); x++) {
       const c = r.grid[y][x], t = TILE_BY_CHAR[c];
-      g.fillStyle = c === '#' ? bc.wall : c === '.' || t?.item || t?.slope ? bc.air : t?.color ?? '#ff00ff';
+      g.fillStyle = c === '#' ? bc.wall : c === '.' || t?.item || t?.slope || t?.ceil ? bc.air : t?.color ?? '#ff00ff';
       g.fillRect(x * z, y * z, z, z);
       if (t?.slope) {
         // Pendiente: el triángulo (o trapecio) de pared bajo su recta.
@@ -315,6 +315,13 @@ function draw() {
         g.fillStyle = bc.wall; g.beginPath();
         g.moveTo(x * z, y * z + (l / 16) * z); g.lineTo(x * z + z, y * z + (rr / 16) * z);
         g.lineTo(x * z + z, y * z + z); g.lineTo(x * z, y * z + z); g.closePath(); g.fill();
+      }
+      if (t?.ceil) {
+        // Rampa de techo: la pared por encima de su recta.
+        const [l, rr] = t.ceil;
+        g.fillStyle = bc.wall; g.beginPath();
+        g.moveTo(x * z, y * z); g.lineTo(x * z + z, y * z);
+        g.lineTo(x * z + z, y * z + (rr / 16) * z); g.lineTo(x * z, y * z + (l / 16) * z); g.closePath(); g.fill();
       }
       if (t?.item || ['o', 'N', 'X', 'Y', 'f', 'z', '^'].includes(c)) {
         g.fillStyle = t?.color ?? '#fff';
@@ -787,7 +794,7 @@ function newLinkId(r) { const used = new Set((r.links ?? []).map((l) => l.id)); 
 // ¿Cabe aquí un punto? Dentro de la sala y sin muro (ni rampa) en ninguna de sus casillas.
 function spotOk(r, x, y, w = PW, h = PH) {
   if (x < 0 || y < 0 || x + w > r.grid[0].length || y + h > r.grid.length) return false;
-  for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const c = r.grid[yy][xx]; if (SOLID.has(c) || TILE_BY_CHAR[c]?.slope) return false; }
+  for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const c = r.grid[yy][xx]; if (SOLID.has(c) || TILE_BY_CHAR[c]?.slope || TILE_BY_CHAR[c]?.ceil) return false; }
   return true;
 }
 // Un punto ya puesto vale si está dentro de la sala y tiene algún paso (libre, o que se abre:
@@ -1255,6 +1262,9 @@ function duplicateRoom() {
   openRoom(id);
 }
 
+// Voltear una rampa (suelo ⇄ techo): la misma forma, reflejada en vertical.
+const FLIP = { '/': 'J', J: '/', k: 'L', L: 'k', a: 'r', r: 'a', A: 'R', R: 'A', E: 'w', w: 'E', e: 'W', W: 'e' };
+
 // ---------------------------------------------------------------- teclado
 const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
 addEventListener('keydown', (e) => {
@@ -1265,6 +1275,7 @@ addEventListener('keydown', (e) => {
   const t = TOOLS.find(([, , k]) => `Key${k}` === e.code);
   if (t) setTool(t[0]);
   if (e.code === 'Delete' || e.code === 'Backspace') deleteSelected();
+  if (e.code === 'KeyT' && FLIP[S.tile]) { S.tile = FLIP[S.tile]; renderPalette(); $('msg').textContent = `Rampa volteada: ${TILE_BY_CHAR[S.tile].name} (T vuelve a voltear).`; return; }
   if (e.code === 'KeyG') { S.view = S.view === 'game' ? 'schema' : 'game'; $('view').checked = S.view === 'game'; draw(); }
   if (e.code === 'BracketRight') { S.brush = Math.min(9, S.brush + 1); $('brush').value = S.brush; $('brush-v').textContent = S.brush; }
   if (e.code === 'BracketLeft') { S.brush = Math.max(1, S.brush - 1); $('brush').value = S.brush; $('brush-v').textContent = S.brush; }

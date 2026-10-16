@@ -16,7 +16,19 @@ const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm']);
 // Por debajo de cada pendiente debe haber pared. Se pisan desde arriba (desde abajo,
 // se atraviesan como una plataforma).
 export const SLOPES = { '/': [16, 0], k: [0, 16], a: [16, 8], A: [8, 0], E: [0, 8], e: [8, 16] };
-export const isSlope = (c) => c in SLOPES;
+export const isSlope = (c) => c in SLOPES || c in CEILS;
+// Rampas de techo (las de suelo volteadas): sólidas por ENCIMA de su recta.
+//   J  techo 45° que baja hacia la derecha   L  techo 45° que baja hacia la izquierda
+//   r  techo suave que baja a la derecha, mitad alta   R  ... mitad baja   (se ponen "rR")
+//   w  techo suave que baja a la izquierda, mitad baja  W  ... mitad alta  (se ponen "wW")
+export const CEILS = { J: [0, 16], L: [16, 0], r: [0, 8], R: [8, 16], w: [16, 8], W: [8, 0] };
+export const isCeil = (c) => c in CEILS;
+// ¿Es sólido el punto (lx, ly) de una casilla de rampa (de suelo o de techo)?
+export function slopeSolidAt(c, lx, ly) {
+  if (c in SLOPES) return ly >= slopeSurface(c, lx);
+  const [l, r] = CEILS[c];
+  return ly < l + (r - l) * Math.min(1, Math.max(0, lx / TILE));
+}
 // Altura de la superficie (px desde arriba de la casilla) a lx px de su borde izquierdo.
 export function slopeSurface(c, lx) {
   const [l, r] = SLOPES[c];
@@ -59,8 +71,28 @@ export class TileWorld {
     const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE), c = this.get(cx, cy);
     if (SOLID.has(c)) return true;
     if (c in SLOPES) return y - cy * TILE >= slopeSurface(c, x - cx * TILE);
+    if (c in CEILS) return slopeSolidAt(c, x - cx * TILE, y - cy * TILE);
     return false;
   }
+
+  // ¿Choca un rectángulo con alguna rampa de techo? Exacto: en el tramo de la casilla que
+  // cubre, la recta alcanza su punto más bajo en un extremo; si el borde de arriba del
+  // rectángulo queda por encima de ese punto, se solapan.
+  rectHitsCeil(x, y, w, h) {
+    const x0 = Math.floor(x / TILE), x1 = Math.floor((x + w - EPS) / TILE);
+    const y0 = Math.floor(y / TILE), y1 = Math.floor((y + h - EPS) / TILE);
+    for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+      const c = this.get(cx, cy);
+      if (!(c in CEILS)) continue;
+      const [l, r] = CEILS[c], k = (r - l) / TILE;
+      const lx0 = Math.max(0, x - cx * TILE), lx1 = Math.min(TILE, x + w - cx * TILE);
+      const low = Math.max(l + k * lx0, l + k * lx1);             // lo más bajo de la recta en ese tramo
+      if (y - cy * TILE < low - EPS) return true;
+    }
+    return false;
+  }
+  // Sólido para un cuerpo: casillas macizas o rampas de techo (las de suelo van aparte).
+  #blocked(x, y, w, h) { return this.rectSolid(x, y, w, h) || this.rectHitsCeil(x, y, w, h); }
 
   // Raycast robusto por la cuadrícula (DDA de Amanatides-Woo): recorre exactamente las
   // casillas que cruza el segmento, en orden, sin saltarse esquinas. En las casillas
@@ -88,6 +120,14 @@ export class TileWorld {
         const fa = fn(tIn), fb = fn(tOut);
         if (fa >= 0) return { x: x0 + dx * tIn, y: y0 + dy * tIn, t: tIn, cx, cy, c };
         if (fb >= 0) { const t = tIn + (tOut - tIn) * (-fa / (fb - fa)); return { x: x0 + dx * t, y: y0 + dy * t, t, cx, cy, c }; }
+      }
+      if (c in CEILS) {
+        // Dentro por encima de la recta: g(t) = surf(x(t)) - y(t) > 0; también lineal en t.
+        const [l, r] = CEILS[c], k = (r - l) / TILE;
+        const gn = (t) => (l + k * Math.min(TILE, Math.max(0, x0 + dx * t - cx * TILE))) - (y0 + dy * t - cy * TILE);
+        const ga = gn(tIn), gb = gn(tOut);
+        if (ga > 0) return { x: x0 + dx * tIn, y: y0 + dy * tIn, t: tIn, cx, cy, c };
+        if (gb > 0) { const t = tIn + (tOut - tIn) * (-ga / (gb - ga)); return { x: x0 + dx * t, y: y0 + dy * t, t, cx, cy, c }; }
       }
       if (tOut >= 1) return null;
       tIn = tOut;
@@ -136,14 +176,14 @@ export class TileWorld {
     if (b.vx) {
       const feet = b.y + b.h, cxp = b.x + b.w / 2;
       const surf = this.raycast(cxp, feet - TILE * 2, cxp, feet);
-      if (surf && isSlope(surf.c) && feet - surf.y > STEP && !this.rectSolid(oldX, b.y, b.w, b.h)) {
+      if (surf && surf.c in SLOPES && feet - surf.y > STEP && !this.rectSolid(oldX, b.y, b.w, b.h)) {
         b.x = oldX; b.hitWall = Math.sign(b.vx); b.vx = 0;
       }
     }
     if (this.rectSolid(b.x, b.y, b.w, b.h)) {
       // Escalón: en el suelo, un choque bajo (la unión de una rampa con un bloque) se sube.
       let lifted = 0;
-      if (wasGround && b.vy >= 0) for (let st = 1; st <= STEP; st++) if (!this.rectSolid(b.x, b.y - st, b.w, b.h)) { lifted = st; break; }
+      if (wasGround && b.vy >= 0) for (let st = 1; st <= STEP; st++) if (!this.#blocked(b.x, b.y - st, b.w, b.h)) { lifted = st; break; }
       if (lifted) b.y -= lifted;
       else if (b.vx > 0) {
         b.x = Math.floor((b.x + b.w) / TILE) * TILE - b.w;
@@ -155,7 +195,16 @@ export class TileWorld {
       if (!lifted) b.vx = 0;
     }
 
-    const prevBottom = b.y + b.h;
+    if (this.rectHitsCeil(b.x, b.y, b.w, b.h)) {
+      let lo = 0, hi = 1;                                  // fracción del paso que sí cabe
+      const nx = b.x;
+      for (let i = 0; i < 10; i++) { const m = (lo + hi) / 2; if (this.rectHitsCeil(oldX + (nx - oldX) * m, b.y, b.w, b.h)) hi = m; else lo = m; }
+      b.x = oldX + (nx - oldX) * lo;
+      if (this.rectHitsCeil(b.x, b.y, b.w, b.h)) b.x = oldX;
+      b.hitWall = Math.sign(b.vx) || b.hitWall; b.vx = 0;
+    }
+
+    const prevBottom = b.y + b.h, oldY = b.y;
     b.y += b.vy * dt;
     if (this.rectSolid(b.x, b.y, b.w, b.h)) {
       if (b.vy > 0) {
@@ -179,13 +228,22 @@ export class TileWorld {
       // la esquina mientras su centro ya va sobre la rampa, que entretanto ha bajado eso)
       const snap = wasGround ? Math.abs(b.vx * dt) * 1.25 + 2 + b.w / 2 : 0;
       const hit = this.raycast(fx, feet - STEP, fx, feet + snap + EPS);
-      if (hit && (isSlope(hit.c) || this.slopeAt(fx, feet - 1) || this.slopeAt(fx, feet + 1))) {
+      if (hit && (hit.c in SLOPES || this.slopeAt(fx, feet - 1) || this.slopeAt(fx, feet + 1))) {
         const ny = hit.y - b.h;
         const sinks = hit.y < feet;                                    // hundido en la rampa
-        if ((sinks || wasGround) && !this.rectSolid(b.x, ny, b.w, b.h)) {
-          b.y = ny; b.vy = 0; b.onGround = true; b.onSlope = isSlope(hit.c);
+        if ((sinks || wasGround) && !this.#blocked(b.x, ny, b.w, b.h)) {
+          b.y = ny; b.vy = 0; b.onGround = true; b.onSlope = hit.c in SLOPES;
         }
       }
+    }
+    if (this.rectHitsCeil(b.x, b.y, b.w, b.h)) {
+      let lo = 0, hi = 1;
+      const ny = b.y;
+      for (let i = 0; i < 10; i++) { const m = (lo + hi) / 2; if (this.rectHitsCeil(b.x, oldY + (ny - oldY) * m, b.w, b.h)) hi = m; else lo = m; }
+      b.y = oldY + (ny - oldY) * lo;
+      if (this.rectHitsCeil(b.x, b.y, b.w, b.h)) b.y = oldY;
+      if (ny < oldY) b.hitCeiling = true; else b.onGround = true;
+      b.vy = 0;
     }
     // Plataformas: solo frenan cayendo (o quieto) desde encima; si suben, te llevan.
     for (const pl of this.platforms) {

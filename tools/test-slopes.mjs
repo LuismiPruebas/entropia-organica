@@ -170,6 +170,68 @@ T('aleatoria: 20 recorridos x 2000 pasos sobre las dos colinas', () => {
   }
 });
 
+// --- Rampas de techo (las de suelo volteadas) ----------------------------------------
+// Pasillo cuyo techo baja en rampa hasta cerrarse (45° y suave): al caminar hacia ahí el
+// cuerpo frena sin meterse; al saltar debajo, la cabeza se para en la diagonal.
+function ceilCave(kind) {
+  const W = 34, H = 10, g = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => (y === 0 || y >= 8 || x === 0 || x === W - 1 ? '#' : '.')));
+  // Techo bajo a la derecha: baja hasta dejar 1 casilla de hueco (el cuerpo mide 1,5: no cabe).
+  const seq = kind === '45' ? ['J'] : ['r', 'R'];
+  let x = 10;
+  for (let row = 1; row <= 6; row++) {
+    for (const c of seq) { g[row][x] = c; for (let yy = 1; yy < row; yy++) g[yy][x] = '#'; x++; }
+  }
+  for (; x < W - 1; x++) for (let yy = 1; yy <= 6; yy++) g[yy][x] = "#";
+  return g.map((r) => r.join(''));
+}
+const hitsCeil = (w, b) => w.rectHitsCeil(b.x, b.y, b.w, b.h);
+for (const kind of ['45', 'suave']) {
+  T(`techo ${kind}: caminar hacia donde baja frena sin meterse`, () => {
+    const map = ceilCave(kind), w = new TileWorld(map);
+    const b = { x: 2 * TILE, y: 8 * TILE - 24, w: 12, h: 24, vx: 0, vy: 0, onGround: false };
+    for (let i = 0; i < 400; i++) {
+      b.vx = 120; b.vy = Math.min(420, b.vy + GRAV * DT); w.move(b, DT);
+      if (w.rectSolid(b.x, b.y, b.w, b.h) || hitsCeil(w, b)) { fail('techo ' + kind, `dentro del techo en el paso ${i}`); return; }
+    }
+    if (b.x > 25 * TILE) fail('techo ' + kind, 'atravesó el techo bajo');
+  });
+  T(`techo ${kind}: saltar debajo para la cabeza en la diagonal`, () => {
+    const map = ceilCave(kind), w = new TileWorld(map);
+    const b = { x: 14 * TILE, y: 8 * TILE - 24, w: 12, h: 24, vx: 0, vy: 0, onGround: true };
+    let bumped = false;
+    for (let i = 0; i < 120; i++) {
+      if (i === 2) b.vy = -400;
+      b.vy = Math.min(420, b.vy + GRAV * DT); w.move(b, DT);
+      if (b.hitCeiling) bumped = true;
+      if (w.rectSolid(b.x, b.y, b.w, b.h) || hitsCeil(w, b)) { fail('salto ' + kind, `la cabeza se metió en el techo (paso ${i})`); return; }
+    }
+    if (!bumped) fail('salto ' + kind, 'no tocó el techo');
+  });
+  T(`techo ${kind}: aleatoria (8 recorridos x 2000 pasos)`, () => {
+    let seed = 11;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+    const map = ceilCave(kind);
+    for (let k = 0; k < 8; k++) {
+      const w = new TileWorld(map), b = { x: (2 + rnd() * 8) * TILE, y: 6 * TILE, w: 12, h: 24, vx: 0, vy: 0, onGround: false };
+      let vx = 0;
+      for (let i = 0; i < 2000; i++) {
+        if (rnd() < 0.03) vx = [-270, -150, 0, 150, 270][Math.floor(rnd() * 5)];
+        b.vx = vx;
+        if (b.onGround && rnd() < 0.03) b.vy = -400;
+        b.vy = Math.min(420, b.vy + GRAV * DT); w.move(b, DT);
+        if (w.rectSolid(b.x, b.y, b.w, b.h) || hitsCeil(w, b)) { fail('aleatoria techo ' + kind, `dentro (recorrido ${k}, paso ${i})`); return; }
+      }
+    }
+  });
+}
+T('raycast hacia arriba contra un techo inclinado', () => {
+  const w = new TileWorld(ceilCave('45'));
+  // Casilla 'J' en (10,1): superficie y = 16 + lx; por su centro (lx 8): y = 24.
+  const hit = w.raycast(10 * TILE + 8, 7 * TILE, 10 * TILE + 8, 0);
+  if (!hit || Math.abs(hit.y - (1 * TILE + 8)) > 0.01) fail('raycast techo', `esperaba y=${TILE + 8}, dio ${hit?.y}`);
+  if (!w.solidAtPx(10 * TILE + 12, 1 * TILE + 4) || w.solidAtPx(10 * TILE + 2, 1 * TILE + 10)) fail('solidAtPx techo', 'mal a un lado u otro de la diagonal');
+});
+
 for (const [name, fn] of scenarios) {
   const before = fails;
   fn();
