@@ -416,6 +416,7 @@ function draw() {
     g.fillStyle = '#40e0ff'; g.beginPath(); g.arc(bx, by, 4, 0, Math.PI * 2); g.fill();
   }
   drawPlacing(z, r);
+  drawLinking(z, r);
   // Rectángulo en curso.
   if (S.drag?.rect) {
     const [x0, y0] = S.drag.from, [x1, y1] = S.drag.to;
@@ -468,6 +469,7 @@ cv.addEventListener('dblclick', (e) => {
   const o = hit[1];
   openRoom(hit[0], { zoom: S.zoom, pan: { x: S.pan.x + (o.map[0] - r.map[0]) * CELL[0] * S.zoom, y: S.pan.y + (o.map[1] - r.map[1]) * CELL[1] * S.zoom } });
 });
+addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.linking) { S.linking = null; $('msg').textContent = 'Conexión cancelada.'; renderRoomPanel(); draw(); } });
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.placing) { S.placing = null; $('msg').textContent = 'Nueva sala cancelada.'; draw(); } });
 cv.addEventListener('wheel', (e) => {
   e.preventDefault();
@@ -486,6 +488,10 @@ cv.addEventListener('mousedown', (e) => {
   if (!S.id) return;
   const [x, y] = toTile(e);
   if (e.button === 1 || spaceDown) { S.drag = { pan: true, sx: e.clientX, sy: e.clientY, px: S.pan.x, py: S.pan.y }; return; }
+  if (S.linking && ['place', 'placeDest'].includes(S.linking.stage) && S.linking.room === S.id) {
+    if (e.button === 2) { S.linking = null; $('msg').textContent = 'Conexión cancelada.'; renderRoomPanel(); draw(); return; }
+    linkingClick(x, y); draw(); return;
+  }
   if (S.placing) {
     if (e.button === 2) { S.placing = null; $('msg').textContent = 'Nueva sala cancelada.'; draw(); return; }
     S.placing.cell = cellOf(room(), x, y);
@@ -755,6 +761,161 @@ function deleteSelected() {
 }
 
 // ---------------------------------------------------------------- panel de sala
+// ---------------------------------------------------------------- conexiones (asistente)
+// Puntos de conexión de la sala: qué hay, adónde lleva cada uno y quién llega aquí. El
+// botón "Crear conexión" guía: 1) sitio del punto (del tamaño del personaje, nunca en
+// muro ni fuera de la sala), 2) adónde lleva (un punto que ya existe, o uno nuevo que se
+// marca en otra sala) y 3) si es recíproco (ida y vuelta) o solo de ida.
+const PW = 1, PH = 2;                                 // tamaño mínimo: el del personaje
+const bName = (id) => BIOMES[S.rooms[id]?.biome]?.name ?? '';
+const linkOf = (roomId, linkId) => (S.rooms[roomId]?.links ?? []).find((l) => l.id === linkId);
+const isReciprocal = (roomId, l) => { const t = l.to && linkOf(l.to, l.toLink); return !!t && t.to === roomId && t.toLink === l.id; };
+function newLinkId(r) { const used = new Set((r.links ?? []).map((l) => l.id)); let n = 1; while (used.has('p' + n)) n++; return 'p' + n; }
+// ¿Cabe aquí un punto? Dentro de la sala y sin muro (ni rampa) en ninguna de sus casillas.
+function spotOk(r, x, y, w = PW, h = PH) {
+  if (x < 0 || y < 0 || x + w > r.grid[0].length || y + h > r.grid.length) return false;
+  for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const c = r.grid[yy][xx]; if (SOLID.has(c) || TILE_BY_CHAR[c]?.slope) return false; }
+  return true;
+}
+// Los que llegan a puntos de esta sala desde otras sin vuelta: [fromRoom, fromLink, toLink].
+function incoming(roomId) {
+  const out = [];
+  for (const [id, o] of Object.entries(S.rooms)) for (const l of o.links ?? []) {
+    if (l.to !== roomId || !l.toLink) continue;
+    const t = linkOf(roomId, l.toLink);
+    if (t && !(t.to === id && t.toLink === l.id)) out.push([id, l, t]);
+  }
+  return out;
+}
+function connectionsHtml(r) {
+  const L = S.linking;
+  let h = `<h4>Conexiones</h4>`;
+  // Puntos de esta sala.
+  const links = r.links ?? [];
+  if (!links.length) h += '<div class="dim" style="font-size:11px">Esta sala no tiene puntos de conexión.</div>';
+  links.forEach((l, i) => {
+    const st = !l.to ? ['sin destino', '#aaa'] : !l.toLink ? [`→ ${l.to} (a su inicio)`, '#ffd23f'] : isReciprocal(S.id, l) ? [`⇄ ${l.to} · ${l.toLink} · ida y vuelta`, '#3aff8a'] : [`→ ${l.to} · ${l.toLink} · solo ida`, '#40e0ff'];
+    const sel = S.sel?.kind === 'links' && S.sel.index === i;
+    h += `<button class="ex${sel ? ' on' : ''}" data-lsel="${i}" style="text-align:left"><b>${l.id}</b> (${l.x},${l.y + (l.h ?? PH) - 1}) <span style="color:${st[1]}">${st[0]}</span></button>`;
+    if (sel) h += `<div class="row"><button data-lredo="${i}">Cambiar destino</button>${l.to && l.toLink && !isReciprocal(S.id, l) && linkOf(l.to, l.toLink) ? `<button data-lrec="${i}">Hacer recíproco</button>` : ''}${isReciprocal(S.id, l) ? `<button data-lone="${i}">Dejar solo ida</button>` : ''}</div>`;
+  });
+  // Llegan aquí sin vuelta: se puede hacer recíproco.
+  for (const [fromId, fl, tl] of incoming(S.id)) h += `<div style="font-size:11px;margin:3px 0">Llega a <b>${tl.id}</b> desde ${fromId} · ${fl.id} (solo ida) <button data-inc="${fromId}|${fl.id}|${tl.id}">Hacer recíproco</button></div>`;
+  h += `<div class="row"><button id="lk-new" class="primary">Crear conexión</button></div>`;
+  return h;
+}
+// El asistente, flotando arriba del lienzo (siempre a la vista mientras dura).
+function renderWizard() {
+  let el = $('wizard');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'wizard';
+    cv.parentElement.style.position = 'relative';
+    cv.parentElement.appendChild(el);
+  }
+  const L = S.linking;
+  if (!L) { el.hidden = true; return; }
+  let h = '';
+  if (L?.stage === 'place' && L.room === S.id) h += `<div class="wiz">1/3 · Haz clic en la sala donde irá el punto (fantasma del tamaño del personaje: verde si vale). <button data-lk="cancel">Cancelar</button></div>`;
+  if (L?.stage === 'dest' && L.room === S.id) {
+    h += `<div class="wiz">2/3 · ¿Adónde lleva <b>${L.link}</b>?</div>`;
+    const list = [];
+    for (const [id, o] of Object.entries(S.rooms)) for (const l of o.links ?? []) if (!(id === S.id && l.id === L.link)) list.push([id, l]);
+    if (list.length) h += list.map(([id, l], i) => `<button class="pick" data-dest="${i}">${bName(id)} · ${id} · ${l.id} (${l.x},${l.y + (l.h ?? PH) - 1})${l.to ? '' : ' · llegada libre'}</button>`).join('');
+    else h += '<div class="dim" style="font-size:11px">Aún no hay otros puntos: créalo a mano.</div>';
+    h += `<div class="row" style="margin-top:4px"><select id="lk-room">${Object.keys(S.rooms).map((id) => `<option value="${id}">${id} · ${S.rooms[id].name}</option>`).join('')}</select><button data-lk="manual">Conectar manualmente…</button></div>`;
+    h += `<div class="row"><button data-lk="none">Sin destino por ahora</button><button data-lk="cancel">Cancelar</button></div>`;
+    S.linkList = list;
+  }
+  if (L?.stage === 'placeDest' && L.room === S.id) h += `<div class="wiz">2/3 · Haz clic en esta sala (${S.id}) donde se llegará desde ${L.from.room} · ${L.from.link}. <button data-lk="cancel">Cancelar</button></div>`;
+  if (L?.stage === 'recip' && (L.room === S.id || L.to.room === S.id)) h += `<div class="wiz">3/3 · ${L.from.room} · ${L.from.link} → ${L.to.room} · ${L.to.link}. ¿Recíproco?<div class="row"><button data-lk="both">Sí, ida y vuelta</button><button data-lk="one">Solo de ida</button></div></div>`;
+  if (!h) h = `<div class="wiz">Asistente de conexión en curso en la sala ${L.room}. <button data-lk="goto">Ir allí</button> <button data-lk="cancel">Cancelar</button></div>`;
+  el.innerHTML = h;
+  el.hidden = false;
+  wireWizard(el);
+}
+function wireConnections(r) {
+  const box = $('room');
+  $('lk-new').onclick = () => { S.linking = { stage: 'place', room: S.id }; setTool('select'); renderRoomPanel(); $('msg').textContent = 'Crear conexión: haz clic donde irá el punto (Esc cancela).'; draw(); };
+  for (const b of box.querySelectorAll('[data-lsel]')) b.onclick = () => { S.sel = { kind: 'links', index: Number(b.dataset.lsel) }; renderInspector(); renderRoomPanel(); draw(); };
+  for (const b of box.querySelectorAll('[data-lredo]')) b.onclick = () => { S.linking = { stage: 'dest', room: S.id, link: r.links[Number(b.dataset.lredo)].id }; renderRoomPanel(); };
+  for (const b of box.querySelectorAll('[data-lrec]')) b.onclick = () => { const l = r.links[Number(b.dataset.lrec)]; makeReciprocal(S.id, l, true); };
+  for (const b of box.querySelectorAll('[data-lone]')) b.onclick = () => { const l = r.links[Number(b.dataset.lone)]; makeReciprocal(S.id, l, false); };
+  for (const b of box.querySelectorAll('[data-inc]')) b.onclick = () => { const [fr, fl] = b.dataset.inc.split('|'); makeReciprocal(fr, linkOf(fr, fl), true); };
+  renderWizard();
+}
+function wireWizard(box) {
+  for (const b of box.querySelectorAll('[data-dest]')) b.onclick = () => {
+    const [id, t] = S.linkList[Number(b.dataset.dest)], L = S.linking, l = linkOf(L.room, L.link);
+    snapshot(); l.to = id; l.toLink = t.id; touch();
+    S.linking = { stage: 'recip', room: L.room, from: { room: L.room, link: L.link }, to: { room: id, link: t.id } };
+    renderRoomPanel();
+  };
+  for (const b of box.querySelectorAll('[data-lk]')) b.onclick = () => {
+    const L = S.linking, a = b.dataset.lk;
+    if (a === 'goto') { openRoom(L.room); return; }
+    if (a === 'cancel' || a === 'none') { S.linking = null; $('msg').textContent = a === 'none' ? 'Punto creado sin destino: puedes dárselo luego ("Cambiar destino").' : 'Conexión cancelada.'; renderRoomPanel(); draw(); return; }
+    if (a === 'manual') {
+      const to = $('lk-room').value;
+      S.linking = { stage: 'placeDest', room: to, from: { room: L.room, link: L.link } };
+      if (to !== S.id) openRoom(to); else { renderRoomPanel(); draw(); }
+      $('msg').textContent = `Conectar manualmente: haz clic en ${to} donde se llegará (Esc cancela).`;
+      return;
+    }
+    if (a === 'both' || a === 'one') {
+      makeReciprocal(L.from.room, linkOf(L.from.room, L.from.link), a === 'both');
+      S.linking = null;
+      $('msg').textContent = a === 'both' ? 'Conexión de ida y vuelta creada.' : 'Conexión de solo ida creada (el destino es solo un punto de llegada).';
+      renderRoomPanel(); draw();
+    }
+  };
+}
+// Recíproco: el punto de destino apunta de vuelta (o deja de hacerlo).
+function makeReciprocal(roomId, l, on) {
+  const t = l && linkOf(l.to, l.toLink);
+  if (!t) return;
+  snapshot();
+  if (on) { t.to = roomId; t.toLink = l.id; } else if (t.to === roomId && t.toLink === l.id) { t.to = ''; t.toLink = ''; }
+  S.dirty.add(l.to); S.dirty.add(roomId);
+  touch(); renderRoomPanel(); renderInspector();
+}
+// Clic en el lienzo durante el asistente: pone el punto (si el sitio vale).
+function linkingClick(x, y) {
+  const L = S.linking, r = room(), top = y - (PH - 1);
+  if (!spotOk(r, x, top)) { $('msg').textContent = 'Ahí no cabe: el punto necesita el hueco del personaje (1×2), sin muro y dentro de la sala.'; return true; }
+  if (L.stage === 'place') {
+    snapshot();
+    const id = newLinkId(r);
+    (r.links ??= []).push({ id, x, y: top, w: PW, h: PH, to: '', toLink: '', trigger: 'use', look: 'portal' });
+    S.sel = { kind: 'links', index: r.links.length - 1 };
+    S.linking = { stage: 'dest', room: S.id, link: id };
+    touch(); renderRoomPanel(); renderInspector();
+    $('msg').textContent = `Punto ${id} creado. Elige adónde lleva en el panel de la sala.`;
+    return true;
+  }
+  if (L.stage === 'placeDest') {
+    snapshot();
+    const id = newLinkId(r);
+    (r.links ??= []).push({ id, x, y: top, w: PW, h: PH, to: '', toLink: '', trigger: 'use', look: 'portal' });
+    const from = linkOf(L.from.room, L.from.link);
+    from.to = S.id; from.toLink = id;
+    S.dirty.add(L.from.room);
+    S.linking = { stage: 'recip', room: S.id, from: L.from, to: { room: S.id, link: id } };
+    touch(); renderRoomPanel();
+    $('msg').textContent = `Punto ${id} creado en ${S.id}. ¿Recíproco? (en el panel de la sala)`;
+    return true;
+  }
+  return false;
+}
+function drawLinking(z, r) {
+  const L = S.linking;
+  if (!L || !['place', 'placeDest'].includes(L.stage) || L.room !== S.id || !S.hover) return;
+  const [x, y] = S.hover, top = y - (PH - 1), ok = spotOk(r, x, top);
+  g.fillStyle = ok ? 'rgba(64,224,255,0.3)' : 'rgba(255,60,80,0.3)'; g.fillRect(x * z, top * z, PW * z, PH * z);
+  g.strokeStyle = ok ? '#40e0ff' : '#ff3c50'; g.lineWidth = 2; g.strokeRect(x * z + 1, top * z + 1, PW * z - 2, PH * z - 2);
+  g.fillStyle = ok ? '#40e0ff' : '#ff8a96'; g.font = 'bold 12px monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
+  g.fillText(ok ? (L.stage === 'place' ? 'punto de conexión' : 'llegada') : 'no cabe aquí', x * z + PW * z + 4, top * z);
+}
+
 function renderRoomPanel() {
   const r = room(), box = $('room');
   if (!r) { box.innerHTML = ''; return; }
@@ -767,8 +928,10 @@ function renderRoomPanel() {
   html += field('mapa [x, y, ancho, alto] (celdas)', r.map ?? [0, 0, cells[0], cells[1]], (v) => { r.map = v; drawMap(); });
   html += `<div class="row"><button id="fitmap" title="Ancho y alto del mapa según el tamaño de la sala">Ajustar mapa al tamaño</button></div>`;
   html += `<h4>Ampliar / recortar</h4><div class="grid4">${['top', 'bottom', 'left', 'right'].map((s) => `<span>${{ top: 'arriba', bottom: 'abajo', left: 'izquierda', right: 'derecha' }[s]}</span><button data-rs="${s}" data-n="-1">−1</button><button data-rs="${s}" data-n="1">+1</button><button data-rs="${s}" data-n="${s === 'top' || s === 'bottom' ? CELL[1] : CELL[0]}">+celda</button>`).join('')}</div>`;
-  html += `<h4>Salidas</h4>`;
-  (r.exits ?? []).forEach((ex, i) => { html += `<button class="ex${S.sel?.kind === 'exits' && S.sel.index === i ? ' on' : ''}" data-ex="${i}">${ex.side}${ex.at ? ` [${ex.at.join('-')}]` : ''} → ${ex.to} (${ex.spawn.join(',')})</button>`; });
+  html += connectionsHtml(r);
+  html += `<h4 style="margin-top:10px">Salidas por el borde</h4>`;
+  if (!(r.exits ?? []).length) html += '<div class="dim" style="font-size:11px">Ninguna.</div>';
+  (r.exits ?? []).forEach((ex, i) => { html += `<button class="ex${S.sel?.kind === 'exits' && S.sel.index === i ? ' on' : ''}" data-ex="${i}">${ex.side}${ex.at ? ` [${ex.at.join('-')}]` : ''} → ${ex.to}${ex.toLink ? ' · ' + ex.toLink : ` (${(ex.spawn ?? []).join(',')})`}</button>`; });
   const loose = looseEnds(r);
   if (loose.length) {
     html += `<h4 style="color:#ffd23f">Huecos sin conectar</h4>`;
@@ -779,11 +942,13 @@ function renderRoomPanel() {
         : `<div class="dim" style="font-size:11px">${where} [${le.i}-${le.j}]: no hay ninguna sala al otro lado (crea una ahí o cierra el hueco)</div>`;
     });
   }
-  html += `<div class="row"><button id="addexit">+ salida</button><button id="setstart">Inicio del juego aquí (punto de prueba)</button></div>`;
+  html += `<div class="row"><button id="addexit">+ salida de borde</button><button id="setstart">Inicio del juego aquí (punto de prueba)</button></div>`;
   box.innerHTML = html;
   $('fitmap').onclick = () => { snapshot(); r.map = [r.map?.[0] ?? 0, r.map?.[1] ?? 0, cells[0], cells[1]]; touch(); renderRoomPanel(); drawMap(); };
   for (const b of box.querySelectorAll('[data-rs]')) b.onclick = () => resize(b.dataset.rs, Number(b.dataset.n));
   for (const b of box.querySelectorAll('[data-conn]')) b.onclick = () => connectLoose(loose[Number(b.dataset.conn)]);
+  wireConnections(r);
+
   for (const b of box.querySelectorAll('[data-ex]')) b.onclick = () => { S.sel = { kind: 'exits', index: Number(b.dataset.ex) }; renderInspector(); renderRoomPanel(); draw(); };
   $('addexit').onclick = () => {
     snapshot();
@@ -1171,4 +1336,4 @@ openRoom(S.start.room);
 validate();
 
 // Depuración desde la consola (y pruebas automáticas): el estado y algunas acciones.
-window.__editor = { S, looseEnds, connectLoose, createRoomAt, openRoom, renderInspector, draw };
+window.__editor = { S, looseEnds, connectLoose, createRoomAt, openRoom, renderInspector, draw, linkingClick };

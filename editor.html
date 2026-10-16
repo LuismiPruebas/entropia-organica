@@ -48,6 +48,11 @@
     .row { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
     .grid4 { display: grid; grid-template-columns: 1fr auto auto auto; gap: 4px; align-items: center; }
     #rooms .rm, .ex, .pb { display: block; width: 100%; text-align: left; margin: 2px 0; padding: 3px 6px; }
+    /* Asistente de conexiones: el paso actual, destacado; la lista de destinos posibles. */
+    .wiz { background: #10222a; border: 1px solid #40e0ff; border-radius: 4px; padding: 6px; margin: 4px 0; font-size: 11px; color: #bfefff; }
+    #wizard { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: min(560px, 90%); max-height: 60%; overflow: auto; z-index: 40; box-shadow: 0 6px 30px #000c; }
+    #wizard .wiz { margin: 0; font-size: 12px; }
+    .pick { display: block; width: 100%; text-align: left; margin: 2px 0; padding: 3px 6px; font-size: 11px; }
     .pb { color: #ff9a8a; }
     #tools button { display: flex; justify-content: space-between; width: 100%; margin: 2px 0; }
     #palette { display: grid; grid-template-columns: 1fr; gap: 2px; }
