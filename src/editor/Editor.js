@@ -1103,9 +1103,12 @@ function renderWizard() {
     h += `<div class="wiz">2/3 · ¿Adónde lleva <b>${L.link}</b>?</div>`;
     const list = [];
     for (const [id, o] of Object.entries(S.rooms)) for (const l of o.links ?? []) if (!(id === S.id && l.id === L.link)) list.push([id, l]);
+    h += '<div class="dim" style="font-size:11px;margin:4px 0 2px">A un punto que ya existe:</div>';
     if (list.length) h += list.map(([id, l], i) => `<button class="pick" data-dest="${i}">${bName(id)} · ${id} · ${l.id} (${l.x},${l.y + (l.h ?? PH) - 1})${l.to ? '' : ' · llegada libre'}</button>`).join('');
-    else h += '<div class="dim" style="font-size:11px">Aún no hay otros puntos: créalo a mano.</div>';
-    h += `<div class="row" style="margin-top:4px"><select id="lk-room">${Object.keys(S.rooms).map((id) => `<option value="${id}">${id} · ${S.rooms[id].name}</option>`).join('')}</select><button data-lk="manual">Conectar manualmente…</button></div>`;
+    else h += '<div class="dim" style="font-size:11px">(todavía no hay otros puntos)</div>';
+    // O a un sitio nuevo de cualquier sala: un botón por sala (un clic y se marca allí).
+    h += '<div class="dim" style="font-size:11px;margin:6px 0 2px">O a un sitio nuevo, marcándolo en la sala:</div><div class="rooms-pick">';
+    h += Object.keys(S.rooms).map((id) => `<button class="pick" data-man="${id}">${id} · ${S.rooms[id].name}${id === S.id ? ' (esta)' : ''} →</button>`).join('') + '</div>';
     h += `<div class="row"><button data-lk="none">Sin destino por ahora</button><button data-lk="cancel">Cancelar</button></div>`;
     S.linkList = list;
   }
@@ -1140,12 +1143,13 @@ function wireWizard(box) {
     S.linking = { stage: 'recip', room: L.room, from: { room: L.room, link: L.link }, to: { room: id, link: t.id } };
     renderRoomPanel();
   };
+  for (const b of box.querySelectorAll('[data-man]')) b.dataset.lk = 'manual';
   for (const b of box.querySelectorAll('[data-lk]')) b.onclick = () => {
     const L = S.linking, a = b.dataset.lk;
     if (a === 'goto') { openRoom(L.room); return; }
     if (a === 'cancel' || a === 'none') { S.linking = null; $('msg').textContent = a === 'none' ? 'Punto creado sin destino: puedes dárselo luego ("Cambiar destino").' : 'Conexión cancelada.'; renderRoomPanel(); draw(); return; }
     if (a === 'manual') {
-      const to = $('lk-room').value;
+      const to = b.dataset.man;
       S.linking = { stage: 'placeDest', room: to, from: { room: L.room, link: L.link } };
       if (to !== S.id) openRoom(to); else { renderRoomPanel(); draw(); }
       $('msg').textContent = `Conectar manualmente: haz clic en ${to} donde se llegará (Esc cancela).`;
