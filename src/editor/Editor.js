@@ -45,6 +45,10 @@ function snapshot() {
   if (S.undo[id].length > 120) S.undo[id].shift();
   S.redo[id] = [];
 }
+function snapshotRoom(id) {
+  (S.undo[id] ??= []).push(JSON.stringify(S.rooms[id]));
+  S.redo[id] = [];
+}
 function touch() {
   CTX_CACHE.delete(S.id);
   S.dirty.add(S.id);
@@ -113,6 +117,7 @@ function shiftRoom(dx, dy) {
     if (typeof o.x === 'number') o.x += dx; else if (Array.isArray(o.x)) o.x = o.x.map((v) => v + dx);
     if (typeof o.y === 'number') o.y += dy;
     if (typeof o.top === 'number') { o.top += dy; o.bottom += dy; }
+    if (Array.isArray(o.arrive)) o.arrive = [o.arrive[0] + dx, o.arrive[1] + dy]; // llegada de un punto de conexión
   };
   for (const key of Object.keys(KINDS)) if (key !== 'exits' && key !== 'pods') for (const o of r[key] ?? []) shift(o);
   if (r.pods) r.pods.at = r.pods.at.map(([x, y]) => [x + dx, y + dy]);
@@ -132,8 +137,16 @@ function resize(side, n) {
   if (side === 'bottom') { if (n > 0) r.grid = [...r.grid, ...Array(n).fill('#'.repeat(w))]; else r.grid = r.grid.slice(0, n); }
   if (side === 'left') { r.grid = r.grid.map((row) => (n > 0 ? '#'.repeat(n) + row : row.slice(-n))); shiftRoom(n, 0); }
   if (side === 'right') r.grid = r.grid.map((row) => (n > 0 ? row + '#'.repeat(n) : row.slice(0, n)));
+  // En el mapa: la esquina sube o se corre lo que crece por arriba o por la izquierda (en
+  // celdas, con decimales si no es una celda entera) y el tamaño sigue al de la sala.
+  const q = (v) => Math.round(v * 1000) / 1000;
+  r.map ??= [0, 0, 1, 1];
+  if (side === 'top') { r.map[1] = q(r.map[1] - n / CELL[1]); S.pan.y -= n * S.zoom; }
+  if (side === 'left') { r.map[0] = q(r.map[0] - n / CELL[0]); S.pan.x -= n * S.zoom; }
+  r.map[2] = q(W() / CELL[0]); r.map[3] = q(H() / CELL[1]);
+  CTX_CACHE.delete(S.id);
   touch();
-  renderRoomPanel();
+  renderRoomPanel(); drawMap();
 }
 
 // ---------------------------------------------------------------- lienzo
@@ -229,6 +242,11 @@ function drawContext(z, r) {
 // "Nueva sala" deja un bloque fantasma en el lienzo, encajado en las celdas del mapa:
 // clic para ponerlo con el tamaño mínimo (2x1 celdas: algo más de una pantalla) o
 // arrastrar para abarcar un espacio mayor. Se pone rojo si pisa otra sala. Esc cancela.
+// ¿Cabe la sala en esa posición del mapa sin pisar a otra?
+function mapFree(id, x, y) {
+  const r = S.rooms[id], w = r.map?.[2] ?? 1, h = r.map?.[3] ?? 1;
+  return !Object.entries(S.rooms).some(([k, o]) => k !== id && o.map && x < o.map[0] + o.map[2] - 1e-6 && x + w > o.map[0] + 1e-6 && y < o.map[1] + o.map[3] - 1e-6 && y + h > o.map[1] + 1e-6);
+}
 function startPlacing() {
   if (!S.id) { createRoomAt(0, 0, 2, 1); return; }
   S.placing = { cell: null, from: null };
@@ -479,6 +497,10 @@ function draw() {
   }
   drawPlacing(z, r);
   drawLinking(z, r);
+  if (S.roomMove) {
+    g.strokeStyle = S.drag?.bad ? '#ff3c50' : '#40e0ff'; g.lineWidth = 3; g.setLineDash([10, 6]);
+    g.strokeRect(-2, -2, W() * z + 4, H() * z + 4); g.setLineDash([]);
+  }
   // Fantasma del enemigo que se va a colocar.
   if (S.tool === 'place' && S.kind === 'enemies' && S.hover && S.enemyType) drawEnemy({ type: S.enemyType, x: S.hover[0], y: S.hover[1] }, z, 0.55);
   drawArea(z);
@@ -535,6 +557,7 @@ cv.addEventListener('dblclick', (e) => {
   openRoom(hit[0], { zoom: S.zoom, pan: { x: S.pan.x + (o.map[0] - r.map[0]) * CELL[0] * S.zoom, y: S.pan.y + (o.map[1] - r.map[1]) * CELL[1] * S.zoom } });
 });
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.linking) { S.linking = null; $('msg').textContent = 'Conexión cancelada.'; renderRoomPanel(); draw(); } });
+addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.roomMove) { S.roomMove = false; $('msg').textContent = ''; renderRoomPanel(); draw(); } });
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.placing) { S.placing = null; $('msg').textContent = 'Nueva sala cancelada.'; draw(); } });
 cv.addEventListener('wheel', (e) => {
   e.preventDefault();
@@ -553,6 +576,11 @@ cv.addEventListener('mousedown', (e) => {
   if (!S.id) return;
   const [x, y] = toTile(e);
   if (e.button === 1 || spaceDown) { S.drag = { pan: true, sx: e.clientX, sy: e.clientY, px: S.pan.x, py: S.pan.y }; return; }
+  if (S.roomMove && e.button === 0) {
+    snapshot();
+    S.drag = { roomMove: true, sx: e.clientX, sy: e.clientY, map0: [...room().map], pan0: { ...S.pan }, bad: false };
+    return;
+  }
   if (S.linking && ['place', 'placeDest'].includes(S.linking.stage) && S.linking.room === S.id) {
     if (e.button === 2) { S.linking = null; $('msg').textContent = 'Conexión cancelada.'; renderRoomPanel(); draw(); return; }
     linkingClick(x, y); draw(); return;
@@ -615,6 +643,16 @@ addEventListener('mousemove', (e) => {
   const d = S.drag;
   if (!d) { if (e.target === cv) draw(); return; }
   if (d.placing) return;
+  if (d.roomMove) {
+    // Por celdas enteras: la sala sigue al ratón y las vecinas se quedan donde están.
+    const dcx = Math.round((e.clientX - d.sx) / (CELL[0] * S.zoom)), dcy = Math.round((e.clientY - d.sy) / (CELL[1] * S.zoom));
+    const nx = d.map0[0] + dcx, ny = d.map0[1] + dcy, r = room();
+    d.bad = !mapFree(S.id, nx, ny);
+    r.map[0] = nx; r.map[1] = ny;
+    S.pan = { x: d.pan0.x + dcx * CELL[0] * S.zoom, y: d.pan0.y + dcy * CELL[1] * S.zoom };
+    draw(); drawMap();
+    return;
+  }
   if (d.areaSel) { S.area.x1 = x; S.area.y1 = y; draw(); return; }
   if (d.areaMove && S.float) { S.float.dx = x - d.from[0]; S.float.dy = y - d.from[1]; draw(); return; }
   if (d.pan) { S.pan.x = d.px + e.clientX - d.sx; S.pan.y = d.py + e.clientY - d.sy; draw(); return; }
@@ -641,6 +679,13 @@ addEventListener('mouseup', () => {
   const d = S.drag;
   S.drag = null;
   if (d?.areaSel) { renderInspector(); return; }
+  if (d?.roomMove) {
+    const r = room();
+    if (d.bad) { r.map[0] = d.map0[0]; r.map[1] = d.map0[1]; S.pan = d.pan0; $('msg').textContent = 'Ahí pisaría otra sala: vuelve a su sitio.'; }
+    else { $('msg').textContent = `Sala ${S.id} en [${r.map[0]}, ${r.map[1]}].`; S.dirty.add(S.id); }
+    renderRoomPanel(); draw(); drawMap();
+    return;
+  }
   if (d?.areaMove) { dropFloat(); return; }
   if (d?.placing && S.placing) {
     // Un clic deja el tamaño mínimo; un arrastre, el espacio marcado.
@@ -1186,11 +1231,12 @@ function renderRoomPanel() {
   html += field('bioma', { v: r.biome, options: Object.keys(BIOMES) }, (v) => { r.biome = v; renderPalette(); drawMap(); }, 'select');
   html += field('secreta', !!r.secret, (v) => { if (v) r.secret = true; else delete r.secret; });
   html += field('mapa [x, y, ancho, alto] (celdas)', r.map ?? [0, 0, cells[0], cells[1]], (v) => { r.map = v; drawMap(); });
-  html += `<div class="row"><button id="fitmap" title="Ancho y alto del mapa según el tamaño de la sala">Ajustar mapa al tamaño</button></div>`;
+  html += `<div class="row"><button id="mvroom" class="${S.roomMove ? 'on' : ''}" title="Arrastra en el lienzo para cambiar dónde está la sala respecto a las demás (por celdas)">${S.roomMove ? 'Moviendo: arrastra (Esc termina)' : 'Mover sala'}</button><button id="fitmap" title="Ancho y alto del mapa según el tamaño de la sala">Ajustar mapa al tamaño</button></div>`;
   html += `<h4>Ampliar / recortar</h4><div class="grid4">${['top', 'bottom', 'left', 'right'].map((s) => `<span>${{ top: 'arriba', bottom: 'abajo', left: 'izquierda', right: 'derecha' }[s]}</span><button data-rs="${s}" data-n="-1">−1</button><button data-rs="${s}" data-n="1">+1</button><button data-rs="${s}" data-n="${s === 'top' || s === 'bottom' ? CELL[1] : CELL[0]}">+celda</button>`).join('')}</div>`;
   html += connectionsHtml(r);
   html += `<div class="row"><button id="setstart">Inicio del juego aquí (punto de prueba)</button></div>`;
   box.innerHTML = html;
+  $('mvroom').onclick = () => { S.roomMove = !S.roomMove; $('msg').textContent = S.roomMove ? 'Mover sala: arrastra en el lienzo; la sala se mueve por celdas (en rojo si pisaría otra). Esc o el botón para terminar.' : ''; renderRoomPanel(); draw(); };
   $('fitmap').onclick = () => { snapshot(); r.map = [r.map?.[0] ?? 0, r.map?.[1] ?? 0, cells[0], cells[1]]; touch(); renderRoomPanel(); drawMap(); };
   for (const b of box.querySelectorAll('[data-rs]')) b.onclick = () => resize(b.dataset.rs, Number(b.dataset.n));
   wireConnections(r);
@@ -1275,7 +1321,33 @@ const mapCell = (e) => {
   return [Math.floor(((e.clientX - rc.left) * sx - t.ox) / t.k + t.minX), Math.floor(((e.clientY - rc.top) * sy - t.oy) / t.k + t.minY)];
 };
 const roomAtCell = ([mx, my]) => Object.entries(S.rooms).find(([, r]) => r.map && mx >= r.map[0] && my >= r.map[1] && mx < r.map[0] + r.map[2] && my < r.map[1] + r.map[3]);
+// Arrastrar una sala en el mapa del mundo la cambia de sitio (por celdas).
+mv.onmousedown = (e) => {
+  const c = mapCell(e); if (!c) return;
+  const hit = roomAtCell(c);
+  if (!hit) return;
+  S.mapDrag = { id: hit[0], from: c, map0: [...hit[1].map], moved: false };
+};
+addEventListener('mousemove', (e) => {
+  const d = S.mapDrag; if (!d) return;
+  const c = mapCell(e); if (!c) return;
+  const dx = c[0] - d.from[0], dy = c[1] - d.from[1];
+  if (!dx && !dy && !d.moved) return;
+  if (!d.moved) snapshotRoom(d.id);
+  d.moved = true;
+  const r = S.rooms[d.id], nx = d.map0[0] + dx, ny = d.map0[1] + dy;
+  if (mapFree(d.id, nx, ny)) { r.map[0] = nx; r.map[1] = ny; }
+  drawMap(); draw();
+});
+addEventListener('mouseup', () => {
+  const d = S.mapDrag; S.mapDrag = null;
+  if (!d?.moved) return;
+  S.dirty.add(d.id); S.justDragged = true; CTX_CACHE.delete(d.id);
+  renderRoomPanel(); refreshRoomList(); draw();
+  $('msg').textContent = `Sala ${d.id} movida a [${S.rooms[d.id].map[0]}, ${S.rooms[d.id].map[1]}].`;
+});
 mv.onclick = (e) => {
+  if (S.justDragged) { S.justDragged = false; return; }
   const c = mapCell(e); if (!c) return;
   const hit = roomAtCell(c);
   if (hit) { S.newCell = null; openRoom(hit[0]); return; }
