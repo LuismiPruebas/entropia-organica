@@ -5,7 +5,7 @@ import { ENEMIES } from '../data/enemies.js';
 import { DNA_CHARS } from '../data/mutations.js';
 import { TileWorld, TILE } from '../core/Physics.js';
 import { canvasTexture } from '../core/Sprites.js';
-import { paintRoom, findHoles, paintMembraneGroup, paintFalseWallGroup, paintPhotoTexture } from './TilePainter.js';
+import { paintRoom, findHoles, paintMembraneGroup, paintPhotoTexture } from './TilePainter.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Pickup } from '../entities/Pickup.js';
 import { Womb } from '../entities/Womb.js';
@@ -59,6 +59,7 @@ export class EntityFactory {
 
     for (let cy = 0; cy < world.h; cy++) {
       for (let cx = 0; cx < world.w; cx++) {
+        if (world.get(cx, cy) === 'z') world.set(cx, cy, 'f');  // antigua pared falsa
         const c = world.get(cx, cy);
         const center = { x: cx * TILE + TILE / 2, y: cy * TILE + TILE / 2 };
         const key = `${id}:${cx},${cy}`;
@@ -242,30 +243,6 @@ export class EntityFactory {
       room.membranes.push({ mesh, glowMesh: glowM, frames, phase: Math.random() * 2 });
     }
 
-    // Paredes falsas (z): parecen roca, pero la luz las atraviesa. Una pieza por grupo.
-    room.falseWalls = [];
-    const seenZ = new Set();
-    for (let cy = 0; cy < room.world.h; cy++) for (let cx = 0; cx < room.world.w; cx++) {
-      if (room.world.get(cx, cy) !== 'z' || seenZ.has(`${cx},${cy}`)) continue;
-      const cells = room.world.floodFill(cx, cy);
-      cells.forEach(([x, y]) => seenZ.add(`${x},${y}`));
-      const p = paintFalseWallGroup(cells, room.world);
-      const tex = canvasTexture(p.canvas);
-      const mk = (color, order) => {
-        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), new THREE.MeshBasicMaterial({
-          map: tex, color, transparent: true, depthTest: false, depthWrite: false,
-        }));
-        mesh.position.set(p.x + p.w / 2, -(p.y + p.h / 2), 0);
-        mesh.renderOrder = order;
-        return mesh;
-      };
-      const mesh = mk(0xffffff, 1), occ = mk(0x000000, -4);
-      v.world.add(mesh);
-      v.glow.add(occ);
-      room.meshes.push(mesh, occ);
-      const key = `${room.id}:${cx},${cy}`;
-      room.falseWalls.push({ cells, mesh, occ, key, charge: 0, revealed: this.game.state.revealedWalls.has(key) });
-    }
   }
 
   // Tras romper membranas: repinta y actualiza las sombras.

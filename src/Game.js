@@ -689,25 +689,6 @@ export class Game {
       }
     }
 
-    // Paredes falsas: con el Ojo Despierto, alumbradas un instante se delatan; sin él,
-    // solo al tocarlas.
-    for (const w of this.room.falseWalls ?? []) {
-      if (w.revealed) continue;
-      const lit = eye1 && w.cells.some(([cx, cy]) => this.#inBeam((cx + 0.5) * TILE, (cy + 0.5) * TILE).lit);
-      const touched = w.cells.some(([cx, cy]) => overlap(this.player, { x: cx * TILE, y: cy * TILE, w: TILE, h: TILE }));
-      w.charge = lit ? w.charge + dt : Math.max(0, w.charge - dt * 0.5);
-      if (w.charge > 0.5 || touched) {
-        w.revealed = true;
-        st.revealedWalls.add(w.key);
-        const [cx, cy] = w.cells[0];
-        this.audio.play('reveal', { x: cx * TILE, y: cy * TILE });
-        this.say('La pared era un espejismo de carne: tu luz la atraviesa.', 2.5);
-        for (const [x, y] of w.cells) for (let i = 0; i < 4; i++) {
-          this.glowParticles.emit((x + Math.random()) * TILE, (y + Math.random()) * TILE, { vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 40, life: 0.6, color: this.beamColor });
-        }
-      }
-    }
-
     // Nódulos óseos: solo existen bajo el haz del ojo despierto (sin el Ojo I, el halo no
     // los revela: era más eficiente que el haz porque alumbra en todas direcciones).
     for (const n of this.room.nodules) {
@@ -721,10 +702,10 @@ export class Game {
 
     let changed = false;
     for (const m of this.room.photo) {
-      // El tejido fotosensible solo cede al Ojo Pineal; sin él, se estremece y ya.
+      // El tejido fotosensible cede al Ojo Despierto (nivel 1); sin él, se estremece y ya.
       const beamed = m.cells.some(([cx, cy]) => this.#inBeam((cx + 0.5) * TILE, (cy + 0.5) * TILE).lit);
-      const lit = beamed && eye2;
-      if (beamed && !eye2 && !st.seenPhotoLocked) { st.seenPhotoLocked = true; this.say('El tejido fotosensible se estremece con tu luz, pero no cede. Necesitas un ojo más fuerte (Ojo Pineal).', 3.5); }
+      const lit = beamed && eye1;
+      if (beamed && !eye1 && !st.seenPhotoLocked) { st.seenPhotoLocked = true; this.say('El tejido fotosensible se estremece con tu luz, pero no cede. Necesitas un ojo despierto (Ojo, nivel I).', 3.5); }
       if (!m.open) {
         m.charge = lit ? m.charge + dt : Math.max(0, m.charge - dt);
         if (m.charge > 0 && Math.random() < 0.3) {
@@ -895,12 +876,6 @@ export class Game {
     for (const e of this.room.enemies) e.render();
     for (const pk of this.room.pickups) pk.render();
     for (const n of this.room.nodules) n.render();
-    // Paredes falsas: tiemblan mientras la luz las delata; descubiertas, quedan como un velo.
-    for (const w of this.room.falseWalls ?? []) {
-      const a = w.revealed ? 0.16 + Math.sin(this.time * 3) * 0.04 : 1 - Math.min(0.5, w.charge) * (Math.random() < 0.5 ? 0.8 : 0.3);
-      w.mesh.material.opacity = a;
-      w.occ.material.opacity = w.revealed ? 0 : a;
-    }
     for (const s of this.room.sacs) s.render();
     for (const pr of this.projectiles) pr.render();
     this.particles.render();

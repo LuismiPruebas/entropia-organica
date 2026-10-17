@@ -790,20 +790,6 @@ function paintSealGroup(cells, P = SEAL) {
   return { frames, x: minX * TILE, y: minY * TILE, w, h };
 }
 
-// Pared falsa (z): se pinta igual que la pared del bioma, en su propio lienzo, para
-// poder desvanecerla cuando la luz la delata. Usa el material de la última sala pintada.
-export function paintFalseWallGroup(cells, world) {
-  const xs = cells.map(([x]) => x), ys = cells.map(([, y]) => y);
-  const minX = Math.min(...xs), minY = Math.min(...ys);
-  const w = (Math.max(...xs) - minX + 1) * TILE, h = (Math.max(...ys) - minY + 1) * TILE;
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const g = canvas.getContext('2d');
-  for (const [cx, cy] of cells) paintWall(g, world, cx, cy, (cx - minX) * TILE, (cy - minY) * TILE);
-  return { canvas, x: minX * TILE, y: minY * TILE, w, h };
-}
-
 // Colmillo aserrado de marfil: base hundida en la encía que se curva en gancho
 // hacia una punta translúcida. Vetas finas de crecimiento, como el marfil, y el filo
 // cóncavo con púas de sierra.
