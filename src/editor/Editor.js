@@ -1251,17 +1251,17 @@ function renderWizard() {
   const L = S.linking;
   if (!L) { el.hidden = true; return; }
   let h = '';
-  if (L?.stage === 'place' && L.room === S.id) h += `<div class="wiz">1/3 · Haz clic en la sala donde irá el punto (fantasma del tamaño del personaje: verde si vale). <button data-lk="cancel">Cancelar</button></div>`;
+  if (L?.stage === 'place' && L.room === S.id) h += `<div class="wiz">1/2 · Haz clic en la sala donde irá el punto (fantasma del tamaño del personaje: verde si vale). <button data-lk="cancel">Cancelar</button></div>`;
   if (L?.stage === 'dest' && L.room === S.id) {
-    h += `<div class="wiz">2/3 · ¿Adónde lleva <b>${L.link}</b>?</div>`;
+    h += `<div class="wiz">2/2 · ¿Adónde lleva <b>${L.link}</b>? Un clic y queda conectado, de ida y vuelta (se cambia luego en Conexiones).</div>`;
     const list = [];
     for (const [id, o] of Object.entries(S.rooms)) for (const l of o.links ?? []) if (!(id === S.id && l.id === L.link)) list.push([id, l]);
     h += '<div class="dim" style="font-size:11px;margin:4px 0 2px">A un punto que ya existe:</div>';
-    if (list.length) h += list.map(([id, l], i) => `<button class="pick" data-dest="${i}">${bName(id)} · ${id} · ${l.id} (${l.x},${l.y + (l.h ?? PH) - 1})${l.to ? '' : ' · llegada libre'}</button>`).join('');
+    if (list.length)     h += list.map(([id, l], i) => `<button class="pick" data-dest="${i}">${bName(id)} · ${id} · ${l.id} (${l.x},${l.y + (l.h ?? PH) - 1})${l.to ? ` · ya lleva a ${l.to}` : ' · libre'}</button>`).join('');
     else h += '<div class="dim" style="font-size:11px">(todavía no hay otros puntos)</div>';
     // O a un sitio nuevo de cualquier sala: un botón por sala (un clic y se marca allí).
-    h += '<div class="dim" style="font-size:11px;margin:6px 0 2px">O a un sitio nuevo, marcándolo en la sala:</div><div class="rooms-pick">';
-    h += Object.keys(S.rooms).map((id) => `<button class="pick" data-man="${id}">${id} · ${S.rooms[id].name}${id === S.id ? ' (esta)' : ''} →</button>`).join('') + '</div>';
+    h += '<div class="dim" style="font-size:11px;margin:6px 0 2px">O a otra sala (el punto de llegada se crea solo, donde encaja en el mapa):</div><div class="rooms-pick">';
+    h += Object.keys(S.rooms).filter((id) => id !== S.id).map((id) => `<button class="pick" data-auto="${id}">${id} · ${S.rooms[id].name}</button>`).join('') + '</div>';
     h += `<div class="row"><button data-lk="none">Sin destino por ahora</button><button data-lk="cancel">Cancelar</button></div>`;
     S.linkList = list;
   }
@@ -1292,11 +1292,29 @@ function wireConnections(r) {
 function wireWizard(box) {
   for (const b of box.querySelectorAll('[data-dest]')) b.onclick = () => {
     const [id, t] = S.linkList[Number(b.dataset.dest)], L = S.linking, l = linkOf(L.room, L.link);
-    snapshot(); l.to = id; l.toLink = t.id; touch();
-    S.linking = { stage: 'recip', room: L.room, from: { room: L.room, link: L.link }, to: { room: id, link: t.id } };
-    renderRoomPanel();
+    snapshot(); l.to = id; l.toLink = t.id;
+    const both = !t.to;                     // si el otro ya lleva a otro sitio, no se lo quitamos
+    if (both) { t.to = L.room; t.toLink = l.id; }
+    S.dirty.add(id); S.dirty.add(L.room); touch();
+    S.linking = null;
+    $('msg').textContent = both ? `Conectado: ${L.room} · ${l.id} ⇄ ${id} · ${t.id} (ida y vuelta).` : `Conectado: ${L.room} · ${l.id} → ${id} · ${t.id} (solo ida: ${t.id} ya llevaba a ${t.to}).`;
+    renderRoomPanel(); drawMap(); draw();
   };
   for (const b of box.querySelectorAll('[data-man]')) b.dataset.lk = 'manual';
+  // Otra sala: el punto de llegada se pone solo y queda de ida y vuelta.
+  for (const b of box.querySelectorAll('[data-auto]')) b.onclick = () => {
+    const L = S.linking, l = linkOf(L.room, L.link), to = b.dataset.auto;
+    const q = arrivalSpot(L.room, l, to);
+    if (!q) { $('msg').textContent = `No encuentro sitio en ${to} para el punto de llegada (ningún hueco de 1×2).`; return; }
+    snapshot(); snapshotRoom(to);
+    const d = S.rooms[to], id = newLinkId(d), edge = atEdge(d, q.x, q.y, q.w, q.h);
+    (d.links ??= []).push({ id, x: q.x, y: q.y, w: q.w, h: q.h, to: L.room, toLink: l.id, trigger: edge ? 'touch' : 'use', look: edge ? 'hidden' : 'portal' });
+    l.to = to; l.toLink = id;
+    S.dirty.add(to); S.dirty.add(L.room); CTX_CACHE.delete(to); touch();
+    S.linking = null;
+    $('msg').textContent = `Conectado: ${L.room} · ${l.id} ⇄ ${to} · ${id} (ida y vuelta), en [${q.x},${q.y}] de ${to}. Para moverlo, abre ${to} y arrástralo (V).${arrivalSpot.noHole ? ` Ojo: ${to} no tiene hueco en su borde de ${({ top: 'arriba', bottom: 'abajo', left: 'la izquierda', right: 'la derecha' })[arrivalSpot.noHole]}, así que va dentro como portal (se usa con E); si abres ahí un hueco y lo pones en él, será un paso.` : ''}`;
+    renderRoomPanel(); drawMap(); draw();
+  };
   for (const b of box.querySelectorAll('[data-lk]')) b.onclick = () => {
     const L = S.linking, a = b.dataset.lk;
     if (a === 'goto') { openRoom(L.room); return; }
@@ -1315,6 +1333,31 @@ function wireWizard(box) {
       renderRoomPanel(); draw();
     }
   };
+}
+// Punto de llegada automático en la sala 'to' para el punto l de la sala 'from': donde le
+// toca según el mapa del mundo. Si l está en un borde, se busca un hueco en el borde opuesto
+// de la otra sala (el más cercano a la misma altura o columna); si no, el hueco 1×2 libre
+// más cercano a ese sitio. Devuelve { x, y, w, h } o null.
+function arrivalSpot(from, l, to) {
+  arrivalSpot.noHole = null;
+  const a = S.rooms[from], d = S.rooms[to];
+  const W = d.grid[0].length, H = d.grid.length, Wa = a.grid[0].length, Ha = a.grid.length;
+  const ox = (r) => (r.map?.[0] ?? 0) * CELL[0], oy = (r) => (r.map?.[1] ?? 0) * CELL[1];
+  const tx = Math.max(0, Math.min(W - 1, Math.round(ox(a) + l.x + (l.w ?? 1) / 2 - ox(d)))), ty = Math.max(0, Math.min(H - 1, Math.round(oy(a) + l.y + (l.h ?? PH) / 2 - oy(d))));
+  const side = l.y === 0 ? 'top' : l.y + (l.h ?? PH) >= Ha ? 'bottom' : l.x === 0 ? 'left' : l.x + (l.w ?? 1) >= Wa ? 'right' : null;
+  const opp = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' }[side];
+  let best = null, bd = Infinity;
+  const tryRect = (q, cx, cy) => { if (!q || !rectOk(d, q)) return; const dd = Math.hypot(cx - tx, cy - ty); if (dd < bd) { bd = dd; best = q; } };
+  if (opp) {
+    // Hueco en el borde opuesto (pointRect ya coge el hueco entero).
+    const cells = opp === 'top' ? [...Array(W).keys()].map((x) => [x, 0]) : opp === 'bottom' ? [...Array(W).keys()].map((x) => [x, H - 1])
+      : opp === 'left' ? [...Array(H).keys()].map((y) => [0, y]) : [...Array(H).keys()].map((y) => [W - 1, y]);
+    for (const [x, y] of cells) { const q = pointRect(d, x, y); if (q.w > 1 || q.h > 1 || opp === 'left' || opp === 'right') tryRect(q, x, y); }
+    if (best) return best;
+    arrivalSpot.noHole = opp;              // no había hueco en ese borde: irá dentro (portal)
+  }
+  for (let y = 0; y < H - 1; y++) for (let x = 0; x < W; x++) tryRect({ x, y, w: PW, h: PH }, x, y + 1);
+  return best;
 }
 // Borra un punto; los que llevaban a él se quedan sin destino (no se rompe nada).
 function deleteLink(roomId, i) {
@@ -1400,9 +1443,10 @@ function linkingClick(x, y, rect = null) {
     const from = linkOf(L.from.room, L.from.link);
     from.to = S.id; from.toLink = id;
     S.dirty.add(L.from.room);
-    S.linking = { stage: 'recip', room: S.id, from: L.from, to: { room: S.id, link: id } };
-    touch(); renderRoomPanel();
-    $('msg').textContent = `Punto ${id} creado en ${S.id}. ¿Recíproco? (en el panel de la sala)`;
+    const nl = r.links.at(-1); nl.to = L.from.room; nl.toLink = L.from.link;
+    S.linking = null;
+    touch(); renderRoomPanel(); drawMap();
+    $('msg').textContent = `Conectado: ${L.from.room} · ${L.from.link} ⇄ ${S.id} · ${id} (ida y vuelta).`;
     return true;
   }
   return false;
