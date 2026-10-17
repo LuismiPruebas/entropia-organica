@@ -238,6 +238,18 @@ function drawContext(z, r) {
     g.strokeRect(x + 0.5, y + 0.5, o.grid[0].length * z - 1, o.grid.length * z - 1);
     g.fillStyle = 'rgba(230,220,230,0.75)'; g.font = 'bold 13px monospace'; g.textAlign = 'left'; g.textBaseline = 'top';
     g.fillText(`${id} · ${o.name}  (doble clic para abrir)`, x + 6, y + 6);
+    // Sus puntos de conexión, en su sitio: en amarillo los que llevan a esta sala (ahí
+    // es donde tiene que haber paso), en cian los demás.
+    for (const l of o.links ?? []) {
+      const here = l.to === S.id, lx = x + l.x * z, ly = y + l.y * z, lw = (l.w ?? 1) * z, lh = (l.h ?? 2) * z;
+      g.fillStyle = here ? 'rgba(255,210,63,0.45)' : 'rgba(64,224,255,0.3)';
+      g.fillRect(lx, ly, lw, lh);
+      g.strokeStyle = here ? '#ffd23f' : '#40e0ff'; g.lineWidth = 2;
+      g.strokeRect(lx + 1, ly + 1, lw - 2, lh - 2);
+      g.fillStyle = here ? '#ffd23f' : '#40e0ff'; g.font = 'bold 11px monospace'; g.textBaseline = 'bottom';
+      g.fillText(`${id}·${l.id}${l.to ? ' → ' + l.to + (l.toLink ? '·' + l.toLink : '') : ''}`, lx, ly - 2);
+      g.textBaseline = 'top';
+    }
   }
 }
 
