@@ -1345,14 +1345,27 @@ function drawMap() {
     mg.fillRect(X(x) + 1, Y(y) + 1, w * k - 2, h * k - 2);
     if (k > 9) { mg.fillStyle = '#000'; mg.font = '9px monospace'; mg.fillText(id, X(x) + 3, Y(y) + 10); }
   }
-  // Conexiones entre salas: una línea entre los centros de las salas unidas.
+  // Conexiones: una línea de cada punto a su punto de destino (donde están de verdad en
+  // la sala) y un puntito en cada uno; sin punto de destino, al centro de la otra sala.
   const ctr = (o) => [X(o.map[0] + o.map[2] / 2), Y(o.map[1] + o.map[3] / 2)];
-  mg.strokeStyle = 'rgba(64,224,255,0.7)'; mg.lineWidth = 1.5;
+  const at = (o, l) => [X(o.map[0] + ((l.x + (l.w ?? 1) / 2) / o.grid[0].length) * o.map[2]), Y(o.map[1] + ((l.y + (l.h ?? 2) / 2) / o.grid.length) * o.map[3])];
+  mg.lineWidth = 1.5;
   for (const [, r] of Object.entries(S.rooms)) {
-    for (const t of [...(r.links ?? []).map((l) => l.to), ...(r.exits ?? []).map((e) => e.to)]) {
-      const o = S.rooms[t];
-      if (!t || !o?.map || !r.map || o === r) continue;
+    if (!r.map) continue;
+    for (const l of r.links ?? []) {
+      const a = at(r, l), o = S.rooms[l.to];
+      mg.fillStyle = l.to && o ? '#40e0ff' : '#ff8a96';
+      mg.fillRect(a[0] - 1.5, a[1] - 1.5, 3, 3);
+      if (!o?.map || o === r) continue;
+      const tl = (o.links ?? []).find((m) => m.id === l.toLink), b = tl ? at(o, tl) : ctr(o);
+      mg.strokeStyle = 'rgba(64,224,255,0.7)';
+      mg.beginPath(); mg.moveTo(a[0], a[1]); mg.lineTo(b[0], b[1]); mg.stroke();
+    }
+    for (const e of r.exits ?? []) {
+      const o = S.rooms[e.to];
+      if (!o?.map || o === r) continue;
       const [ax, ay] = ctr(r), [bx, by] = ctr(o);
+      mg.strokeStyle = 'rgba(64,224,255,0.7)';
       mg.beginPath(); mg.moveTo(ax, ay); mg.lineTo(bx, by); mg.stroke();
     }
   }
@@ -1595,6 +1608,21 @@ addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------- arranque
 $('save').onclick = save;
 renderBestiary();
+// Salas que crecieron sin que su tamaño en el mapa las siguiera (ampliadas con versiones
+// anteriores del editor): el mapa crece hasta su tamaño real y quedan para guardar. Las
+// que en el mapa son más grandes que la sala (redondeadas a celdas enteras) no se tocan.
+{
+  const q = (v) => Math.round(v * 1000) / 1000, grown = [];
+  for (const [id, r] of Object.entries(S.rooms)) {
+    if (!r.map || !r.grid?.length) continue;
+    const w = q(r.grid[0].length / CELL[0]), h = q(r.grid.length / CELL[1]);
+    if (w > r.map[2] + 1e-3 || h > r.map[3] + 1e-3) {
+      r.map[2] = Math.max(r.map[2], w); r.map[3] = Math.max(r.map[3], h);
+      S.dirty.add(id); grown.push(id);
+    }
+  }
+  if (grown.length) setTimeout(() => { $('msg').textContent = `Tamaño en el mapa corregido (era más pequeño que la sala): ${grown.join(', ')}. Guarda para dejarlo así.`; refreshRoomList(); drawMap(); });
+}
 // Selector de mapa: cambia el mundo activo (el del juego también) y recarga.
 $('world').innerHTML = Object.entries(WORLDS).map(([id, w]) => `<option value="${id}"${id === WORLD_ID ? ' selected' : ''}>${w.name}</option>`).join('');
 $('world').onchange = (e) => {
