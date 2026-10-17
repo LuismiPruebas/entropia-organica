@@ -14,6 +14,7 @@ import { enemyThumb } from './EnemyThumbs.js';
 import { paintShrineBase, drawShrine, SW as SHRINE_W, SH as SHRINE_H } from '../entities/ShrineArt.js';
 import { faceData } from '../data/faces.js';
 import { linkArrival } from '../data/connections.js';
+import { DECOR, decorPreview } from '../entities/Decor.js';
 import { baseNode } from '../data/nodes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -345,6 +346,19 @@ function drawFace(o, z, alpha) {
   g.drawImage(shrineThumb(), (o.x + 0.5) * z - (SHRINE_W / 32) * z, (o.y + 1) * z - (SHRINE_H / 16) * z, (SHRINE_W / 16) * z, (SHRINE_H / 16) * z);
   g.globalAlpha = 1;
 }
+// Decoración en el lienzo: una muestra de la estructura en su sitio (como en el juego).
+const DECOR_PREV = {};
+function drawDecor(o, z, alpha) {
+  const T = DECOR[o.type] ?? DECOR.neurona, img = (DECOR_PREV[o.type] ??= decorPreview(o.type));
+  const x = (o.x + 0.5) * z - (T.w / 32) * z, y = T.hang ? o.y * z : (o.y + 1) * z - (T.h / 16) * z;
+  g.globalAlpha = alpha;
+  g.save();
+  if (o.flip) { g.translate(x * 2 + (T.w / 16) * z, 0); g.scale(-1, 1); }
+  g.drawImage(img, x, y, (T.w / 16) * z, (T.h / 16) * z);
+  g.restore();
+  g.globalAlpha = 1;
+}
+function showDecorRow() { if ($('decor-row')) $('decor-row').style.display = S.tool === 'place' && S.kind === 'decor' ? '' : 'none'; }
 // Un enemigo dibujado con su aspecto, apoyado (centrado) en el fondo de su caja.
 function drawEnemy(o, z, alpha) {
   const th = enemyThumb(o.type);
@@ -522,6 +536,7 @@ function draw() {
       const color = kind === 'zones' ? (o.color ?? K.color) : K.color;
       if (kind === 'enemies') drawEnemy(o, z, 1);
       if (kind === 'faces') drawFace(o, z, o.front ? 0.95 : 0.7);
+      if (kind === 'decor') drawDecor(o, z, o.front ? 0.95 : 0.75);
       drawBox(kind, o, i, color, K.text?.(o));
       // Ruta de las plataformas móviles; radio de las pistas.
       if (kind === 'movers') {
@@ -563,6 +578,7 @@ function draw() {
   // Fantasma del enemigo que se va a colocar.
   if (S.tool === 'place' && S.kind === 'enemies' && S.hover && S.enemyType) drawEnemy({ type: S.enemyType, x: S.hover[0], y: S.hover[1] }, z, 0.55);
   if (S.tool === 'place' && S.kind === 'faces' && S.hover) drawFace({ x: S.hover[0], y: S.hover[1] }, z, 0.45);
+  if (S.tool === 'place' && S.kind === 'decor' && S.hover) drawDecor({ x: S.hover[0], y: S.hover[1], type: S.decorType ?? 'neurona' }, z, 0.5);
   drawArea(z);
   // Rectángulo en curso.
   if (S.drag?.rect) {
@@ -684,6 +700,7 @@ cv.addEventListener('mousedown', (e) => {
       const o = K.make(x, y, room());
       if (S.kind === 'nodules' && S.noduleLux) o.push('luz'); // desde la paleta: nódulo lumínico
       if (S.kind === 'enemies' && S.enemyType) o.type = S.enemyType; // el elegido en el Bestiario
+      if (S.kind === 'decor') o.type = S.decorType ?? 'neurona';                 // la elegida en el desplegable
       if (o) { (room()[S.kind] ??= []).push(o); S.sel = { kind: S.kind, index: room()[S.kind].length - 1 }; }
       else if (S.kind === 'pods') S.sel = { kind: 'pods', index: room().pods.at.length - 1 };
       touch(); renderInspector(); return;
@@ -975,12 +992,17 @@ function setTool(t) {
   for (const b of document.querySelectorAll('[data-tool]')) b.classList.toggle('on', b.dataset.tool === t);
   if (typeof renderInspector === 'function' && S.id) renderInspector();
   $('kind-row').style.display = t === 'place' ? '' : 'none';
+  showDecorRow();
 }
 function renderTools() {
   $('tools').innerHTML = TOOLS.map(([id, label, key]) => `<button data-tool="${id}" title="${label} (${key})">${label}<kbd>${key}</kbd></button>`).join('');
   for (const b of document.querySelectorAll('[data-tool]')) b.onclick = () => setTool(b.dataset.tool);
   $('kind').innerHTML = Object.entries(KINDS).filter(([k]) => k !== 'exits').map(([k, K]) => `<option value="${k}">${K.label}</option>`).join('');
-  $('kind').onchange = () => { S.kind = $('kind').value; S.noduleLux = false; };
+  $('kind').onchange = () => { S.kind = $('kind').value; S.noduleLux = false; showDecorRow(); };
+  $('decor-type').innerHTML = Object.entries(DECOR).map(([k, d]) => `<option value="${k}">${d.name}</option>`).join('');
+  $('decor-type').value = S.decorType ??= 'neurona';
+  $('decor-type').onchange = () => { S.decorType = $('decor-type').value; draw(); };
+  showDecorRow();
   $('brush').oninput = () => { S.brush = Number($('brush').value); $('brush-v').textContent = S.brush; };
   setTool('brush');
 }
@@ -1168,6 +1190,7 @@ function renderInspector() {
   else for (const [k, v] of Object.entries(o)) {
     if (kind === 'exits' && k === 'toLink') continue;
     if (kind === 'enemies' && k === 'type') html += field('tipo', { v, options: ENEMY_TYPES }, (nv) => { o.type = nv; }, 'select');
+    else if (kind === 'decor' && k === 'type') html += field('estructura', { v: DECOR[v]?.name ?? v, options: Object.values(DECOR).map((d) => d.name) }, (nv) => { o.type = Object.keys(DECOR).find((key) => DECOR[key].name === nv) ?? o.type; }, 'select');
     else if (kind === 'exits' && k === 'to') html += field('lleva a', { v, options: Object.keys(S.rooms) }, (nv) => { o.to = nv; }, 'select');
     else if (kind === 'exits' && k === 'side') html += field('lado', { v, options: ['left', 'right', 'top', 'bottom'] }, (nv) => { o.side = nv; }, 'select');
     else html += field(k, v, (nv) => { o[k] = nv; });

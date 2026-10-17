@@ -11,7 +11,9 @@ export class MenuNav {
   // el: contenedor · selector: elementos elegibles
   // isOpen(): si el menú está abierto · onPick(item): al marcar (por defecto, clic)
   // onSelect(item): al cambiar la selección
-  constructor(el, selector, { isOpen, onPick, onSelect } = {}) {
+  // allow(cur, cand, dx, dy): si se puede saltar de cur a cand en esa dirección (opcional).
+  constructor(el, selector, { isOpen, onPick, onSelect, allow } = {}) {
+    this.allow = allow ?? (() => true);
     this.el = el;
     this.selector = selector;
     this.isOpen = isOpen;
@@ -72,7 +74,7 @@ export class MenuNav {
     const c = center(cur);
     let best = null, bestScore = Infinity;
     for (const b of list) {
-      if (b === cur) continue;
+      if (b === cur || !this.allow(cur, b, dx, dy)) continue;
       const p = center(b), vx = p.x - c.x, vy = p.y - c.y;
       const along = vx * dx + vy * dy, across = Math.abs(vx * dy - vy * dx);
       if (along <= 2) continue;
@@ -85,7 +87,7 @@ export class MenuNav {
       let far = -Infinity;
       for (const b of list) {
         const p = center(b), back = -(p.y - c.y) * dy - Math.abs(p.x - c.x) * 2.5;
-        if (b !== cur && back > far) { far = back; best = b; }
+        if (b !== cur && this.allow(cur, b, dx, dy) && back > far) { far = back; best = b; }
       }
     }
     if (best) this.select(best);

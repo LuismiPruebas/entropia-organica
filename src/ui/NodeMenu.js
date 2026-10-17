@@ -137,7 +137,14 @@ export class NodeMenu {
     this.game = game;
     this.el = document.getElementById('node-menu');
     this.open = false;
-    this.nav = new MenuNav(this.el, 'button', { isOpen: () => this.open, onSelect: (b) => { game.audio.play('flicker'); this.#showInfo(b); } });
+    // A las pestañas solo se sube a propósito (arriba) y de ellas solo se baja (abajo):
+    // a izquierda y derecha, cada uno se queda en su fila.
+    const tab = (b) => b.classList.contains('nm-tab');
+    this.nav = new MenuNav(this.el, 'button', {
+      isOpen: () => this.open,
+      onSelect: (b) => { game.audio.play('flicker'); this.#showInfo(b); },
+      allow: (cur, b, dx, dy) => (tab(cur) === tab(b) ? true : tab(b) ? dy < 0 : dy > 0),
+    });
     addEventListener('keydown', (e) => {
       if (!this.open) return;
       if (e.code === 'Escape' || e.code === 'KeyE') this.close();

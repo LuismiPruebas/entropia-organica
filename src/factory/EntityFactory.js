@@ -21,6 +21,7 @@ import { YolkSac } from '../entities/YolkSac.js';
 import { Gate, Pad, PodChain, Valve, Float, Mover, PhotoMembrane, buildFangs } from '../entities/Puzzles.js';
 import { Face } from '../entities/Face.js';
 import { Veil, veilGroups } from '../entities/Veil.js';
+import { Decor } from '../entities/Decor.js';
 
 // Lo hondo que está cada sala: salas de distancia desde el inicio (por las salidas),
 // de 0 a 1 (TIER_DEPTH salas o más). Mide la dificultad de los patrones de disparo.
@@ -168,6 +169,8 @@ export class EntityFactory {
       ...buildFangs(g, world), // colmillos animados de púas y abismos
       // Rostros del Anfitrión (lore): hablan, se liberan y abren las membranas Z.
       ...(def.faces ?? []).map((d) => new Face(g, room, d)),
+      // Decoración (editor): estructuras animadas del sistema nervioso.
+      ...(def.decor ?? []).map((d, i) => new Decor(g, room, d, i)),
       // Velos de membrana: capas translúcidas por delante de todo.
       ...veilGroups(veilCells).map((cells, i) => new Veil(g, room, cells, i)),
     ];
