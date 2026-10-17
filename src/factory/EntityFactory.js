@@ -38,7 +38,7 @@ export function roomTier(id) {
   return Math.min(1, (depth[id] ?? TIER_DEPTH) / TIER_DEPTH);
 }
 
-const PICKUP_CHARS = { b: 'biomass', B: 'battery', S: 'scrap', O: 'oxygen', H: 'heart', Q: 'cyst', h: 'tissue', g: 'thymus', '*': 'fragment', P: 'shield', C: 'regen' };
+const PICKUP_CHARS = { b: 'biomass', B: 'battery', S: 'scrap', O: 'oxygen', H: 'heart', Q: 'cyst', h: 'tissue', u: 'plasma', g: 'thymus', '*': 'fragment', P: 'shield', C: 'regen' };
 
 // Puente entre los datos (levels/enemies) y la escena de Three.js.
 export class EntityFactory {

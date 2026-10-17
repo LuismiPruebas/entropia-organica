@@ -501,7 +501,7 @@ export class Game {
     for (const pk of this.room.pickups) {
       pk.update(dt);
       // Lo oculto no existe para ti hasta que tu ojo lo revela.
-      if (overlap(p, pk) && (!pk.hidden || pk.revealed) && !pk.locked && !(pk.noTake > 0)) {
+      if (overlap(p, pk) && (!pk.hidden || pk.revealed) && !pk.locked && !(pk.noTake > 0) && (pk.def.canTake?.(this.state) ?? true)) {
         pk.collect();
         if (pk.kind === 'heart') return this.#win();
       } else if (pk.locked && overlap(p, pk) && this.time - (this.lastCantTake ?? -9) > 3) {

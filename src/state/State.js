@@ -34,6 +34,8 @@ export const ITEMS = {
   shield: { name: 'Perla de Nácar', time: 10, price: { bio: 130 } }, // invulnerable
   regen: { name: 'Célula Madre', time: 10, price: { bio: 130 } },   // regenera integridad
 };
+// Coágulo de plasma: cura al momento, al cogerlo o al comprarlo en un útero (sin límite).
+export const PLASMA = { name: 'Coágulo de plasma', heal: 30, price: { bio: 30 } };
 export const REGEN_RATE = 5;          // integridad por segundo con la Célula Madre
 export const ITEM_DROP_CHANCE = 0.02; // por criatura abatida (ni crías ni esbirros)
 // Células lumínicas a la venta en cada útero: pocas, y no vuelven a crecer.
@@ -269,6 +271,13 @@ export class GameState {
     if (this.nodeCellsLeft(key) <= 0 || !this.pay(CELL_PRICE)) return false;
     this.nodeCells[key] = (this.nodeCells[key] ?? 0) + 1;
     return this.gainCell() ? 'stored' : 'used';
+  }
+
+  // Compra un coágulo de plasma en el útero y cura al momento.
+  buyPlasma() {
+    if (this.integrity >= this.maxIntegrity || !this.pay(PLASMA.price)) return false;
+    this.heal(PLASMA.heal);
+    return true;
   }
 
   buyItem(kind) {

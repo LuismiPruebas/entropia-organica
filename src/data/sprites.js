@@ -447,6 +447,20 @@ export const SPRITES = {
     ] },
     glow: 'G',
   },
+  // Coágulo de plasma: una gota de sangre espesa con el corazón encendido.
+  plasma: {
+    frames: { a: [
+      '...kk...',
+      '..kBBk..',
+      '..kBRk..',
+      '.kBRoRk.',
+      'kBRoooRk',
+      'kBRooRBk',
+      '.kBRRBk.',
+      '..kkkk..',
+    ] },
+    glow: 'o',
+  },
   tissue: {
     frames: { a: [
       '...ff...',

@@ -1,6 +1,6 @@
 import { getSprite, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { ITEMS } from '../state/State.js';
+import { ITEMS, PLASMA } from '../state/State.js';
 
 // 'ojo II', 'extremidades + torso III': de qué órgano es una secuencia, sin desvelarla.
 export const dnaTag = (id) => { const m = MUTATIONS[id]; return `${linesOf(m).map((l) => LINES[l].name.toLowerCase()).join(' + ')} ${ROMAN[m.level]}`; };
@@ -51,6 +51,15 @@ export const PICKUPS = {
       : st.thymus >= st.thymusMax
         ? `Timo Necrótico (${st.thymusMax}/${st.thymusMax}): tu sistema inmune calla para siempre. El rechazo ya no existe.`
         : `Timo Necrótico (${st.thymus}/${st.thymusMax}): tu sistema inmune olvida pelear un poco más. El rechazo crece más despacio y tarda más en hacerte fallar.`),
+  },
+  // Coágulo de plasma: integridad al momento. Con la integridad al máximo no se coge
+  // (se queda para luego).
+  plasma: {
+    sprite: 'plasma',
+    sound: 'pickup',
+    canTake: (st) => st.integrity < st.maxIntegrity,
+    apply: (st) => st.heal(PLASMA.heal),
+    text: `Coágulo de plasma: +${PLASMA.heal} integridad.`,
   },
   tissue: {
     sprite: 'tissue',

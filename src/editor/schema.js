@@ -37,6 +37,7 @@ export const TILES = [
   { c: 'O', name: 'Filtro de oxígeno', color: '#4ab8f0', item: true },
   { c: 'Q', name: 'Quiste (+20 biomasa máx)', color: '#d0a0ff', item: true },
   { c: 'h', name: 'Tejido sano', color: '#ff9aa8', item: true },
+  { c: 'u', name: 'Coágulo de plasma (+30 integridad)', color: '#ff3a4a', item: true },
   { c: 'g', name: 'Timo Necrótico', color: '#a0ffa0', item: true },
   { c: '*', name: 'Fragmento de ADN', color: '#ff60ff', item: true },
   { c: 'P', name: 'Perla de Nácar (invulnerable)', color: '#4ff0ff', item: true },
