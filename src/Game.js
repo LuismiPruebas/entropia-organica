@@ -553,7 +553,10 @@ export class Game {
     // Eventos de texto de la sala (editor: "Evento de texto"): al entrar en su zona.
     for (const te of this.room.texts ?? []) {
       const d = te.def, inZone = overlap(p, { x: d.x * TILE, y: d.y * TILE, w: (d.w ?? 1) * TILE, h: (d.h ?? 1) * TILE });
-      if (inZone && !te.inside && !(d.once !== false && st.flags.has(te.key))) {
+      // Condición: siempre, o solo antes / después de vencer a un jefe.
+      const bossDown = d.boss && st.flags.has(`boss:${d.boss}`);
+      const allowed = d.when === 'antes' ? !bossDown : d.when === 'despues' ? bossDown : true;
+      if (inZone && !te.inside && allowed && !(d.once !== false && st.flags.has(te.key))) {
         if (d.once !== false) st.flags.add(te.key);
         const lines = (d.lines ?? []).filter(Boolean);
         if (d.mode === 'aviso') this.say(lines.join(' '), Math.max(2.5, lines.join(' ').length * 0.06));

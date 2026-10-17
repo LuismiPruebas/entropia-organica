@@ -273,5 +273,9 @@ export const LEVELS = {
       { id: 'p1', x: 85, y: 21, w: 1, h: 6, to: 'A3', toLink: 'p2', trigger: 'touch', look: 'hidden' },
     ],
     lamps: [[63, 14], [27, 14], [21, 24], [58, 28], [46, 2], [14, 2], [74, 2]],
+    texts: [
+      { x: 77, y: 19, w: 5, h: 8, mode: 'dialogo', speaker: '', lines: ['La cavidad late como un corazón enfermo. Algo enorme flota en la oscuridad y chisporrotea.', 'Al fondo, cosido a la carne, un rostro te observa.'], once: true, when: 'antes', boss: 'gangliomadre' },
+      { x: 70, y: 19, w: 4, h: 8, mode: 'aviso', lines: ['La cavidad respira tranquila. Ya no hay nada aquí que te quiera muerto.'], once: true, when: 'despues', boss: 'gangliomadre' },
+    ],
   },
 };

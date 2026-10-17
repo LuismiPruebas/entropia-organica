@@ -12,6 +12,7 @@ import { patchLevels } from './serialize.js';
 import { NODE_DOSES, NODE_HEAL } from '../state/State.js';
 import { enemyThumb } from './EnemyThumbs.js';
 import { paintShrineBase, drawShrine, SW as SHRINE_W, SH as SHRINE_H } from '../entities/ShrineArt.js';
+import { faceData } from '../data/faces.js';
 
 const $ = (id) => document.getElementById(id);
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -1089,6 +1090,26 @@ function renderInspector() {
   if (kind === 'lamps') html += field('largo (px)', o[2] ?? 10, (v) => { o[2] = Math.max(2, Math.round(v)); }, 'number');
   if (kind === 'nodules') html += field('tipo', { v: o[2] === 'luz' ? 'luz (suelta célula)' : 'óseo (suelta hueso)', options: ['óseo (suelta hueso)', 'luz (suelta célula)'] }, (nv) => { if (nv.startsWith('luz')) o[2] = 'luz'; else o.length = 2; }, 'select');
   else if (kind === 'links') html += linkFields(o);
+  else if (kind === 'faces') {
+    const fd = faceData(room().biome);
+    html += field('x (centro de la base)', o.x, (v) => { o.x = Math.round(v); }, 'number') + field('y (suelo bajo la base)', o.y, (v) => { o.y = Math.round(v); }, 'number');
+    html += field('delante de las paredes (front)', !!o.front, (v) => { o.front = v; });
+    html += field('lo libera el jefe', { v: o.boss ?? `(el del bioma: ${fd.boss ?? 'ninguno'})`, options: [`(el del bioma: ${fd.boss ?? 'ninguno'})`, ...BOSSES] }, (v) => { if (v.startsWith('(')) delete o.boss; else o.boss = v; }, 'select');
+    html += `<p class="dim">Textos del rostro: los de su bioma (data/faces.js). Si los cambias aquí se guardan solo para este rostro; vacía un campo para volver a los del bioma.</p>`;
+    const txt = (label, key, multi) => {
+      const val = o[key] ?? fd[key];
+      return field(label, multi ? (val ?? []).join('\n\n') : val ?? '', (v) => {
+        const nv = multi ? v.split(/\n\s*\n/).map((s) => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean) : v.replace(/\s*\n\s*/g, ' ').trim();
+        const empty = multi ? !nv.length : !nv;
+        if (empty || JSON.stringify(nv) === JSON.stringify(fd[key])) delete o[key]; else o[key] = nv;
+      }, 'textarea');
+    };
+    html += txt('poseído: provocaciones (aviso; la primera al verte, luego al azar; una línea en blanco las separa)', 'taunts', true);
+    html += txt('liberado: agradecimiento (diálogo)', 'thanks', false);
+    html += txt('liberado: al abrir sus membranas (diálogo)', 'opens', false);
+    html += txt('liberado: pistas (diálogo, una cada vez, en orden)', 'hints', true);
+    html += `<div class="row"><button id="face-reset">Volver a los textos del bioma</button></div>`;
+  }
   else if (kind === 'texts') {
     html += field('textos (una línea en blanco separa una pantalla de la siguiente)', (o.lines ?? []).join('\n\n'), (v) => {
       o.lines = v.split(/\n\s*\n/).map((s) => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
@@ -1096,6 +1117,12 @@ function renderInspector() {
     html += field('quién habla (vacío: nadie)', o.speaker ?? '', (v) => { if (v.trim()) o.speaker = v.trim(); else delete o.speaker; });
     html += field('tipo', { v: o.mode === 'aviso' ? 'aviso (se va solo)' : 'diálogo (espera a que el jugador pase)', options: ['diálogo (espera a que el jugador pase)', 'aviso (se va solo)'] }, (v) => { o.mode = v.startsWith('aviso') ? 'aviso' : 'dialogo'; }, 'select');
     html += field('solo la primera vez', o.once !== false, (v) => { o.once = v; });
+    const WHEN = { '': 'siempre', antes: 'solo antes de vencer al jefe', despues: 'solo después de vencer al jefe' };
+    html += field('cuándo', { v: WHEN[o.when ?? ''], options: Object.values(WHEN) }, (v) => {
+      const k = Object.keys(WHEN).find((key) => WHEN[key] === v);
+      if (k) { o.when = k; o.boss ??= bossOfRoom(room()); } else { delete o.when; delete o.boss; }
+    }, 'select');
+    if (o.when) html += field('jefe', { v: o.boss ?? '', options: BOSSES }, (v) => { o.boss = v; }, 'select');
     html += field('x', o.x, (v) => { o.x = Math.round(v); }, 'number') + field('y', o.y, (v) => { o.y = Math.round(v); }, 'number');
     html += field('ancho (casillas)', o.w ?? 1, (v) => { o.w = Math.max(1, Math.round(v)); }, 'number') + field('alto (casillas)', o.h ?? 1, (v) => { o.h = Math.max(1, Math.round(v)); }, 'number');
     html += `<p class="dim">Salta al entrar en la zona. Para verlo: Alt+clic cerca para el punto de prueba y "Probar ▶".</p>`;
@@ -1113,6 +1140,7 @@ function renderInspector() {
   html += `<div class="row"><button id="del">Eliminar</button><button id="dup">Duplicar</button></div>`;
   box.innerHTML = html;
   if (kind === 'links') wireLinkButtons(o);
+  if (kind === 'faces' && $('face-reset')) $('face-reset').onclick = () => { snapshot(); for (const k of ['taunts', 'thanks', 'opens', 'hints']) delete o[k]; touch(); renderInspector(); };
   $('del').onclick = deleteSelected;
   $('dup').onclick = () => {
     if (kind === 'pods') return;
@@ -1124,6 +1152,8 @@ function renderInspector() {
     touch(); renderInspector();
   };
 }
+const BOSSES = Object.keys(ENEMIES).filter((id) => ENEMIES[id].boss);
+const bossOfRoom = (r) => (r.enemies ?? []).map((e) => e.type).find((t) => ENEMIES[t]?.boss) ?? BOSSES[0];
 function deleteSelected() {
   if (!S.sel) return;
   snapshot();

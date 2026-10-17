@@ -23,7 +23,11 @@ export class Face {
     this.room = room;
     this.def = def;
     this.biome = room.def.biome;
-    this.data = faceData(this.biome);
+    // Textos: los de su bioma (data/faces.js), salvo los que se hayan cambiado para este
+    // rostro en el editor (taunts, thanks, opens, hints en su definición).
+    const base = faceData(this.biome);
+    this.data = { ...base };
+    for (const k of ['taunts', 'thanks', 'opens', 'hints']) if (def[k] !== undefined) this.data[k] = def[k];
     this.boss = def.boss !== undefined ? def.boss : this.data.boss;
     this.flag = `face:${this.biome}`;
     this.x0 = (def.x + 0.5) * TILE - SW / 2;

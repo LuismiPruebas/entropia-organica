@@ -141,7 +141,7 @@ export const KINDS = {
     label: 'Evento de texto (zona)', color: '#ffe08a',
     make: (x, y) => ({ x, y, w: 3, h: 3, mode: 'dialogo', speaker: '', lines: ['Escribe aquí el texto.'], once: true }),
     box: (o) => [o.x, o.y, o.w ?? 1, o.h ?? 1], move: (o, x, y) => { o.x = x; o.y = y; },
-    text: (o) => `${o.mode === 'aviso' ? 'aviso' : 'diálogo'}${o.speaker ? ' · ' + o.speaker : ''}${o.once === false ? ' ↻' : ''}`,
+    text: (o) => `${o.mode === 'aviso' ? 'aviso' : 'diálogo'}${o.when ? (o.when === 'antes' ? ' · antes de ' : ' · tras ') + (o.boss ?? '?') : ''}${o.speaker ? ' · ' + o.speaker : ''}${o.once === false ? ' ↻' : ''}`
   },
   // Rostro del Anfitrión (entities/Face.js, textos en data/faces.js): altar de 18x15 casillas;
   // (x, y) es el centro de su base. front: delante de las paredes (si no, de fondo).
