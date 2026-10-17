@@ -724,7 +724,8 @@ const TOOLS = [
 //   sala). Si era un corte, en ese momento desaparece del sitio original.
 // - Supr la borra; Esc suelta la selección y anula el corte.
 // Todo va con lo que hay encima: objetos, enemigos, puntos, luces...
-S.areaFill ??= '#';
+// El hueco queda limpio (aire, como con la Goma) salvo que se elija pared; se recuerda.
+S.areaFill ??= (() => { try { return localStorage.getItem('linfa.areaFill') === '#' ? '#' : '.'; } catch { return '.'; } })();
 const areaRect = (a) => [Math.min(a.x0, a.x1), Math.min(a.y0, a.y1), Math.abs(a.x1 - a.x0) + 1, Math.abs(a.y1 - a.y0) + 1];
 const inRect = ([x, y, w, h], px, py) => px >= x && py >= y && px < x + w && py < y + h;
 const elemPos = (kind, o, r) => (kind === 'pods' ? o : KINDS[kind].box(o, r)).slice(0, 2);
@@ -778,6 +779,7 @@ function liftArea() {
   const tiles = Array.from({ length: h }, (_, j) => Array.from({ length: w }, (_, i) => getTile(x + i, y + j)));
   const elems = elementsIn(rc);
   fillRect(room(), rc);
+  S.gameCanvasFor = null; CTX_CACHE.delete(S.id);         // la vista de juego, ya sin lo levantado
   S.float = { tiles, elems, x, y, w, h, dx: 0, dy: 0 };
 }
 // Coloca el bloque que se arrastra a (dx, dy) de su origen; sus elementos lo siguen.
@@ -806,7 +808,7 @@ function areaPanel() {
   if (S.clip) h += `<p class="dim">${S.clip.cut ? 'Cortado' : 'Copiado'}: ${S.clip.w}×${S.clip.h} de ${S.clip.room}.</p>`;
   if (S.area) h += '<div class="row"><button id="ar-cut">Cortar</button><button id="ar-copy">Copiar</button><button id="ar-del">Borrar</button></div>';
   if (S.clip) h += `<div class="row"><button id="ar-paste" title="Se pega con su esquina donde estaba el ratón por última vez sobre la sala">Pegar ${S.clip.w}×${S.clip.h}</button></div>`;
-  h += field('el hueco que deja (al mover, cortar o borrar) se rellena con', { v: S.areaFill === '#' ? 'pared' : 'aire', options: ['pared', 'aire'] }, (v) => { S.areaFill = v === 'pared' ? '#' : '.'; }, 'select');
+  h += field('el hueco que deja (al mover, cortar o borrar) queda como', { v: S.areaFill === '#' ? 'pared' : 'aire', options: ['aire', 'pared'] }, (v) => { S.areaFill = v === 'pared' ? '#' : '.'; try { localStorage.setItem('linfa.areaFill', S.areaFill); } catch {} }, 'select');
   return h;
 }
 function wireAreaPanel() {
