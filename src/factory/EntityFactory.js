@@ -252,6 +252,7 @@ export class EntityFactory {
 
   // Tras romper membranas: repinta y actualiza las sombras.
   refresh(room) {
+    room.holes = findHoles(room.world);   // un hueco recién abierto en techo o suelo ya echa corriente
     this.#paint(room);
     this.game.visual.setRoomSolids(room.world);
   }
