@@ -367,33 +367,57 @@ export const CREATURES = {
   // ======================= JEFES =======================
 
   // GANGLIO MADRE: una neurona colosal y fractal, con un ojo en el soma.
+  // Teletransporte (bossGanglion): al cargarlo, arcos eléctricos que saltan del soma a
+  // las ramas, cada vez más; en el salto, parpadea (Enemy.vanish).
   gangliomadre: {
-    size: () => [64, 60],
-    origin: (e) => center(e, 64, 60),
+    size: () => [100, 94],
+    origin: (e) => center(e, 100, 94),
     noFlip: true,
     draw(g, gl, e, t, game) {
-      const cx = 32, cy = 30;
+      const cx = 50, cy = 47;
+      const charge = e.tp?.phase === 'charge' ? 1 - e.tp.t / e.tp.total : 0;
+      const tips = [];
       const branch = (x, y, a, len, depth, k) => {
         let px = x, py = y;
+        const jit = 0.08 + charge * 0.25;                  // al cargar, las ramas tiemblan
         for (let i = 0; i < len; i++) {
-          px += Math.cos(a + Math.sin(t * 1.5 + k + i * 0.3) * 0.08);
-          py += Math.sin(a + Math.sin(t * 1.5 + k + i * 0.3) * 0.08);
-          P(g, px, py, depth > 1 ? '#5a3a6a' : '#4a3058', depth > 1 ? 2 : 1, depth > 1 ? 2 : 1);
+          px += Math.cos(a + Math.sin(t * (1.5 + charge * 20) + k + i * 0.3) * jit);
+          py += Math.sin(a + Math.sin(t * (1.5 + charge * 20) + k + i * 0.3) * jit);
+          P(g, px, py, depth > 1 ? '#5a3a6a' : '#4a3058', depth > 1 ? 3 : 2, depth > 1 ? 3 : 2);
           // Impulso que corre hacia fuera por cada rama.
-          if (Math.floor((t * 14 + k * 3) % len) === i) { P(gl, px, py, '#82d2ff', 2, 2); P(g, px, py, '#82d2ff'); }
+          if (Math.floor((t * 14 + k * 3) % len) === i) { P(gl, px, py, '#82d2ff', 2, 2); P(g, px, py, '#82d2ff', 2, 2); }
         }
         if (depth > 0) for (const s of [-1, 1]) branch(px, py, a + s * 0.55, len * 0.6, depth - 1, k + s);
+        else tips.push([px, py]);
       };
-      for (let k = 0; k < 8; k++) branch(cx, cy, (k / 8) * Math.PI * 2 + t * 0.15, 10, 2, k);
-      const pulse = 9 + Math.sin(t * 3) * 1;
+      for (let k = 0; k < 8; k++) branch(cx, cy, (k / 8) * Math.PI * 2 + t * 0.15, 19, 2, k);
+      const pulse = 14 + Math.sin(t * 3) * 1.5 + charge * 2;
       disc(g, cx, cy, Math.round(pulse), '#3a2848');
-      disc(g, cx, cy, Math.round(pulse) - 2, '#5a3a72');
+      disc(g, cx, cy, Math.round(pulse) - 3, '#5a3a72');
       const p = game.player, a = Math.atan2(p.cy - e.cy, p.cx - e.cx);
-      disc(g, cx, cy, 4, '#e8dcc8');
-      const ix = cx + Math.cos(a) * 2, iy = cy + Math.sin(a) * 2;
-      disc(g, ix, iy, 2, '#ffd25a');
-      P(g, ix, iy, '#140c10');
-      disc(gl, ix, iy, 2, '#ffd25a');
+      disc(g, cx, cy, 6, '#e8dcc8');
+      const ix = cx + Math.cos(a) * 3, iy = cy + Math.sin(a) * 3;
+      disc(g, ix, iy, 3, charge > 0 ? '#bfeaff' : '#ffd25a');
+      P(g, ix, iy, '#140c10', 2, 2);
+      disc(gl, ix, iy, 3, charge > 0 ? '#bfeaff' : '#ffd25a');
+      // Arcos: del soma a la punta de algunas ramas, en zigzag, más y más a menudo.
+      if (charge > 0) {
+        const n = 1 + Math.floor(charge * 5);
+        for (let j = 0; j < n; j++) {
+          if (Math.random() > 0.35 + charge * 0.6) continue;
+          const [tx, ty] = tips[Math.floor(Math.random() * tips.length)];
+          let x = cx, y = cy;
+          const steps = 6;
+          for (let s = 1; s <= steps; s++) {
+            const u = s / steps, nx = cx + (tx - cx) * u + (s < steps ? (Math.random() - 0.5) * 9 : 0), ny = cy + (ty - cy) * u + (s < steps ? (Math.random() - 0.5) * 9 : 0);
+            line(gl, x, y, nx, ny, '#bfeaff', 2);
+            line(g, x, y, nx, ny, '#e8f8ff', 1);
+            x = nx; y = ny;
+          }
+        }
+        // El soma se ilumina por dentro (sin tapar el ojo).
+        for (let s = 0; s < 3; s++) { const ang = Math.random() * Math.PI * 2, rr = 7 + Math.random() * 5; P(gl, cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr, charge > 0.7 && Math.random() < 0.5 ? '#ffffff' : '#82d2ff', 2, 2); }
+      }
     },
   },
 

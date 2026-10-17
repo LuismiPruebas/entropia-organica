@@ -10,6 +10,23 @@ import { ITEM_DROP_CHANCE } from '../state/State.js';
 const FRAGMENT_CHANCE = 0.18;
 
 const GRAVITY = 900;
+// Ganglio Madre: dónde reaparecer al teletransportarse ([cx, cy] en píxeles, o null).
+// Un hueco libre de su tamaño (con margen), lejos de donde está, ni pegado a ti ni
+// demasiado lejos, y que te vea.
+function ganglionSpot(e, g) {
+  const W = g.world.pixelW, H = g.world.pixelH, p = g.player, m = 6;
+  let best = null, bestScore = -Infinity;
+  for (let i = 0; i < 60; i++) {
+    const x = e.w / 2 + m + Math.random() * (W - e.w - 2 * m), y = e.h / 2 + m + Math.random() * (H - e.h - 2 * m);
+    if (g.world.rectSolid(x - e.w / 2 - m, y - e.h / 2 - m, e.w + 2 * m, e.h + 2 * m)) continue;
+    const dp = Math.hypot(x - p.cx, y - p.cy), de = Math.hypot(x - e.cx, y - e.cy);
+    if (dp < 85 || dp > 230 || de < 70) continue;
+    if (!g.world.lineOfSight(x, y, p.cx, p.cy)) continue;
+    const score = -Math.abs(dp - 140) + Math.random() * 30;
+    if (score > bestScore) { bestScore = score; best = [x, y]; }
+  }
+  return best;
+}
 // Matriarca: duración de la anticipación del picado.
 const WINDUP = 0.38;
 // Ritmo de la Matriarca: todo corto para que el patrón sea continuo.
@@ -279,11 +296,64 @@ export const BEHAVIORS = {
   },
 
   // Ganglio Madre: flota guardando distancia, dispara ráfagas de orbes eléctricos
-  // y engendra neuronas. Con poca vida dispara más a menudo.
+  // y engendra neuronas. Con poca vida dispara más a menudo. Cada pocos segundos (o si
+  // te le echas encima) se teletransporta: se queda quieto chisporroteando y parpadeando
+  // (la anticipación; en su destino ya saltan chispas) y reaparece allí con un estallido.
+  // Enfurecido carga más rápido, salta más a menudo y al llegar suelta un anillo de orbes.
   bossGanglion(e, dt, g) {
     const p = g.player, d = e.def;
     const dx = p.cx - e.cx, dy = p.cy - e.cy, dist = Math.hypot(dx, dy) || 1;
     const enraged = e.hp < d.hp / 2;
+    const spark = (x, y, n, sp, life = 0.45) => {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, s = sp * (0.4 + Math.random() * 0.6);
+        g.glowParticles.emit(x, y, { vx: Math.cos(a) * s, vy: Math.sin(a) * s, life, color: Math.random() < 0.3 ? [1, 1, 1] : [0.5, 0.85, 1] });
+      }
+    };
+    e.tpCool = (e.tpCool ?? 6) - dt;
+    if (e.tp) {
+      e.tp.t -= dt;
+      e.vx = e.vy = 0;
+      if (e.tp.phase === 'charge') {
+        const k = 1 - e.tp.t / e.tp.total;
+        // Parpadeo eléctrico: cada vez desaparece más a menudo y destella en blanco.
+        e.vanish = Math.random() < 0.15 + k * 0.45;
+        if (Math.random() < 0.25 + k * 0.4) e.flash = 0.04;
+        e.shakeX = (Math.random() - 0.5) * 2 * k;
+        if (Math.random() < 0.5) spark(e.cx, e.cy, 1, 60 + k * 80);
+        if (Math.random() < 0.3 + k * 0.6) spark(e.tp.x, e.tp.y, 1, 30 + k * 50, 0.35); // aviso: ahí aparecerá
+        if (e.tp.t <= 0) {
+          spark(e.cx, e.cy, 22, 160, 0.5);
+          e.x = e.tp.x - e.w / 2; e.y = e.tp.y - e.h / 2;
+          spark(e.cx, e.cy, 26, 170, 0.55);
+          g.audio.play(d.sounds?.blink ?? 'gangZap', e);
+          g.shake = Math.max(g.shake ?? 0, 4);
+          if (enraged) {
+            for (let i = 0; i < 8; i++) {
+              const a = (i / 8) * Math.PI * 2;
+              g.spawnProjectile({ x: e.cx - 2, y: e.cy - 2, w: 5, h: 5, vx: Math.cos(a) * 75, vy: Math.sin(a) * 75, damage: 8, kind: 'orb', owner: 'enemy', color: '#82d2ff', glow: [0.5, 0.85, 1], life: 2.6 });
+            }
+          }
+          e.tp = { phase: 'arrive', t: 0.35, total: 0.35 };
+          e.shakeX = 0;
+        }
+      } else {
+        e.vanish = e.tp.t > 0.12 && Math.random() < 0.3;     // se asienta, aún inestable
+        if (e.tp.t <= 0) { e.tp = null; e.vanish = false; e.cool = Math.max(e.cool ?? 0, 0.6); }
+      }
+      return;
+    }
+    // ¿Toca saltar? Cada pocos segundos, o antes si lo tienes encima.
+    if (e.tpCool <= 0 || (dist < 55 && e.tpCool < 3.5)) {
+      const to = ganglionSpot(e, g);
+      e.tpCool = enraged ? 4.5 + Math.random() * 1.5 : 7 + Math.random() * 2;
+      if (to) {
+        const total = enraged ? 0.75 : 1.05;
+        e.tp = { phase: 'charge', t: total, total, x: to[0], y: to[1] };
+        g.audio.play(d.sounds?.charge ?? 'gangZap', e);
+        return;
+      }
+    }
     let speed = d.speed * (e.lit ? 0.5 : 1);
     const want = dist > 95 ? 1 : dist < 60 ? -1 : 0;
     e.vx = (dx / dist) * speed * want + Math.sin(e.t * 1.3) * 18;
@@ -1846,7 +1916,7 @@ export class Enemy {
     placeMesh(this.glowMesh, sx, oy, w, h);
     const flip = c.noFlip ? 1 : (this.dir > 0 ? 1 : -1);
     this.mesh.scale.x = this.glowMesh.scale.x = flip;
-    this.mesh.visible = this.glowMesh.visible = !this.submerged;
+    this.mesh.visible = this.glowMesh.visible = !this.submerged && !this.vanish;
   }
 
   dispose() {

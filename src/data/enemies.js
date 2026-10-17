@@ -250,8 +250,8 @@ export const ENEMIES = {
     voice: ['crackle', 'moan'],
     behavior: 'bossGanglion',
     boss: true,
-    light: { color: [0.18, 0.2, 0.45], r: 130 },
-    hp: 100, w: 30, h: 28, // era 120
+    light: { color: [0.18, 0.2, 0.45], r: 170 },
+    hp: 100, w: 44, h: 42, // era 30x28 (y 120 de vida)
     weakTo: { spine: 1.25, acid: 1.25 }, // las espinas del simbionte le hieren un poco más
     music: 'ganglio',
     speed: 26,
@@ -262,7 +262,7 @@ export const ENEMIES = {
       lore: ['MEMORIA: EL PRIMER NERVIO', 'Recuerdas un laboratorio. Cables cosidos a una médula que no era tuya. Alguien dijo: "el sistema aceptará el injerto si le damos un dueño". El dueño eras tú.'],
       text: 'El Sistema Nervioso se aquieta. Su mapa se graba en tu memoria.',
     },
-    sounds: { reveal: 'gangZap', aura: 'gangAura', attack: 'gangZap', summon: 'gangSummon', hurt: 'gangHurt', die: 'gangDie' },
+    sounds: { reveal: 'gangZap', aura: 'gangAura', attack: 'gangZap', summon: 'gangSummon', hurt: 'gangHurt', die: 'gangDie', charge: 'gangCharge', blink: 'gangBlink' },
     auraPeriod: 2.2,
     lore: 'La neurona de la que nacieron todas las demás. Sus ramas siguen disparando impulsos hacia ninguna parte. Tiene un ojo en el soma y lleva demasiado tiempo esperando que algo lo mire de vuelta.',
   },

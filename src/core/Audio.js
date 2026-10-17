@@ -212,6 +212,19 @@ const SOUNDS = {
     a.noise(o, { dur: 0.12, vol: 0.5, type: 'highpass', f0: 2500, f1: 1200, delay: 0.22 });
     a.tone(o, { type: 'square', f0: 90, f1: 40, dur: 0.18, vol: 0.2, delay: 0.22 });
   },
+  // Carga del salto: un zumbido que trepa y chisporroteos cada vez más seguidos.
+  gangCharge: (a, o) => {
+    a.tone(o, { type: 'sawtooth', f0: 70, f1: 520, dur: 0.95, vol: 0.08 });
+    a.tone(o, { type: 'square', f0: 140, f1: 1040, dur: 0.95, vol: 0.03 });
+    for (let i = 0; i < 22; i++) { const u = Math.sqrt(Math.random()); a.noise(o, { dur: rnd(0.005, 0.02), vol: 0.08 + u * 0.22, type: 'highpass', f0: rnd(2500, 7000), delay: u * 0.9 }); }
+  },
+  // El salto: un chasquido eléctrico seco que se apaga lejos.
+  gangBlink: (a, o) => {
+    a.noise(o, { dur: 0.08, vol: 0.6, type: 'highpass', f0: 4000, f1: 1500 });
+    a.tone(o, { type: 'sawtooth', f0: 1600, f1: 60, dur: 0.3, vol: 0.14 });
+    a.tone(o, { type: 'square', f0: 70, f1: 35, dur: 0.25, vol: 0.18, delay: 0.02 });
+    for (let i = 0; i < 6; i++) a.noise(o, { dur: 0.01, vol: 0.2 - i * 0.025, type: 'highpass', f0: rnd(3000, 6000), delay: 0.08 + i * rnd(0.04, 0.08) });
+  },
   // Invoca neuronas: un coro de crepitares que se separan.
   gangSummon: (a, o) => {
     for (let k = 0; k < 3; k++) a.creature(o, { f0: rnd(500, 900), f1: rnd(1100, 1600), dur: 0.5, vol: 0.05, formant: 1800, q: 6, rough: 1, vib: 30, delay: k * 0.08 });
