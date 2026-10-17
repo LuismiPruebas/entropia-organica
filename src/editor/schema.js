@@ -136,10 +136,11 @@ export const KINDS = {
     box: (o) => { const n = o.n ?? 2, l = Math.ceil(o.len ?? 2.5); return o.dir === 'down' ? [o.x, o.y, n, l] : o.dir === 'left' ? [o.x - l + 1, o.y, l, n] : o.dir === 'right' ? [o.x, o.y, l, n] : [o.x, o.y - l + 1, n, l]; },
     move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => `estacas ${o.dir}${o.period ? ` ${o.period}s` : ''}`,
   },
-  // Rostro del Anfitrión (entities/Face.js, textos en data/faces.js): (x, y) es su centro.
+  // Rostro del Anfitrión (entities/Face.js, textos en data/faces.js): altar de 18x15 casillas;
+  // (x, y) es el centro de su base. front: delante de las paredes (si no, de fondo).
   faces: {
     label: 'Rostro del Anfitrión (lore)', color: '#ffd27a',
-    make: (x, y) => ({ x, y }), box: (o) => [o.x - 2, o.y - 2, 5, 5], move: (o, x, y) => { o.x = x + 2; o.y = y + 2; }, text: (o) => `rostro${o.boss ? ' → ' + o.boss : ''}`,
+    make: (x, y) => ({ x, y, front: false }), box: (o) => [o.x - 8, o.y - 14, 18, 15], move: (o, x, y) => { o.x = x + 8; o.y = y + 14; }, text: (o) => `rostro del anfitrión${o.boss ? ' → ' + o.boss : ''}${o.front ? ' (delante)' : ''}`,
   },
   winds: {
     label: 'Corriente de aire', color: '#90f0e0',
