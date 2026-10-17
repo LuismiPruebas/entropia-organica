@@ -11,6 +11,7 @@ import { TILES, TILE_BY_CHAR, SOLID, KINDS, ENEMY_TYPES, ENEMIES } from './schem
 import { patchLevels } from './serialize.js';
 import { NODE_DOSES, NODE_HEAL } from '../state/State.js';
 import { enemyThumb } from './EnemyThumbs.js';
+import { paintShrineBase, drawShrine, SW as SHRINE_W, SH as SHRINE_H } from '../entities/ShrineArt.js';
 
 const $ = (id) => document.getElementById(id);
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -311,6 +312,24 @@ function renameRoom(oldId, newId) {
   renderRoomList(); renderRoomPanel(); drawMap(); draw();
 }
 
+// El Rostro del Anfitrión (altar de 18x15 casillas), poseído, pintado una vez.
+let SHRINE = null;
+function shrineThumb() {
+  if (SHRINE) return SHRINE;
+  const bases = [paintShrineBase(0), paintShrineBase(1)];
+  const c = document.createElement('canvas'), gc = document.createElement('canvas');
+  c.width = gc.width = SHRINE_W; c.height = gc.height = SHRINE_H;
+  drawShrine(c.getContext('2d'), gc.getContext('2d'), { bases, k: 0, t: 2, beat: 0.05, talk: 0.3, look: [0, 0.3] });
+  const x = c.getContext('2d');
+  x.globalCompositeOperation = 'lighter'; x.drawImage(gc, 0, 0); x.globalCompositeOperation = 'source-over';
+  return (SHRINE = c);
+}
+// El altar en el lienzo: (o.x, o.y) es la casilla del centro de su base.
+function drawFace(o, z, alpha) {
+  g.globalAlpha = alpha;
+  g.drawImage(shrineThumb(), (o.x + 0.5) * z - (SHRINE_W / 32) * z, (o.y + 1) * z - (SHRINE_H / 16) * z, (SHRINE_W / 16) * z, (SHRINE_H / 16) * z);
+  g.globalAlpha = 1;
+}
 // Un enemigo dibujado con su aspecto, apoyado (centrado) en el fondo de su caja.
 function drawEnemy(o, z, alpha) {
   const th = enemyThumb(o.type);
@@ -328,13 +347,27 @@ function renderBestiary() {
   if (!box) return;
   const ids = Object.keys(ENEMIES).filter((id) => ENEMIES[id].creature);
   ids.sort((a, b) => BIOME_ORDER.indexOf(ENEMIES[a].biome) - BIOME_ORDER.indexOf(ENEMIES[b].biome) || !!ENEMIES[a].boss - !!ENEMIES[b].boss);
-  let html = '', last = null;
+  let html = `<h5 style="color:#ffd27a">LORE</h5><button data-face="1" class="${S.tool === 'place' && S.kind === 'faces' ? 'on' : ''}" title="Rostro del Anfitrión: altar de 18×15 casillas. Clic en la sala: centro de su base (sobre el suelo)."><span class="th" data-shrine="1"></span><span class="boss">Rostro del Anfitrión</span></button><span></span>`, last = null;
   for (const id of ids) {
     const d = ENEMIES[id];
     if (d.biome !== last) { last = d.biome; html += `<h5 style="color:${BIOMES[d.biome]?.mapColor ?? '#ccc'}">${(BIOMES[d.biome]?.name ?? d.biome).toUpperCase()}</h5>`; }
     html += `<button data-en="${id}" class="${S.enemyType === id && S.tool === 'place' && S.kind === 'enemies' ? 'on' : ''}" title="${d.name} (${id}) · ${d.w}×${d.h}px · ${d.behavior}"><span class="th" data-th="${id}"></span><span class="${d.boss ? 'boss' : ''}">${d.name}${d.boss ? ' · JEFE' : ''}</span></button>`;
   }
   box.innerHTML = html;
+  for (const el of box.querySelectorAll('[data-shrine]')) {
+    const c = document.createElement('canvas');
+    c.width = SHRINE_W; c.height = SHRINE_H;
+    c.style.width = '62px'; c.style.height = '52px';
+    c.getContext('2d').drawImage(shrineThumb(), 0, 0);
+    el.appendChild(c);
+  }
+  for (const b of box.querySelectorAll('[data-face]')) b.onclick = () => {
+    S.kind = 'faces'; S.enemyType = null; S.noduleLux = false;
+    $('kind').value = 'faces';
+    setTool('place');
+    for (const o of box.querySelectorAll('[data-en], [data-face]')) o.classList.toggle('on', o === b);
+    $('msg').textContent = 'Colocando el Rostro del Anfitrión: clic en la casilla del centro de su base, sobre el suelo (18×15 casillas hacia arriba). Clic derecho sobre él lo borra.';
+  };
   for (const el of box.querySelectorAll('[data-th]')) {
     const th = enemyThumb(el.dataset.th);
     if (!th) continue;
@@ -349,7 +382,7 @@ function renderBestiary() {
     S.enemyType = b.dataset.en; S.kind = 'enemies'; S.noduleLux = false;
     $('kind').value = 'enemies';
     setTool('place');
-    for (const o of box.querySelectorAll('[data-en]')) o.classList.toggle('on', o === b);
+    for (const o of box.querySelectorAll('[data-en], [data-face]')) o.classList.toggle('on', o === b);
     $('msg').textContent = `Colocando ${ENEMIES[S.enemyType].name}: clic en la sala (clic derecho sobre uno lo borra).`;
   };
 }
@@ -464,6 +497,7 @@ function draw() {
     (r[kind] ?? []).forEach((o, i) => {
       const color = kind === 'zones' ? (o.color ?? K.color) : K.color;
       if (kind === 'enemies') drawEnemy(o, z, 1);
+      if (kind === 'faces') drawFace(o, z, o.front ? 0.95 : 0.7);
       drawBox(kind, o, i, color, K.text?.(o));
       // Ruta de las plataformas móviles; radio de las pistas.
       if (kind === 'movers') {
@@ -504,6 +538,7 @@ function draw() {
   }
   // Fantasma del enemigo que se va a colocar.
   if (S.tool === 'place' && S.kind === 'enemies' && S.hover && S.enemyType) drawEnemy({ type: S.enemyType, x: S.hover[0], y: S.hover[1] }, z, 0.55);
+  if (S.tool === 'place' && S.kind === 'faces' && S.hover) drawFace({ x: S.hover[0], y: S.hover[1] }, z, 0.45);
   drawArea(z);
   // Rectángulo en curso.
   if (S.drag?.rect) {
