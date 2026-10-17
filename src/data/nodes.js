@@ -1,10 +1,14 @@
+import { LEVELS } from './levels.js';
+import { NODE_DOSES, NODE_HEAL } from '../state/State.js';
 // Cada útero de Nodo Seguro es distinto: qué ofrece y con qué cobra. No da igual en
 // cuál pares. Donde abunda el hueso (la zona nerviosa, llena de nódulos) el útero
 // cobra en hueso y la carne vale más; donde sobra la carne, cobra en biomasa.
 // Algunos digieren un recurso en el otro para compensar la escasez de la zona.
 //
 //   precio      { bio: n } o { scrap: n }
-//   heal        +NODE_HEAL integridad (gasta una dosis del útero)
+//   heal        precio de una cura (gasta una dosis del útero)
+// Las curas de cada útero (cuántas guarda y cuánto cura cada una) se ponen en su sala,
+// desde el editor: womb: { doses, cure }. Sin eso, NODE_DOSES y NODE_HEAL (state/State.js).
 //   suppressor  -35 rechazo
 //   trade       { give: precio, get: { bio | scrap: n } } intercambio
 // Sanar, comprar células lumínicas (precio y tope en state/State.js) y mutar están en todos;
@@ -19,4 +23,7 @@ export const NODES = {
 // Para Nodos nuevos sin carta propia.
 export const DEFAULT_NODE = { name: 'Útero', heal: { bio: 15 }, suppressor: { scrap: 6 } };
 
-export const nodeOf = (roomId) => NODES[roomId] ?? DEFAULT_NODE;
+export const nodeOf = (roomId) => {
+  const w = LEVELS[roomId]?.womb ?? {};
+  return { ...(NODES[roomId] ?? DEFAULT_NODE), doses: w.doses ?? NODE_DOSES, cure: w.cure ?? NODE_HEAL };
+};

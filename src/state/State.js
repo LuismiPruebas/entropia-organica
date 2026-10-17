@@ -34,8 +34,8 @@ export const ITEMS = {
   shield: { name: 'Perla de Nácar', time: 10, price: { bio: 130 } }, // invulnerable
   regen: { name: 'Célula Madre', time: 10, price: { bio: 130 } },   // regenera integridad
 };
-// Coágulo de plasma: cura al momento, al cogerlo o al comprarlo en un útero (sin límite).
-export const PLASMA = { name: 'Coágulo de plasma', heal: 30, price: { bio: 30 } };
+// Coágulo de plasma: cura al momento al cogerlo (solo se encuentra; el útero no lo vende).
+export const PLASMA = { name: 'Coágulo de plasma', heal: 30 };
 export const REGEN_RATE = 5;          // integridad por segundo con la Célula Madre
 export const ITEM_DROP_CHANCE = 0.02; // por criatura abatida (ni crías ni esbirros)
 // Células lumínicas a la venta en cada útero: pocas, y no vuelven a crecer.
@@ -273,13 +273,6 @@ export class GameState {
     return this.gainCell() ? 'stored' : 'used';
   }
 
-  // Compra un coágulo de plasma en el útero y cura al momento.
-  buyPlasma() {
-    if (this.integrity >= this.maxIntegrity || !this.pay(PLASMA.price)) return false;
-    this.heal(PLASMA.heal);
-    return true;
-  }
-
   buyItem(kind) {
     if (!this.pay(ITEMS[kind].price)) return false;
     this.items[kind]++;
@@ -463,19 +456,21 @@ export class GameState {
 
   // Reserva de nutrientes del útero de cada Nodo: NODE_DOSES curas que se regeneran
   // solas, una cada NODE_REGEN segundos de juego. Curar ya no es una fuente infinita.
-  nodeReserve(key, now) {
-    const r = (this.nodeRes[key] ??= { n: NODE_DOSES, t: now });
-    while (r.n < NODE_DOSES && now - r.t >= NODE_REGEN) { r.n++; r.t += NODE_REGEN; }
-    if (r.n >= NODE_DOSES) r.t = now;
-    return { doses: r.n, next: r.n < NODE_DOSES ? Math.ceil(NODE_REGEN - (now - r.t)) : 0 };
+  // Cada útero puede tener su propio tope de curas (max) y lo que cura cada una (amount).
+  nodeReserve(key, now, max = NODE_DOSES) {
+    const r = (this.nodeRes[key] ??= { n: max, t: now });
+    if (r.n > max) r.n = max;                             // si se bajó el tope en el editor
+    while (r.n < max && now - r.t >= NODE_REGEN) { r.n++; r.t += NODE_REGEN; }
+    if (r.n >= max) r.t = now;
+    return { doses: r.n, next: r.n < max ? Math.ceil(NODE_REGEN - (now - r.t)) : 0 };
   }
 
-  healAtNode(key, now, price) {
-    const r = this.nodeReserve(key, now);
+  healAtNode(key, now, price, amount = NODE_HEAL, max = NODE_DOSES) {
+    const r = this.nodeReserve(key, now, max);
     if (r.doses <= 0 || this.integrity >= this.maxIntegrity || !this.pay(price)) return false;
-    this.heal(NODE_HEAL);
+    this.heal(amount);
     const res = this.nodeRes[key];
-    if (res.n === NODE_DOSES) res.t = now;
+    if (res.n === max) res.t = now;
     res.n--;
     return true;
   }

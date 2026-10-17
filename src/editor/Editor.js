@@ -9,6 +9,7 @@ import { paintRoom } from '../factory/TilePainter.js';
 import { reach } from '../../tools/reach.mjs';
 import { TILES, TILE_BY_CHAR, SOLID, KINDS, ENEMY_TYPES, ENEMIES } from './schema.js';
 import { patchLevels } from './serialize.js';
+import { NODE_DOSES, NODE_HEAL } from '../state/State.js';
 import { enemyThumb } from './EnemyThumbs.js';
 
 const $ = (id) => document.getElementById(id);
@@ -1346,6 +1347,17 @@ function renderRoomPanel() {
   html += field('mapa [x, y, ancho, alto] (celdas)', r.map ?? [0, 0, cells[0], cells[1]], (v) => { r.map = v; drawMap(); });
   html += `<div class="row"><button id="mvroom" class="${S.roomMove ? 'on' : ''}" title="Arrastra en el lienzo para cambiar dónde está la sala respecto a las demás (por celdas)">${S.roomMove ? 'Moviendo: arrastra (Esc termina)' : 'Mover sala'}</button><button id="fitmap" title="Ancho y alto del mapa según el tamaño de la sala">Ajustar mapa al tamaño</button></div>`;
   html += `<h4>Ampliar / recortar</h4><div class="grid4">${['top', 'bottom', 'left', 'right'].map((s) => `<span>${{ top: 'arriba', bottom: 'abajo', left: 'izquierda', right: 'derecha' }[s]}</span><button data-rs="${s}" data-n="-1">−1</button><button data-rs="${s}" data-n="1">+1</button><button data-rs="${s}" data-n="${s === 'top' || s === 'bottom' ? CELL[1] : CELL[0]}">+celda</button>`).join('')}</div>`;
+  // Útero de la sala: cuántas curas guarda (se regeneran con el tiempo) y cuánto cura cada una.
+  if (r.grid.some((row) => row.includes('N'))) {
+    const w = r.womb ?? {}, setW = (k, v, def) => {
+      const o = { ...(r.womb ?? {}) };
+      if (!(v > 0) || v === def) delete o[k]; else o[k] = Math.round(v);
+      if (Object.keys(o).length) r.womb = o; else delete r.womb;
+    };
+    html += `<h4>Útero (curas)</h4>`;
+    html += field(`curas máximas (por defecto ${NODE_DOSES})`, w.doses ?? NODE_DOSES, (v) => setW('doses', v, NODE_DOSES));
+    html += field(`integridad por cura (por defecto ${NODE_HEAL})`, w.cure ?? NODE_HEAL, (v) => setW('cure', v, NODE_HEAL));
+  }
   html += connectionsHtml(r);
   html += `<div class="row"><button id="setstart">Inicio del juego aquí (punto de prueba)</button></div>`;
   box.innerHTML = html;

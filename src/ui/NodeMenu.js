@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { NODE_DOSES, NODE_HEAL, NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, PLASMA, CELL_PRICE, NODE_CELLS, CELL_STORE_FROM, CELL_AUTO_BELOW, SUPPRESS_CUT, SUPPRESS_TIME } from '../state/State.js';
+import { NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, CELL_PRICE, NODE_CELLS, CELL_STORE_FROM, CELL_AUTO_BELOW, SUPPRESS_CUT, SUPPRESS_TIME } from '../state/State.js';
 import { LEVELS } from '../data/levels.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { nodeOf } from '../data/nodes.js';
@@ -53,7 +53,6 @@ const CATS = {
   trade: { c: '#c8b8a0', info: 'El útero digiere un recurso y te devuelve el otro.' },
   shield: { c: '#4ff0ff', info: 'Se guarda; úsala cuando quieras desde el Genoma.' },
   regen: { c: '#7dff9a', info: 'Se guarda; úsala cuando quieras desde el Genoma.' },
-  plasma: { c: '#ff3a4a', info: 'Cura al momento. Más caro que sanar en el útero, pero nunca se agota.' },
   travel: { c: '#d0a8ff', info: 'El nervio del organismo te lleva a otro útero que ya conoces.' },
 };
 const HINT = 'Señala una opción para saber qué hace.';
@@ -73,16 +72,6 @@ const ICON = {
       blob(g, cx, 14.5, r + 0.6, r + 0.6, '#140c10');
       blob(g, cx, 14.5, r, r, full ? '#ff5a6a' : grow ? '#a02838' : '#3a1820');
     }
-  },
-  // Coágulo de plasma: una gota de sangre espesa que palpita.
-  plasma(g, t) {
-    const k = 1 + Math.sin(t * 3) * 0.06;
-    blob(g, 9, 10.5, 5.6 * k, 5.6 * k, '#140c10');
-    seg(g, 9, 2, 9, 8, '#140c10', 5);
-    blob(g, 9, 10.5, 4.6 * k, 4.6 * k, '#c0283a');
-    seg(g, 9, 3.5, 9, 8, '#c0283a', 3);
-    blob(g, 9.6, 11.2, 2.4 * k, 2.4 * k, '#ff3a4a');
-    px(g, 7, 9, '#ffb0b8', 1, 2);
   },
   // Vial de supresor: cristal con líquido violeta que burbujea y su aguja.
   suppressor(g, t) {
@@ -180,26 +169,18 @@ export class NodeMenu {
 
   render() {
     const g = this.game, st = g.state, key = g.room.id;
-    const res = st.nodeReserve(key, g.time);
-    const node = nodeOf(key); // cada útero ofrece y cobra distinto (data/nodes.js)
+    const node = nodeOf(key); // cada útero ofrece y cobra distinto (data/nodes.js y la sala)
+    const res = st.nodeReserve(key, g.time, node.doses);
     // Cada opción: en su ficha, solo nombre y coste (con el motivo si no se puede); lo
     // que hace (effect + la explicación de su tipo) va al panel de abajo al señalarla.
     const options = [
       {
-        icon: ['heal', { doses: res.doses, total: NODE_DOSES, fill: res.next ? 1 - res.next / NODE_REGEN : 0 }],
+        icon: ['heal', { doses: res.doses, total: node.doses, fill: res.next ? 1 - res.next / NODE_REGEN : 0 }],
         label: 'Sanar tejido',
-        effect: `<span class="c-int">+${NODE_HEAL} integridad</span>${res.next ? ` <span class="dim">(otra cura en ${res.next}s)</span>` : ''}`,
+        effect: `<span class="c-int">+${node.cure} integridad</span>${res.next ? ` <span class="dim">(otra cura en ${res.next}s)</span>` : ''}`,
         cost: `${price(node.heal)}${why(!res.doses && 'útero vacío', st.integrity >= st.maxIntegrity && 'integridad al máximo', !st.canPay(node.heal) && 'no te alcanza')}`,
         enabled: res.doses > 0 && st.canPay(node.heal) && st.integrity < st.maxIntegrity,
-        run: () => { if (st.healAtNode(key, g.time, node.heal)) g.audio.play('womb'); },
-      },
-      {
-        icon: ['plasma'],
-        label: PLASMA.name,
-        effect: `<span class="c-int">+${PLASMA.heal} integridad al momento</span>`,
-        cost: `${price(PLASMA.price)}${why(st.integrity >= st.maxIntegrity && 'integridad al máximo', !st.canPay(PLASMA.price) && 'no te alcanza')}`,
-        enabled: st.canPay(PLASMA.price) && st.integrity < st.maxIntegrity,
-        run: () => { if (st.buyPlasma()) { g.audio.play('womb'); g.say(`El útero te inyecta plasma: +${PLASMA.heal} integridad.`, 2); } },
+        run: () => { if (st.healAtNode(key, g.time, node.heal, node.cure, node.doses)) g.audio.play('womb'); },
       },
       // Células lumínicas: como al encontrarlas, siempre recargan el ojo y, si ya estaba
       // a CELL_STORE_FROM o más, además se guardan. Cada útero solo cría unas pocas.
