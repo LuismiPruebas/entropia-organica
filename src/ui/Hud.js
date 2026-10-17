@@ -16,7 +16,41 @@ export class Hud {
 
   show(v) { this.root.hidden = !v; }
 
+  // Diálogo (lore): una o varias pantallas que esperan a que el jugador pase. El texto
+  // se escribe letra a letra; pasar la primera vez lo completa, la segunda avanza.
+  //   opts: { speaker, key (texto del aviso para pasar), owner, onLine(i), onEnd() }
+  dialogue(lines, opts = {}) {
+    if (this.dlg) this.endDialogue();
+    lines = lines.filter(Boolean);
+    if (!lines.length) return;
+    this.dlg = { lines, i: 0, shown: 0, ...opts };
+    const el = $('dialogue');
+    el.hidden = false;
+    el.querySelector('.who').textContent = opts.speaker ? caps(opts.speaker) : '';
+    this.msg.classList.remove('show');
+    this.msgTime = 0;
+    opts.onLine?.(0);
+  }
+  get dialogueActive() { return !!this.dlg; }
+  get typing() { const d = this.dlg; return !!d && d.shown < d.lines[d.i].length; }
+  advance() {
+    const d = this.dlg;
+    if (!d) return;
+    if (this.typing) { d.shown = d.lines[d.i].length; return; }
+    if (++d.i >= d.lines.length) return this.endDialogue();
+    d.shown = 0;
+    d.onLine?.(d.i);
+  }
+  endDialogue() {
+    const d = this.dlg;
+    if (!d) return;
+    this.dlg = null;
+    $('dialogue').hidden = true;
+    d.onEnd?.();
+  }
+
   say(text, seconds = 2.5) {
+    if (this.dlg) return;                 // mientras hay un diálogo, los avisos no lo tapan
     this.msg.textContent = text;
     this.msg.classList.add('show');
     this.msgTime = seconds;
@@ -48,6 +82,15 @@ export class Hud {
   update(dt, st, roomName, eye = [1, 0.82, 0.25]) {
     this.msgTime -= dt;
     if (this.msgTime <= 0) this.msg.classList.remove('show');
+    const d = this.dlg;
+    if (d) {
+      const line = d.lines[d.i];
+      d.shown = Math.min(line.length, d.shown + dt * 48);
+      const el = $('dialogue'), txt = line.slice(0, Math.floor(d.shown));
+      if (this.cache.dlgTxt !== txt) el.querySelector('.txt').textContent = this.cache.dlgTxt = txt;
+      const next = this.typing ? '' : `${d.key ?? 'E'} ${d.i < d.lines.length - 1 ? '>' : 'x'}`;
+      if (this.cache.dlgNext !== next) el.querySelector('.next').textContent = this.cache.dlgNext = next;
+    }
     this.t = (this.t ?? 0) + dt;
     const t = this.t;
     this.g ??= $('organs-c').getContext('2d');

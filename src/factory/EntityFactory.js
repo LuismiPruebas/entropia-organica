@@ -93,6 +93,8 @@ export class EntityFactory {
       }
     }
 
+    // Eventos de texto (editor): zonas que lanzan un diálogo o un aviso al entrar.
+    room.texts = (def.texts ?? []).map((d, i) => ({ def: d, key: `text:${id}:${i}`, inside: false }));
     // Sala de un jefe ya vencido: la sombra que la inundaba se ha retirado (Game: cleanse).
     room.cleansed = (def.enemies ?? []).some((e, i) => ENEMIES[e.type]?.boss && g.state.bosses.has(`${id}:${i}`));
     room.cleanse = room.cleansed ? 1 : 0;

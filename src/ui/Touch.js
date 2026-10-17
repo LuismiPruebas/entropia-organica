@@ -402,7 +402,7 @@ export class Touch {
       show('map', st.has?.('map1'));
       show('weapon', (st.weapons?.length ?? 0) > 1);
       const p = g.player;
-      show('interact', !!(g.room && p && g.room.nodes?.some((n) => overlap(p, n))));
+      show('interact', !!(g.hud?.dialogueActive || (g.room && p && g.room.nodes?.some((n) => overlap(p, n)))));
     }
     show('back', menu);
     if (menu && this.menuDirs?.size && performance.now() > this.repeatAt) {

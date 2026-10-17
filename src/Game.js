@@ -181,6 +181,7 @@ export class Game {
   // ---------- Salas ----------
   loadRoom(id, spawn) {
     this.audio.stopBossMusic(0.8);
+    this.hud.endDialogue();
     if (this.room) this.factory.disposeRoom(this.room);
     for (const p of this.projectiles) p.dispose();
     this.projectiles = [];
@@ -324,6 +325,12 @@ export class Game {
 
   say(text, seconds) { this.hud.say(text, seconds); }
 
+  // Diálogo de lore: se queda hasta que el jugador pasa (E, Usar en mando o pantalla).
+  dialogue(lines, opts = {}) {
+    const key = this.pad.active ? 'USAR' : this.touch.active ? 'USAR' : 'E';
+    this.hud.dialogue(lines, { key, ...opts });
+  }
+
   // Dónde se usan los consumibles: en el Genoma, con su tecla según con qué juegas.
   itemKey() {
     return `desde el Genoma ${this.pad.active ? '(Options)' : this.touch.active ? '(botón del ADN)' : '[I]'}`;
@@ -431,6 +438,12 @@ export class Game {
   #updatePlay(dt) {
     // Congelado del impacto: unos fotogramas quietos dan peso al golpe.
     if (this.hitStop > 0) { this.hitStop -= dt; return; }
+    // Diálogo abierto: E (o Enter) lo pasa, y esa pulsación no hace nada más.
+    if (this.hud.dialogueActive && this.input.hit('KeyE', 'Enter')) {
+      this.hud.advance();
+      this.input.pressed.delete('KeyE');
+      this.input.pressed.delete('Enter');
+    }
     const st = this.state, p = this.player, input = this.input;
     this.eyeColor = eyeColor(st.light / 100);
     this.beamColor = beamColor(st.light / 100);
@@ -537,6 +550,17 @@ export class Game {
     }
     // Sala liberada: la luz vuelve despacio.
     if (this.room.cleansed && this.room.cleanse < 1) this.room.cleanse = Math.min(1, this.room.cleanse + dt / 4);
+    // Eventos de texto de la sala (editor: "Evento de texto"): al entrar en su zona.
+    for (const te of this.room.texts ?? []) {
+      const d = te.def, inZone = overlap(p, { x: d.x * TILE, y: d.y * TILE, w: (d.w ?? 1) * TILE, h: (d.h ?? 1) * TILE });
+      if (inZone && !te.inside && !(d.once !== false && st.flags.has(te.key))) {
+        if (d.once !== false) st.flags.add(te.key);
+        const lines = (d.lines ?? []).filter(Boolean);
+        if (d.mode === 'aviso') this.say(lines.join(' '), Math.max(2.5, lines.join(' ').length * 0.06));
+        else this.dialogue(lines, { speaker: d.speaker });
+      }
+      te.inside = inZone;
+    }
     for (const w of this.room.wombs) w.update();
     for (const h of this.room.hazards) h.update(dt);
     for (const n of this.room.nodules) n.update(dt);

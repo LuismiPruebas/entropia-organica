@@ -989,7 +989,7 @@ function field(label, value, onset, type) {
   if (type === 'select') input = `<select id="${id}">${value.options.map((o) => `<option${o === value.v ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
   else if (typeof value === 'boolean') input = `<input id="${id}" type="checkbox"${value ? ' checked' : ''}>`;
   else if (typeof value === 'number') input = `<input id="${id}" type="number" step="any" value="${value}">`;
-  else if (typeof value === 'string' && value.length > 30) input = `<textarea id="${id}" rows="3">${value}</textarea>`;
+  else if (type === 'textarea' || (typeof value === 'string' && value.length > 30)) input = `<textarea id="${id}" rows="${type === 'textarea' ? 6 : 3}">${String(value).replace(/</g, '&lt;')}</textarea>`;
   else if (typeof value === 'string') input = `<input id="${id}" value="${value.replace(/"/g, '&quot;')}">`;
   else input = `<input id="${id}" class="json" value='${JSON.stringify(value)}'>`;
   setTimeout(() => {
@@ -1089,6 +1089,17 @@ function renderInspector() {
   if (kind === 'lamps') html += field('largo (px)', o[2] ?? 10, (v) => { o[2] = Math.max(2, Math.round(v)); }, 'number');
   if (kind === 'nodules') html += field('tipo', { v: o[2] === 'luz' ? 'luz (suelta célula)' : 'óseo (suelta hueso)', options: ['óseo (suelta hueso)', 'luz (suelta célula)'] }, (nv) => { if (nv.startsWith('luz')) o[2] = 'luz'; else o.length = 2; }, 'select');
   else if (kind === 'links') html += linkFields(o);
+  else if (kind === 'texts') {
+    html += field('textos (una línea en blanco separa una pantalla de la siguiente)', (o.lines ?? []).join('\n\n'), (v) => {
+      o.lines = v.split(/\n\s*\n/).map((s) => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
+    }, 'textarea');
+    html += field('quién habla (vacío: nadie)', o.speaker ?? '', (v) => { if (v.trim()) o.speaker = v.trim(); else delete o.speaker; });
+    html += field('tipo', { v: o.mode === 'aviso' ? 'aviso (se va solo)' : 'diálogo (espera a que el jugador pase)', options: ['diálogo (espera a que el jugador pase)', 'aviso (se va solo)'] }, (v) => { o.mode = v.startsWith('aviso') ? 'aviso' : 'dialogo'; }, 'select');
+    html += field('solo la primera vez', o.once !== false, (v) => { o.once = v; });
+    html += field('x', o.x, (v) => { o.x = Math.round(v); }, 'number') + field('y', o.y, (v) => { o.y = Math.round(v); }, 'number');
+    html += field('ancho (casillas)', o.w ?? 1, (v) => { o.w = Math.max(1, Math.round(v)); }, 'number') + field('alto (casillas)', o.h ?? 1, (v) => { o.h = Math.max(1, Math.round(v)); }, 'number');
+    html += `<p class="dim">Salta al entrar en la zona. Para verlo: Alt+clic cerca para el punto de prueba y "Probar ▶".</p>`;
+  }
   else for (const [k, v] of Object.entries(o)) {
     if (kind === 'exits' && k === 'toLink') continue;
     if (kind === 'enemies' && k === 'type') html += field('tipo', { v, options: ENEMY_TYPES }, (nv) => { o.type = nv; }, 'select');

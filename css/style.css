@@ -69,20 +69,54 @@ body {
 #boss-bar .bar[hidden] { display: none; }
 #boss-bar .fill { display: block; height: 100%; background: #c0283a; box-shadow: 0 0 4px #ff2040; transition: width .2s; }
 
+/* Mensajes: en una caja sutil que se lee sobre cualquier fondo. */
 #message {
   position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: 14px;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 48px);
+  box-sizing: border-box;
+  padding: 3px 6px 2px;
   text-align: center;
   font-size: 5px;
   line-height: 1.7;
   color: #e8dcc8;
   text-shadow: 1px 1px 0 #000;
+  background: rgba(14, 6, 10, 0.72);
+  border: 1px solid rgba(220, 150, 140, 0.18);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
   pointer-events: none;
   opacity: 0;
   transition: opacity .2s;
 }
+
+/* Diálogos de lore: se quedan hasta que el jugador pasa (E / Usar). */
+#dialogue {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  width: min(78%, 300px);
+  box-sizing: border-box;
+  padding: 4px 7px 6px;
+  font-size: 5px;
+  line-height: 1.8;
+  color: #f0e2cc;
+  text-shadow: 1px 1px 0 #000;
+  background: rgba(16, 5, 9, 0.84);
+  border: 1px solid rgba(232, 170, 110, 0.35);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.75), inset 0 0 8px rgba(120, 30, 40, 0.35);
+  pointer-events: none;
+}
+#dialogue[hidden] { display: none; }
+#dialogue .who { color: #ffd27a; font-size: 4px; letter-spacing: 1px; margin-bottom: 2px; }
+#dialogue .who:empty { display: none; }
+#dialogue .next { position: absolute; right: 5px; bottom: 1px; font-size: 4px; color: #ffd27a; animation: dlg-blink 1s steps(2) infinite; }
+@keyframes dlg-blink { 50% { opacity: 0.2; } }
 
 #message.show { opacity: 1; }
 

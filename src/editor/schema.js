@@ -135,6 +135,14 @@ export const KINDS = {
     box: (o) => { const n = o.n ?? 2, l = Math.ceil(o.len ?? 2.5); return o.dir === 'down' ? [o.x, o.y, n, l] : o.dir === 'left' ? [o.x - l + 1, o.y, l, n] : o.dir === 'right' ? [o.x, o.y, l, n] : [o.x, o.y - l + 1, n, l]; },
     move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => `estacas ${o.dir}${o.period ? ` ${o.period}s` : ''}`,
   },
+  // Evento de texto: al entrar en la zona salta un diálogo (se queda hasta que el jugador
+  // pasa) o un aviso (se va solo). once: solo la primera vez.
+  texts: {
+    label: 'Evento de texto (zona)', color: '#ffe08a',
+    make: (x, y) => ({ x, y, w: 3, h: 3, mode: 'dialogo', speaker: '', lines: ['Escribe aquí el texto.'], once: true }),
+    box: (o) => [o.x, o.y, o.w ?? 1, o.h ?? 1], move: (o, x, y) => { o.x = x; o.y = y; },
+    text: (o) => `${o.mode === 'aviso' ? 'aviso' : 'diálogo'}${o.speaker ? ' · ' + o.speaker : ''}${o.once === false ? ' ↻' : ''}`,
+  },
   // Rostro del Anfitrión (entities/Face.js, textos en data/faces.js): altar de 18x15 casillas;
   // (x, y) es el centro de su base. front: delante de las paredes (si no, de fondo).
   faces: {
@@ -191,4 +199,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'faces', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'faces', 'texts', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];

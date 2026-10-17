@@ -57,9 +57,30 @@ export class Face {
     g.audio.play(this.k > 0.5 ? 'faceFree' : 'faceSpeak', this.center);
   }
 
+  // Habla en un diálogo (se queda hasta que pases); mueve la boca mientras se escribe.
+  #talk(lines, onLine, onEnd) {
+    const g = this.game;
+    g.dialogue(lines, {
+      speaker: 'El Anfitrión', owner: this,
+      onLine: (i) => { g.audio.play(this.k > 0.5 ? 'faceFree' : 'faceSpeak', this.center); onLine?.(i); },
+      onEnd,
+    });
+  }
+
+  // Liberado del todo: su marca y sus membranas.
+  #free() {
+    if (this.state === 'free') return;
+    this.state = 'free';
+    this.k = 1;
+    this.game.state.flags.add(this.flag);
+    this.#openMembranes();
+  }
+
   update(dt) {
     const g = this.game, p = g.player, st = g.state;
     this.t += dt;
+    // Mientras se escribe su diálogo, la boca se mueve.
+    if (g.hud.dlg?.owner === this && g.hud.typing) this.talk = Math.max(this.talk, 0.2);
     this.talk = Math.max(0, this.talk - dt);
     this.next -= dt;
     const near = Math.hypot(p.cx - this.mid.x, p.cy - this.mid.y) < HEAR;
@@ -86,22 +107,15 @@ export class Face {
       if (Math.random() < 0.6) this.#spark(1);
       if (this.wake >= 2.2 && !this.thanked) {
         this.thanked = true;
-        this.#say(this.data.thanks, 6);
-        this.openAt = this.wake + 6.2;
-      }
-      if (this.thanked && this.wake >= this.openAt) {
-        this.state = 'free';
-        st.flags.add(this.flag);
-        this.#openMembranes();
-        if (this.data.opens) this.#say(this.data.opens, 4.5);
-        this.next = 7;
+        // Te lo agradece (y abre sus membranas al decirlo); se queda hasta que pases.
+        this.#talk([this.data.thanks, this.data.opens], (i) => { if (i === 1) this.#free(); }, () => { this.#free(); this.next = 9; });
       }
     } else if (this.state === 'free') {
-      if (near && this.next <= 0 && this.data.hints.length) {
+      if (near && this.next <= 0 && this.data.hints.length && !g.hud.dialogueActive) {
         const i = st.faceHints?.[this.biome] ?? 0;
         (st.faceHints ??= {})[this.biome] = (i + 1) % this.data.hints.length;
-        this.#say(this.data.hints[i], 6);
-        this.next = 14 + Math.random() * 4;
+        this.next = 999;                                  // la siguiente, al cerrar esta
+        this.#talk([this.data.hints[i]], null, () => { this.next = 14 + Math.random() * 4; });
       }
       if (Math.random() < 0.05) this.#spark(1);
     }
