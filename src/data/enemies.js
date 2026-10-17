@@ -88,6 +88,7 @@ export const ENEMIES = {
     lore: 'Un trozo del enjambre que no aceptó morir. Al partirse se reparte en dos, y otra vez, cada vez más pequeña y más rabiosa, hasta que ya no queda nada que dividir.',
   },
   ojo: {
+    infects: true, // su saliva (Sistema Nervioso) infecta; tocar su tejido, también
     frag: 'ocular', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Ojo de Techo',
     biome: 'nervioso',

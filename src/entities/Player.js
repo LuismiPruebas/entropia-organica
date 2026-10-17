@@ -1079,6 +1079,7 @@ export class Player {
   }
 
   #melee() {
+    let infectious = false;
     const g = this.game, st = g.state;
     if (this.fireCd > 0) return;
     this.fireCd = 0.38;
@@ -1096,6 +1097,7 @@ export class Player {
       // Contra una coraza intacta el golpe rebota y no absorbe nada.
       if (e.hurt(MELEE_DAMAGE, 'melee')) {
         hit = true;
+        if (e.def?.infects) infectious = true;   // reventar el tejido de algo que infecta
         e.knockback(this.facing, MELEE_KNOCK);
       }
     }
@@ -1110,7 +1112,7 @@ export class Player {
         g.glowParticles.emit(hx, hy, { vx: Math.cos(a) * (90 + Math.random() * 120), vy: Math.sin(a) * (90 + Math.random() * 120), life: 0.25, color: [1, 0.75, 0.4] });
       }
       st.addBiomass(MELEE_ABSORB);
-      if (Math.random() < MELEE_INFECTION && st.applyStatus('infection', INFECTION.time)) {
+      if (infectious && Math.random() < MELEE_INFECTION && st.applyStatus('infection', INFECTION.time)) {
         g.say('El tejido que has reventado te infecta.', 1.8);
       }
     }

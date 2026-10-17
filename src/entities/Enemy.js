@@ -108,7 +108,8 @@ function eyeVolley(e, g) {
 function eyeShot(e, g, v, i) {
   const p = g.player, d = e.def;
   const x0 = e.cx, y0 = e.y + e.h - 2;
-  const base = { owner: 'enemy', damage: d.projectileDamage, status: 'infection' };
+  // Infecta solo la saliva (Sistema Nervioso) de un ojo que infecta (enemies.js: infects).
+  const base = { owner: 'enemy', damage: d.projectileDamage, status: d.infects && v.ammo === 'spit' ? 'infection' : undefined };
   const mid = i - (v.n - 1) / 2;
   if (v.ammo === 'seed') {
     // Se sueltan hacia ti en abanico, muy despacio; el aire hace el resto.
@@ -465,7 +466,7 @@ export const BEHAVIORS = {
         e.drop = enraged ? 0.6 : 1.1;
         g.spawnProjectile({
           x: q.x - 4, y: q.y + 6, w: 7, h: 7, vx: (p.cx - q.x) * 0.4, vy: 30, gravity: 420, life: 3,
-          damage: 5, kind: 'sporeLob', owner: 'enemy', status: 'infection', burstRadius: 30, burstDamage: 5,
+          damage: 5, kind: 'sporeLob', owner: 'enemy', burstRadius: 30, burstDamage: 5,
         });
         g.audio.play(d.sounds?.attack ?? 'spit', e);
       }
@@ -490,7 +491,7 @@ export const BEHAVIORS = {
         if (e.dust <= 0) {
           e.dust = enraged ? 0.32 : 0.5;
           const sx = e.cx + (Math.random() < 0.5 ? -1 : 1) * (18 + Math.random() * 22);
-          g.spawnProjectile({ x: sx - 3, y: e.cy - 6, w: 6, h: 6, vx: (Math.random() - 0.5) * 30, vy: 20, life: 4.5, damage: 4, kind: 'seed', owner: 'enemy', status: 'infection', home: 15 });
+          g.spawnProjectile({ x: sx - 3, y: e.cy - 6, w: 6, h: 6, vx: (Math.random() - 0.5) * 30, vy: 20, life: 4.5, damage: 4, kind: 'seed', owner: 'enemy', home: 15 });
         }
         if (e.timer <= 0) { go('aim', enraged ? MOTH_T.aimRage : MOTH_T.aim); e.aimAt = { x: p.cx + p.vx * 0.2, y: p.cy }; g.audio.play('charge', e); }
       } else {
@@ -564,7 +565,7 @@ export const BEHAVIORS = {
       // Si te ensarta (en cualquier punto del asta): daño e infección.
       for (let k = 0; k <= 3; k++) {
         const hx = ncx + (tipX - ncx) * (0.4 + k * 0.2), hy = ncy + (tipY - ncy) * (0.4 + k * 0.2);
-        if (Math.hypot(p.cx - hx, p.cy - hy) < 12) { g.hurtPlayer(d.stingDamage, e.cx, d.name, 'infection'); break; }
+        if (Math.hypot(p.cx - hx, p.cy - hy) < 12) { g.hurtPlayer(d.stingDamage, e.cx, d.name); break; }
       }
     } else if (e.gs === 'stuck') {
       e.pose = 'stuck';
@@ -1869,7 +1870,7 @@ export class Enemy {
       const a = Math.random() * Math.PI * 2, s = 20 + Math.random() * 60;
       g.glowParticles.emit(this.cx, this.cy, { vx: Math.cos(a) * s, vy: Math.sin(a) * s - 10, life: 0.9, color: [0.55, 0.65, 0.12] });
     }
-    if (Math.hypot(p.cx - this.cx, p.cy - this.cy) < d.radius) g.hurtPlayer(d.burstDamage, this.cx, 'esporas', 'infection');
+    if (Math.hypot(p.cx - this.cx, p.cy - this.cy) < d.radius) g.hurtPlayer(d.burstDamage, this.cx, 'esporas');
   }
 
   render() {
