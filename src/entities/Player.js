@@ -562,8 +562,8 @@ export class Player {
   }
 
   // Rechazo en el cuerpo (diegético): desde el 40 % la silueta late en violeta, más
-  // deprisa y más fuerte cuanto más rechazo; desde el 70 % gotea pus y da tirones; al
-  // 100 % sangra y tiembla. Un fallo de mutación es un espasmo (rejectSpasm).
+  // deprisa y más fuerte cuanto más rechazo; desde el 70 % gotea pus; al 100 % sangra.
+  // El cuerpo solo se sacude cuando una mutación falla (rejectSpasm): nada de tics sueltos.
   // Devuelve el desplazamiento horizontal del cuerpo en este fotograma.
   #rejectFx(dt) {
     const g = this.game, st = g.state;
@@ -573,19 +573,15 @@ export class Player {
     const beat = Math.pow(Math.max(0, Math.sin(this.rejPhase * Math.PI)), 6);
     const p = k * (0.25 + 0.55 * beat) + this.spasm * 0.9;
     this.rejTint = [0.45 * p, 0.04 * p, 0.55 * p];
-    let jolt = this.spasm > 0.4 ? (Math.random() < 0.5 ? -1 : 1) : 0;
+    const jolt = this.spasm > 0.4 ? (Math.random() < 0.5 ? -1 : 1) : 0;
     if (st.rejection >= 70) {
-      // Tirones sueltos y pus violeta que gotea del cuerpo.
-      if (Math.random() < dt * (0.4 + k)) this.twitch = 0.08;
+      // Pus violeta que gotea del cuerpo.
       if (Math.random() < dt * 4 * k) g.particles.emit(this.x + Math.random() * this.w, this.y + 6 + Math.random() * (this.h - 8), { vx: (Math.random() - 0.5) * 8, vy: 10 + Math.random() * 20, life: 0.6, color: [0.55, 0.15, 0.6] });
     }
     if (st.critical) {
-      // Crisis: tiembla sin parar y sangra.
+      // Crisis: sangra.
       if (Math.random() < dt * 6) g.particles.emit(this.x + Math.random() * this.w, this.y + 4 + Math.random() * (this.h - 6), { vx: (Math.random() - 0.5) * 14, vy: 15 + Math.random() * 25, life: 0.7, color: [0.55, 0.03, 0.08] });
-      if (Math.random() < 0.25) jolt = Math.random() < 0.5 ? -1 : 1;
     }
-    this.twitch = Math.max(0, (this.twitch ?? 0) - dt);
-    if (this.twitch > 0) jolt = this.twitch > 0.04 ? 1 : -1;
     return jolt;
   }
 
