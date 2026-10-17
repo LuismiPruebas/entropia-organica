@@ -224,6 +224,17 @@ body {
   text-align: left;
   cursor: pointer;
 }
+/* Pestañas del útero (Mutar, Cuidados, Tienda, Viajar) y la rejilla de dos columnas. */
+#node-menu .nm-tabs { display: flex; gap: 2px; margin-bottom: 3px; flex-wrap: wrap; }
+#node-menu button.nm-tab {
+  display: inline-block; width: auto; min-height: 0; margin: 0; padding: 1px 5px 0;
+  font-size: 4px; letter-spacing: .5px; color: #a89080; background: #140a0d;
+  border-radius: 5px 5px 2px 2px; box-shadow: inset 0 0 0 1px #3a1822;
+}
+#node-menu button.nm-tab.on { color: #ffd27a; background: #2a1418; box-shadow: inset 0 0 0 1px #c8784a, 0 0 4px rgba(255, 180, 90, .25); }
+#node-menu button.nm-tab.nav-sel { color: #7dff9a; box-shadow: inset 0 0 0 1px #7dff9a; }
+#node-menu .nm-list.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; align-content: start; }
+#node-menu .nm-list.cols button { margin: 0; }
 #node-menu button.mut { background: #160d1c; box-shadow: inset 0 0 0 1px #3a2050, inset 0 -2px 0 #0c0610; }
 #node-menu button .nm-icon {
   position: absolute;

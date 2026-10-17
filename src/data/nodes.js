@@ -23,7 +23,26 @@ export const NODES = {
 // Para Nodos nuevos sin carta propia.
 export const DEFAULT_NODE = { name: 'Útero', heal: { bio: 15 }, suppressor: { scrap: 6 } };
 
+// Desde el editor, cada sala puede decir qué vende su útero (womb.sells) y cómo se
+// llama (womb.name). Lo que no diga, sale de la carta de arriba (o de DEFAULT_NODE).
+//   sells: { cells, suppressor, extender, shield, regen: true/false, trade: '' | 'carne' | 'hueso' }
+//   trade 'carne': digiere hueso y da carne · 'hueso': calcifica carne y da hueso
+export const TRADES = {
+  carne: { give: { scrap: 6 }, get: { bio: 15 } },
+  hueso: { give: { bio: 15 }, get: { scrap: 6 } },
+};
+export const baseNode = (roomId) => NODES[roomId] ?? DEFAULT_NODE;
 export const nodeOf = (roomId) => {
-  const w = LEVELS[roomId]?.womb ?? {};
-  return { ...(NODES[roomId] ?? DEFAULT_NODE), doses: w.doses ?? NODE_DOSES, cure: w.cure ?? NODE_HEAL };
+  const w = LEVELS[roomId]?.womb ?? {}, base = baseNode(roomId), s = w.sells ?? {};
+  return {
+    ...base,
+    name: w.name ?? base.name,
+    doses: w.doses ?? NODE_DOSES, cure: w.cure ?? NODE_HEAL,
+    cells: s.cells ?? true,
+    extender: s.extender ?? true,
+    suppressor: s.suppressor === false ? null : s.suppressor === true ? (base.suppressor ?? { scrap: 6 }) : base.suppressor,
+    trade: s.trade === '' ? null : TRADES[s.trade] ?? base.trade,
+    shield: s.shield ?? true,
+    regen: s.regen ?? true,
+  };
 };

@@ -141,8 +141,9 @@ export class NodeMenu {
     addEventListener('keydown', (e) => {
       if (!this.open) return;
       if (e.code === 'Escape' || e.code === 'KeyE') this.close();
+      // 1-4: pestañas.
       const n = Number(e.key);
-      if (n >= 1) this.el.querySelectorAll('button')[n - 1]?.click();
+      if (n >= 1) this.el.querySelectorAll('.nm-tab')[n - 1]?.click();
     });
   }
 
@@ -151,6 +152,8 @@ export class NodeMenu {
     this.openedAt = performance.now();
     this.el.hidden = false;
     this.nav.index = 0;
+    this.tab = null;                 // la elige render: Mutar si hay algo listo para injertar
+    this.firstOpen = true;
     this.render();
     const loop = (ms) => {
       if (!this.open) return;
@@ -175,6 +178,7 @@ export class NodeMenu {
     // que hace (effect + la explicación de su tipo) va al panel de abajo al señalarla.
     const options = [
       {
+        tab: 'cuidar',
         icon: ['heal', { doses: res.doses, total: node.doses, fill: res.next ? 1 - res.next / NODE_REGEN : 0 }],
         label: 'Sanar tejido',
         effect: `<span class="c-int">+${node.cure} integridad${st.infection > 0 ? ' y cura la infección' : ''}</span>${res.next ? ` <span class="dim">(otra cura en ${res.next}s)</span>` : ''}`,
@@ -184,7 +188,8 @@ export class NodeMenu {
       },
       // Células lumínicas: como al encontrarlas, siempre recargan el ojo y, si ya estaba
       // a CELL_STORE_FROM o más, además se guardan. Cada útero solo cría unas pocas.
-      {
+      node.cells && {
+        tab: 'cuidar',
         icon: ['cell', { left: st.nodeCellsLeft(key), total: NODE_CELLS }],
         label: `Célula lumínica ${st.nodeCellsLeft(key)}/${NODE_CELLS}`,
         effect: `<span class="c-lux">recarga el ojo${st.light >= CELL_STORE_FROM ? ` y se guarda (llevas ${st.cells})` : ''}</span>`,
@@ -198,6 +203,7 @@ export class NodeMenu {
         },
       },
       node.suppressor && {
+        tab: 'cuidar',
         icon: ['suppressor'],
         label: 'Supresor de rechazo',
         effect: `<span class="c-rej">-${SUPPRESS_CUT} rechazo y no sube en ${SUPPRESS_TIME / 60} min</span> <span class="dim">(ahora ${Math.floor(st.rejection)} %)</span>`,
@@ -205,7 +211,8 @@ export class NodeMenu {
         enabled: st.canPay(node.suppressor) && st.rejection > 0,
         run: () => { if (st.craftSuppressor(node.suppressor)) { g.audio.play('womb'); g.say(`El supresor adormece tus injertos: el rechazo no subirá en ${SUPPRESS_TIME / 60} minutos.`, 3); } },
       },
-      {
+      node.extender && {
+        tab: 'cuidar',
         icon: ['extender'],
         label: 'Extensor de tolerancia',
         effect: `<span class="c-rej">+${CAPACITY_PER_EXTENDER} carga genética</span> <span class="dim">(ahora ${st.load}/${st.capacity})</span>`,
@@ -214,6 +221,7 @@ export class NodeMenu {
         run: () => { if (st.buyExtender()) { g.audio.play('mutate'); g.say('El útero te injerta un extensor: tu cuerpo tolera más carga genética.', 3); } },
       },
       node.trade && {
+        tab: 'tienda',
         icon: ['trade', { toBio: !!node.trade.get.bio }],
         label: node.trade.get.bio ? 'Digerir hueso' : 'Calcificar carne',
         effect: '',
@@ -222,7 +230,8 @@ export class NodeMenu {
         run: () => { if (st.tradeAtNode(node.trade)) g.audio.play('womb'); },
       },
       // Consumibles raros: el útero los cría, pero cuestan mucha carne.
-      ...Object.entries(ITEMS).map(([kind, it]) => ({
+      ...Object.entries(ITEMS).filter(([kind]) => node[kind] !== false).map(([kind, it]) => ({
+        tab: 'tienda',
         icon: [kind],
         label: `${it.name} ×${st.items[kind]}`,
         effect: kind === 'shield' ? `<span class="c-o2">invulnerable ${it.time} s</span>` : `<span class="c-int">regeneras ${it.time} s</span>`,
@@ -236,6 +245,7 @@ export class NodeMenu {
         const cost = st.installCost(id);
         const tag = linesOf(m).map((l) => LINES[l].name).join(' + ');
         return {
+          tab: 'mutar',
           icon: ['dna', { id }],
           label: `${m.name} <span class="nm-line">${tag} ${ROMAN[m.level]}</span>`,
           cost: ready
@@ -250,6 +260,7 @@ export class NodeMenu {
       }),
       // Tercer Ojo: el organismo te escupe en otro útero que ya conozcas.
       ...(st.has('eye3') ? travelTargets(st, key).map(([room, spawn]) => ({
+        tab: 'viajar',
         icon: ['travel'],
         label: `Viajar: ${nodeOf(room).name}`,
         cost: `<span class="c-lux">-${TRAVEL.light} luz</span> · ${price({ bio: TRAVEL.bio })}${why(st.light < TRAVEL.light && 'sin luz', !st.canPay({ bio: TRAVEL.bio }) && 'no te alcanza')}`,
@@ -266,6 +277,14 @@ export class NodeMenu {
       })) : []),
     ].filter(Boolean);
 
+    // Pestañas: solo las que tienen algo. Al abrir, Mutar si hay algo listo para injertar.
+    const TABS = [['mutar', 'MUTAR'], ['cuidar', 'CUIDADOS'], ['tienda', 'TIENDA'], ['viajar', 'VIAJAR']].filter(([t]) => options.some((o) => o.tab === t));
+    if (!this.tab || !TABS.some(([t]) => t === this.tab)) this.tab = options.some((o) => o.tab === 'mutar' && o.enabled) ? 'mutar' : TABS.find(([t]) => t === 'cuidar')?.[0] ?? TABS[0]?.[0];
+    // Primero lo que se puede usar ya (en Mutar, las mutaciones listas para injertar).
+    const shown = options.filter((o) => o.tab === this.tab).sort((a, b) => (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0));
+    if (this.firstOpen) { this.nav.index = TABS.length; this.firstOpen = false; }   // empieza en la primera ficha
+    const TAB_INFO = { mutar: 'Injerta el ADN latente que llevas. Cada injerto cuesta integridad máxima y sube el rechazo.', cuidar: 'Cura, luz para el ojo y lo que calma o amplía tu tolerancia.', tienda: 'Trueques y consumibles raros.', viajar: 'El nervio del organismo te lleva a otro útero que ya conoces.' };
+
     this.el.innerHTML = `
       <svg class="nm-veins" viewBox="0 0 250 120" preserveAspectRatio="none">
         ${VEINS.map((d) => `<path class="vein" d="${d}"/><path class="pulse" d="${d}"/>`).join('')}
@@ -274,14 +293,22 @@ export class NodeMenu {
         <span class="nm-close" title="Cerrar">✕</span>
         <h2>NODO SEGURO <span class="nm-name">${node.name}</span></h2>
         <div class="nm-res"><span class="c-int">INT ${Math.ceil(st.integrity)}/${st.maxIntegrity}</span> <span class="c-bio">BIO ${Math.floor(st.biomass)}</span> <span class="c-lux">LUZ ${Math.floor(st.light)}</span> <span class="c-scrap">HUESO ${st.scrap}</span></div>
-        <div class="nm-scroll"><div class="nm-list"></div><div class="nm-bar" hidden><i></i></div></div>
+        <div class="nm-tabs">${TABS.map(([t, name], i) => { const n = options.filter((o) => o.tab === t).length, ready = options.filter((o) => o.tab === t && o.enabled).length; return `<button class="nm-tab${t === this.tab ? ' on' : ''}" data-tab="${t}" data-title="${name}" data-info="${TAB_INFO[t]}" data-effect="">${i + 1} ${name} <span class="dim">${t === 'mutar' ? `${ready}/${n}` : n}</span></button>`; }).join('')}</div>
+        <div class="nm-scroll"><div class="nm-list${this.tab === 'mutar' ? '' : ' cols'}"></div><div class="nm-bar" hidden><i></i></div></div>
         <div class="nm-info"></div>
       </div>`;
     const list = this.el.querySelector('.nm-list');
     this.icons = [];
     // Se cierra con la misma tecla que lo abre (E, △/Y, USAR), con Esc o con la aspa.
     this.el.querySelector('.nm-close').addEventListener('click', () => this.close());
-    options.forEach((o, i) => {
+    for (const b of this.el.querySelectorAll('.nm-tab')) b.addEventListener('click', () => {
+      if (b.dataset.tab === this.tab) return;
+      this.tab = b.dataset.tab;
+      this.nav.index = TABS.length;      // tras repintar, la primera ficha de la pestaña
+      g.audio.play('flicker');
+      this.render();
+    });
+    shown.forEach((o, i) => {
       const b = document.createElement('button');
       b.disabled = !o.enabled;
       if (o.mutation) b.classList.add('mut');
@@ -293,7 +320,7 @@ export class NodeMenu {
       b.dataset.info = cat.info;
       b.dataset.title = o.label;
       b.dataset.effect = o.effect ?? '';
-      b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas><span class="nm-label">${i + 1}. ${o.label}</span><span class="desc">${o.cost}</span>`;
+      b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas><span class="nm-label">${o.label}</span><span class="desc">${o.cost}</span>`;
       // Con el ratón, la selección sigue al cursor: marco y panel siempre coinciden.
       b.addEventListener('mouseenter', () => { if (!b.classList.contains('nav-sel')) this.nav.select(b); });
       if (o.icon) this.icons.push({ g: b.querySelector('canvas').getContext('2d'), kind: o.icon[0], opts: o.icon[1] ?? {} });

@@ -13,6 +13,7 @@ import { NODE_DOSES, NODE_HEAL } from '../state/State.js';
 import { enemyThumb } from './EnemyThumbs.js';
 import { paintShrineBase, drawShrine, SW as SHRINE_W, SH as SHRINE_H } from '../entities/ShrineArt.js';
 import { faceData } from '../data/faces.js';
+import { baseNode } from '../data/nodes.js';
 
 const $ = (id) => document.getElementById(id);
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -1493,9 +1494,30 @@ function renderRoomPanel() {
       if (!(v > 0) || v === def) delete o[k]; else o[k] = Math.round(v);
       if (Object.keys(o).length) r.womb = o; else delete r.womb;
     };
-    html += `<h4>Útero (curas)</h4>`;
+    html += `<h4>Útero</h4>`;
+    const base = baseNode(S.id), sells = w.sells ?? {};
+    // Guarda un ajuste de womb (y lo quita si vuelve a lo de por defecto).
+    const setWomb = (fn) => { const o = { ...(r.womb ?? {}) }; fn(o); if (o.sells && !Object.keys(o.sells).length) delete o.sells; if (Object.keys(o).length) r.womb = o; else delete r.womb; };
+    html += field(`nombre (por defecto «${base.name}»)`, w.name ?? base.name, (v) => setWomb((o) => { if (!v.trim() || v.trim() === base.name) delete o.name; else o.name = v.trim(); }));
     html += field(`curas máximas (por defecto ${NODE_DOSES})`, w.doses ?? NODE_DOSES, (v) => setW('doses', v, NODE_DOSES));
     html += field(`integridad por cura (por defecto ${NODE_HEAL})`, w.cure ?? NODE_HEAL, (v) => setW('cure', v, NODE_HEAL));
+    html += `<p class="dim" style="margin:6px 0 2px">Qué vende (sanar y mutar están siempre):</p>`;
+    const SELL = [
+      ['cells', 'Células lumínicas', true],
+      ['suppressor', 'Supresor de rechazo', !!base.suppressor],
+      ['extender', 'Extensor de tolerancia', true],
+      ['shield', 'Perla de Nácar', true],
+      ['regen', 'Célula Madre', true],
+    ];
+    for (const [k, label, def] of SELL) html += field(label, sells[k] ?? def, (v) => setWomb((o) => { o.sells = { ...(o.sells ?? {}) }; if (v === def) delete o.sells[k]; else o.sells[k] = v; }));
+    const tradeNow = sells.trade !== undefined ? sells.trade : base.trade ? (base.trade.get.bio ? 'carne' : 'hueso') : '';
+    const TR = { '': 'ninguno', carne: 'digerir hueso (da carne)', hueso: 'calcificar carne (da hueso)' };
+    const tradeDef = base.trade ? (base.trade.get.bio ? 'carne' : 'hueso') : '';
+    html += field('trueque', { v: TR[tradeNow], options: Object.values(TR) }, (v) => setWomb((o) => {
+      const k = Object.keys(TR).find((key) => TR[key] === v) ?? '';
+      o.sells = { ...(o.sells ?? {}) };
+      if (k === tradeDef) delete o.sells.trade; else o.sells.trade = k;
+    }), 'select');
   }
   // Membranas del Rostro (Z): qué rostro las abre (por defecto, el de su bioma).
   if (r.grid.some((row) => row.includes('Z'))) {
