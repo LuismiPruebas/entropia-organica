@@ -19,6 +19,7 @@ import { BoneTrap, Wind } from '../entities/Traps.js';
 import { Nodule } from '../entities/Nodule.js';
 import { YolkSac } from '../entities/YolkSac.js';
 import { Gate, Pad, PodChain, Valve, Float, Mover, PhotoMembrane, buildFangs } from '../entities/Puzzles.js';
+import { Face } from '../entities/Face.js';
 
 // Lo hondo que está cada sala: salas de distancia desde el inicio (por las salidas),
 // de 0 a 1 (TIER_DEPTH salas o más). Mide la dificultad de los patrones de disparo.
@@ -63,6 +64,8 @@ export class EntityFactory {
         const key = `${id}:${cx},${cy}`;
         if ((c === 'X' || c === 'Y') && g.state.broken.has(key)) {
           world.set(cx, cy, '.');
+        } else if (c === 'Z' && g.state.flags.has(`face:${def.faceSeal ?? def.biome}`)) {
+          world.set(cx, cy, '.');                          // su Rostro ya se liberó
         } else if (c === 'o') {
           room.anchors.push(center);
         } else if (c === 'f' && !photoSeen.has(`${cx},${cy}`)) {
@@ -152,6 +155,8 @@ export class EntityFactory {
       ...(def.floats ?? []).map((d) => new Float(g, room, d, pools[d.pool])),
       ...(def.movers ?? []).map((d) => new Mover(g, room, d)),
       ...buildFangs(g, world), // colmillos animados de púas y abismos
+      // Rostros del Anfitrión (lore): hablan, se liberan y abren las membranas Z.
+      ...(def.faces ?? []).map((d) => new Face(g, room, d)),
     ];
     this.#paint(room);
     // Membranas fotosensibles: piezas animadas con la textura de su bioma (justo tras
@@ -211,10 +216,10 @@ export class EntityFactory {
     const seen = new Set();
     for (let cy = 0; cy < room.world.h; cy++) for (let cx = 0; cx < room.world.w; cx++) {
       const kind = room.world.get(cx, cy);
-      if ((kind !== 'X' && kind !== 'Y') || seen.has(`${cx},${cy}`)) continue;
+      if ((kind !== 'X' && kind !== 'Y' && kind !== 'Z') || seen.has(`${cx},${cy}`)) continue;
       const cells = room.world.floodFill(cx, cy);
       cells.forEach(([x, y]) => seen.add(`${x},${y}`));
-      const p = paintMembraneGroup(cells, kind === 'Y' ? 'seal' : 'crack');
+      const p = paintMembraneGroup(cells, kind === 'Y' ? 'seal' : kind === 'Z' ? 'face' : 'crack');
       const frames = p.frames.map((f) => ({ tex: canvasTexture(f.color), glowTex: canvasTexture(f.glow) }));
       const mk = (map, additive) => {
         const mesh = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), new THREE.MeshBasicMaterial({

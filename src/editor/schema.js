@@ -14,6 +14,7 @@ export const TILES = [
   { c: 'N', name: 'Nodo Seguro (útero)', color: '#3aff8a' },
   { c: 'X', name: 'Membrana agrietada (Embestida)', color: '#b04a6a' },
   { c: 'Y', name: 'Esfínter sellado (Tendón)', color: '#e07a9a' },
+  { c: 'Z', name: 'Membrana del Rostro (se abre al liberarlo)', color: '#9a6ad0' },
   { c: 'f', name: 'Membrana fotosensible (luz)', color: '#c8a0c0' },
   { c: 'z', name: 'Pared falsa (luz)', color: '#8a5a6a' },
   { c: 'm', name: 'Mucosa resbaladiza', color: '#6a8a30' },
@@ -46,7 +47,7 @@ export const TILES = [
   ...Object.entries(DNA_CHARS).map(([c, id]) => ({ c, name: `ADN: ${MUTATIONS[id].name}`, color: MUTATIONS[id].color ?? '#ffffff', item: true })),
 ];
 export const TILE_BY_CHAR = Object.fromEntries(TILES.map((t) => [t.c, t]));
-export const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm']);
+export const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm', 'Z']);
 
 export const ENEMY_TYPES = Object.keys(ENEMIES);
 export { ENEMIES };
@@ -135,6 +136,11 @@ export const KINDS = {
     box: (o) => { const n = o.n ?? 2, l = Math.ceil(o.len ?? 2.5); return o.dir === 'down' ? [o.x, o.y, n, l] : o.dir === 'left' ? [o.x - l + 1, o.y, l, n] : o.dir === 'right' ? [o.x, o.y, l, n] : [o.x, o.y - l + 1, n, l]; },
     move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => `estacas ${o.dir}${o.period ? ` ${o.period}s` : ''}`,
   },
+  // Rostro del Anfitrión (entities/Face.js, textos en data/faces.js): (x, y) es su centro.
+  faces: {
+    label: 'Rostro del Anfitrión (lore)', color: '#ffd27a',
+    make: (x, y) => ({ x, y }), box: (o) => [o.x - 2, o.y - 2, 5, 5], move: (o, x, y) => { o.x = x + 2; o.y = y + 2; }, text: (o) => `rostro${o.boss ? ' → ' + o.boss : ''}`,
+  },
   winds: {
     label: 'Corriente de aire', color: '#90f0e0',
     make: (x, y) => ({ x, y, w: 4, h: 6, dir: 'up' }), box: (o) => [o.x, o.y, o.w, o.h], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => `aire ${o.dir}`,
@@ -185,4 +191,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'faces', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];

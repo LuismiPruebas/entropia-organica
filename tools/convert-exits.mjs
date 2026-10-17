@@ -14,7 +14,7 @@ if (!world) { console.error('Uso: node tools/convert-exits.mjs <mundo> [--write]
 const file = new URL(`../src/data/worlds/${world}.js`, import.meta.url);
 const { LEVELS } = await import(file);
 
-const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm']);
+const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm', 'Z']);
 // Lo que se abre (membrana, esfínter, fotosensible, falsa) cuenta como hueco.
 const passable = (c) => c !== undefined && (!SOLID.has(c) || c === 'X' || c === 'Y' || c === 'f');
 

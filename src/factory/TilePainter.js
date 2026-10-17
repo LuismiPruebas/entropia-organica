@@ -38,7 +38,7 @@ const px = (g, x, y, color, w = 1, h = 1) => {
   g.fillRect(x, y, w, h);
 };
 
-const isWallChar = (c) => c === '#' || c === 'X' || c === 'f' || c === 'Y' || c === 'z' || c === 'm' || isSlope(c);
+const isWallChar = (c) => c === '#' || c === 'X' || c === 'f' || c === 'Y' || c === 'Z' || c === 'z' || c === 'm' || isSlope(c);
 
 // Mucosa resbaladiza (m): pared cubierta de moco brillante. Se pinta como la pared y
 // encima un barniz verdoso con regueros que relucen (las Garras no se agarran).
@@ -673,6 +673,7 @@ function bulge(g, x, y, dir, r, m) {
 // alternan para que parezca respirar. Devuelve { frames: [{color, glow}], x, y, w, h }.
 export function paintMembraneGroup(cells, kind = 'crack') {
   if (kind === 'seal') return paintSealGroup(cells);
+  if (kind === 'face') return paintSealGroup(cells, FACE_SEAL);
   const xs = cells.map(([x]) => x), ys = cells.map(([, y]) => y);
   const minX = Math.min(...xs), minY = Math.min(...ys);
   const w = (Math.max(...xs) - minX + 1) * TILE, h = (Math.max(...ys) - minY + 1) * TILE;
@@ -726,7 +727,10 @@ export function paintMembraneGroup(cells, kind = 'crack') {
 // Esfínter sellado (Y): un músculo anular cerrado con fuerza. Pliegues radiales que
 // convergen en un frunce central, con un anillo rosado (como los esfínteres de
 // anclaje) que indica dónde clavar el Tendón para desgarrarlo.
-function paintSealGroup(cells) {
+// Colores del esfínter sellado (Y) y de la membrana del Rostro (Z: violeta, con núcleo).
+const SEAL = { hi: '#b0404e', mid: '#8a2a38', lo: '#5a1420', edge: '#4a0e18', fleck: '#d06a78', ring: '#e88a9a', glow: [255, 110, 150], spoke: '#2a0610', core: '#140408' };
+const FACE_SEAL = { hi: '#8a5ac0', mid: '#5e3690', lo: '#36185a', edge: '#22103a', fleck: '#b08ae0', ring: '#d8b8ff', glow: [190, 140, 255], spoke: '#1a0828', core: '#0c0414', nucleus: true };
+function paintSealGroup(cells, P = SEAL) {
   const xs = cells.map(([x]) => x), ys = cells.map(([, y]) => y);
   const minX = Math.min(...xs), minY = Math.min(...ys);
   const w = (Math.max(...xs) - minX + 1) * TILE, h = (Math.max(...ys) - minY + 1) * TILE;
@@ -752,25 +756,35 @@ function paintSealGroup(cells) {
       if ((freeL || freeR) && (freeT || freeB)) continue;
       // Fibras radiales: bandas claras y oscuras alrededor del centro.
       const fold = Math.sin(a * 9 + d * 0.15 * squeeze);
-      let c = fold > 0.45 ? '#b0404e' : fold > -0.3 ? '#8a2a38' : '#5a1420';
-      if (freeL || freeR || freeT || freeB) c = '#4a0e18';
+      let c = fold > 0.45 ? P.hi : fold > -0.3 ? P.mid : P.lo;
+      if (freeL || freeR || freeT || freeB) c = P.edge;
       px(g, x, y, c);
-      if (r() < 0.03) px(g, x, y, '#d06a78');
+      if (r() < 0.03) px(g, x, y, P.fleck);
     }
     // Frunce central y anillo de anclaje.
     const ring = Math.min(w, h) * 0.22 * squeeze;
     for (let k = 0; k < 64; k++) {
       const a = (k / 64) * Math.PI * 2;
       const x = Math.round(cxp + Math.cos(a) * ring), y = Math.round(cyp + Math.sin(a) * ring);
-      px(g, x, y, '#e88a9a');
-      gl.fillStyle = frame ? 'rgba(255,110,150,0.9)' : 'rgba(255,110,150,0.5)';
+      px(g, x, y, P.ring);
+      gl.fillStyle = `rgba(${P.glow.join(',')},${frame ? 0.9 : 0.5})`;
       gl.fillRect(x, y, 1, 1);
     }
     for (let k = 0; k < 6; k++) {
       const a = (k / 6) * Math.PI * 2 + 0.3;
-      for (let t = 0; t < ring - 1; t++) px(g, Math.round(cxp + Math.cos(a) * t), Math.round(cyp + Math.sin(a) * t), '#2a0610');
+      for (let t = 0; t < ring - 1; t++) px(g, Math.round(cxp + Math.cos(a) * t), Math.round(cyp + Math.sin(a) * t), P.spoke);
     }
-    px(g, Math.round(cxp), Math.round(cyp), '#140408', 2, 2);
+    px(g, Math.round(cxp), Math.round(cyp), P.core, 2, 2);
+    // Membrana del Rostro: en el frunce, un núcleo extraño que late (un ojo cerrado).
+    if (P.nucleus) {
+      const nr = Math.max(2, Math.min(w, h) * 0.12) * (frame ? 1.15 : 1);
+      for (let y = -Math.ceil(nr); y <= Math.ceil(nr); y++) for (let x = -Math.ceil(nr); x <= Math.ceil(nr); x++) {
+        const d = Math.hypot(x, y * 1.3) / nr;
+        if (d > 1) continue;
+        px(g, Math.round(cxp + x), Math.round(cyp + y), d > 0.75 ? '#1a0828' : d > 0.4 ? '#e0c8ff' : '#ffd27a');
+        if (d < 0.6) { gl.fillStyle = frame ? 'rgba(255,210,122,0.95)' : 'rgba(200,150,255,0.7)'; gl.fillRect(Math.round(cxp + x), Math.round(cyp + y), 1, 1); }
+      }
+    }
     return { color, glow };
   });
   return { frames, x: minX * TILE, y: minY * TILE, w, h };

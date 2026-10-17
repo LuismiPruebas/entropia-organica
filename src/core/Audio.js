@@ -212,6 +212,18 @@ const SOUNDS = {
     a.noise(o, { dur: 0.12, vol: 0.5, type: 'highpass', f0: 2500, f1: 1200, delay: 0.22 });
     a.tone(o, { type: 'square', f0: 90, f1: 40, dur: 0.18, vol: 0.2, delay: 0.22 });
   },
+  // Rostro del Anfitrión: poseído, un murmullo grave y áspero con chasquidos húmedos;
+  // libre, una voz cálida y honda, como un órgano que suspira.
+  faceSpeak: (a, o) => {
+    a.creature(o, { f0: rnd(90, 110), f1: rnd(70, 85), dur: 1.1, vol: 0.13, formant: 520, q: 5, rough: 0.9, vib: 7 });
+    a.creature(o, { f0: rnd(180, 220), f1: rnd(120, 150), dur: 0.9, vol: 0.05, formant: 1100, q: 6, rough: 1, vib: 20, delay: 0.15 });
+    for (let i = 0; i < 5; i++) a.noise(o, { dur: 0.03, vol: 0.12, type: 'bandpass', f0: rnd(600, 1400), q: 4, delay: Math.random() * 1 });
+  },
+  faceFree: (a, o) => {
+    a.creature(o, { f0: rnd(120, 135), f1: rnd(100, 112), dur: 1.4, vol: 0.11, formant: 700, q: 4, rough: 0.15, vib: 3 });
+    a.tone(o, { type: 'sine', f0: 240, f1: 236, dur: 1.4, vol: 0.04 });
+    a.tone(o, { type: 'sine', f0: 360, f1: 356, dur: 1.2, vol: 0.025, delay: 0.1 });
+  },
   // Carga del salto: un zumbido que trepa y chisporroteos cada vez más seguidos.
   gangCharge: (a, o) => {
     a.tone(o, { type: 'sawtooth', f0: 70, f1: 520, dur: 0.95, vol: 0.08 });

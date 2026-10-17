@@ -273,6 +273,8 @@ export class Game {
   // grabado en el mapa y, algunos, un cambio permanente en el mundo.
   onBossDefeated(e) {
     const st = this.state, d = e.def, r = d.reward ?? {};
+    // Su música se corta en el momento en que cae (sin arrastrarse tras su muerte).
+    this.audio.stopBossMusic(0.25);
     if (e.key) st.bosses.add(e.key);
     if (d.drop?.dna) this.dropPickup('dna', e.cx, e.cy, undefined, { mutation: d.drop.dna });
     (d.drop?.items ?? []).forEach((k, i) => this.dropPickup(k, e.cx + (i + 1) * 12, e.cy - 6));
@@ -511,6 +513,18 @@ export class Game {
     }
     this.room.pickups = this.room.pickups.filter((pk) => pk.alive);
 
+    // Membrana del Rostro: al rozarla cerrada, un aviso de qué la abre.
+    if (this.time - (this.lastFaceSealSay ?? -9) > 5) {
+      const w = this.world, x0 = Math.floor((p.x - 2) / TILE), x1 = Math.floor((p.x + p.w + 2) / TILE);
+      const y0 = Math.floor((p.y - 2) / TILE), y1 = Math.floor((p.y + p.h + 2) / TILE);
+      let hit = false;
+      for (let y = y0; y <= y1 && !hit; y++) for (let x = x0; x <= x1; x++) if (w.get(x, y) === 'Z') { hit = true; break; }
+      if (hit) {
+        this.lastFaceSealSay = this.time;
+        this.audio.play('thump', p);
+        this.say('Una membrana con un núcleo dormido. No cede a la fuerza: algo en este cuerpo tiene que querer abrirla.', 3.5);
+      }
+    }
     for (const w of this.room.wombs) w.update();
     for (const h of this.room.hazards) h.update(dt);
     for (const n of this.room.nodules) n.update(dt);
