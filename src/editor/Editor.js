@@ -418,6 +418,7 @@ function draw() {
       const c = r.grid[y][x], t = TILE_BY_CHAR[c];
       g.fillStyle = c === '#' ? bc.wall : c === '.' || t?.item || t?.slope || t?.ceil ? bc.air : t?.color ?? '#ff00ff';
       g.fillRect(x * z, y * z, z, z);
+      if (c === 'G') { g.fillStyle = bc.air; g.fillRect(x * z, y * z, z, z); g.fillStyle = 'rgba(214,150,186,0.42)'; g.fillRect(x * z, y * z, z, z); }   // velo: aire con tinte
       if (t?.slope) {
         // Pendiente: el triángulo (o trapecio) de pared bajo su recta.
         const [l, rr] = t.slope;

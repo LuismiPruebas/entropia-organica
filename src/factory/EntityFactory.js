@@ -20,6 +20,7 @@ import { Nodule } from '../entities/Nodule.js';
 import { YolkSac } from '../entities/YolkSac.js';
 import { Gate, Pad, PodChain, Valve, Float, Mover, PhotoMembrane, buildFangs } from '../entities/Puzzles.js';
 import { Face } from '../entities/Face.js';
+import { Veil, veilGroups } from '../entities/Veil.js';
 
 // Lo hondo que está cada sala: salas de distancia desde el inicio (por las salidas),
 // de 0 a 1 (TIER_DEPTH salas o más). Mide la dificultad de los patrones de disparo.
@@ -56,6 +57,7 @@ export class EntityFactory {
     const room = { id, def, world, biome, ambient: def.ambient ?? biome.ambient, enemies: [], pickups: [], anchors: [], nodes: [], photo: [], meshes: [], tier: roomTier(id) };
     const hidden = new Set((def.hidden ?? []).map(([x, y]) => `${x},${y}`));
     const photoSeen = new Set();
+    const veilCells = new Set();       // velo de membrana ('G'): aire para la física, capa delante
 
     for (let cy = 0; cy < world.h; cy++) {
       for (let cx = 0; cx < world.w; cx++) {
@@ -63,7 +65,10 @@ export class EntityFactory {
         const c = world.get(cx, cy);
         const center = { x: cx * TILE + TILE / 2, y: cy * TILE + TILE / 2 };
         const key = `${id}:${cx},${cy}`;
-        if ((c === 'X' || c === 'Y') && g.state.broken.has(key)) {
+        if (c === 'G') {
+          veilCells.add(`${cx},${cy}`);
+          world.set(cx, cy, '.');
+        } else if ((c === 'X' || c === 'Y') && g.state.broken.has(key)) {
           world.set(cx, cy, '.');
         } else if (c === 'Z' && g.state.flags.has(`face:${def.faceSeal ?? def.biome}`)) {
           world.set(cx, cy, '.');                          // su Rostro ya se liberó
@@ -163,6 +168,8 @@ export class EntityFactory {
       ...buildFangs(g, world), // colmillos animados de púas y abismos
       // Rostros del Anfitrión (lore): hablan, se liberan y abren las membranas Z.
       ...(def.faces ?? []).map((d) => new Face(g, room, d)),
+      // Velos de membrana: capas translúcidas por delante de todo.
+      ...veilGroups(veilCells).map((cells, i) => new Veil(g, room, cells, i)),
     ];
     this.#paint(room);
     // Membranas fotosensibles: piezas animadas con la textura de su bioma (justo tras

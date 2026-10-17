@@ -17,6 +17,7 @@ export const TILES = [
   { c: 'Z', name: 'Membrana del Rostro (se abre al liberarlo)', color: '#9a6ad0' },
   { c: 'f', name: 'Membrana fotosensible (Ojo I)', color: '#c8a0c0' },
   { c: 'm', name: 'Mucosa resbaladiza', color: '#6a8a30' },
+  { c: 'G', name: 'Velo de membrana (translúcido, sin colisión, por delante)', color: '#c890b0' },
   // Pendientes (core/Physics.js -> SLOPES): suelo inclinado, pared por debajo de la recta.
   { c: '/', name: 'Rampa 45° (sube a la derecha)', color: '#8a3a58', slope: [16, 0] },
   { c: 'k', name: 'Rampa 45° (sube a la izquierda)', color: '#8a3a58', slope: [0, 16] },
