@@ -410,7 +410,7 @@ function renderBestiary() {
   if (!box) return;
   const ids = Object.keys(ENEMIES).filter((id) => ENEMIES[id].creature);
   ids.sort((a, b) => BIOME_ORDER.indexOf(ENEMIES[a].biome) - BIOME_ORDER.indexOf(ENEMIES[b].biome) || !!ENEMIES[a].boss - !!ENEMIES[b].boss);
-  let html = `<h5 style="color:#ffd27a">LORE</h5><button data-face="1" class="${S.tool === 'place' && S.kind === 'faces' ? 'on' : ''}" title="Rostro del Anfitrión: altar de 18×15 casillas. Clic en la sala: centro de su base (sobre el suelo)."><span class="th" data-shrine="1"></span><span class="boss">Rostro del Anfitrión</span></button><span></span>`, last = null;
+  let html = `<h5 style="color:#ffd27a">LORE</h5><button data-face="1" class="${S.tool === 'place' && S.kind === 'faces' ? 'on' : ''}" title="Rostro del Anfitrión: altar de 18×15 casillas. Clic en la sala: centro de su base (sobre el suelo)."><span class="th" data-shrine="1"></span><span class="boss">Rostro del Anfitrión</span></button><button data-bucle="1" class="${S.tool === 'place' && S.kind === 'decor' && S.decorType === 'bucle' ? 'on' : ''}" title="Pensamiento Bucle: habitante del sistema nervioso (sin colisión); susurra su bucle si te acercas."><span class="th" data-bucleth="1"></span><span class="boss">Pensamiento Bucle</span></button>`, last = null;
   for (const id of ids) {
     const d = ENEMIES[id];
     if (d.biome !== last) { last = d.biome; html += `<h5 style="color:${BIOMES[d.biome]?.mapColor ?? '#ccc'}">${(BIOMES[d.biome]?.name ?? d.biome).toUpperCase()}</h5>`; }
@@ -424,6 +424,14 @@ function renderBestiary() {
     c.getContext('2d').drawImage(shrineThumb(), 0, 0);
     el.appendChild(c);
   }
+  for (const el of box.querySelectorAll('[data-bucleth]')) { const c = decorPreview('bucle'); c.style.width = '52px'; c.style.height = '52px'; el.appendChild(c); }
+  for (const b of box.querySelectorAll('[data-bucle]')) b.onclick = () => {
+    S.kind = 'decor'; S.decorType = 'bucle'; S.enemyType = null;
+    $('kind').value = 'decor'; $('decor-type').value = 'bucle';
+    setTool('place');
+    for (const o of box.querySelectorAll('[data-en], [data-face], [data-bucle]')) o.classList.toggle('on', o === b);
+    $('msg').textContent = 'Colocando el Pensamiento Bucle: clic en la casilla del centro de su base, sobre el suelo.';
+  };
   for (const b of box.querySelectorAll('[data-face]')) b.onclick = () => {
     S.kind = 'faces'; S.enemyType = null; S.noduleLux = false;
     $('kind').value = 'faces';

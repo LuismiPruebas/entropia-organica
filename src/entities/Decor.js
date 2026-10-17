@@ -122,6 +122,132 @@ export const DECOR = {
       if (ch > 0.05) for (let k = 0; k < 2 + ch * 3; k++) { const a = Math.random() * Math.PI * 2, d = 6 + Math.random() * 8; seg(g, 16, 13, 16 + Math.cos(a) * d, 13 + Math.sin(a) * d, C.impL); seg(gl, 16, 13, 16 + Math.cos(a) * d, 13 + Math.sin(a) * d, C.imp, 2); }
     },
   },
+  // Pensamiento Bucle: un pensamiento atrapado en su propia repetición. Acuclillado, se
+  // aprieta el cráneo con las manos y se mece; la espiral de su cara no deja de girar.
+  // Lo rodea un anillo de neuronas por el que dan vueltas los impulsos (con flechas que
+  // marcan el sentido), y cada neurona se enciende al pasar uno. Sus raíces laten contra
+  // el suelo. Si te acercas, susurra un pensamiento que vuelve siempre al principio.
+  bucle: {
+    name: 'Pensamiento Bucle', w: 104, h: 104, soma: [52, 44],
+    whisper: [
+      '¿Y si lo hice mal?',
+      'Tengo que comprobarlo otra vez.',
+      'Ya lo comprobé. ¿Lo comprobé bien?',
+      'Tengo que comprobarlo otra vez.',
+      '¿Y si lo hice mal?',
+    ],
+    setup(r) {
+      const roots = [];
+      for (let i = 0; i < 7; i++) roots.push(branch(r, 40 + i * 4, 88, Math.PI / 2 + (i - 3) * 0.35, 8 + r() * 10, 0.5));
+      const nodes = [0.05, 0.27, 0.48, 0.66, 0.86].map((u) => ({ u, arms: [...Array(6)].map(() => ({ a: r() * Math.PI * 2, l: 4 + r() * 5 })) }));
+      return { roots, nodes };
+    },
+    draw(g, gl, t, s) {
+      const P = { body: '#3a2448', bodyD: '#24142e', bodyL: '#563664', vein: '#c8669a', veinL: '#f0a0c8', bone: '#d8ccc0', boneD: '#9a8c84', boneL: '#f4ece2', spiral: '#c8507a', ring: '#7a3268', ringL: '#c86aa8', ringD: '#3e1838', shadow: '#120a16' };
+      const RX = 52, RY = 46, R = 42, spin = t * 0.15;
+      const at = (u, rr = R) => { const a = u * Math.PI * 2 + spin - Math.PI / 2; return [RX + Math.cos(a) * rr, RY + Math.sin(a) * rr * 0.96]; };
+      // Sombra en el suelo.
+      blob(g, 52, 96, 30, 3.5, P.shadow);
+      // --- El anillo: axón, flechas y neuronas.
+      for (let i = 0; i < 160; i++) {
+        const [x, y] = at(i / 160);
+        px(g, x - 1, y - 1, P.ringD, 3, 3);
+      }
+      for (let i = 0; i < 160; i++) { const [x, y] = at(i / 160); px(g, x, y, i % 9 < 5 ? P.ring : P.ringL, 1, 1); }
+      // Flechas (sentido de las agujas): un pequeño chevrón en tres sitios del anillo.
+      for (const u of [0.16, 0.57, 0.76]) {
+        const [x, y] = at(u), [nx, ny] = at(u + 0.01), a = Math.atan2(ny - y, nx - x);
+        for (const sd of [-1, 1]) seg(g, x, y, x - Math.cos(a + sd * 0.7) * 5, y - Math.sin(a + sd * 0.7) * 5, P.ringL, 2);
+      }
+      // Impulsos que dan vueltas; al pasar por una neurona, la encienden.
+      const imps = [0, 0.33, 0.66].map((o) => (t * 0.22 + o) % 1);
+      for (const u of imps) {
+        for (let k = 0; k < 6; k++) { const [x, y] = at(u - k * 0.006); px(g, x - 1, y - 1, k ? P.ringL : '#ffffff', 2, 2); if (k < 3) px(gl, x - 1, y - 1, '#a04aa0', 3, 3); }
+      }
+      for (const n of s.nodes) {
+        const [x, y] = at(n.u);
+        const near = Math.min(...imps.map((u) => Math.abs(((u - n.u + 1.5) % 1) - 0.5)));
+        const lit = Math.max(0, 1 - near / 0.05);
+        for (const arm of n.arms) {
+          const a = arm.a + Math.sin(t * 1.3 + arm.a) * 0.15;
+          seg(g, x, y, x + Math.cos(a) * arm.l, y + Math.sin(a) * arm.l, P.ringD, 2);
+          seg(g, x, y, x + Math.cos(a) * arm.l, y + Math.sin(a) * arm.l, P.ring, 1);
+          px(g, x + Math.cos(a) * (arm.l + 1), y + Math.sin(a) * (arm.l + 1), lit > 0.3 ? '#ffe0f0' : P.ringL);
+        }
+        part(g, x, y, 4 + lit, 3.6 + lit, mix(P.ring, '#f0a0d0', lit), P.ringD, '#ffd0e8');
+        px(g, x - 0.5, y - 0.5, lit > 0.3 ? '#fff4d8' : '#e8a050', 2, 2);
+        blob(gl, x, y, 3 + lit * 4, 3 + lit * 4, mix('#200a20', '#c04a9a', 0.25 + lit * 0.75));
+      }
+      // --- La criatura (se mece desde los pies).
+      const rock = Math.sin(t * 1.6) * 0.06, shake = Math.sin(t * 23) * (Math.sin(t * 0.7) > 0.6 ? 0.6 : 0.15);
+      g.save(); gl.save();
+      for (const c of [g, gl]) { c.translate(52, 92); c.rotate(rock); c.translate(-52 + shake, -92); }
+      // Raíces que bajan al suelo y laten.
+      for (const [i, p] of s.roots.entries()) {
+        drawPath(g, p, P.bodyD, 2); drawPath(g, p, P.vein, 1);
+        const j = Math.floor((t * 8 + i * 3) % p.length); px(gl, p[j][0], p[j][1], '#a03a7a', 2, 2);
+      }
+      // Piernas en cuclillas: muslos hacia fuera, rodillas arriba, pies en el suelo.
+      for (const sd of [-1, 1]) {
+        const hip = [52 + sd * 6, 76], knee = [52 + sd * 17, 66], foot = [52 + sd * 15, 90];
+        seg(g, hip[0], hip[1], knee[0], knee[1], K, 8); seg(g, knee[0], knee[1], foot[0], foot[1], K, 6);
+        seg(g, hip[0], hip[1], knee[0], knee[1], P.body, 6); seg(g, knee[0], knee[1], foot[0], foot[1], P.body, 4);
+        part(g, knee[0], knee[1], 3.4, 3, P.bodyL, P.bodyD);                                   // rodilla
+        seg(g, hip[0], hip[1] - 2, knee[0], knee[1] - 2, P.bodyL, 1);
+        part(g, foot[0] + sd * 2, foot[1], 5, 2.2, P.body, P.bodyD);
+        for (let k = -2; k <= 2; k += 2) px(g, foot[0] + sd * 2 + k + sd * 2, foot[1] + 2, P.bodyD, 1, 1);  // dedos
+        seg(g, knee[0] - sd, knee[1] + 2, foot[0], foot[1] - 3, P.vein, 1);
+      }
+      // Torso (respira) con venas rosas.
+      const br = 1 + Math.sin(t * 2.1) * 0.04;
+      part(g, 52, 64, 10 * br, 14, P.body, P.bodyD, P.bodyL);
+      blob(g, 52, 70, 6 * br, 6, P.bodyD);                                                      // vientre hundido
+      // Venas rosas que bajan serpenteando por el cuerpo (y laten).
+      for (const [x0, ph] of [[46, 0], [50, 1.7], [55, 3.1], [58, 4.4]]) {
+        for (let y = 52; y < 82; y++) px(g, x0 + Math.sin(y * 0.35 + ph) * 1.2, y, (Math.floor(t * 6 + ph * 3) + y) % 9 === 0 ? P.veinL : P.vein);
+      }
+      for (const [x, y] of [[47, 62], [57, 62]]) px(g, x, y, P.bodyD, 3, 1);             // pectorales
+      // Brazos: de los hombros a las sienes, apretando.
+      const sq = Math.max(0, Math.sin(t * 3.1)) * 1.2;
+      for (const sd of [-1, 1]) {
+        const sh = [52 + sd * 10, 52], el = [52 + sd * 20, 42], hand = [52 + sd * (13 - sq), 34];
+        seg(g, sh[0], sh[1], el[0], el[1], K, 6); seg(g, el[0], el[1], hand[0], hand[1], K, 6);
+        seg(g, sh[0], sh[1], el[0], el[1], P.body, 4); seg(g, el[0], el[1], hand[0], hand[1], P.body, 4);
+        seg(g, el[0], el[1], hand[0], hand[1] + 2, P.vein, 1);
+      }
+      // Cráneo pálido y grande, con la espiral girando en la cara.
+      const hy = 32 + Math.sin(t * 1.6) * 0.5;
+      part(g, 52, hy, 12, 13, P.bone, P.boneD, P.boneL);
+      part(g, 52, hy + 11, 5, 4, P.bone, P.boneD);                                       // mandíbula
+      px(g, 50, hy + 12, '#3a2430', 4, 2);                                                // boca
+      blob(g, 52, hy + 1, 7, 7.5, '#efe4d8');
+      // Espiral (gira sin parar).
+      for (let k = 0; k < 90; k++) {
+        const th = k * 0.14, rr = 0.7 + th * 0.62, a = th - t * 2.4;
+        if (rr > 6.6) break;
+        px(g, 52 + Math.cos(a) * rr, hy + 1 + Math.sin(a) * rr, k % 2 ? P.spiral : '#a03a62');
+        if (k % 4 === 0) px(gl, 52 + Math.cos(a) * rr, hy + 1 + Math.sin(a) * rr, '#5a1a3a');
+      }
+      px(g, 51.5, hy + 0.5, '#5a1838', 2, 2);
+      // Manos sobre el cráneo (encima de él), con dedos.
+      for (const sd of [-1, 1]) {
+        const hx = 52 + sd * (13 - sq), hyy = hy + 1;
+        part(g, hx, hyy, 3.2, 4.2, P.body, P.bodyD);
+        for (let k = 0; k < 3; k++) seg(g, hx - sd * 1, hyy - 3 + k * 2, hx - sd * 5, hyy - 4 + k * 2, P.bodyL, 1);
+      }
+      g.restore(); gl.restore();
+    },
+    // Al acercarte, susurra su bucle (una frase cada pocos segundos, y vuelta a empezar).
+    tick(d, game) {
+      const p = game.player, T = d.type, cx = d.x0 + T.w / 2, cy = d.y0 + T.h / 2;
+      if (Math.hypot(p.cx - cx, p.cy - cy) > 120) return;
+      d.wt = (d.wt ?? 0) - 1 / 60;
+      if (d.wt > 0 || game.hud.dialogueActive) return;
+      const i = (d.wi = ((d.wi ?? -1) + 1) % T.whisper.length);
+      game.say(`«${T.whisper[i]}»`, 2.6);
+      d.wt = 3.4;
+    },
+  },
   // Médula: columna con anillos de vértebra, raíces nerviosas a los lados y un impulso
   // que sube por ella.
   medula: {
@@ -170,6 +296,7 @@ export class Decor {
 
   update(dt) {
     this.t += dt;
+    this.type.tick?.(this, this.game, dt);
     if (this.t - this.drawnAt < 1 / 20) return;
     this.drawnAt = this.t;
     const { g, gl } = this.spr, T = this.type;
