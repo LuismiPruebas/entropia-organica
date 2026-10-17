@@ -13,6 +13,7 @@ import { NODE_DOSES, NODE_HEAL } from '../state/State.js';
 import { enemyThumb } from './EnemyThumbs.js';
 import { paintShrineBase, drawShrine, SW as SHRINE_W, SH as SHRINE_H } from '../entities/ShrineArt.js';
 import { faceData } from '../data/faces.js';
+import { linkArrival } from '../data/connections.js';
 import { baseNode } from '../data/nodes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -473,12 +474,20 @@ function draw() {
     g.fillText(`→ ${ex.to}`, bx + bw / 2, by + bh / 2);
   }
   // Dónde se aparece al llegar a un punto (si no es sobre el propio punto).
-  for (const l of r.links ?? []) if (l.arrive) {
-    const [ax, ay] = l.arrive;
-    g.strokeStyle = '#3aff8a'; g.lineWidth = 2; g.setLineDash([3, 3]);
+  for (const l of r.links ?? []) {
+    const [ax, ay] = l.arrive ?? linkArrival(r, l.id) ?? [l.x, l.y + 1];
+    const auto = !l.arrive;
+    if (auto && ax >= l.x && ax < l.x + (l.w ?? 1) && ay >= l.y && ay < l.y + (l.h ?? 2)) continue;   // sobre el propio punto: no hace falta marca
+    g.strokeStyle = auto ? 'rgba(58,255,138,0.5)' : '#3aff8a'; g.lineWidth = 2; g.setLineDash([3, 3]);
     g.strokeRect(ax * z + 1, (ay - 1) * z + 1, z - 2, 2 * z - 2); g.setLineDash([]);
-    g.fillStyle = '#3aff8a'; g.font = '10px monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
-    g.fillText(`llegada ${l.id}`, ax * z, (ay - 1) * z - 1);
+    g.fillStyle = auto ? 'rgba(58,255,138,0.6)' : '#3aff8a'; g.font = '10px monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
+    g.fillText(`llegada ${l.id}${auto ? ' (auto)' : ''}`, ax * z, (ay - 1) * z - 1);
+  }
+  // Marcando una llegada: la casilla bajo el ratón.
+  if (S.pickArrive && S.hover) {
+    const [hx, hy] = S.hover;
+    g.fillStyle = 'rgba(58,255,138,0.3)'; g.fillRect(hx * z, (hy - 1) * z, z, 2 * z);
+    g.strokeStyle = '#3aff8a'; g.lineWidth = 2; g.strokeRect(hx * z + 1, (hy - 1) * z + 1, z - 2, 2 * z - 2);
   }
   // Puntos de conexión con destino: el mismo distintivo que una salida ("→ sala"). Pegados
   // al borde, la pestaña sale por fuera del borde, como las salidas de siempre.
@@ -608,6 +617,7 @@ cv.addEventListener('dblclick', (e) => {
   openRoom(hit[0], { zoom: S.zoom, pan: { x: S.pan.x + (o.map[0] - r.map[0]) * CELL[0] * S.zoom, y: S.pan.y + (o.map[1] - r.map[1]) * CELL[1] * S.zoom } });
 });
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.linking) { S.linking = null; $('msg').textContent = 'Conexión cancelada.'; renderRoomPanel(); draw(); } });
+addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.pickArrive) { S.pickArrive = null; $('msg').textContent = ''; renderInspector(); draw(); } });
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.roomMove) { S.roomMove = false; $('msg').textContent = ''; renderRoomPanel(); draw(); } });
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.placing) { S.placing = null; $('msg').textContent = 'Nueva sala cancelada.'; draw(); } });
 cv.addEventListener('wheel', (e) => {
@@ -626,6 +636,16 @@ addEventListener('keyup', (e) => { if (e.code === 'Space') spaceDown = false; })
 cv.addEventListener('mousedown', (e) => {
   if (!S.id) return;
   const [x, y] = toTile(e);
+  if (S.pickArrive && e.button === 0) {
+    const o = S.pickArrive, r = room();
+    S.pickArrive = null;
+    if (!(r.links ?? []).includes(o) || x < 0 || y < 1 || x >= W() || y >= H()) { $('msg').textContent = 'Fuera de la sala: no se ha marcado.'; renderInspector(); draw(); return; }
+    snapshot(); o.arrive = [x, y]; touch();
+    const solid = (c) => SOLID.has(c) || TILE_BY_CHAR[c]?.slope;
+    const ok = !solid(r.grid[y][x]) && !solid(r.grid[y - 1]?.[x]);
+    $('msg').textContent = ok ? `Al llegar por ${o.id} se aparece en [${x},${y}].` : `Marcado en [${x},${y}], pero ahí hay pared: el personaje no cabe (2 casillas de alto).`;
+    renderInspector(); draw(); return;
+  }
   if (e.button === 1 || spaceDown) { S.drag = { pan: true, sx: e.clientX, sy: e.clientY, px: S.pan.x, py: S.pan.y }; return; }
   if (S.roomMove && e.button === 0) {
     snapshot();
@@ -1037,7 +1057,9 @@ function linkFields(o) {
   h += field('se activa', { v: LINK_TRIGGER[o.trigger ?? 'use'], options: Object.values(LINK_TRIGGER) }, (v) => { o.trigger = Object.keys(LINK_TRIGGER).find((k) => LINK_TRIGGER[k] === v); }, 'select');
   h += field('aspecto', { v: LINK_LOOK[o.look ?? 'portal'], options: Object.values(LINK_LOOK) }, (v) => { o.look = Object.keys(LINK_LOOK).find((k) => LINK_LOOK[k] === v); }, 'select');
   h += field('tamaño [ancho, alto] (casillas)', [o.w ?? 1, o.h ?? 2], (v) => { o.w = Math.max(1, v[0]); o.h = Math.max(1, v[1]); });
-  h += field('al llegar aquí, aparece en [x, y] (vacío: sobre el punto)', o.arrive ?? '', (v) => { if (Array.isArray(v) && v.length === 2) o.arrive = v; else delete o.arrive; });
+  const auto = linkArrival({ ...room(), links: [{ ...o, arrive: undefined }] }, o.id);
+  h += `<p class="dim" style="margin:6px 0 2px">Al llegar aquí se aparece en: <b style="color:#3aff8a">${o.arrive ? `[${o.arrive}] (marcado)` : `[${auto}] (automático)`}</b></p>`;
+  h += `<div class="row"><button id="lk-arr" class="${S.pickArrive === o ? 'on' : ''}">${S.pickArrive === o ? 'Haz clic en la sala… (Esc cancela)' : 'Marcar dónde se aparece'}</button>${o.arrive ? '<button id="lk-arr-del">Volver a automático</button>' : ''}</div>`;
   // Estado de la conexión, en claro.
   const back = o.to && o.toLink && (S.rooms[o.to]?.links ?? []).find((l) => l.id === o.toLink);
   const two = back && back.to === S.id && back.toLink === o.id;
@@ -1051,6 +1073,8 @@ function linkFields(o) {
 }
 function wireLinkButtons(o) {
   const r = room(), here = S.id;
+  if ($('lk-arr')) $('lk-arr').onclick = () => { S.pickArrive = S.pickArrive === o ? null : o; $('msg').textContent = S.pickArrive ? `Clic en la casilla donde pisará el personaje al llegar por ${o.id} (sus pies quedan en esa casilla).` : ''; renderInspector(); draw(); };
+  if ($('lk-arr-del')) $('lk-arr-del').onclick = () => { snapshot(); delete o.arrive; touch(); renderInspector(); draw(); };
   if ($('lk-back')) $('lk-back').onclick = () => {
     const t = S.rooms[o.to].links.find((l) => l.id === o.toLink);
     snapshot(); t.to = here; t.toLink = o.id; S.dirty.add(o.to); touch(); renderInspector();
