@@ -10,10 +10,10 @@ import { canvasSprite } from './Puzzles.js';
 // centro de su base; con invert: true la estructura va boca abajo, colgada del techo de
 // esa casilla.
 //
-// Muro eléctrico: una neurona en el suelo y otra colgada del techo, en la misma columna
-// (o una al lado), se tienden un haz de rayos entre sus somas que se enciende cada poco
-// (wall: { on, off, delay } en la del suelo, en segundos). Avisa cargando antes de
-// encenderse; encendido, hiere y empuja.
+// Muro eléctrico: un ganglio en el suelo y otro colgado del techo, en la misma columna
+// (o una al lado), se tienden un haz de rayos de techo a suelo que se enciende cada poco
+// (wall: { on, off, delay } en el del suelo, en segundos). Avisa cargando antes de
+// encenderse; encendido, hiere y empuja. Las neuronas son solo decoración.
 
 const K = '#140c10';
 const C = {                       // paleta nerviosa
@@ -77,27 +77,29 @@ export const DECOR = {
   },
   // Ganglio: racimo de bulbos nerviosos que laten a destiempo y chispean entre ellos.
   ganglio: {
-    name: 'Ganglio', w: 64, h: 48,
+    name: 'Ganglio', w: 48, h: 44, soma: [24, 20],
     setup(r) {
-      const b = [];
-      for (let i = 0; i < 7; i++) b.push({ x: 12 + r() * 40, y: 12 + r() * 26, r: 4 + r() * 5, ph: r() * 6 });
+      const b = [{ x: 24, y: 20, r: 7, ph: 0 }];             // el bulbo central (de él salta el muro)
+      for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + r() * 0.6, d = 9 + r() * 6; b.push({ x: 24 + Math.cos(a) * d * 1.2, y: 20 + Math.sin(a) * d * 0.8, r: 3.5 + r() * 3, ph: r() * 6 }); }
       b.sort((p, q) => q.r - p.r);
       const fib = [];
       for (let i = 1; i < b.length; i++) { const j = Math.floor(r() * i); fib.push([b[i], b[j]]); }
       const roots = [];
-      for (let i = 0; i < 4; i++) { const o = b[Math.floor(r() * b.length)]; roots.push(branch(r, o.x, o.y, Math.PI / 2 + (r() - 0.5) * 1.6, 14 + r() * 10)); }
+      for (let i = 0; i < 4; i++) { const o = b[Math.floor(r() * b.length)]; roots.push(branch(r, o.x, o.y, Math.PI / 2 + (r() - 0.5) * 1.4, 10 + r() * 8)); }
       return { b, fib, roots };
     },
     draw(g, gl, t, s) {
       for (const p of s.roots) { drawPath(g, p, C.tissueD, 2); drawPath(g, p, C.tissue, 1); }
       for (const [a, c] of s.fib) { seg(g, a.x, a.y, c.x, c.y, C.tissueD, 3); seg(g, a.x, a.y, c.x, c.y, C.tissueL, 1); }
+      const ch = s.charge ?? 0;
       for (const o of s.b) {
-        const k = Math.max(0, Math.sin(t * 2.2 + o.ph));
+        const k = Math.max(ch, Math.max(0, Math.sin(t * 2.2 + o.ph)));
         part(g, o.x, o.y, o.r + k * 0.6, o.r * 0.9 + k * 0.5, mix(C.tissueL, C.hi, k), C.tissue, C.myelin);
         if (k > 0.6) blob(gl, o.x, o.y, o.r * 0.7, o.r * 0.6, mix('#000000', '#3a6aa0', (k - 0.6) / 0.4));
       }
-      // Chispa entre dos bulbos, de vez en cuando.
-      const i = Math.floor(t * 1.7) % s.fib.length, live = (t * 1.7) % 1 < 0.18;
+      if (ch > 0.05) for (let k = 0; k < 2 + ch * 3; k++) { const a = Math.random() * Math.PI * 2, d = 8 + Math.random() * 8; seg(g, 24, 20, 24 + Math.cos(a) * d, 20 + Math.sin(a) * d, C.impL); seg(gl, 24, 20, 24 + Math.cos(a) * d, 20 + Math.sin(a) * d, C.imp, 2); }
+      // Chispa entre dos bulbos, de vez en cuando (o sin parar si su muro carga).
+      const i = Math.floor(t * 1.7) % s.fib.length, live = (t * 1.7) % 1 < 0.18 || ch > 0.05;
       if (live) {
         const [a, c] = s.fib[i];
         let x = a.x, y = a.y;
@@ -179,16 +181,16 @@ export class Decor {
   dispose() { this.spr.dispose(); }
 }
 
-// Parejas de neuronas que forman un muro: una en el suelo y otra colgada del techo
+// Parejas de ganglios que forman un muro: uno en el suelo y otro colgado del techo
 // por encima, a una casilla como mucho de su columna. Devuelve [{ floor, ceil }] (los
 // índices en la lista de decoración).
 export function neuronPairs(list) {
   const out = [], used = new Set();
   list.forEach((d, i) => {
-    if (d.type !== 'neurona' || d.invert) return;
+    if (d.type !== WALL_TYPE || d.invert) return;
     let best = -1, bd = Infinity;
     list.forEach((c, j) => {
-      if (c.type !== 'neurona' || !c.invert || used.has(j) || c.y >= d.y || Math.abs(c.x - d.x) > 1) return;
+      if (c.type !== WALL_TYPE || !c.invert || used.has(j) || c.y >= d.y || Math.abs(c.x - d.x) > 1) return;
       const dd = d.y - c.y + Math.abs(c.x - d.x) * 4;
       if (dd < bd) { bd = dd; best = j; }
     });
@@ -197,9 +199,10 @@ export function neuronPairs(list) {
   return out;
 }
 export const WALL_DEFAULT = { on: 1.4, off: 2.6, delay: 0 };
+export const WALL_TYPE = 'ganglio';
 const WARN = 0.8;               // segundos de aviso (carga) antes de encenderse
 
-// Muro eléctrico entre dos neuronas enfrentadas.
+// Muro eléctrico entre dos ganglios enfrentados.
 export class ElectricWall {
   constructor(game, a, b) {
     this.game = game;
@@ -207,7 +210,7 @@ export class ElectricWall {
     const w = { ...WALL_DEFAULT, ...(a.def.wall ?? {}) };
     this.on = Math.max(0.2, w.on); this.off = Math.max(0.2, w.off);
     this.t = -(w.delay ?? 0);
-    // De techo a suelo: la descarga recorre también el cuerpo de las dos neuronas, así
+    // De techo a suelo: la descarga recorre también el cuerpo de los dos ganglios, así
     // que no se puede pasar por debajo ni por encima de los somas.
     const top = b.soma, bot = a.soma;
     this.x = (top.x + bot.x) / 2; this.y0 = b.y0 + 2; this.y1 = a.y0 + a.type.h - 2;
