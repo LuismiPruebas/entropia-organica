@@ -247,14 +247,17 @@ export class Player {
     // boca del arma giran con él.
     const tl = this.tilt ?? 0;
     if (tl) {
-      const dx = x + 0.5 - BODY_W / 2, dy = y + 0.5 - BODY_H / 2, cs = Math.cos(tl), sn = Math.sin(tl);
-      x = BODY_W / 2 + dx * cs - dy * sn - 0.5; y = BODY_H / 2 + dx * sn + dy * cs - 0.5;
+      const py = this.pivotFeet ? BODY_H : BODY_H / 2;
+      const dx = x + 0.5 - BODY_W / 2, dy = y + 0.5 - py, cs = Math.cos(tl), sn = Math.sin(tl);
+      x = BODY_W / 2 + dx * cs - dy * sn - 0.5; y = py + dx * sn + dy * cs - 0.5;
     }
     const left = Math.round(this.cx - BODY_W / 2), top = Math.round(this.y + this.h - BODY_H);
     return { x: left + (this.facing > 0 ? x : BODY_W - 1 - x) + 0.5, y: top + y + 0.5 };
   }
   // La luz sale del ojo fotóforo; los disparos, de la boca del arma (siguen la mira).
   // Ambos se acotan a la caja para no nacer dentro de una pared.
+  // La boca (por donde vomita), siguiendo la cabeza y la inclinación del cuerpo.
+  get mouthPos() { return this.#bodyToWorld(this.body.mouth ?? this.body.eye); }
   get lampPos() {
     const e = this.#bodyToWorld(this.body.eye);
     return { x: Math.max(this.x + 1, Math.min(this.x + this.w - 1, e.x)), y: Math.max(this.y + 1, e.y) };
@@ -304,11 +307,11 @@ export class Player {
       // Dos arcadas: en cada una, un chorro de vómito hacia delante.
       const heave = (t > 0.32 && t < 0.5) || (t > 0.6 && t < 0.86);
       if (heave) {
-        const mx = this.cx + this.facing * 6, my = this.y + 9;
+        const mp = this.mouthPos, mx = mp.x + this.facing, my = mp.y + 1;
         for (let i = 0; i < 4; i++) {
           const chunky = Math.random() < 0.3;
           g.particles.emit(mx, my, {
-            vx: this.facing * (50 + Math.random() * 80), vy: -10 + Math.random() * 50, life: 0.7 + Math.random() * 0.4, gravity: 520,
+            vx: this.facing * (45 + Math.random() * 70), vy: 5 + Math.random() * 55, life: 0.7 + Math.random() * 0.4, gravity: 520,
             color: chunky ? [0.42, 0.32, 0.1] : Math.random() < 0.5 ? [0.58, 0.66, 0.16] : [0.66, 0.6, 0.2],
             stain: Math.random() < 0.5 ? 'rgba(110,130,30,0.75)' : 'rgba(90,70,20,0.7)',
           });
@@ -1147,8 +1150,9 @@ export class Player {
     this.retchK = rt ? Math.min(1, rt / 0.22, (1 - rt) / 0.14) : 0;
     const heaveJolt = rt && ((rt > 0.32 && rt < 0.5) || (rt > 0.6 && rt < 0.86)) ? Math.sin(this.anim * 40) * 0.06 : 0;
     this.tilt += this.retchK * 0.38 + heaveJolt;
+    this.pivotFeet = this.swimK < 0.5;
     this.body.render(st.mutations, {
-      t: this.anim, dt, aim: aim - this.tilt, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: Math.max(this.crouchK, (this.retchK ?? 0) * 0.55), dash: this.dashK, swim: this.swimK, stroke: this.strokeT,
+      t: this.anim, dt, aim: aim - this.tilt, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: Math.max(this.crouchK, (this.retchK ?? 0) * 0.3), dash: this.dashK, swim: this.swimK, stroke: this.strokeT,
       vx: this.vx * this.facing, vy: this.vy,
       onGround: this.onGround, clinging: !!this.clinging, rope, reach, charge: this.charge,
       weapon: st.weaponId, recoil: this.recoil ?? 0, armRaise: this.#armRaise(dt),
@@ -1165,10 +1169,15 @@ export class Player {
     const press = this.clinging ? this.facing * (1 + Math.round(this.clingJolt * 2)) : 0;
     const jolt = this.#rejectFx(dt); // el rechazo sacude el cuerpo
     const x = this.cx - BODY_W / 2 + press + jolt, y = this.y + this.h - BODY_H;
+    const rz = -this.tilt * this.facing;
+    // Nadando, el cuerpo gira en torno a su centro; de pie (arcadas), en torno a los pies,
+    // para que no se despeguen del suelo al encorvarse.
+    const fx = this.pivotFeet ? -(BODY_H / 2) * Math.sin(rz) : 0, fy = this.pivotFeet ? -(BODY_H / 2) * (1 - Math.cos(rz)) : 0;
     for (const m of [this.mesh, this.selfMesh, this.glowMesh]) {
       placeMesh(m, x, y, BODY_W, BODY_H);
+      m.position.x += fx; m.position.y += fy;
       m.scale.x = this.facing * (1 + 0.14 * (this.dashK ?? 0)); // al lanzarse, la silueta se estira hacia delante
-      m.rotation.z = -this.tilt * this.facing;                       // nadando, tumbado hacia delante
+      m.rotation.z = rz;                                              // nadando o encorvado, inclinado hacia delante
     }
     // Arco del golpe: aparece al salir el brazo y se desvanece, siempre por delante.
     const pk = this.punch / MELEE_TIME; // 1 al empezar, 0 al acabar

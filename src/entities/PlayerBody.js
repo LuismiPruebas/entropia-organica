@@ -36,6 +36,7 @@ const HEAD = [
   '...kkkk',
 ];
 const EYE = [6, 4]; // la lente
+const MOUTH = [7, 7]; // la boca (por donde vomita)
 
 // Orden en que se cae el pelo: primero las puntas del peinado, después calvas
 // repartidas (orden pseudoaleatorio fijo, para que no parpadee entre fotogramas).
@@ -418,6 +419,7 @@ export class PlayerBody {
     c.head[0] = x0 + 4;
     c.head[1] = y0 + 3;
     this.eye = { x: x0 + EYE[0], y: y0 + EYE[1] };
+    this.mouth = { x: x0 + MOUTH[0], y: y0 + MOUTH[1] };
   }
 
   #backArm(g, c) {
