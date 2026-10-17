@@ -10,7 +10,7 @@ import { canvasSprite } from './Puzzles.js';
 // centro de su base; con invert: true la estructura va boca abajo, colgada del techo de
 // esa casilla.
 //
-// Muro eléctrico: un ganglio en el suelo y otro colgado del techo, en la misma columna
+// Muro eléctrico: un ganglio en el suelo y otro colgado del techo (2x2 casillas cada uno), en la misma columna
 // (o una al lado), se tienden un haz de rayos de techo a suelo que se enciende cada poco
 // (wall: { on, off, delay } en el del suelo, en segundos). Avisa cargando antes de
 // encenderse; encendido, hiere y empuja. Las neuronas son solo decoración.
@@ -75,36 +75,51 @@ export const DECOR = {
       else glowAt(gl, s.cx + 1, s.cy, '#1a3050', 4);
     },
   },
-  // Ganglio: racimo de bulbos nerviosos que laten a destiempo y chispean entre ellos.
+  // Ganglio: un racimo pequeño de bulbos nerviosos que se inflaman (se hinchan de golpe y
+  // se deshinchan despacio, en una ola que sale del centro); al hincharse la piel se tensa,
+  // se le marcan las venas y brilla. Al cargar su muro eléctrico se quedan hinchados al
+  // máximo y chispean.
   ganglio: {
-    name: 'Ganglio', w: 48, h: 44, soma: [24, 20],
+    name: 'Ganglio', w: 32, h: 30, soma: [16, 13],
     setup(r) {
-      const b = [{ x: 24, y: 20, r: 7, ph: 0 }];             // el bulbo central (de él salta el muro)
-      for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + r() * 0.6, d = 9 + r() * 6; b.push({ x: 24 + Math.cos(a) * d * 1.2, y: 20 + Math.sin(a) * d * 0.8, r: 3.5 + r() * 3, ph: r() * 6 }); }
-      b.sort((p, q) => q.r - p.r);
-      const fib = [];
-      for (let i = 1; i < b.length; i++) { const j = Math.floor(r() * i); fib.push([b[i], b[j]]); }
+      const b = [{ x: 16, y: 14, r: 4.6, d: 0 }];
+      for (let i = 0; i < 4; i++) {
+        const a = -Math.PI / 2 + (i - 1.5) * 1.15 + (r() - 0.5) * 0.3, d = 9 + r() * 1.5;
+        b.push({ x: 16 + Math.cos(a) * d * 1.1, y: 14 + Math.sin(a) * d * 0.95 + 1, r: 2.8 + r() * 1.2, d: 1 });
+      }
       const roots = [];
-      for (let i = 0; i < 4; i++) { const o = b[Math.floor(r() * b.length)]; roots.push(branch(r, o.x, o.y, Math.PI / 2 + (r() - 0.5) * 1.4, 10 + r() * 8)); }
-      return { b, fib, roots };
+      for (let i = 0; i < 3; i++) roots.push(branch(r, 12 + i * 4, 17, Math.PI / 2 + (i - 1) * 0.5, 7 + r() * 5, 0.4));
+      return { b, roots, ph: r() * 6 };
     },
     draw(g, gl, t, s) {
-      for (const p of s.roots) { drawPath(g, p, C.tissueD, 2); drawPath(g, p, C.tissue, 1); }
-      for (const [a, c] of s.fib) { seg(g, a.x, a.y, c.x, c.y, C.tissueD, 3); seg(g, a.x, a.y, c.x, c.y, C.tissueL, 1); }
+      const P = { rim: '#3a1048', base: '#9a54b6', mid: '#d08ae6', light: '#f6dcff', vein: '#e0405e', glow: '#1e0a2a' };
       const ch = s.charge ?? 0;
-      for (const o of s.b) {
-        const k = Math.max(ch, Math.max(0, Math.sin(t * 2.2 + o.ph)));
-        part(g, o.x, o.y, o.r + k * 0.6, o.r * 0.9 + k * 0.5, mix(C.tissueL, C.hi, k), C.tissue, C.myelin);
-        if (k > 0.6) blob(gl, o.x, o.y, o.r * 0.7, o.r * 0.6, mix('#000000', '#3a6aa0', (k - 0.6) / 0.4));
+      // Inflamación: subida rápida y bajada lenta; los de fuera, un poco después.
+      const swell = (delay) => {
+        const u = ((t * 0.55 + s.ph - delay * 0.08) % 1 + 1) % 1;
+        const k = u < 0.18 ? u / 0.18 : Math.max(0, 1 - (u - 0.18) / 0.62);
+        return Math.max(ch, k * k * (3 - 2 * k));
+      };
+      for (const p of s.roots) { drawPath(g, p, P.rim, 2); drawPath(g, p, P.base, 1); }
+      // Fibras del centro a cada bulbo.
+      for (const o of s.b.slice(1)) { seg(g, 16, 13, o.x, o.y, P.rim, 3); seg(g, 16, 13, o.x, o.y, P.base, 1); }
+      // De fuera hacia dentro, para que el central quede encima.
+      for (const o of [...s.b].reverse()) {
+        const k = swell(o.d), rr = o.r * (0.85 + 0.5 * k);
+        part(g, o.x, o.y, rr, rr * 0.92, mix(P.base, P.mid, k), mix(P.rim, P.base, k * 0.4), P.light);
+        // Piel tensa: brillo que crece y venas rojas que se marcan.
+        if (k > 0.25) {
+          px(g, o.x - rr * 0.45, o.y - rr * 0.5, P.light, Math.max(1, Math.round(rr * 0.35)), 1);
+          const vk = Math.min(1, (k - 0.25) / 0.6);
+          if (vk > 0.3) { seg(g, o.x - rr * 0.6, o.y + rr * 0.1, o.x - rr * 0.1, o.y + rr * 0.45, P.vein); seg(g, o.x + rr * 0.15, o.y - rr * 0.55, o.x + rr * 0.55, o.y - rr * 0.1, P.vein); }
+        }
+        // Brillo propio (se lee a oscuras), más fuerte al hincharse.
+        blob(gl, o.x, o.y, rr * (0.35 + 0.3 * k), rr * (0.3 + 0.3 * k), mix(P.glow, ch > 0.05 ? '#3a8aff' : '#6a2a8a', k * 0.7));
       }
-      if (ch > 0.05) for (let k = 0; k < 2 + ch * 3; k++) { const a = Math.random() * Math.PI * 2, d = 8 + Math.random() * 8; seg(g, 24, 20, 24 + Math.cos(a) * d, 20 + Math.sin(a) * d, C.impL); seg(gl, 24, 20, 24 + Math.cos(a) * d, 20 + Math.sin(a) * d, C.imp, 2); }
-      // Chispa entre dos bulbos, de vez en cuando (o sin parar si su muro carga).
-      const i = Math.floor(t * 1.7) % s.fib.length, live = (t * 1.7) % 1 < 0.18 || ch > 0.05;
-      if (live) {
-        const [a, c] = s.fib[i];
-        let x = a.x, y = a.y;
-        for (let k = 1; k <= 5; k++) { const nx = a.x + (c.x - a.x) * (k / 5) + (Math.random() - 0.5) * 4, ny = a.y + (c.y - a.y) * (k / 5) + (Math.random() - 0.5) * 4; seg(g, x, y, nx, ny, C.impL); seg(gl, x, y, nx, ny, C.imp, 2); x = nx; y = ny; }
-      }
+      // Núcleo del central.
+      blob(g, 16, 13, 1.6 + swell(0) * 0.8, 1.4 + swell(0) * 0.6, ch > 0.05 ? C.impL : '#3a1448');
+      // Cargando o encendido: chispas que saltan del centro.
+      if (ch > 0.05) for (let k = 0; k < 2 + ch * 3; k++) { const a = Math.random() * Math.PI * 2, d = 6 + Math.random() * 8; seg(g, 16, 13, 16 + Math.cos(a) * d, 13 + Math.sin(a) * d, C.impL); seg(gl, 16, 13, 16 + Math.cos(a) * d, 13 + Math.sin(a) * d, C.imp, 2); }
     },
   },
   // Médula: columna con anillos de vértebra, raíces nerviosas a los lados y un impulso
