@@ -87,7 +87,7 @@ for (const [id, lv] of Object.entries(LEVELS)) {
     for (let y = l.y; y < l.y + (l.h ?? 2); y++) for (let x = l.x; x < l.x + (l.w ?? 1); x++) {
       const c = cell(id, x, y);
       if (c === undefined) inside = false;
-      else if (!SOLID.has(c) || 'XYf'.includes(c)) open = true;
+      else if (!SOLID.has(c) || 'XYfZ'.includes(c)) open = true;
     }
     if (!inside || !open) fail(`${id}: el punto ${l.id} está fuera de la sala o tapado por muro en [${l.x},${l.y}]`);
     if (l.to && !LEVELS[l.to]) fail(`${id}: el punto ${l.id} lleva a una sala que no existe (${l.to})`);

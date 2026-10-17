@@ -194,10 +194,26 @@ export class Game {
     this.world = this.room.world;
     this.gore.reset(this.world);
     this.player.spawnAt(...spawn);
+    this.#unstick();
     this.#updateCamera(1, true);
     this.audio.setBiome(this.room.biome.sound);
     this.state.visited.add(id);
     if (prevBiome && prevBiome !== this.room.biome) this.say(`— ${caps(this.room.biome.name)} —`, 3);
+  }
+
+  // Si al llegar quedas dentro de algo sólido (p. ej. un punto de conexión tapado por una
+  // membrana aún cerrada), te lleva al hueco libre más cercano.
+  #unstick() {
+    const p = this.player, w = this.world;
+    if (!w.rectSolid(p.x, p.y, p.w, p.h)) return;
+    for (let r = 1; r <= 12; r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = p.x + dx * TILE, y = p.y + dy * TILE;
+        if (x < 0 || y < 0 || x + p.w > w.pixelW || y + p.h > w.pixelH) continue;
+        if (!w.rectSolid(x, y, p.w, p.h)) { p.x = x; p.y = y; p.vx = p.vy = 0; return; }
+      }
+    }
   }
 
   #checkExits() {

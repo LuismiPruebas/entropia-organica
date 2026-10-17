@@ -646,7 +646,7 @@ cv.addEventListener('mousedown', (e) => {
     if (S.tool === 'place' && !hit && !erase) {
       snapshot();
       const K = KINDS[S.kind];
-      if (S.kind === 'links' && !spotOk(room(), x, y - (PH - 1))) { $('msg').textContent = 'Ahí no cabe el punto: necesita el hueco del personaje (1×2), sin muro y dentro de la sala. Mejor usa "Crear conexión" en el panel de la sala.'; S.undo[S.id]?.pop(); return; }
+      if (S.kind === 'links' && !spotOk(room(), x, y - (PH - 1))) { $('msg').textContent = 'Ahí no cabe el punto: necesita el hueco del personaje (1×2), sin roca (las membranas valen) y dentro de la sala. Mejor usa "Crear conexión" en el panel de la sala.'; S.undo[S.id]?.pop(); return; }
       const o = K.make(x, y, room());
       if (S.kind === 'nodules' && S.noduleLux) o.push('luz'); // desde la paleta: nódulo lumínico
       if (S.kind === 'enemies' && S.enemyType) o.type = S.enemyType; // el elegido en el Bestiario
@@ -1182,9 +1182,13 @@ const linkOf = (roomId, linkId) => (S.rooms[roomId]?.links ?? []).find((l) => l.
 const isReciprocal = (roomId, l) => { const t = l.to && linkOf(l.to, l.toLink); return !!t && t.to === roomId && t.toLink === l.id; };
 function newLinkId(r) { const used = new Set((r.links ?? []).map((l) => l.id)); let n = 1; while (used.has('p' + n)) n++; return 'p' + n; }
 // ¿Cabe aquí un punto? Dentro de la sala y sin muro (ni rampa) en ninguna de sus casillas.
+// Casillas que no son paso pero se abren en el juego: un punto de conexión puede ir en ellas
+// (membrana agrietada, esfínter, fotosensible, membrana del Rostro); la roca, no.
+const OPENABLE = new Set(['X', 'Y', 'f', 'Z']);
+const passOrOpen = (c) => !SOLID.has(c) || OPENABLE.has(c);
 function spotOk(r, x, y, w = PW, h = PH) {
   if (x < 0 || y < 0 || x + w > r.grid[0].length || y + h > r.grid.length) return false;
-  for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const c = r.grid[yy][xx]; if (SOLID.has(c) || TILE_BY_CHAR[c]?.slope || TILE_BY_CHAR[c]?.ceil) return false; }
+  for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const c = r.grid[yy][xx]; if (!passOrOpen(c) || TILE_BY_CHAR[c]?.slope || TILE_BY_CHAR[c]?.ceil) return false; }
   return true;
 }
 // Un punto ya puesto vale si está dentro de la sala y tiene algún paso (libre, o que se abre:
@@ -1194,7 +1198,7 @@ function spotUsable(r, l) {
   for (let y = l.y; y < l.y + (l.h ?? PH); y++) for (let x = l.x; x < l.x + (l.w ?? PW); x++) {
     const c = r.grid[y]?.[x];
     if (c === undefined) return false;
-    if (!SOLID.has(c) || 'XYfZ'.includes(c)) open = true;
+    if (passOrOpen(c)) open = true;
   }
   return open;
 }
@@ -1348,7 +1352,7 @@ function makeReciprocal(roomId, l, on) {
 // El punto que se pondría al hacer clic en (x, y): en un hueco del borde, el hueco entero
 // (un solo paso aunque sea grande); en otro sitio, el hueco del personaje (1×2).
 function pointRect(r, x, y) {
-  const Wd = r.grid[0].length, Hd = r.grid.length, open = (c) => c !== undefined && !SOLID.has(c) && !TILE_BY_CHAR[c]?.slope && !TILE_BY_CHAR[c]?.ceil;
+  const Wd = r.grid[0].length, Hd = r.grid.length, open = (c) => c !== undefined && passOrOpen(c) && !TILE_BY_CHAR[c]?.slope && !TILE_BY_CHAR[c]?.ceil;
   if ((x === 0 || x === Wd - 1) && open(r.grid[y]?.[x])) {
     let a = y, b = y;
     while (a > 0 && open(r.grid[a - 1][x])) a--;
@@ -1377,7 +1381,7 @@ function dragRect(a, b) {
 const rectOk = (r, q) => spotOk(r, q.x, q.y, q.w, q.h);
 function linkingClick(x, y, rect = null) {
   const L = S.linking, r = room(), q = rect ?? pointRect(r, x, y);
-  if (!rectOk(r, q)) { $('msg').textContent = 'Ahí no cabe: el punto necesita al menos el hueco del personaje (1×2), sin muro y dentro de la sala.'; return true; }
+  if (!rectOk(r, q)) { $('msg').textContent = 'Ahí no cabe: el punto necesita al menos el hueco del personaje (1×2), sin roca (las membranas que se abren valen) y dentro de la sala.'; return true; }
   const top = q.y;
   if (L.stage === 'place') {
     snapshot();
