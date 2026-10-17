@@ -271,6 +271,9 @@ export const LEVELS = {
     ],
     links: [
       { id: 'p1', x: 85, y: 21, w: 1, h: 6, to: 'A3', toLink: 'p2', trigger: 'touch', look: 'hidden' },
+      { id: 'p2', x: 37, y: 0, w: 1, h: 2, to: '', toLink: '', trigger: 'touch', look: 'hidden' },
+      { id: 'p3', x: 38, y: 0, w: 1, h: 2, to: '', toLink: '', trigger: 'touch', look: 'hidden' },
+      { id: 'p4', x: 39, y: 0, w: 1, h: 2, to: '', toLink: '', trigger: 'touch', look: 'hidden' },
     ],
     lamps: [[63, 14], [27, 14], [21, 24], [58, 28], [46, 2], [14, 2], [74, 2]],
   },
