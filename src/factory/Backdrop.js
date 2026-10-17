@@ -330,6 +330,61 @@ const BACKDROPS = {
   },
 };
 
+// ----------------------------------------------------------------------------------
+// Variantes de fondo por sala (lv.backdrop: 2, 3...). Misma familia de color que su
+// bioma para que se sienta el mismo lugar, pero otro paisaje.
+// Sistema Nervioso 2 · Córtex silencioso: tejido violeta casi liso, capilares finísimos
+// y alguna mota; nada de neuronas en el fondo lejano.
+BACKDROPS['nervioso:2'] = () => {
+  const sf = surface();
+  tissue(sf, { lo: '#1e0c2a', mid: '#2c1440', hi: '#3c1c54' }, 21, 2);
+  lobules(sf, 5, 22, { membrane: '#1a0a24', cell: '#38184c', shine: '#5a3078', nucleus: '#2a1038' }, { strength: 0.22, membrane: 0.08, nucleus: false });
+  vessels(sf, 3, 23, '#4a1a48', '#6a2a60', { len: 200, thick: 1, branch: 0.01 });
+  const r = rng(24);
+  for (let n = 0; n < 40; n++) disc(sf, r() * S, r() * S, 0.8 + r() * 0.8, '#5a3070', '#8a60a8', '#3a1a48', { k: 0.5 });
+  return sf.canvas();
+};
+// Sistema Nervioso 3 · Sustancia blanca: haces de fibras paralelas y onduladas, como
+// los tractos del cerebro, con alguna célula glial entre ellas.
+BACKDROPS['nervioso:3'] = () => {
+  const sf = surface();
+  tissue(sf, { lo: '#24103a', mid: '#341a50', hi: '#462266' }, 31, 3);
+  const fib = hexRgb('#6a3a8c'), my = hexRgb('#a878c8'), dk = hexRgb('#1c0a2c');
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const w = tfbm(x, y, 4, 32) * 10 + Math.sin((x / S) * Math.PI * 2 * 2) * 3;   // ondulación sin costura
+    const v = Math.sin(((y + w) / S) * Math.PI * 2 * 22);
+    if (v > 0.82) sf.blend(x, y, my, 0.55 * (v - 0.82) / 0.18);
+    else if (v > 0.35) sf.blend(x, y, fib, 0.5);
+    else if (v < -0.85) sf.blend(x, y, dk, 0.5);
+  }
+  const r = rng(33);
+  for (let n = 0; n < 18; n++) disc(sf, r() * S, r() * S, 1.5 + r() * 2, '#8a2a5a', '#c85a8a', '#5a1838', { k: 0.8 });
+  return sf.canvas();
+};
+// Sistema Nervioso 4 · Nebulosa sináptica: violeta hondo con destellos desenfocados
+// (vesículas) y un polvo fino de neurotransmisor.
+BACKDROPS['nervioso:4'] = () => {
+  const sf = surface();
+  tissue(sf, { lo: '#160820', mid: '#22102e', hi: '#30163e' }, 41, 3);
+  const r = rng(42);
+  const glow = (x0, y0, rad, col, k) => {
+    const c = hexRgb(col);
+    for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++) {
+      const q = Math.hypot(x, y) / rad;
+      if (q < 1) sf.blend(x0 + x, y0 + y, c, k * (1 - q) * (1 - q));
+    }
+  };
+  for (let n = 0; n < 16; n++) glow(r() * S, r() * S, 8 + r() * 18, r() < 0.6 ? '#7a3aa0' : r() < 0.5 ? '#a0407a' : '#3a6aa0', 0.35 + r() * 0.25);
+  for (let n = 0; n < 120; n++) sf.blend(r() * S, r() * S, hexRgb(r() < 0.5 ? '#c8a0e8' : '#90c8f0'), 0.35 + r() * 0.4);
+  return sf.canvas();
+};
+
+// Fondos que ofrece cada bioma (para el editor). El primero es el de siempre.
+export const BACKDROP_VARIANTS = {
+  nervioso: ['Bosque neuronal', 'Córtex silencioso', 'Sustancia blanca', 'Nebulosa sináptica'],
+};
+export const backdropKey = (biome, variant) => (variant > 1 && BACKDROPS[`${biome}:${variant}`] ? `${biome}:${variant}` : biome);
+
 export function paintBackdrop(biomeId) {
   return (BACKDROPS[biomeId] ?? BACKDROPS.nervioso)();
 }

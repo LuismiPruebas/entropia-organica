@@ -451,7 +451,77 @@ function circulatorio() {
   };
 }
 
-const BUILDERS = { nervioso, pulmonar, digestivo, corazon, oseo, circulatorio };
+// --- Variantes del Sistema Nervioso (lv.backdrop) ----------------------------------
+// Raíces finas para el plano frontal (silueta oscura que asoma por abajo).
+function nervFront(seed, n) {
+  const [front, f] = canvas(FRONT_W, FRONT_H), r = rng(seed);
+  for (let k = 0; k < n; k++) {
+    let x = r() * FRONT_W, y = FRONT_H, a = -Math.PI / 2 + (r() - 0.5);
+    for (let i = 0; i < 30; i++) { f.fillStyle = i % 6 ? '#22082e' : '#3a1450'; f.fillRect(Math.round(x) % FRONT_W, Math.round(y), 2, 2); x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.5; }
+  }
+  return front;
+}
+// 2 · Córtex silencioso: un único axón largo y mielinizado que cruza en diagonal (sin
+// costura) y una neurona lejana y tenue. Pocos impulsos, mucha calma.
+function nervioso2() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const axon = [];
+  for (let i = 0; i <= MID_W; i++) axon.push([i, 40 + (i / MID_W) * 0 + Math.sin((i / MID_W) * Math.PI * 2) * 26 + Math.sin((i / MID_W) * Math.PI * 4) * 6]);
+  for (const [x, y] of axon) { dot(g, x - 1, y - 1, '#4a2266', 3, 3); dot(g, x, y - 1, '#7a4aa0'); }
+  for (let i = 4; i < axon.length; i += 16) ball(g, axon[i][0], axon[i][1], 3, '#a878c8', '#e0c0f8', '#5a3080');
+  // Neurona lejana: pequeña, apagada, con dendritas cortas.
+  const r = rng(52), sx = 170, sy = 130;
+  const paths = [axon];
+  for (let k = 0; k < 6; k++) {
+    let x = sx, y = sy, a = (k / 6) * Math.PI * 2 + r() * 0.4;
+    const pts = [];
+    for (let i = 0; i < 16 + r() * 8; i++) { dot(g, x, y, '#3e1c56', 2, 2); pts.push([x, y]); x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.3; }
+    paths.push(pts.reverse());
+  }
+  ball(g, sx, sy, 6, '#5a3078', '#8a60b0', '#341848', '#26102e');
+  gl.fillStyle = 'rgba(120,140,255,0.15)'; gl.fillRect(sx - 2, sy - 2, 4, 4);
+  return { mid, midGlow: glow, front: nervFront(53, 4), anim: { neural: { paths, somas: [[sx, sy]], calm: true } } };
+}
+// 3 · Sustancia blanca: varios nervios gruesos y paralelos con anillos de mielina, por
+// los que corren impulsos.
+function nervioso3() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const paths = [];
+  for (const [y0, amp, ph, th] of [[34, 7, 0.4, 7], [92, 10, 2.1, 9], [150, 6, 4.0, 6]]) {
+    const pts = wavy(y0, amp, (Math.PI * 2 * 2) / MID_W, ph);
+    ringedTube(g, pts, th, '#6a3a90', '#b088d8', '#3a1a58', '#d8b8f0', 9);
+    for (let i = 0; i < pts.length; i += 3) { gl.fillStyle = 'rgba(140,110,255,0.05)'; gl.fillRect(Math.round(pts[i][0]), Math.round(pts[i][1]), 1, 1); }
+    paths.push(pts, pts.slice().reverse());
+  }
+  // Fibras finas sueltas entre los haces.
+  const r = rng(61);
+  for (let k = 0; k < 6; k++) { const y0 = r() * MID_H; for (const [x, y] of wavy(y0, 3, (Math.PI * 2) / MID_W, r() * 6)) dot(g, x, y, '#4a2464'); }
+  return { mid, midGlow: glow, front: nervFront(63, 7), anim: { neural: { paths, somas: [] } } };
+}
+// 4 · Nebulosa sináptica: dos grandes neuronas lejanas en penumbra, con el núcleo
+// encendido, y partículas de neurotransmisor que flotan.
+function nervioso4() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const r = rng(71);
+  for (const [sx, sy, R] of [[64, 70, 12], [190, 140, 9]]) {
+    for (let k = 0; k < 7; k++) {
+      let x = sx, y = sy, a = (k / 7) * Math.PI * 2 + r() * 0.5, w = 4;
+      for (let i = 0; i < 40; i++) { dot(g, x - w / 2, y - w / 2, '#2c1240', Math.max(1, Math.round(w)), Math.max(1, Math.round(w))); x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.25; w = Math.max(1, w - 0.08); }
+    }
+    ball(g, sx, sy, R, '#341850', '#4a2468', '#22102e', '#1a0a24');
+    ball(g, sx - 1, sy - 1, R * 0.4, '#a060d8', '#e0b0ff', '#5a2890');
+    gl.fillStyle = 'rgba(170,120,255,0.35)'; gl.fillRect(sx - R * 0.4, sy - R * 0.4, R * 0.8, R * 0.8);
+  }
+  return {
+    mid, midGlow: glow, front: nervFront(73, 3),
+    anim: { pulseGlow: 0.35, motes: { n: 34, colors: ['rgba(200,160,255,0.9)', 'rgba(140,210,255,0.9)', 'rgba(255,170,220,0.8)'], vx: 4, vy: -3, size: 1, shape: 'dot', wobble: 10 } },
+  };
+}
+
+const BUILDERS = { nervioso, pulmonar, digestivo, corazon, oseo, circulatorio, 'nervioso:2': nervioso2, 'nervioso:3': nervioso3, 'nervioso:4': nervioso4 };
 
 // Ritmo de las paredes vivas de cada bioma (0..1).
 const RHYTHMS = {
@@ -497,7 +567,7 @@ export class Scenery {
       const mo = b.anim.motes;
       dyn = {
         base: b.midGlow, cv, ctx, last: 0,
-        neural: b.anim.neural ? { paths: b.anim.neural.paths, sparks: [], flashes: [] } : null,
+        neural: b.anim.neural ? { paths: b.anim.neural.paths, sparks: [], flashes: [], calm: b.anim.neural.calm } : null,
         flow: b.anim.flow ?? null,
         motes: mo ? Array.from({ length: mo.n }, (_, i) => ({ x: Math.random() * MID_W, y: Math.random() * MID_H, ph: Math.random() * 6, c: mo.colors[i % mo.colors.length], k: 0.6 + Math.random() * 0.8 })) : null,
       };
@@ -527,7 +597,7 @@ export class Scenery {
     // Impulsos que recorren dendritas y axones; al llegar al soma, destello.
     const n = d.neural;
     if (n) {
-      while (n.sparks.length < 7) {
+      while (n.sparks.length < (n.calm ? 2 : 7)) {
         const path = n.paths[Math.floor(Math.random() * n.paths.length)];
         n.sparks.push({ path, pos: 0, speed: 30 + Math.random() * 40 });
       }
@@ -630,6 +700,6 @@ export class Scenery {
     s.front.material.map.offset.x = (camX * FP + sway) / FRONT_W;
     s.top.material.map.offset.x = (-camX * FP + sway) / FRONT_W;
     // Paredes vivas.
-    if (this.pulseMesh) this.pulseMesh.material.opacity = RHYTHMS[s.id](t, this.state);
+    if (this.pulseMesh) this.pulseMesh.material.opacity = RHYTHMS[s.id.split(":")[0]](t, this.state);
   }
 }

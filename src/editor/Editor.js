@@ -14,6 +14,7 @@ import { enemyThumb } from './EnemyThumbs.js';
 import { paintShrineBase, drawShrine, SW as SHRINE_W, SH as SHRINE_H } from '../entities/ShrineArt.js';
 import { faceData } from '../data/faces.js';
 import { linkArrival } from '../data/connections.js';
+import { BACKDROP_VARIANTS } from '../factory/Backdrop.js';
 import { DECOR, decorPreview, neuronPairs, WALL_DEFAULT, WALL_TYPE } from '../entities/Decor.js';
 import { baseNode } from '../data/nodes.js';
 
@@ -268,8 +269,24 @@ function mapFree(id, x, y) {
 function startPlacing() {
   if (!S.id) { createRoomAt(0, 0, 2, 1); return; }
   S.placing = { cell: null, from: null };
+  showNewRoomBox(true);
   $('msg').textContent = 'Nueva sala: clic en un hueco libre (tamaño mínimo) o arrastra para marcar todo su espacio. Esc o clic derecho para cancelar. Aléjate con la rueda para ver más.';
   draw();
+}
+// Cajita flotante mientras se coloca una sala nueva: el fondo que tendrá.
+function showNewRoomBox(on) {
+  let el = $('newroom-box');
+  const bgs = BACKDROP_VARIANTS[room()?.biome ?? 'nervioso'];
+  if (!on || !bgs || bgs.length < 2) { if (el) el.hidden = true; return; }
+  if (!el) {
+    el = document.createElement('div'); el.id = 'newroom-box'; el.className = 'wiz';
+    el.style.cssText = 'position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;';
+    cv.parentElement.style.position = 'relative';
+    cv.parentElement.appendChild(el);
+  }
+  el.innerHTML = `Fondo de la sala nueva: <select id="newroom-bg">${bgs.map((b, i) => `<option value="${i + 1}"${i + 1 === (S.newBackdrop ?? 1) ? ' selected' : ''}>${b}</option>`).join('')}</select>`;
+  el.hidden = false;
+  $('newroom-bg').onchange = (e) => { S.newBackdrop = Number(e.target.value); };
 }
 function placingRect() {
   const p = S.placing;
@@ -304,6 +321,9 @@ function createRoomAt(x, y, cw, ch) {
   // La vista no salta: la sala nueva queda en el mismo sitio de la pantalla.
   const keep = S.id && room()?.map ? { zoom: S.zoom, pan: { x: S.pan.x + (x - room().map[0]) * CELL[0] * S.zoom, y: S.pan.y + (y - room().map[1]) * CELL[1] * S.zoom } } : null;
   S.rooms[id] = { name: 'Sala nueva', biome, map: [x, y, cw, ch], grid, exits: [] };
+  const bgs = BACKDROP_VARIANTS[biome];
+  if (bgs && (S.newBackdrop ?? 1) > 1 && S.newBackdrop <= bgs.length) S.rooms[id].backdrop = S.newBackdrop;
+  showNewRoomBox(false);
   S.dirty.add(id);
   S.placing = null;
   openRoom(id, keep);
@@ -650,7 +670,7 @@ cv.addEventListener('dblclick', (e) => {
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.linking) { S.linking = null; $('msg').textContent = 'Conexión cancelada.'; renderRoomPanel(); draw(); } });
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.pickArrive) { S.pickArrive = null; $('msg').textContent = ''; renderInspector(); draw(); } });
 addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.roomMove) { S.roomMove = false; $('msg').textContent = ''; renderRoomPanel(); draw(); } });
-addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.placing) { S.placing = null; $('msg').textContent = 'Nueva sala cancelada.'; draw(); } });
+addEventListener('keydown', (e) => { if (e.code === 'Escape' && S.placing) { S.placing = null; showNewRoomBox(false); $('msg').textContent = 'Nueva sala cancelada.'; draw(); } });
 cv.addEventListener('wheel', (e) => {
   e.preventDefault();
   const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
@@ -688,7 +708,7 @@ cv.addEventListener('mousedown', (e) => {
     S.linkDrag = { from: [x, y] }; S.drag = { linkDrag: true }; draw(); return;
   }
   if (S.placing) {
-    if (e.button === 2) { S.placing = null; $('msg').textContent = 'Nueva sala cancelada.'; draw(); return; }
+    if (e.button === 2) { S.placing = null; showNewRoomBox(false); $('msg').textContent = 'Nueva sala cancelada.'; draw(); return; }
     S.placing.cell = cellOf(room(), x, y);
     S.placing.from = S.placing.cell;
     S.drag = { placing: true };
@@ -1557,6 +1577,8 @@ function renderRoomPanel() {
   html += field('identificador (cambia también las salidas que llevan aquí)', S.id, (v) => renameRoom(S.id, v));
   html += field('nombre', r.name, (v) => { r.name = v; renderRoomList(); });
   html += field('bioma', { v: r.biome, options: Object.keys(BIOMES) }, (v) => { r.biome = v; renderPalette(); drawMap(); }, 'select');
+  const bgs = BACKDROP_VARIANTS[r.biome];
+  if (bgs?.length > 1) html += field('fondo', { v: bgs[(r.backdrop ?? 1) - 1] ?? bgs[0], options: bgs }, (v) => { const n = bgs.indexOf(v) + 1; if (n > 1) r.backdrop = n; else delete r.backdrop; }, 'select');
   html += field('secreta', !!r.secret, (v) => { if (v) r.secret = true; else delete r.secret; });
   html += field('mapa [x, y, ancho, alto] (celdas)', r.map ?? [0, 0, cells[0], cells[1]], (v) => { r.map = v; drawMap(); });
   html += `<div class="row"><button id="mvroom" class="${S.roomMove ? 'on' : ''}" title="Arrastra en el lienzo para cambiar dónde está la sala respecto a las demás (por celdas)">${S.roomMove ? 'Moviendo: arrastra (Esc termina)' : 'Mover sala'}</button><button id="fitmap" title="Ancho y alto del mapa según el tamaño de la sala">Ajustar mapa al tamaño</button></div>`;

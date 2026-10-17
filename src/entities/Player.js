@@ -999,7 +999,7 @@ export class Player {
           this.game.shake = Math.max(this.game.shake, 4);
           this.game.flash(pos.x, pos.y, 120, [1, 0.8, 0.5], 0.1);
           audio.play('shotgun', this);
-          this.fireCd = 0.8 * cooldown;
+          this.fireCd = 0.55 * cooldown;                         // era 0.8: más rápida, más gratificante
         } else {
           this.#melee();
         }

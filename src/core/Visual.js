@@ -1,7 +1,7 @@
 import * as THREE from '../../vendor/three.module.min.js'; // ruta directa: Safari de iOS < 16.4 no entiende import maps
 import { compositeVertex, compositeFragment, MAX_POINT_LIGHTS } from './shaders.js';
 import { canvasTexture } from './Sprites.js';
-import { paintBackdrop, BACKDROP_SIZE } from '../factory/Backdrop.js';
+import { paintBackdrop, BACKDROP_SIZE, backdropKey } from '../factory/Backdrop.js';
 import { Scenery } from './Scenery.js';
 
 export const VIEW_W = 384;
@@ -77,8 +77,10 @@ export class Visual {
     return tex;
   }
 
-  // Cambia el fondo en parallax al del bioma de la sala (con caché).
-  setBiome(id, biome) {
+  // Cambia el fondo en parallax al del bioma de la sala (con caché). variant: el fondo
+  // elegido para la sala (1 = el de siempre; ver Backdrop.BACKDROP_VARIANTS).
+  setBiome(biomeId, biome, variant = 1) {
+    const id = backdropKey(biomeId, variant);
     if (this.biomeId === id) return;
     this.biomeId = id;
     this.bgCache ??= new Map();

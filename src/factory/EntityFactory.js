@@ -182,7 +182,7 @@ export class EntityFactory {
     // pintar la sala, que deja preparado el material).
     for (const m of room.photo) m.view = new PhotoMembrane(g, room, m, paintPhotoTexture(world, m.cells));
     g.visual.setRoomSolids(world);
-    g.visual.setBiome(def.biome ?? 'nervioso', biome);
+    g.visual.setBiome(def.biome ?? 'nervioso', biome, def.backdrop ?? 1);
     return room;
   }
 
