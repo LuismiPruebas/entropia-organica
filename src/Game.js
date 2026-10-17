@@ -273,8 +273,10 @@ export class Game {
   // grabado en el mapa y, algunos, un cambio permanente en el mundo.
   onBossDefeated(e) {
     const st = this.state, d = e.def, r = d.reward ?? {};
-    // Su música se corta en el momento en que cae (sin arrastrarse tras su muerte).
+    // Su música se corta en el momento en que cae (sin arrastrarse tras su muerte), y la
+    // sombra que inundaba su sala se retira poco a poco (solo en esta sala).
     this.audio.stopBossMusic(0.25);
+    this.room.cleansed = true;
     if (e.key) st.bosses.add(e.key);
     if (d.drop?.dna) this.dropPickup('dna', e.cx, e.cy, undefined, { mutation: d.drop.dna });
     (d.drop?.items ?? []).forEach((k, i) => this.dropPickup(k, e.cx + (i + 1) * 12, e.cy - 6));
@@ -294,6 +296,14 @@ export class Game {
     this.shake = 10;
     this.audio.play('mutate');
     this.say(`${d.name} ha caído. ${r.lore ? '[I] Nueva memoria en el Genoma. ' : ''}${r.text ?? ''}`, 6);
+  }
+
+  // Luz ambiente de la sala. Sin energía en el ojo, la penumbra se cierra; en la sala de
+  // un jefe vencido la sombra se retira y la carne se ve con una luz cálida y limpia.
+  #ambient() {
+    const c = this.room.cleanse ?? 0, dim = this.state.light > 0 ? 1 : 0.5;
+    const CLEAN = [0.62, 0.5, 0.46];
+    return this.room.ambient.map((v, i) => (v + (CLEAN[i] - v) * c * 0.85) * (dim + (1 - dim) * c));
   }
 
   // Superficie del fluido en el que está metido `p` (cubetas que se llenan o ácido fijo
@@ -525,6 +535,8 @@ export class Game {
         this.say('Una membrana con un núcleo dormido. No cede a la fuerza: algo en este cuerpo tiene que querer abrirla.', 3.5);
       }
     }
+    // Sala liberada: la luz vuelve despacio.
+    if (this.room.cleansed && this.room.cleanse < 1) this.room.cleanse = Math.min(1, this.room.cleanse + dt / 4);
     for (const w of this.room.wombs) w.update();
     for (const h of this.room.hazards) h.update(dt);
     for (const n of this.room.nodules) n.update(dt);
@@ -910,7 +922,7 @@ export class Game {
       ambR: st.light <= 0 ? 20 : st.flashlightOn ? HALO_R : 42, // mismo halo con o sin Ojo I
       // Sin energía en el ojo, la penumbra se cierra: la carne apenas se intuye.
       range: LIGHT_RANGE * st.mod('lightRange'),
-      ambient: st.light > 0 ? this.room.ambient : this.room.ambient.map((v) => v * 0.5),
+      ambient: this.#ambient(),
       lightColor: this.beamColor,
       eyeColor: this.eyeColor,
       points: this.#pointLights(),

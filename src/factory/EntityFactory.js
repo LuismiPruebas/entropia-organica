@@ -93,6 +93,9 @@ export class EntityFactory {
       }
     }
 
+    // Sala de un jefe ya vencido: la sombra que la inundaba se ha retirado (Game: cleanse).
+    room.cleansed = (def.enemies ?? []).some((e, i) => ENEMIES[e.type]?.boss && g.state.bosses.has(`${id}:${i}`));
+    room.cleanse = room.cleansed ? 1 : 0;
     (def.enemies ?? []).forEach((e, i) => {
       const key = `${id}:${i}`;
       if (g.state.slain.has(key)) return; // sigue muerto hasta que descanses

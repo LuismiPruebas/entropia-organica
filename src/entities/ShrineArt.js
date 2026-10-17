@@ -99,7 +99,7 @@ function vein(g, r, x, y, ang, len, w, cols, out) {
   for (let i = 0; i < len; i++) {
     ang += (r() - 0.5) * 0.5;
     x += Math.cos(ang); y += Math.sin(ang);
-    if (y < 190 && (x < 52 || x > SW - 52)) break;      // no se sale del tapiz por los lados
+    if ((y < 190 && (x < 52 || x > SW - 52)) || x < 30 || x > SW - 30) break;   // no se sale por los lados
     P(g, x, y, cols[0], w, w);
     if (w > 1) P(g, x, y, cols[1], 1, 1);
     path.push([x, y]);
@@ -324,6 +324,30 @@ export function paintShrineBase(k, seed = 11) {
   } else {
     for (const f of flows) if (f.length > 30 && r() < 0.35) for (const [x, y] of f) P(gl, x, y, '#2a1406');
   }
+  // 8) Remate superior: nada de corte recto. La masa termina en un borde de carne
+  // ondulado (más alto en el centro, sobre la cabeza), con lóbulos que cuelgan y hebras.
+  const edge = (x) => 3 + 10 * nz(x * 0.7, 5) + 20 * (Math.abs(x - 144) / 144) ** 1.5 + 4 * Math.sin(x * 0.13 + 2);
+  const img = g.getImageData(0, 0, SW, SH).data;
+  const solid = (x, y) => img[(Math.round(y) * SW + Math.round(x)) * 4 + 3] > 0;
+  for (let x = 0; x < SW; x++) {
+    const e = Math.floor(edge(x));
+    g.clearRect(x, 0, 1, e); gl.clearRect(x, 0, 1, e);
+    if (!solid(x, e + 1)) continue;
+    P(g, x, e, FLESH[1]); P(g, x, e + 1, FLESH[5]); P(g, x, e + 2, FLESH[4]); P(g, x, e + 3, FLESH[2]);
+    if (r() < 0.06) drips.push({ x, y: e + 3, len: 8 + r() * 26, p: r(), sp: 0.2 + r() * 0.4 });
+  }
+  for (let i = 0; i < 16; i++) {                                     // lóbulos sobre el borde
+    const x = 56 + r() * 176, e = edge(x);
+    if (!solid(x, e + 4)) continue;
+    const rx = 4 + r() * 6;
+    bulb(g, x, e + rx * 0.4, rx, rx * 0.75, FLESH, r() < 0.3);
+  }
+  for (let i = 0; i < 30; i++) {                                     // hebras que cuelgan del borde
+    const x = 56 + r() * 176, e = edge(x);
+    if (!solid(x, e + 4)) continue;
+    const L = 6 + r() * 20;
+    for (let y = 0; y < L; y++) P(g, x + Math.sin(y * 0.3 + i) * 0.6, e + 2 + y, y > L - 2 ? FLESH[6] : FLESH[3]);
+  }
   return { color, glow, flows: flows.filter((f) => f.length > 12), drips };
 }
 
@@ -447,63 +471,99 @@ export function drawShrine(g, gl, o) {
     }
   }
 
-  // Ojos: el parásito los abre (rojos, te siguen); el anfitrión los cierra en paz.
-  const [lx, ly] = o.look;
+  // Ojos. Poseído: abiertos y entornados con odio; parpadean, saltan de un punto a otro
+  // (sacádicos) y se abren de par en par al hablar; la pupila se dilata. Libre: cerrados
+  // en paz, con los ojos moviéndose bajo los párpados; de vez en cuando los entreabre y
+  // asoma un iris dorado.
+  const [lx, ly] = o.look, blink = o.blink ?? 0, wide = o.wide ?? 0, pupil = o.pupil ?? 1;
   for (const e of EYES) {
+    const sd = e.x < 144 ? 1 : -1;
     if (!host) {
-      // Entornados bajo el ceño: el párpado de arriba baja hacia la nariz (mirada de odio).
-      const open = 0.85 + 0.15 * Math.sin(t * 0.7), sd = e.x < 144 ? 1 : -1;
-      const lid = (x) => e.y + 0.5 - 3.2 * open * (1 - (x / 8.6) ** 2) + Math.max(0, (x * sd) / 8) * 2.4;
+      const open = (0.8 + 0.35 * wide) * (1 - blink);
+      if (open < 0.12) { for (let x = -9; x <= 9; x++) P(g, e.x + x, e.y + 1 + (x * x) / 60 + Math.max(0, (x * sd) / 8) * 1.2, '#1a0408', 1, 2); continue; }
+      const frown = 2.4 * (1 - wide * 0.6);
+      const lid = (x) => e.y + 0.5 - 3.2 * open * (1 - (x / 8.6) ** 2) + Math.max(0, (x * sd) / 8) * frown;
+      const low = (x) => e.y + 0.5 + 2.6 * open * (1 - (x / 8.6) ** 2) - (Math.sin(t * 31 + e.x) > 0.96 ? 0.8 : 0); // tic
       for (let x = -8; x <= 8; x++) {
-        const y0 = lid(x), y1 = e.y + 0.5 + 2.6 * open * (1 - (x / 8.6) ** 2);
+        const y0 = lid(x), y1 = low(x);
         for (let y = Math.ceil(y0); y <= y1; y++) P(g, e.x + x, y, y > y1 - 1 ? '#3a0a10' : (x * 3 + y) % 7 === 0 ? '#a03028' : '#b08a6a');
       }
-      const ix = e.x + lx * 3.5, iy = e.y + 1 + ly * 0.8;
-      for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 5 && iy + y >= lid(ix - e.x + x)) P(g, ix + x, iy + y, x * x + y * y > 2 ? '#9a0a0a' : '#ff3a1a');
-      P(g, ix, iy - 1, '#140000', 1, 3);
+      const ix = e.x + lx * 3.8, iy = e.y + 1 + ly * 1.1, ir = 2.2 + wide * 0.4;
+      for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) {
+        const d = x * x + y * y;
+        if (d > ir * ir || iy + y < lid(ix - e.x + x) || iy + y > low(ix - e.x + x)) continue;
+        P(g, ix + x, iy + y, d > ir * ir * 0.45 ? '#9a0a0a' : '#ff3a1a');
+      }
+      const pw = pupil > 1.35 ? 2 : 1;
+      P(g, ix - (pw - 1) * 0.5, iy - 1.5, '#140000', pw, 3);
       P(gl, ix - 1, iy - 1, '#ff2010', 3, 3);
+      if (wide > 0.3) P(gl, ix - 2, iy - 2, '#5a0800', 5, 5);
       for (let x = -9; x <= 9; x++) P(g, e.x + x, lid(Math.max(-8.5, Math.min(8.5, x))) - 1, '#1a0408', 1, 2);   // párpado
     } else {
-      // Párpados cerrados con un hilo de luz dorada.
-      const glowK = 0.5 + 0.5 * Math.sin(t * 1.2 + e.x);
-      for (let x = -8; x <= 8; x++) P(gl, e.x + x, e.y + 1.5 + (x * x) / 40, glowK > 0.5 ? '#6a4412' : '#3a2408');
+      const h = o.hostOpen ?? 0;
+      if (h > 0.08) {
+        // Entreabiertos: un iris dorado que mira con calma.
+        const open = h * 0.9;
+        const lid = (x) => e.y + 1 - 2.8 * open * (1 - (x / 8.6) ** 2), low = (x) => e.y + 1.5 + 1.6 * open * (1 - (x / 8.6) ** 2);
+        for (let x = -8; x <= 8; x++) for (let y = Math.ceil(lid(x)); y <= low(x); y++) P(g, e.x + x, y, '#e8d0b0');
+        const ix = e.x + lx * 2.5, iy = e.y + 1 + ly * 0.6;
+        for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x * x + y * y <= 5 && iy + y >= lid(ix - e.x + x) && iy + y <= low(ix - e.x + x)) P(g, ix + x, iy + y, x * x + y * y > 2 ? '#a06a18' : '#ffc860');
+        P(g, ix, iy, '#2a1404');
+        P(gl, ix - 1, iy - 1, '#ffb040', 3, 3);
+        for (let x = -9; x <= 9; x++) P(g, e.x + x, lid(Math.max(-8.5, Math.min(8.5, x))) - 1, '#5a2a24', 1, 1);
+      } else {
+        // Cerrados: el ojo se mueve bajo el párpado (un bulto de luz que va y viene).
+        const rem = Math.sin(t * 2.3 + e.x * 0.1) * 3 + Math.sin(t * 5.1) * 0.8;
+        P(g, e.x + rem - 1, e.y - 1, '#d89a86', 3, 1); P(g, e.x + rem, e.y - 2, '#e8b4a0');
+        const glowK = 0.5 + 0.5 * Math.sin(t * 1.2 + e.x);
+        for (let x = -8; x <= 8; x++) P(gl, e.x + x, e.y + 1.5 + (x * x) / 40, glowK > 0.5 ? '#6a4412' : '#3a2408');
+      }
     }
   }
-  // Tercer ojo de la frente.
-  const blink = (t % (host ? 7 : 4.3)) < 0.14;
+  // Tercer ojo de la frente: parpadea a su aire, mira y dilata la pupila.
+  const b3 = o.blink3 ?? 0, oy3 = 8.5 * (1 - b3);
   g.fillStyle = '#1a0408';
   g.beginPath(); g.ellipse(THIRD.x, THIRD.y, 7, 8.5, 0, 0, Math.PI * 2); g.fill();
-  if (!blink) {
+  if (oy3 > 1.5) {
+    const ex = THIRD.x + lx * 1.8, ey = THIRD.y + ly * 1.8;
+    g.save(); g.beginPath(); g.ellipse(THIRD.x, THIRD.y, 6.5, oy3 - 0.5, 0, 0, Math.PI * 2); g.clip();
     g.fillStyle = host ? '#e8a030' : '#c81818';
-    g.beginPath(); g.ellipse(THIRD.x + lx * 1.5, THIRD.y + ly * 1.5, 5, 6, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(ex, ey, 5, 6, 0, 0, Math.PI * 2); g.fill();
     g.fillStyle = host ? '#ffe2a0' : '#ff5040';
-    g.beginPath(); g.ellipse(THIRD.x + lx * 1.5 - 1.5, THIRD.y + ly * 1.5 - 2, 1.6, 1.6, 0, 0, Math.PI * 2); g.fill();
-    if (host) P(g, THIRD.x + lx * 1.5 - 1.5, THIRD.y + ly * 1.5 - 1.5, '#2a1404', 3, 3);
-    else P(g, THIRD.x + lx * 1.5 - 0.5, THIRD.y + ly * 1.5 - 4, '#140000', 1, 8);
-    gl.globalAlpha = 0.7 + 0.3 * Math.sin(t * 2.2);
+    g.beginPath(); g.ellipse(ex - 1.5, ey - 2, 1.6, 1.6, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = host ? '#2a1404' : '#140000';
+    const pw = host ? 1.4 * pupil : 0.6 * pupil;
+    g.beginPath(); g.ellipse(ex, ey, pw, host ? 1.4 * pupil : 3.6, 0, 0, Math.PI * 2); g.fill();
+    g.restore();
+    gl.globalAlpha = (0.55 + 0.3 * Math.sin(t * 2.2)) * (oy3 / 8.5);
     gl.fillStyle = host ? '#ffb040' : '#ff2010';
-    gl.beginPath(); gl.ellipse(THIRD.x, THIRD.y, 6, 7, 0, 0, Math.PI * 2); gl.fill();
+    gl.beginPath(); gl.ellipse(THIRD.x, THIRD.y, 6, oy3 * 0.8, 0, 0, Math.PI * 2); gl.fill();
     gl.globalAlpha = 1;
-  } else for (let y = -6; y <= 6; y++) P(g, THIRD.x, THIRD.y + y, '#5a1a1e');
-  // Boca. Poseída: un gruñido siempre abierto, el labio de arriba recogido enseñando
-  // encías y dientes desiguales; al hablar se abre más y tiembla. Libre: se abre al hablar.
+  }
+  for (const sy of [-1, 1]) for (let x = -7; x <= 7; x++) P(g, THIRD.x + x, THIRD.y + sy * oy3 * Math.sqrt(Math.max(0, 1 - (x / 7.2) ** 2)) - (sy < 0 ? 1 : 0), '#2a0a10');
+
+  // Boca. Poseída: un gruñido abierto con la mandíbula que se articula por sílabas al
+  // hablar, que respira, que de vez en cuando chasquea los dientes (snap), la lengua que
+  // se mueve y babas que se estiran y gotean. Libre: los labios se separan al hablar.
   if (!host) {
-    const H = 9 + o.talk * 6 + Math.sin(t * 9) * 0.6, RXm = 16;
-    const cx = MOUTH.x, cy = MOUTH.y + 2;
+    const snap = o.snap ?? 0;
+    const H = Math.max(2, 6 + o.talk * 10 + Math.sin(t * 1.3) * 1.2 + snap * 7 - (snap > 0.85 ? 8 : 0));
+    const RXm = 16 + o.talk * 2, cx = MOUTH.x, cy = MOUTH.y + 2 + o.talk * 1.5;
     for (let x = -RXm - 2; x <= RXm + 2; x++) {
       const u = Math.max(0, 1 - (x / RXm) ** 2), su = Math.sqrt(u);
       const top = cy - (H / 2) * su - 2.2 * u, bot = cy + (H / 2) * su + 0.5 * u;
       if (Math.abs(x) > RXm) { P(g, cx + x, cy - 0.5, '#1a0408', 1, 2); continue; }    // comisuras
-      // Labios (finos, tirantes) y su borde oscuro.
       P(g, cx + x, top - 3, '#1a0408'); P(g, cx + x, top - 2, '#7a2a34', 1, 1);
       P(g, cx + x, bot + 2, '#1a0408'); P(g, cx + x, bot + 1, '#6a2028', 1, 1);
-      // Encías.
       P(g, cx + x, top - 2, '#6a1828', 1, 3); P(g, cx + x, top - 1, x % 3 ? '#9a3442' : '#5a1020', 1, 1);
       P(g, cx + x, bot - 1, '#7a2030', 1, 3);
-      // Garganta.
-      for (let y = Math.ceil(top + 1); y < bot - 1; y++) P(g, cx + x, y, y > bot - 3 && Math.abs(x) < 7 ? '#5a1420' : '#0a0204');
+      for (let y = Math.ceil(top + 1); y < bot - 1; y++) P(g, cx + x, y, '#0a0204');
     }
-    // Dientes: arriba cuelgan, abajo suben; colmillos más largos; algunos rotos.
+    // Lengua: asoma y se agita al hablar.
+    if (H > 6) {
+      const tx = cx + Math.sin(t * 7.3) * 3 * o.talk, ty = cy + H / 2 - 2 - o.talk * 2;
+      for (let y = -2; y <= 2; y++) for (let x = -6; x <= 6; x++) if ((x / 6) ** 2 + (y / 2.4) ** 2 <= 1) P(g, tx + x, ty + y, y < -1 ? '#9a3a44' : '#6a1a24');
+    }
     for (let i = -5; i <= 5; i++) {
       if (i === -1 || i === 4) continue;                                   // huecos de dientes caídos
       const x = cx + i * 2.6 - 1, u = Math.max(0, 1 - ((i * 2.6) / RXm) ** 2), su = Math.sqrt(u);
@@ -513,15 +573,24 @@ export function drawShrine(g, gl, o) {
       for (let y = 0; y < lu; y++) P(g, x, top + y, y >= lu - 1.5 ? '#8a7a50' : y === 0 ? '#6a5a3a' : '#c4b488', fang && y > lu - 3 ? 1 : 2, 1);
       for (let y = 0; y < ld; y++) P(g, x, bot - y, y >= ld - 1.5 ? '#8a7a50' : y === 0 ? '#6a5a3a' : '#b4a478', fang && y > ld - 3 ? 1 : 2, 1);
     }
-    // Hilo de baba y el fondo de la garganta, rojo.
-    P(g, cx - 5, cy - 1, '#9a7a80', 1, Math.max(1, H - 3)); P(g, cx + 7, cy, '#8a6a70', 1, Math.max(1, H - 5));
+    // Babas: hilos que se estiran con la mandíbula y una gota que cuelga y cae.
+    for (const [bx, ph] of [[-5, 0], [7, 1.7]]) {
+      const stretch = H - 3 + Math.sin(t * 2 + ph) * 1.5;
+      if (stretch > 2) for (let y = 0; y < stretch; y++) P(g, cx + bx + Math.sin(y * 0.5 + t) * 0.4, cy - H / 2 + 1 + y, '#9a7a80');
+    }
+    const dp = (t * 0.45) % 1, dropX = cx + 9, base = cy + H / 2 + 2;
+    const hang = Math.min(1, dp / 0.7) * 7, fall = dp > 0.7 ? ((dp - 0.7) / 0.3) ** 2 * 30 : 0;
+    for (let y = 0; y < hang; y++) P(g, dropX, base + y + (fall ? fall : 0) * (y / Math.max(1, hang)), '#a8889a');
+    P(g, dropX - 0.5, base + hang + fall, '#c8a8b8', 2, 2);
     P(gl, cx - 6, cy, '#3a0408', 12, Math.max(1, H / 2));
   } else if (o.talk > 0.02) {
-    const h = 1 + o.talk * 6, w = 8 + o.talk * 3;
+    const h = 0.5 + o.talk * 4.5, w = 7 + o.talk * 2;
+    g.fillStyle = '#5a1a1e';
+    g.beginPath(); g.ellipse(MOUTH.x, MOUTH.y + h * 0.3, w + 1, h * 0.6 + 1, 0, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#0c0206';
-    g.beginPath(); g.ellipse(MOUTH.x, MOUTH.y + h * 0.35, w, h * 0.6, 0, 0, Math.PI * 2); g.fill();
-    if (h > 3) for (let x = -5; x <= 5; x += 2) P(g, MOUTH.x + x, MOUTH.y + 0.5, host ? '#e8d8c0' : '#c8b8a0', 1, 1);
-    P(gl, MOUTH.x - 4, MOUTH.y + 1, host ? '#4a2a08' : '#3a0614', 8, 2);
+    g.beginPath(); g.ellipse(MOUTH.x, MOUTH.y + h * 0.3, w, h * 0.6, 0, 0, Math.PI * 2); g.fill();
+    if (h > 2.5) for (let x = -5; x <= 5; x += 2) P(g, MOUTH.x + x, MOUTH.y - h * 0.2, '#e8d8c0', 1, 1);
+    P(gl, MOUTH.x - 4, MOUTH.y + 1, '#4a2a08', 8, 2);
   }
   // Sello del altar: un ojo que se ilumina con cada latido.
   g.fillStyle = '#1a0408';

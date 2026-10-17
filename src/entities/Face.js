@@ -108,7 +108,8 @@ export class Face {
     // Si te alejas, la próxima vez te habla enseguida.
     if (!near && this.next > 2) this.next = Math.min(this.next, 2);
 
-    if (this.t - this.drawnAt >= 1 / 20) { this.drawnAt = this.t; this.#draw(); }
+    this.#animate(dt);
+    if (this.t - this.drawnAt >= 1 / 30) { this.drawnAt = this.t; this.#draw(); }
   }
 
   #spark(n) {
@@ -140,13 +141,57 @@ export class Face {
     }
   }
 
-  #draw() {
-    const p = this.game.player, t = this.t;
+  // Gestos: mirada con sacádicos, parpadeos, pupila, chasquidos de dientes y, ya libre,
+  // los ojos que se entreabren de vez en cuando. Avanza con dt real (lo llama update).
+  #animate(dt) {
+    const p = this.game.player, A = (this.anim ??= { lx: 0, ly: 0, tx: 0, ty: 0, next: 0, blink: 0, bt: 3, b3: 0, b3t: 5, snap: 0, st: 4, open: 0, ot: 8, pupil: 1, wide: 0, talk: 0 });
+    const host = this.k > 0.5, talking = this.talk > 0;
     const dx = p.cx - this.cx, dy = p.cy - this.cy, d = Math.hypot(dx, dy) || 1;
+    // Mirada: salta (rápido) a un punto nuevo cada poco; el parásito casi siempre a ti.
+    if ((A.next -= dt) <= 0) {
+      const toYou = host ? Math.random() < 0.4 : Math.random() < 0.8;
+      A.tx = toYou ? dx / d : Math.random() * 2 - 1;
+      A.ty = toYou ? dy / d : Math.random() * 1.4 - 0.7;
+      A.next = host ? 1.5 + Math.random() * 2.5 : 0.25 + Math.random() * 1.1;
+    }
+    const sp = Math.min(1, dt * (host ? 4 : 22));
+    A.lx += (A.tx - A.lx) * sp; A.ly += (A.ty - A.ly) * sp;
+    // Parpadeo (0 abierto, 1 cerrado): cierra rápido y abre algo más lento.
+    if ((A.bt -= dt) <= 0) { A.blinkT = 0; A.bt = 2.2 + Math.random() * 4 + (Math.random() < 0.2 ? -1.8 : 0); }
+    if (A.blinkT !== undefined) { A.blinkT += dt; const u = A.blinkT / 0.2; A.blink = u < 0.4 ? u / 0.4 : u < 1 ? 1 - (u - 0.4) / 0.6 : 0; if (u >= 1) A.blinkT = undefined; }
+    if ((A.b3t -= dt) <= 0) { A.b3T = 0; A.b3t = 3 + Math.random() * 6; }
+    if (A.b3T !== undefined) { A.b3T += dt; const u = A.b3T / 0.3; A.b3 = u < 0.5 ? u * 2 : u < 1 ? 2 - u * 2 : 0; if (u >= 1) A.b3T = undefined; }
+    // Pupila: se dilata al hablar o si lo tienes cerca.
+    const wantP = 1 + (talking ? 0.5 : 0) + (d < 120 ? 0.3 : 0);
+    A.pupil += (wantP - A.pupil) * Math.min(1, dt * 3);
+    // Chasquido de dientes del parásito (callado): abre de golpe y cierra con un clac.
+    if (!host && !talking && (A.st -= dt) <= 0) { A.snapT = 0; A.st = 3 + Math.random() * 5; }
+    if (A.snapT !== undefined) {
+      A.snapT += dt; const u = A.snapT / 0.45;
+      A.snap = u < 0.6 ? u / 0.6 : u < 0.75 ? 0.9 : u < 1 ? 1 - (u - 0.75) / 0.25 : 0;
+      if (u >= 0.75 && !A.clacked) { A.clacked = true; this.game.audio.play('crunch', this.center); }
+      if (u >= 1) { A.snapT = undefined; A.clacked = false; }
+    }
+    // Libre: de vez en cuando entreabre los ojos un par de segundos.
+    if (host && (A.ot -= dt) <= 0) { A.oT = 0; A.ot = 7 + Math.random() * 6; }
+    if (A.oT !== undefined) { A.oT += dt; const u = A.oT / 3.2; A.open = u < 0.3 ? u / 0.3 : u < 0.75 ? 1 : u < 1 ? 1 - (u - 0.75) / 0.25 : 0; if (u >= 1) A.oT = undefined; }
+    // Habla por sílabas: cada una con su apertura; pausas breves de vez en cuando.
+    if (talking) {
+      const sy = this.t * (host ? 6 : 7.5), i = Math.floor(sy), h = Math.abs(Math.sin(i * 12.9898 + 4.1) * 43758.5453) % 1;
+      A.talk = h < 0.12 ? 0.08 : (0.35 + 0.65 * h) * Math.sin(Math.PI * (sy - i));
+    } else A.talk = Math.max(0, (A.talk ?? 0) - dt * 6);
+    A.wide += ((talking && !host ? 1 : 0) - A.wide) * Math.min(1, dt * 5);
+  }
+
+  #draw() {
+    const t = this.t, A = this.anim ?? {};
     // Latido: más rápido y nervioso poseído; lento y hondo liberado.
     const period = this.k > 0.5 ? 1.25 : 0.82;
-    const talk = this.talk > 0 ? 0.35 + Math.abs(Math.sin(t * (this.k > 0.5 ? 8 : 12))) * 0.65 : 0;
-    drawShrine(this.spr.g, this.spr.gl, { bases: BASES, k: this.k, t, beat: (t % period) / period, talk, look: [dx / d, dy / d] });
+    drawShrine(this.spr.g, this.spr.gl, {
+      bases: BASES, k: this.k, t, beat: (t % period) / period,
+      talk: A.talk ?? 0, look: [A.lx ?? 0, A.ly ?? 0], blink: A.blink ?? 0, blink3: A.b3 ?? 0,
+      pupil: A.pupil ?? 1, wide: A.wide ?? 0, snap: A.snap ?? 0, hostOpen: A.open ?? 0,
+    });
     // Liberándose: tiembla.
     const shake = this.state === 'waking' && this.wake < 2.2 ? (Math.random() - 0.5) * 3 : 0;
     this.spr.place(this.x0 + shake, this.y0);
