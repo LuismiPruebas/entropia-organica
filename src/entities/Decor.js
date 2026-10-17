@@ -6,8 +6,14 @@ import { canvasSprite } from './Puzzles.js';
 // "Decoración (sistema nervioso)") para dar variedad al fondo. Animadas, sin colisión.
 // De fondo por defecto (las paredes de la sala las tapan); con front: true, por delante.
 //
-// En la sala: decor: [{ x, y, type, flip?, front? }]. (x, y) es la casilla del centro de
-// su base (las que cuelgan del techo, como el haz nervioso, cuelgan de esa casilla).
+// En la sala: decor: [{ x, y, type, flip?, front?, invert? }]. (x, y) es la casilla del
+// centro de su base; con invert: true la estructura va boca abajo, colgada del techo de
+// esa casilla.
+//
+// Muro eléctrico: una neurona en el suelo y otra colgada del techo, en la misma columna
+// (o una al lado), se tienden un haz de rayos entre sus somas que se enciende cada poco
+// (wall: { on, off, delay } en la del suelo, en segundos). Avisa cargando antes de
+// encenderse; encendido, hiere y empuja.
 
 const K = '#140c10';
 const C = {                       // paleta nerviosa
@@ -32,7 +38,7 @@ const glowAt = (gl, x, y, c, n = 2) => px(gl, x - (n >> 1), y - (n >> 1), c, n, 
 export const DECOR = {
   // Neurona: soma con núcleo, dendritas ramificadas y axón mielinizado hacia abajo.
   neurona: {
-    name: 'Neurona', w: 72, h: 80,
+    name: 'Neurona', w: 72, h: 80, sway: true, soma: [36, 30],
     setup(r) {
       const cx = 36, cy = 30, dend = [];
       for (let i = 0; i < 6; i++) {
@@ -59,8 +65,9 @@ export const DECOR = {
       for (let i = 2; i < s.axon.length - 1; i += 6) { const [x, y] = s.axon[i]; blob(g, x, y + 1, 2.4, 2.6, C.myelin, C.myelinD); }
       const shot = fire > 0.55 ? Math.floor(((fire - 0.55) / 0.45) * (s.axon.length - 1)) : -1;
       if (shot >= 0) { const [x, y] = s.axon[shot]; px(g, x - 1, y - 1, C.impL, 3, 3); glowAt(gl, x, y, C.imp, 5); }
-      // Soma: se ilumina al disparar.
-      const flash = fire > 0.5 && fire < 0.62 ? 1 : 0;
+      // Soma: se ilumina al disparar (y mientras su muro eléctrico carga o arde).
+      const flash = (fire > 0.5 && fire < 0.62) || (s.charge ?? 0) > 0.05 ? 1 : 0;
+      if ((s.charge ?? 0) > 0.05) for (let k = 0; k < 3; k++) { const a = Math.random() * Math.PI * 2, d = 9 + Math.random() * 6; seg(g, s.cx + Math.cos(a) * 7, s.cy + Math.sin(a) * 6, s.cx + Math.cos(a) * d, s.cy + Math.sin(a) * d, C.impL); seg(gl, s.cx, s.cy, s.cx + Math.cos(a) * d, s.cy + Math.sin(a) * d, C.imp); }
       part(g, s.cx, s.cy, 9 + flash * 0.6, 8 + flash * 0.6, flash ? C.hi : C.tissueL, C.tissue);
       blob(g, s.cx + 1, s.cy, 3.4, 3.2, flash ? C.impL : '#2a1a40');
       px(g, s.cx, s.cy - 1, flash ? '#ffffff' : C.hi, 2, 2);
@@ -98,54 +105,6 @@ export const DECOR = {
       }
     },
   },
-  // Haz nervioso: un nervio grueso en arco (cuelga del techo por sus dos extremos), con su
-  // vaina de mielina por segmentos y la señal que corre a lo largo; caen fibras sueltas.
-  nervio: {
-    name: 'Haz nervioso', w: 128, h: 56, hang: true,
-    setup(r) {
-      const pts = [];
-      for (let i = 0; i <= 120; i++) { const u = i / 120; pts.push([4 + u * 120, 6 + Math.sin(u * Math.PI) * 30 + Math.sin(u * 9) * 1.5]); }
-      const hang = [];
-      for (let i = 0; i < 9; i++) { const j = 10 + Math.floor(r() * 100); hang.push({ p: pts[j], len: 6 + r() * 14, ph: r() * 6 }); }
-      return { pts, hang };
-    },
-    draw(g, gl, t, s) {
-      for (const h of s.hang) { const sw = Math.sin(t * 1.3 + h.ph) * 1.5; seg(g, h.p[0], h.p[1], h.p[0] + sw, h.p[1] + h.len, C.tissue, 1); px(g, h.p[0] + sw, h.p[1] + h.len, C.hi); }
-      for (let i = 1; i < s.pts.length; i++) seg(g, s.pts[i - 1][0], s.pts[i - 1][1], s.pts[i][0], s.pts[i][1], K, 8);   // contorno, todo primero
-      for (let i = 1; i < s.pts.length; i++) {
-        const [ax, ay] = s.pts[i - 1], [bx, by] = s.pts[i];
-        const band = Math.floor(i / 7) % 2;
-        seg(g, ax, ay, bx, by, band ? C.myelin : C.myelinD, 6);
-        seg(g, ax, ay - 1.5, bx, by - 1.5, band ? '#f0e8f8' : C.myelin, 1);
-        if (i % 7 === 0) seg(g, bx, by - 3, bx, by + 3, C.tissueD, 1);   // nódulos de Ranvier
-      }
-      // La señal salta de nódulo en nódulo.
-      const n = s.pts.length, u = (t * 0.6) % 1, i = Math.floor(u * (n - 1) / 7) * 7;
-      const [x, y] = s.pts[Math.min(n - 1, i)];
-      px(g, x - 1, y - 2, C.impL, 3, 4); blob(gl, x, y, 4, 4, '#2a5a8a');
-    },
-  },
-  // Sinapsis: dos terminales enfrentados; las vesículas sueltan neurotransmisor a través
-  // de la hendidura y el de enfrente chispea al recibirlo.
-  sinapsis: {
-    name: 'Sinapsis', w: 64, h: 40,
-    setup(r) { return { ves: [...Array(6)].map(() => ({ x: 10 + r() * 10, y: 13 + r() * 14 })), ph: r() * 3 }; },
-    draw(g, gl, t, s) {
-      seg(g, 0, 20, 14, 20, C.tissueD, 6); seg(g, 50, 20, 64, 20, C.tissueD, 6);
-      part(g, 18, 20, 11, 12, C.tissueL, C.tissue, C.myelin);
-      part(g, 46, 20, 10, 12, C.tissueL, C.tissue, C.myelin);
-      for (const v of s.ves) { blob(g, v.x, v.y, 2, 2, C.myelin, C.myelinD); }
-      // Neurotransmisor cruzando la hendidura.
-      const u = ((t * 0.9 + s.ph) % 1);
-      for (let k = 0; k < 5; k++) {
-        const p = (u + k * 0.12) % 1, x = 28 + p * 9, y = 14 + ((k * 37) % 13);
-        if (p < 0.95) { px(g, x, y, C.gold); px(gl, x, y, '#5a4010'); }
-      }
-      // Receptores del otro lado.
-      for (let y = 10; y <= 30; y += 4) px(g, 36, y, C.hi, 1, 2);
-      if (u > 0.8) { for (let k = 0; k < 4; k++) { const y = 12 + Math.random() * 16; seg(g, 37, y, 40 + Math.random() * 3, y + (Math.random() - 0.5) * 4, C.impL); } blob(gl, 46, 20, 6, 7, '#2a5a8a'); }
-    },
-  },
   // Médula: columna con anillos de vértebra, raíces nerviosas a los lados y un impulso
   // que sube por ella.
   medula: {
@@ -169,27 +128,6 @@ export const DECOR = {
       if (y > 0) { px(g, 22, y, C.impL, 4, 5); blob(gl, 24, y + 2, 5, 6, '#2a5a8a'); }
     },
   },
-  // Astrocito: célula en estrella con prolongaciones que se mecen; respira luz despacio.
-  astrocito: {
-    name: 'Astrocito', w: 56, h: 56,
-    setup(r) { return { arms: [...Array(10)].map((_, i) => ({ a: (i / 10) * Math.PI * 2 + r() * 0.4, len: 12 + r() * 12, ph: r() * 6 })) }; },
-    draw(g, gl, t, s) {
-      const cx = 28, cy = 28, br = 0.5 + 0.5 * Math.sin(t * 1.1);
-      for (const a of s.arms) {
-        let x = cx, y = cy, ang = a.a;
-        for (let i = 0; i < a.len; i++) {
-          ang += Math.sin(t * 0.8 + a.ph + i * 0.3) * 0.04;
-          const nx = x + Math.cos(ang), ny = y + Math.sin(ang);
-          seg(g, x, y, nx, ny, i < a.len * 0.5 ? C.tissueL : C.tissue, i < a.len * 0.4 ? 2 : 1);
-          x = nx; y = ny;
-        }
-        blob(g, x, y, 1.5, 1.5, C.hi);
-        if (br > 0.7) px(gl, x, y, '#2a4a70');
-      }
-      part(g, cx, cy, 6, 5.5, mix(C.tissueL, C.hi, br * 0.6), C.tissue, C.myelin);
-      blob(gl, cx, cy, 4 + br * 2, 4 + br * 2, mix('#0a1020', '#2a5a8a', br));
-    },
-  },
 };
 
 export class Decor {
@@ -202,11 +140,13 @@ export class Decor {
     const order = def.front ? 2 : -5;
     this.spr = canvasSprite(game, T.w, T.h, order);
     this.spr.glow.renderOrder = order;
-    // Base centrada en (x, y); lo que cuelga, desde el techo de esa casilla.
+    // Base centrada en (x, y); invertida, colgada del techo de esa casilla.
     this.x0 = (def.x + 0.5) * TILE - T.w / 2;
-    this.y0 = T.hang ? def.y * TILE : (def.y + 1) * TILE - T.h;
+    this.y0 = def.invert ? def.y * TILE : (def.y + 1) * TILE - T.h;
     this.spr.place(this.x0, this.y0);
     this.spr.mesh.scale.x = this.spr.glow.scale.x = def.flip ? -1 : 1;
+    this.spr.mesh.scale.y = this.spr.glow.scale.y = def.invert ? -1 : 1;
+    this.jolt = 0;
     this.t = Math.random() * 10;
     this.drawnAt = -1;
   }
@@ -215,10 +155,109 @@ export class Decor {
     this.t += dt;
     if (this.t - this.drawnAt < 1 / 20) return;
     this.drawnAt = this.t;
-    const { g, gl } = this.spr;
-    g.clearRect(0, 0, this.type.w, this.type.h);
-    gl.clearRect(0, 0, this.type.w, this.type.h);
-    this.type.draw(g, gl, this.t, this.state);
+    const { g, gl } = this.spr, T = this.type;
+    g.clearRect(0, 0, T.w, T.h);
+    gl.clearRect(0, 0, T.w, T.h);
+    if (T.sway) {
+      // Se mece desde su base y de vez en cuando da una sacudida (más si su muro arde).
+      if (Math.random() < 0.012 + (this.state.charge ?? 0) * 0.15) this.jolt = 1;
+      this.jolt = Math.max(0, this.jolt - 0.12);
+      const a = Math.sin(this.t * 0.9) * 0.05 + Math.sin(this.t * 2.3) * 0.015 + (this.jolt > 0 ? (Math.random() - 0.5) * 0.14 * this.jolt : 0);
+      for (const c of [g, gl]) { c.save(); c.translate(T.w / 2, T.h); c.rotate(a); c.translate(-T.w / 2, -T.h); }
+      T.draw(g, gl, this.t, this.state);
+      g.restore(); gl.restore();
+    } else T.draw(g, gl, this.t, this.state);
+    this.spr.commit();
+  }
+
+  // Dónde está el soma en el mundo (para los muros eléctricos).
+  get soma() {
+    const T = this.type, [sx, sy] = T.soma ?? [T.w / 2, T.h / 2];
+    return { x: this.x0 + (this.def.flip ? T.w - sx : sx), y: this.def.invert ? this.y0 + T.h - sy : this.y0 + sy };
+  }
+
+  dispose() { this.spr.dispose(); }
+}
+
+// Parejas de neuronas que forman un muro: una en el suelo y otra colgada del techo
+// por encima, a una casilla como mucho de su columna. Devuelve [{ floor, ceil }] (los
+// índices en la lista de decoración).
+export function neuronPairs(list) {
+  const out = [], used = new Set();
+  list.forEach((d, i) => {
+    if (d.type !== 'neurona' || d.invert) return;
+    let best = -1, bd = Infinity;
+    list.forEach((c, j) => {
+      if (c.type !== 'neurona' || !c.invert || used.has(j) || c.y >= d.y || Math.abs(c.x - d.x) > 1) return;
+      const dd = d.y - c.y + Math.abs(c.x - d.x) * 4;
+      if (dd < bd) { bd = dd; best = j; }
+    });
+    if (best >= 0) { used.add(best); out.push({ floor: i, ceil: best }); }
+  });
+  return out;
+}
+export const WALL_DEFAULT = { on: 1.4, off: 2.6, delay: 0 };
+const WARN = 0.8;               // segundos de aviso (carga) antes de encenderse
+
+// Muro eléctrico entre dos neuronas enfrentadas.
+export class ElectricWall {
+  constructor(game, a, b) {
+    this.game = game;
+    this.a = a; this.b = b;     // Decor del suelo y del techo
+    const w = { ...WALL_DEFAULT, ...(a.def.wall ?? {}) };
+    this.on = Math.max(0.2, w.on); this.off = Math.max(0.2, w.off);
+    this.t = -(w.delay ?? 0);
+    // De techo a suelo: la descarga recorre también el cuerpo de las dos neuronas, así
+    // que no se puede pasar por debajo ni por encima de los somas.
+    const top = b.soma, bot = a.soma;
+    this.x = (top.x + bot.x) / 2; this.y0 = b.y0 + 2; this.y1 = a.y0 + a.type.h - 2;
+    this.W = 28;
+    this.h = Math.max(8, this.y1 - this.y0);
+    this.spr = canvasSprite(game, this.W, Math.ceil(this.h), 3);
+    this.spr.place(this.x - this.W / 2, this.y0);
+    this.phase = 'off';
+  }
+
+  get center() { return { x: this.x, y: (this.y0 + this.y1) / 2 }; }
+
+  update(dt) {
+    const g = this.game, p = g.player, cyc = this.on + this.off;
+    this.t += dt;
+    const u = ((this.t % cyc) + cyc) % cyc;           // 0..off: apagado · off..cyc: encendido
+    const phase = this.t < 0 ? 'off' : u >= this.off ? 'on' : u >= this.off - WARN ? 'warn' : 'off';
+    if (phase !== this.phase) {
+      if (phase === 'warn') g.audio.play('gangCharge', this.center);
+      if (phase === 'on') { g.audio.play('gangBlink', this.center); g.shake = Math.max(g.shake ?? 0, 1.5); }
+      this.phase = phase;
+    }
+    const k = phase === 'on' ? 1 : phase === 'warn' ? (u - (this.off - WARN)) / WARN : 0;
+    this.a.state.charge = this.b.state.charge = k;
+    // Encendido: hiere y aparta al que lo toque.
+    if (phase === 'on' && p.x + p.w > this.x - 5 && p.x < this.x + 5 && p.y + p.h > this.y0 && p.y < this.y1) {
+      g.hurtPlayer(12, this.x, 'muro eléctrico');
+      if (Math.random() < 0.5) g.glowParticles.emit(p.cx, p.cy, { vx: (Math.random() - 0.5) * 80, vy: -40, life: 0.3, color: [0.6, 0.9, 1] });
+    }
+    this.#draw(phase, k);
+  }
+
+  #draw(phase, k) {
+    const { g, gl } = this.spr, W = this.W, H = Math.ceil(this.h), cx = W / 2;
+    g.clearRect(0, 0, W, H); gl.clearRect(0, 0, W, H);
+    if (phase === 'off') { this.spr.commit(); return; }
+    // Aviso: chispas sueltas que nacen en los extremos. Encendido: varios rayos.
+    const bolts = phase === 'on' ? 3 : Math.random() < 0.3 + k * 0.5 ? 1 : 0;
+    for (let n = 0; n < bolts; n++) {
+      const reach = phase === 'on' ? H : H * (0.15 + k * 0.25), from = n % 2 ? H : 0, dir = from ? -1 : 1;
+      let x = cx, y = from;
+      const steps = Math.max(3, Math.round(reach / 7));
+      for (let i = 1; i <= steps; i++) {
+        const nx = cx + (i < steps || phase !== 'on' ? (Math.random() - 0.5) * (phase === 'on' ? 14 : 8) : 0), ny = from + dir * (reach * i) / steps;
+        seg(gl, x, y, nx, ny, '#4aa0ff', phase === 'on' ? 3 : 2);
+        seg(g, x, y, nx, ny, n === 0 ? '#ffffff' : C.impL, 1);
+        x = nx; y = ny;
+      }
+    }
+    if (phase === 'on') { gl.fillStyle = 'rgba(60,140,255,0.18)'; gl.fillRect(cx - 6, 0, 12, H); }
     this.spr.commit();
   }
 

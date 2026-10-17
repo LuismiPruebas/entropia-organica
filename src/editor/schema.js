@@ -2,6 +2,7 @@
 // pintan y los elementos que se colocan (con su posición, su caja y una plantilla).
 import { ENEMIES } from '../data/enemies.js';
 import { DECOR } from '../entities/Decor.js';
+const decorBox = (o) => { const T = DECOR[o.type] ?? DECOR.neurona; return [Math.ceil(T.w / 16), Math.ceil(T.h / 16)]; };
 import { MUTATIONS, DNA_CHARS } from '../data/mutations.js';
 
 // Tiles: carácter, nombre y color en la vista esquemática.
@@ -141,10 +142,10 @@ export const KINDS = {
   // el centro de su base; las que cuelgan (haz nervioso), del techo de esa casilla.
   decor: {
     label: 'Decoración (sistema nervioso)', color: '#8a6ab8',
-    make: (x, y) => ({ x, y, type: 'neurona', flip: false, front: false }),
-    box: (o) => { const T = DECOR[o.type] ?? DECOR.neurona, w = Math.ceil(T.w / 16), h = Math.ceil(T.h / 16); return [o.x - Math.floor((w - 1) / 2), T.hang ? o.y : o.y - h + 1, w, h]; },
-    move: (o, x, y) => { const T = DECOR[o.type] ?? DECOR.neurona, w = Math.ceil(T.w / 16), h = Math.ceil(T.h / 16); o.x = x + Math.floor((w - 1) / 2); o.y = T.hang ? y : y + h - 1; },
-    text: (o) => DECOR[o.type]?.name ?? o.type,
+    make: (x, y) => ({ x, y, type: 'neurona', flip: false, front: false, invert: false }),
+    box: (o) => { const [w, h] = decorBox(o); return [o.x - Math.floor((w - 1) / 2), o.invert ? o.y : o.y - h + 1, w, h]; },
+    move: (o, x, y) => { const [w, h] = decorBox(o); o.x = x + Math.floor((w - 1) / 2); o.y = o.invert ? y : y + h - 1; },
+    text: (o) => `${DECOR[o.type]?.name ?? o.type}${o.invert ? ' (techo)' : ''}`,
   },
   // Evento de texto: al entrar en la zona salta un diálogo (se queda hasta que el jugador
   // pasa) o un aviso (se va solo). once: solo la primera vez.

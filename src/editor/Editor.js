@@ -14,7 +14,7 @@ import { enemyThumb } from './EnemyThumbs.js';
 import { paintShrineBase, drawShrine, SW as SHRINE_W, SH as SHRINE_H } from '../entities/ShrineArt.js';
 import { faceData } from '../data/faces.js';
 import { linkArrival } from '../data/connections.js';
-import { DECOR, decorPreview } from '../entities/Decor.js';
+import { DECOR, decorPreview, neuronPairs, WALL_DEFAULT } from '../entities/Decor.js';
 import { baseNode } from '../data/nodes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -350,13 +350,27 @@ function drawFace(o, z, alpha) {
 const DECOR_PREV = {};
 function drawDecor(o, z, alpha) {
   const T = DECOR[o.type] ?? DECOR.neurona, img = (DECOR_PREV[o.type] ??= decorPreview(o.type));
-  const x = (o.x + 0.5) * z - (T.w / 32) * z, y = T.hang ? o.y * z : (o.y + 1) * z - (T.h / 16) * z;
+  const x = (o.x + 0.5) * z - (T.w / 32) * z, y = o.invert ? o.y * z : (o.y + 1) * z - (T.h / 16) * z;
   g.globalAlpha = alpha;
   g.save();
   if (o.flip) { g.translate(x * 2 + (T.w / 16) * z, 0); g.scale(-1, 1); }
+  if (o.invert) { g.translate(0, y * 2 + (T.h / 16) * z); g.scale(1, -1); }
   g.drawImage(img, x, y, (T.w / 16) * z, (T.h / 16) * z);
   g.restore();
   g.globalAlpha = 1;
+}
+// Muros eléctricos: entre cada neurona del suelo y la del techo que tiene encima.
+function drawElectricWalls(z, r) {
+  const list = r.decor ?? [];
+  for (const { floor, ceil } of neuronPairs(list)) {
+    const a = list[floor], b = list[ceil], T = DECOR.neurona, [, sy] = T.soma;
+    const x = ((a.x + b.x) / 2 + 0.5) * z, y0 = (b.y * 16 + T.h - sy) / 16 * z, y1 = ((a.y + 1) * 16 - T.h + sy) / 16 * z;
+    g.strokeStyle = '#82d2ff'; g.lineWidth = 3; g.setLineDash([6, 4]);
+    g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke(); g.setLineDash([]);
+    const w = { ...WALL_DEFAULT, ...(a.wall ?? {}) };
+    g.fillStyle = '#82d2ff'; g.font = 'bold 11px monospace'; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillText(`⚡ muro: ${w.on}s on / ${w.off}s off${w.delay ? ` · desfase ${w.delay}s` : ''}`, x + 6, (y0 + y1) / 2);
+  }
 }
 function showDecorRow() { if ($('decor-row')) $('decor-row').style.display = S.tool === 'place' && S.kind === 'decor' ? '' : 'none'; }
 // Un enemigo dibujado con su aspecto, apoyado (centrado) en el fondo de su caja.
@@ -578,7 +592,8 @@ function draw() {
   // Fantasma del enemigo que se va a colocar.
   if (S.tool === 'place' && S.kind === 'enemies' && S.hover && S.enemyType) drawEnemy({ type: S.enemyType, x: S.hover[0], y: S.hover[1] }, z, 0.55);
   if (S.tool === 'place' && S.kind === 'faces' && S.hover) drawFace({ x: S.hover[0], y: S.hover[1] }, z, 0.45);
-  if (S.tool === 'place' && S.kind === 'decor' && S.hover) drawDecor({ x: S.hover[0], y: S.hover[1], type: S.decorType ?? 'neurona' }, z, 0.5);
+  if (S.tool === 'place' && S.kind === 'decor' && S.hover) drawDecor({ x: S.hover[0], y: S.hover[1], type: S.decorType === 'neurona-techo' ? 'neurona' : S.decorType ?? 'neurona', invert: S.decorType === 'neurona-techo' }, z, 0.5);
+  drawElectricWalls(z, r);
   drawArea(z);
   // Rectángulo en curso.
   if (S.drag?.rect) {
@@ -700,7 +715,7 @@ cv.addEventListener('mousedown', (e) => {
       const o = K.make(x, y, room());
       if (S.kind === 'nodules' && S.noduleLux) o.push('luz'); // desde la paleta: nódulo lumínico
       if (S.kind === 'enemies' && S.enemyType) o.type = S.enemyType; // el elegido en el Bestiario
-      if (S.kind === 'decor') o.type = S.decorType ?? 'neurona';                 // la elegida en el desplegable
+      if (S.kind === 'decor') { const dt = S.decorType ?? 'neurona'; o.type = dt === 'neurona-techo' ? 'neurona' : dt; o.invert = dt === 'neurona-techo'; }   // la elegida en el desplegable
       if (o) { (room()[S.kind] ??= []).push(o); S.sel = { kind: S.kind, index: room()[S.kind].length - 1 }; }
       else if (S.kind === 'pods') S.sel = { kind: 'pods', index: room().pods.at.length - 1 };
       touch(); renderInspector(); return;
@@ -999,7 +1014,7 @@ function renderTools() {
   for (const b of document.querySelectorAll('[data-tool]')) b.onclick = () => setTool(b.dataset.tool);
   $('kind').innerHTML = Object.entries(KINDS).filter(([k]) => k !== 'exits').map(([k, K]) => `<option value="${k}">${K.label}</option>`).join('');
   $('kind').onchange = () => { S.kind = $('kind').value; S.noduleLux = false; showDecorRow(); };
-  $('decor-type').innerHTML = Object.entries(DECOR).map(([k, d]) => `<option value="${k}">${d.name}</option>`).join('');
+  $('decor-type').innerHTML = Object.entries(DECOR).map(([k, d]) => `<option value="${k}">${d.name}</option>` + (k === 'neurona' ? '<option value="neurona-techo">Neurona (colgada del techo)</option>' : '')).join('');
   $('decor-type').value = S.decorType ??= 'neurona';
   $('decor-type').onchange = () => { S.decorType = $('decor-type').value; draw(); };
   showDecorRow();
@@ -1196,6 +1211,18 @@ function renderInspector() {
     else html += field(k, v, (nv) => { o[k] = nv; });
   }
   if (kind === 'exits') html += field('llega al punto (opcional: en vez de "spawn")', { v: o.toLink ?? '', options: ['', ...(S.rooms[o.to]?.links ?? []).map((l) => l.id)] }, (nv) => { if (nv) o.toLink = nv; else delete o.toLink; }, 'select');
+  if (kind === 'decor' && o.type === 'neurona') {
+    const list = room().decor ?? [], i = list.indexOf(o), pair = neuronPairs(list).find((p) => p.floor === i || p.ceil === i);
+    if (!pair) html += `<p class="dim">Pon otra neurona ${o.invert ? 'en el suelo, debajo' : 'colgada del techo (invertida), encima'} en esta misma columna (o una al lado) y entre las dos se forma un muro eléctrico.</p>`;
+    else if (pair.ceil === i) html += `<p class="dim">Forma un muro eléctrico con la neurona del suelo de debajo: sus tiempos se ajustan en aquella.</p>`;
+    else {
+      const w = { ...WALL_DEFAULT, ...(o.wall ?? {}) }, setWall = (k, v) => { o.wall = { ...(o.wall ?? {}), [k]: Math.max(0, Math.round(v * 10) / 10) }; if (o.wall[k] === WALL_DEFAULT[k]) delete o.wall[k]; if (!Object.keys(o.wall).length) delete o.wall; };
+      html += `<h4 style="margin-top:8px">Muro eléctrico</h4>`;
+      html += field('encendido (segundos)', w.on, (v) => setWall('on', v), 'number');
+      html += field('apagado (segundos; avisa cargando 0,8 s antes)', w.off, (v) => setWall('off', v), 'number');
+      html += field('desfase (segundos; para alternar varios muros)', w.delay, (v) => setWall('delay', v), 'number');
+    }
+  }
   if (kind === 'enemies') html += `<p class="dim">${ENEMIES[o.type]?.name ?? ''} · ${ENEMIES[o.type]?.w}x${ENEMIES[o.type]?.h}px · ${ENEMIES[o.type]?.behavior}</p>`;
   if (kind === 'pods') html += field('abre la compuerta', room().pods.opens, (v) => { room().pods.opens = v; }) + field('orden (índices)', room().pods.order, (v) => { room().pods.order = v; });
   html += `<div class="row"><button id="del">Eliminar</button><button id="dup">Duplicar</button></div>`;

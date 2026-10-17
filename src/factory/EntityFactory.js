@@ -21,7 +21,7 @@ import { YolkSac } from '../entities/YolkSac.js';
 import { Gate, Pad, PodChain, Valve, Float, Mover, PhotoMembrane, buildFangs } from '../entities/Puzzles.js';
 import { Face } from '../entities/Face.js';
 import { Veil, veilGroups } from '../entities/Veil.js';
-import { Decor } from '../entities/Decor.js';
+import { Decor, ElectricWall, neuronPairs } from '../entities/Decor.js';
 
 // Lo hondo que está cada sala: salas de distancia desde el inicio (por las salidas),
 // de 0 a 1 (TIER_DEPTH salas o más). Mide la dificultad de los patrones de disparo.
@@ -148,6 +148,8 @@ export class EntityFactory {
     room.targets = [];
     room.gates = {};
     for (const d of def.gates ?? []) room.gates[d.id] = new Gate(g, room, d);
+    // Decoración (y los muros eléctricos de las neuronas enfrentadas).
+    const decors = (def.decor ?? []).map((d, i) => new Decor(g, room, d, i));
     room.hazards = [
       ...pools,
       // Sistema circulatorio (entities/Blood.js): charcas que laten, arterias, válvulas y ventrículos.
@@ -170,7 +172,8 @@ export class EntityFactory {
       // Rostros del Anfitrión (lore): hablan, se liberan y abren las membranas Z.
       ...(def.faces ?? []).map((d) => new Face(g, room, d)),
       // Decoración (editor): estructuras animadas del sistema nervioso.
-      ...(def.decor ?? []).map((d, i) => new Decor(g, room, d, i)),
+      ...decors,
+      ...neuronPairs(def.decor ?? []).map((p) => new ElectricWall(g, decors[p.floor], decors[p.ceil])),
       // Velos de membrana: capas translúcidas por delante de todo.
       ...veilGroups(veilCells).map((cells, i) => new Veil(g, room, cells, i)),
     ];
