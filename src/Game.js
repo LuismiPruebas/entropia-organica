@@ -22,7 +22,7 @@ import { START } from './data/levels.js';
 import { MUTATIONS, FRAGMENTS, LINES } from './data/mutations.js';
 import { BIOMES } from './data/biomes.js';
 import { LEVELS } from './data/levels.js';
-import { ITEMS } from './state/State.js';
+import { ITEMS, INFECTION } from './state/State.js';
 import { linkArrival } from './entities/Link.js';
 
 const CONE_HALF = Math.PI / 6;
@@ -379,7 +379,7 @@ export class Game {
     }
     const fromEnemy = cause !== 'espinas';
     st.damage(fromEnemy ? n * st.mod('damageTaken') : n, cause);
-    if (status === 'infection' && st.applyStatus('infection', 3)) this.say('Infección: la herida empieza a pudrirse.', 1.8);
+    if (status === 'infection' && st.applyStatus('infection', INFECTION.time)) this.say('Infección: la herida se pudre y te revuelve por dentro. Te dará arcadas.', 2.5);
     p.invuln = 0.9;
     p.rope = null;
     p.vy = -160;

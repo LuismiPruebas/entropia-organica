@@ -177,9 +177,9 @@ export class NodeMenu {
       {
         icon: ['heal', { doses: res.doses, total: node.doses, fill: res.next ? 1 - res.next / NODE_REGEN : 0 }],
         label: 'Sanar tejido',
-        effect: `<span class="c-int">+${node.cure} integridad</span>${res.next ? ` <span class="dim">(otra cura en ${res.next}s)</span>` : ''}`,
-        cost: `${price(node.heal)}${why(!res.doses && 'útero vacío', st.integrity >= st.maxIntegrity && 'integridad al máximo', !st.canPay(node.heal) && 'no te alcanza')}`,
-        enabled: res.doses > 0 && st.canPay(node.heal) && st.integrity < st.maxIntegrity,
+        effect: `<span class="c-int">+${node.cure} integridad${st.infection > 0 ? ' y cura la infección' : ''}</span>${res.next ? ` <span class="dim">(otra cura en ${res.next}s)</span>` : ''}`,
+        cost: `${price(node.heal)}${why(!res.doses && 'útero vacío', st.integrity >= st.maxIntegrity && st.infection <= 0 && 'integridad al máximo', !st.canPay(node.heal) && 'no te alcanza')}`,
+        enabled: res.doses > 0 && st.canPay(node.heal) && (st.integrity < st.maxIntegrity || st.infection > 0),
         run: () => { if (st.healAtNode(key, g.time, node.heal, node.cure, node.doses)) g.audio.play('womb'); },
       },
       // Células lumínicas: como al encontrarlas, siempre recargan el ojo y, si ya estaba

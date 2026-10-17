@@ -64,8 +64,8 @@ export const PICKUPS = {
   tissue: {
     sprite: 'tissue',
     sound: 'dna',
-    apply: (st) => { st.corrupted = Math.max(0, st.corrupted - 10); st.heal(10); },
-    text: 'Tejido sano: recuperas 10 de integridad corrupta.',
+    apply: (st) => { st.corrupted = Math.max(0, st.corrupted - 10); st.heal(10); st.infection = 0; },
+    text: (p, st) => 'Tejido sano: recuperas 10 de integridad corrupta y se va cualquier infección.',
   },
   dna: {
     sprite: 'dna',

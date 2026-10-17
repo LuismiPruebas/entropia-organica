@@ -212,6 +212,14 @@ const SOUNDS = {
     a.noise(o, { dur: 0.12, vol: 0.5, type: 'highpass', f0: 2500, f1: 1200, delay: 0.22 });
     a.tone(o, { type: 'square', f0: 90, f1: 40, dur: 0.18, vol: 0.2, delay: 0.22 });
   },
+  // Arcada de la infección: la garganta se cierra, gorgotea y suelta el chorro.
+  retch: (a, o) => {
+    a.creature(o, { f0: 130, f1: 90, dur: 0.35, vol: 0.14, formant: 600, q: 4, rough: 1, vib: 18 });
+    a.noise(o, { dur: 0.3, vol: 0.22, type: 'lowpass', f0: 900, f1: 300, delay: 0.38 });
+    a.creature(o, { f0: 110, f1: 70, dur: 0.3, vol: 0.12, formant: 500, q: 4, rough: 1, vib: 25, delay: 0.38 });
+    a.noise(o, { dur: 0.32, vol: 0.2, type: 'lowpass', f0: 800, f1: 250, delay: 0.72 });
+    for (let i = 0; i < 6; i++) a.noise(o, { dur: 0.03, vol: 0.12, type: 'bandpass', f0: rnd(300, 700), q: 6, delay: 0.45 + Math.random() * 0.6 });
+  },
   // Rostro del Anfitrión: poseído, un murmullo grave y áspero con chasquidos húmedos;
   // libre, una voz cálida y honda, como un órgano que suspira.
   faceSpeak: (a, o) => {

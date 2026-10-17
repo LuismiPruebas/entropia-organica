@@ -36,6 +36,10 @@ export const ITEMS = {
 };
 // Coágulo de plasma: cura al momento al cogerlo (solo se encuentra; el útero no lo vende).
 export const PLASMA = { name: 'Coágulo de plasma', heal: 30 };
+// Infección: te pudre al menos 10 s (poco daño, pero arcadas que te dejan vendido; ver
+// Player). La anula la Dermis Nanocutánea; la curan el útero, el Tejido sano, la Célula
+// Madre y la Perla de Nácar.
+export const INFECTION = { time: 10, dps: 1.2 };
 export const REGEN_RATE = 5;          // integridad por segundo con la Célula Madre
 export const ITEM_DROP_CHANCE = 0.02; // por criatura abatida (ni crías ni esbirros)
 // Células lumínicas a la venta en cada útero: pocas, y no vuelven a crecer.
@@ -259,7 +263,7 @@ export class GameState {
     if (this.dead || !this.items[kind] || this.timers[kind] > 0) return false;
     this.items[kind]--;
     this.timers[kind] = ITEMS[kind].time;
-    if (kind === 'shield') this.infection = 0;
+    if (kind === 'shield' || kind === 'regen') this.infection = 0;
     return true;
   }
 
@@ -350,7 +354,7 @@ export class GameState {
     if (this.critical) this.damage(0.8 * dt, 'rechazo');
     if (this.infection > 0) {
       this.infection -= dt;
-      this.damage(2.5 * dt, 'infección');
+      this.damage(INFECTION.dps * dt, 'infección');
     }
   }
 
@@ -467,8 +471,9 @@ export class GameState {
 
   healAtNode(key, now, price, amount = NODE_HEAL, max = NODE_DOSES) {
     const r = this.nodeReserve(key, now, max);
-    if (r.doses <= 0 || this.integrity >= this.maxIntegrity || !this.pay(price)) return false;
+    if (r.doses <= 0 || (this.integrity >= this.maxIntegrity && this.infection <= 0) || !this.pay(price)) return false;
     this.heal(amount);
+    this.infection = 0;                                  // el útero limpia la infección
     const res = this.nodeRes[key];
     if (res.n === max) res.t = now;
     res.n--;

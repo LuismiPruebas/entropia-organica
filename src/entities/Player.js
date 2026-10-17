@@ -3,7 +3,7 @@ import { MUTATIONS } from '../data/mutations.js';
 import { spriteMesh, placeMesh, setMap, canvasTexture } from '../core/Sprites.js';
 import { PlayerBody, BODY_W, BODY_H, CROUCH_DROP } from './PlayerBody.js';
 import { TILE, overlap } from '../core/Physics.js';
-import { OXYGEN_COST } from '../state/State.js';
+import { INFECTION, OXYGEN_COST } from '../state/State.js';
 
 export const GRAVITY = 900;
 const JUMP_V = 320;
@@ -44,6 +44,13 @@ const MELEE_REACH = 22;      // alcance desde el borde del cuerpo
 const MELEE_KNOCK = 210;     // empujón que aparta a la criatura
 const MELEE_TIME = 0.24;     // duración del gesto (para la animación)
 const HIT_STOP = 0.035;      // congelado al acertar: da peso al impacto
+// Arcadas de la infección: lo que dura cada una y una entrada "muerta" mientras dura
+// (nada pulsado; la mira y el ratón siguen donde estaban).
+const RETCH_TIME = 1.15;
+const RETCH_INPUT = (real) => ({
+  down: () => false, hit: () => false, up: () => false, released: new Set(), pressed: new Set(), keys: new Set(),
+  mouse: real.mouse, padAim: { x: 0, y: 0, active: false },
+});
 const MELEE_INFECTION = 0.25; // probabilidad de infectarte al tocar el tejido
 
 // Cómo se lanza la embestida: 'doubleTap' (dos toques rápidos a un lado) o 'shift'.
@@ -277,7 +284,47 @@ export class Player {
     this.lastSafe = { x: this.x, y: this.y };
   }
 
+  // Infectado, cada pocos segundos le dan arcadas: se encorva y vomita, y mientras dura
+  // no responde a los controles (te deja expuesto). Fuera de eso, el paso normal.
   update(dt) {
+    this.#retchTick(dt);
+    if (!(this.retch > 0)) return this.#step(dt);
+    const g = this.game, real = g.input;
+    g.input = RETCH_INPUT(real);
+    try { return this.#step(dt); } finally { g.input = real; }
+  }
+
+  #retchTick(dt) {
+    const g = this.game, st = g.state;
+    if (st.infection <= 0 || st.dead) { this.retch = 0; this.retchCd = undefined; return; }
+    this.retchCd ??= 1.6 + Math.random() * 0.8;
+    if (this.retch > 0) {
+      this.retch -= dt;
+      const t = 1 - this.retch / RETCH_TIME;
+      // Dos arcadas: en cada una, un chorro de vómito hacia delante.
+      const heave = (t > 0.32 && t < 0.5) || (t > 0.6 && t < 0.86);
+      if (heave) {
+        const mx = this.cx + this.facing * 6, my = this.y + 9;
+        for (let i = 0; i < 4; i++) {
+          const chunky = Math.random() < 0.3;
+          g.particles.emit(mx, my, {
+            vx: this.facing * (50 + Math.random() * 80), vy: -10 + Math.random() * 50, life: 0.7 + Math.random() * 0.4, gravity: 520,
+            color: chunky ? [0.42, 0.32, 0.1] : Math.random() < 0.5 ? [0.58, 0.66, 0.16] : [0.66, 0.6, 0.2],
+            stain: Math.random() < 0.5 ? 'rgba(110,130,30,0.75)' : 'rgba(90,70,20,0.7)',
+          });
+        }
+        if (Math.random() < 0.3) g.glowParticles.emit(mx, my, { vx: this.facing * 40, vy: 10, life: 0.3, color: [0.25, 0.35, 0.05] });
+      }
+      if (this.retch <= 0) this.retch = 0;
+    } else if ((this.retchCd -= dt) <= 0 && !this.rope && !this.clinging && !this.swimming) {
+      this.retch = RETCH_TIME;
+      this.retchCd = 3.2 + Math.random() * 1.6;
+      g.audio.play('retch', this);
+      if (!st.seenRetch) { st.seenRetch = true; g.say('La infección te revuelve: vomitas y quedas a merced de lo que te rodea. Cúrate en un útero.', 3.5); }
+    }
+  }
+
+  #step(dt) {
     const { input, state: st, world, audio } = this.game;
     this.fireCd -= dt;
     this.dashCd -= dt;
@@ -1060,7 +1107,7 @@ export class Player {
         g.glowParticles.emit(hx, hy, { vx: Math.cos(a) * (90 + Math.random() * 120), vy: Math.sin(a) * (90 + Math.random() * 120), life: 0.25, color: [1, 0.75, 0.4] });
       }
       st.addBiomass(MELEE_ABSORB);
-      if (Math.random() < MELEE_INFECTION && st.applyStatus('infection', 3)) {
+      if (Math.random() < MELEE_INFECTION && st.applyStatus('infection', INFECTION.time)) {
         g.say('El tejido que has reventado te infecta.', 1.8);
       }
     }
@@ -1096,8 +1143,12 @@ export class Player {
     // Nadando, todo el cuerpo se tumba hacia delante (con cualquier mutación); la mira
     // se compensa para que el arma siga apuntando donde apuntas.
     this.tilt = this.swimK * 0.5;
+    const rt = this.retch > 0 ? 1 - this.retch / RETCH_TIME : 0;
+    this.retchK = rt ? Math.min(1, rt / 0.22, (1 - rt) / 0.14) : 0;
+    const heaveJolt = rt && ((rt > 0.32 && rt < 0.5) || (rt > 0.6 && rt < 0.86)) ? Math.sin(this.anim * 40) * 0.06 : 0;
+    this.tilt += this.retchK * 0.38 + heaveJolt;
     this.body.render(st.mutations, {
-      t: this.anim, dt, aim: aim - this.tilt, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: this.crouchK, dash: this.dashK, swim: this.swimK, stroke: this.strokeT,
+      t: this.anim, dt, aim: aim - this.tilt, punch: this.punch / MELEE_TIME, land: this.crouchK > 0 ? 0 : this.landT / 0.14, crouch: Math.max(this.crouchK, (this.retchK ?? 0) * 0.55), dash: this.dashK, swim: this.swimK, stroke: this.strokeT,
       vx: this.vx * this.facing, vy: this.vy,
       onGround: this.onGround, clinging: !!this.clinging, rope, reach, charge: this.charge,
       weapon: st.weaponId, recoil: this.recoil ?? 0, armRaise: this.#armRaise(dt),
