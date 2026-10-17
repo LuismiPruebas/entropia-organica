@@ -49,7 +49,11 @@ const KEYS = {
 };
 
 export const RUMBLE = 'death'; // futura opción: 'off' | 'death' | 'all'
-const DEAD = 0.25; // zona muerta del stick de apuntar
+// Stick de apuntar con histéresis: se activa con un empujón claro y se suelta al volver
+// casi al centro. Así un stick que deriva un poco en reposo no enciende y apaga la mira
+// manual una y otra vez (el personaje se daba la vuelta a tirones y el auto-apuntado
+// saltaba de un blanco a otro).
+const AIM_ON = 0.4, AIM_OFF = 0.22;
 const MOVE_ON = 0.5, MOVE_OFF = 0.3; // histéresis del stick de mover
 const STICK_MENU_ON = 0.65, STICK_MENU_OFF = 0.3; // el stick en los menús
 const STICK_REPEAT_DELAY = 420, STICK_REPEAT = 150; // ms: pausa antes de repetir y cadencia
@@ -65,7 +69,7 @@ export class Gamepad {
     addEventListener('gamepadconnected', (e) => {
       console.info('[mando]', e.gamepad.id, 'mapeo:', e.gamepad.mapping || 'ninguno', 'ejes:', e.gamepad.axes.length, 'botones:', e.gamepad.buttons.length);
     });
-    addEventListener('gamepaddisconnected', () => { this.#releaseAll(); this.deadAxes = null; });
+    addEventListener('gamepaddisconnected', () => { this.#releaseAll(); this.deadAxes = null; this.rest = null; });
     // Si vuelves al teclado o al ratón, los avisos dejan de mostrar los botones del mando.
     addEventListener('keydown', (e) => { if (e.isTrusted) this.active = false; });
     addEventListener('mousedown', () => { this.active = false; });
@@ -92,7 +96,7 @@ export class Gamepad {
     // algunos mapeos no estándar el DualSense pone L2/R2 donde iría un stick, a -1).
     // Se descartan para que no apunten ni giren al personaje por su cuenta.
     this.deadAxes ??= pad.axes.map((v) => Math.abs(v) > 0.5);
-    const axis = (i) => (this.deadAxes[i] ? 0 : pad.axes[i] ?? 0);
+    const axis = this.#centered(pad);
     const lx = axis(0), ly = axis(1), rx = axis(2), ry = axis(3);
     const on = (a, v) => (this.held.has(a) ? v > MOVE_OFF : v > MOVE_ON);
     if (on('left', -lx)) want.add('left');
@@ -107,7 +111,7 @@ export class Gamepad {
     // Stick derecho: la mira analógica.
     const m = Math.hypot(rx, ry), aim = this.input.padAim;
     // Solo toca la mira cuando apunta el stick (la mira táctil también la usa).
-    if (m > DEAD) { aim.active = true; aim.x = rx / m; aim.y = ry / m; this.aiming = true; }
+    if (m > (this.aiming ? AIM_OFF : AIM_ON)) { aim.active = true; aim.x = rx / m; aim.y = ry / m; aim.m = Math.min(1, m); this.aiming = true; }
     else if (this.aiming) { aim.active = false; this.aiming = false; }
     if (want.size || this.aiming) this.active = true;
     this.#rumble(pad);
@@ -128,6 +132,16 @@ export class Gamepad {
       if (down) { this.input.keys.add(k.input); this.input.pressed.add(k.input); }
       else { this.input.keys.delete(k.input); this.input.released.add(k.input); }
     }
+  }
+
+  // Centro en reposo de cada eje (calibrado al conectar): los sticks gastados no están
+  // en 0 exacto. Se restan para que la deriva no cuente como movimiento.
+  #centered(pad) {
+    this.rest ??= pad.axes.map((v) => (Math.abs(v) < 0.3 ? v : 0));
+    return (i) => {
+      const v = (this.deadAxes[i] ? 0 : pad.axes[i] ?? 0) - (this.rest[i] ?? 0);
+      return Math.max(-1, Math.min(1, v));
+    };
   }
 
   #releaseAll() {

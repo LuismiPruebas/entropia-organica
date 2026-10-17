@@ -292,8 +292,10 @@ export class Player {
     // en cuanto se mueve el ratón, la mira vuelve a seguir al cursor.
     const ms = input.mouse;
     this.mouseIdle = (this.mouseIdle ?? 9) + dt;
-    if (this.lastMouse && (ms.x !== this.lastMouse.x || ms.y !== this.lastMouse.y)) { this.aimMode = 'mouse'; this.mouseIdle = 0; }
-    this.lastMouse = { x: ms.x, y: ms.y };
+    // El ratón toma la mira solo si se mueve de verdad (3 px desde donde estaba), no por
+    // un temblor de la mano o del sensor.
+    if (!this.lastMouse) this.lastMouse = { x: ms.x, y: ms.y };
+    if (Math.hypot(ms.x - this.lastMouse.x, ms.y - this.lastMouse.y) >= 3) { this.aimMode = 'mouse'; this.mouseIdle = 0; this.lastMouse = { x: ms.x, y: ms.y }; }
     if (input.hit('KeyD', 'ArrowRight', 'KeyA', 'ArrowLeft')) this.aimMode = 'keys';
     // Stick derecho del mando: mira analógica en 360°. Al soltarlo, mira al frente.
     const pad = input.padAim;
@@ -302,7 +304,10 @@ export class Player {
     if (this.aimMode !== 'keys') this.lock = null;
     if (this.aimMode === 'pad') {
       this.aim = Math.atan2(pad.y, pad.x);
-      if (Math.abs(pad.x) > 0.15) this.facing = pad.x > 0 ? 1 : -1;
+      // Se da la vuelta hacia donde apunta el stick solo si apunta claramente a un lado;
+      // si no, mira hacia donde camina.
+      if (Math.abs(pad.x) > 0.5) this.facing = pad.x > 0 ? 1 : -1;
+      else if (dir) this.facing = dir;
     } else if (this.aimMode === 'keys') {
       if (dir) this.facing = dir;
       // Auto-apuntado: sin mira manual (stick derecho o ratón), el arma se fija en la
