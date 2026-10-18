@@ -51,6 +51,33 @@ export const VOICES = {
   // Dolor: un gritito diminuto, como un ratón (aire y garganta, no un pitido).
   cellHurt: (a, o) => a.voice(o, { pitch: [[0, rnd(1300, 1450)], [0.3, rnd(1650, 1800)], [1, 1100]], dur: 0.11, vol: 0.4, breath: 0.3, vib: 12, vibDepth: 0.02, formants: [[1500, 4, 1], [3000, 6, 0.25]], attack: 0.012 }),
 
+  // ---------------------------------------------------------------- Polinizador
+  // Alas de insecto y una garganta que fue de persona.
+  // Firma (vuela): el zumbido grave de las alas y, encima, un "mmm" humano que se queja.
+  pollBuzz: (a, o) => {
+    a.voice(o, { f0: rnd(120, 145), f1: rnd(115, 150), dur: 1, vol: 0.3, growl: 1, growlRate: rnd(28, 34), growlWave: 'square', breath: 0.15, formants: [[700, 3, 1]], attack: 0.2, release: 0.4 });
+    a.voice(o, { pitch: [[0, rnd(150, 165)], [0.5, 140], [1, 112]], dur: 0.8, vol: 0.5, growl: 0.15, vib: 5, formants: F('m'), attack: 0.08, delay: 0.15 });
+  },
+  // Ataque (carga y se lanza): un grito humano que crece de "a" a "e", rasgado, con las
+  // alas subiendo a un chillido detrás.
+  pollScream: (a, o) => {
+    a.voice(o, { pitch: [[0, rnd(230, 260)], [0.45, rnd(430, 470)], [1, rnd(520, 560)]], dur: 0.7, vol: 0.6, breath: 0.4, growl: 0.45, growlRate: 34, vib: 7, formants: F('a'), to: F('e'), attack: 0.05, release: 0.35 });
+    a.voice(o, { f0: 300, f1: 760, dur: 0.6, vol: 0.22, growl: 1, growlRate: 40, growlWave: 'square', formants: [[1400, 3, 1]], attack: 0.1 });
+  },
+  // Herido: un "¡ah!" humano corto y el crujido de la quitina.
+  pollHurt: (a, o) => {
+    a.voice(o, { pitch: [[0, rnd(360, 400)], [0.25, rnd(460, 500)], [1, 250]], dur: 0.3, vol: 0.6, breath: 0.35, growl: 0.25, growlRate: 30, vib: 8, formants: F('a'), attack: 0.015 });
+    a.knock(o, { f: rnd(2400, 3000), q: 6, dur: 0.05, vol: 0.12 });
+  },
+  // Muere: un lamento humano que cae de "o" a "u" mientras las alas se atascan y se paran,
+  // y el golpe sordo del cuerpo.
+  pollDie: (a, o) => {
+    a.knock(o, { f: rnd(110, 140), q: 2, dur: 0.35, vol: 0.4 });
+    a.voice(o, { pitch: [[0, rnd(400, 440)], [0.25, rnd(470, 500)], [1, 105]], dur: 1.4, vol: 0.6, breath: 0.3, growl: 0.4, growlRate: 26, vib: 6, formants: F('o'), to: F('u'), attack: 0.03, release: 0.5 });
+    a.voice(o, { f0: 150, f1: 55, dur: 1.2, vol: 0.28, growl: 1, growlRate: 30, growlWave: 'square', formants: [[600, 3, 1]], attack: 0.05, delay: 0.1 });
+    a.knock(o, { f: 90, q: 2, dur: 0.3, vol: 0.3, delay: 1.3 });
+  },
+
   // ---------------------------------------------------------------- Ojo de Techo
   // Firma: un parpadeo húmedo y un "mmm" grave de atención, con la boca cerrada.
   eyeSquelch: (a, o) => {
@@ -201,6 +228,7 @@ export const VOICES = {
 export const VOICE_GAIN = {
   neuronWarble: 1.6, neuronAlert: 0.8, neuronHurt: 3,
   swarmBuzz: 4.1, swarmAlert: 2.5, swarmHurt: 2.75,
+  pollBuzz: 3.5, pollScream: 2.8, pollHurt: 3, pollDie: 2.8,
   cellChirp: 0.52, cellHurt: 0.75,
   eyeSquelch: 3.3, eyeAlert: 1.7, eyeHurt: 1.95,
   sacInhale: 2.75, sacHurt: 4,
