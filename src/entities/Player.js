@@ -36,7 +36,7 @@ const RAM_DAMAGE = 12;     // la embestida atraviesa y hiere
 const BURST_SIZE = 3;          // espinas por ráfaga
 const BURST_GAP = 0.07;        // segundos entre espinas de una ráfaga
 const BURST_REST = 0.2;        // pausa entre ráfagas
-const BURSTS_PER_BIOMASS = 2;  // ráfagas por cada punto de biomasa
+const BIOMASS_PER_BURST = 1;   // biomasa que devora cada ráfaga (hambriento: más que antes)
 // Cuerpo a cuerpo: siempre disponible como último recurso.
 const MELEE_ABSORB = 3;      // biomasa que absorbes por golpe acertado
 const MELEE_DAMAGE = 14;     // culatazo: más que una astilla, pero hay que estar pegado
@@ -1025,26 +1025,30 @@ export class Player {
       return;
     }
 
-    // Arma simbionte: mientras mantienes, ráfagas automáticas de tres espinas. Cada dos
-    // ráfagas cuestan 1 de biomasa (se puede disparar un buen rato) y cada cuarta lanza
-    // además un glóbulo de plasma incandescente que sigue quemando.
+    // Arma simbionte: mientras mantienes, ráfagas automáticas de tres espinas; cada
+    // ráfaga devora 1 de biomasa. Cuando la agota, el cañón se vacía de golpe y escupe un
+    // glóbulo de plasma incandescente que sigue quemando (el último disparo).
     this.charge = 0;
     if (!input.down('Mouse0')) { this.burstLeft = 0; return; }
     if (this.fireCd > 0) return;
     if (!this.burstLeft) {
-      this.burstN = (this.burstN ?? 0) + 1;
-      if (this.burstN % BURSTS_PER_BIOMASS === 0 && !st.spendBiomass(1)) { this.#melee(); return; }
-      if (st.biomass <= 0) { this.#melee(); return; }
+      if (st.biomass <= 0 || !st.spendBiomass(Math.min(BIOMASS_PER_BURST, st.biomass))) { this.#melee(); return; }
       this.burstLeft = BURST_SIZE;
-      if (this.burstN % 4 === 0) {
-        this.#shoot(pos, { speed: 300, damage: 10 * dmg, kind: 'acid', w: 6, h: 6, color: '#ffd0f4', glow: [1, 0.35, 0.9], dot: 6, gravity: 120, breaks: true });
-        audio.play('acid', this);
-      }
+      this.lastBurst = st.biomass <= 0;               // con esta ráfaga se queda sin biomasa
     }
     this.#shoot(pos, { speed: 560, damage: 8 * dmg, kind: 'spine', w: 7, h: 2, color: '#ff4ad8', glow: [0.8, 0.2, 0.7], spread: (Math.random() - 0.5) * 0.09, breaks: true });
     audio.play('spine', this);
     this.burstLeft--;
     this.fireCd = this.burstLeft > 0 ? BURST_GAP : BURST_REST * cooldown;
+    // Agotado: tras la última ráfaga se vacía y escupe el glóbulo de plasma.
+    if (!this.burstLeft && this.lastBurst) {
+      this.lastBurst = false;
+      this.#shoot(pos, { speed: 300, damage: 14 * dmg, kind: 'acid', w: 8, h: 8, color: '#ffd0f4', glow: [1, 0.35, 0.9], dot: 8, gravity: 120, breaks: true });
+      audio.play('acid', this);
+      this.recoil = 0.6;
+      this.fireCd = 0.6 * cooldown;
+      if (!st.seenEmptyCannon) { st.seenEmptyCannon = true; this.game.say('El cañón se vacía: escupe su último glóbulo. Sin biomasa no dispara.', 2); }
+    }
   }
 
   // Sin cañón, el brazo cuelga relajado; solo se alza a apuntar mientras mueves el
