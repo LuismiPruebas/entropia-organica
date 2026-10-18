@@ -76,8 +76,8 @@ body {
                       sombra que se difumina por los lados, texto lila; espera a E.
      #dialogue.npc    conversación con un personaje: membrana de carne de bordes
                       irregulares que respiran, con su nombre; espera a E.
-     #bark            voz suelta de un personaje: la misma membrana, pequeña, a la
-                      izquierda; se va sola. */
+     #bark            voz suelta de un personaje: la misma membrana, centrada, algo
+                      más arriba; se va sola. */
 @keyframes text-membrane {
   0%, 100% { border-radius: 10px 4px 12px 5px / 6px 11px 4px 10px; }
   33% { border-radius: 5px 11px 4px 12px / 11px 4px 10px 6px; }
@@ -135,9 +135,11 @@ body {
 #dialogue.npc .who, #bark .who { color: #ffd27a; }
 #dialogue.npc .next { color: #ffd27a; }
 #bark {
-  left: 10px;
-  bottom: 30px;
-  max-width: 170px;
+  left: 50%;
+  bottom: 30px;              /* centrada, por encima de la cápsula de información */
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(78%, 300px);
   padding: 4px 10px 5px;
   transition: opacity .3s;
 }
