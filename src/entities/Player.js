@@ -1114,8 +1114,8 @@ export class Player {
     const dmgMul = last && T.combo === 3 ? 1.5 : 1;
     // Con la cuchilla, cada tajo te lanza hacia delante (el último, más).
     if (st.weaponId === BLADE.id) {
-      this.vx = this.facing * (last ? 230 : 150);
-      this.wallLock = Math.max(this.wallLock ?? 0, 0.12);
+      this.vx = this.facing * (last ? 110 : 70);              // un paso corto, controlable
+      this.wallLock = Math.max(this.wallLock ?? 0, 0.06);
     }
     if (!st.seenMelee) {
       st.seenMelee = true;
