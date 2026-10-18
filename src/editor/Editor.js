@@ -391,22 +391,75 @@ function drawFace(o, z, alpha) {
   g.drawImage(shrineThumb(), (o.x + 0.5) * z - (SHRINE_W / 32) * z, (o.y + 1) * z - (SHRINE_H / 16) * z, (SHRINE_W / 16) * z, (SHRINE_H / 16) * z);
   g.globalAlpha = 1;
 }
-// Decoración: el tipo del desplegable, girado (anclada al suelo, a una pared o al techo) y
-// en espejo según los botones (como las rampas). Girar va en el sentido de las agujas:
-// suelo → pared izquierda → techo → pared derecha.
+// ---------------------------------------------------------------- piezas orientables
+// Rampas y decoración se orientan igual: una "pieza" con su dibujo grande y sus operaciones
+// (Voltear ⇅, Espejo ⇆ y, la decoración, Girar ⟳). La pieza elegida sale en lo alto de la
+// paleta; la de un elemento ya colocado, en el inspector. T voltea la pieza elegida.
+//   pieza: { icon (html), name, sub?, ops: [{ label, title, run() }] }
+function pieceCard(p, prefix) {
+  return `<div class="piece">${p.icon}<div><b>${p.name}</b>${p.sub ? `<div class="dim">${p.sub}</div>` : ''}<div class="row">${p.ops.map((op, i) => `<button id="${prefix}-${i}" title="${op.title}">${op.label}</button>`).join('')}</div></div></div>`;
+}
+function wirePiece(p, prefix, before, after) {
+  p.ops.forEach((op, i) => { const b = $(`${prefix}-${i}`); if (b) b.onclick = () => { before?.(); op.run(); after(); }; });
+}
+// Rampa: la casilla elegida en la paleta (FLIP y MIRROR, más abajo).
+function slopePiece(bc) {
+  const cur = TILE_BY_CHAR[S.tile];
+  if (!cur?.slope && !cur?.ceil) return null;
+  return {
+    icon: slopeIcon(cur, 42, bc.wall, bc.air), name: cur.name,
+    ops: [
+      { label: `⇅ Voltear (${cur.ceil ? 'suelo' : 'techo'})`, title: 'Rampa de techo ⇄ de suelo (tecla T)', run: () => { S.tile = FLIP[S.tile]; } },
+      { label: '⇆ Espejo', title: 'Que suba o baje hacia el otro lado', run: () => { S.tile = MIRROR[S.tile]; } },
+    ],
+  };
+}
+// Decoración: anclada al suelo, a una pared (side) o al techo (invert), y en espejo (flip).
 const ANCHORS = ['suelo', 'left', 'techo', 'right'];
 const ANCHOR_NAME = { suelo: 'en el suelo', left: 'en la pared izquierda', techo: 'colgada del techo', right: 'en la pared derecha' };
 const anchorOf = (o) => o.side ?? (o.invert ? 'techo' : 'suelo');
 const setAnchor = (o, a) => { o.invert = a === 'techo'; if (a === 'left' || a === 'right') o.side = a; else delete o.side; };
-const nextAnchor = (a) => ANCHORS[(ANCHORS.indexOf(a) + 1) % ANCHORS.length];
-const decorFromChoice = (dt = 'neurona') => {
-  const o = { type: dt, flip: !!S.decorFlip };
-  setAnchor(o, S.decorAnchor ?? 'suelo');
-  return o;
+const DECOR_OPS = {
+  // Voltear: suelo ⇄ techo (en una pared, de arriba abajo).
+  flip: (o) => { const a = anchorOf(o); if (a === 'suelo' || a === 'techo') setAnchor(o, a === 'suelo' ? 'techo' : 'suelo'); else o.flip = !o.flip; },
+  // Espejo: que mire al otro lado (en una pared, pasa a la de enfrente).
+  mirror: (o) => { const a = anchorOf(o); if (a === 'left' || a === 'right') setAnchor(o, a === 'left' ? 'right' : 'left'); else o.flip = !o.flip; },
+  // Girar: un cuarto de vuelta (suelo → pared izquierda → techo → pared derecha).
+  rotate: (o) => setAnchor(o, ANCHORS[(ANCHORS.indexOf(anchorOf(o)) + 1) % ANCHORS.length]),
 };
-function showDecorAnchor() { if ($('decor-anchor')) $('decor-anchor').textContent = `${ANCHOR_NAME[S.decorAnchor ?? 'suelo']}${S.decorFlip ? ' · en espejo' : ''}`; }
-function rotateDecorChoice() { S.decorAnchor = nextAnchor(S.decorAnchor ?? 'suelo'); showDecorAnchor(); draw(); }
-function flipDecorChoice() { S.decorFlip = !S.decorFlip; showDecorAnchor(); draw(); }
+function decorIcon(o, size = 42) {
+  const T = DECOR[o.type] ?? DECOR.neurona, img = (DECOR_PREV[o.type] ??= decorPreview(o.type));
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d'), k = (size - 4) / Math.max(T.w, T.h), a = anchorOf(o);
+  x.imageSmoothingEnabled = false;
+  x.translate(size / 2, size / 2);
+  x.rotate({ suelo: 0, left: Math.PI / 2, techo: Math.PI, right: -Math.PI / 2 }[a]);
+  if (o.flip !== (a === 'techo')) x.scale(-1, 1);          // boca abajo ya invierte el lado
+  x.drawImage(img, (-T.w / 2) * k, (-T.h / 2) * k, T.w * k, T.h * k);
+  return `<img src="${c.toDataURL()}" width="${size}" height="${size}" style="image-rendering:pixelated">`;
+}
+function decorPieceOf(o) {
+  const a = anchorOf(o);
+  return {
+    icon: decorIcon(o), name: DECOR[o.type]?.name ?? o.type, sub: `${ANCHOR_NAME[a]}${o.flip ? ' · en espejo' : ''}`,
+    ops: [
+      { label: `⇅ Voltear (${a === 'techo' ? 'suelo' : a === 'suelo' ? 'techo' : 'arriba ⇄ abajo'})`, title: 'Del suelo al techo y al revés (tecla T)', run: () => DECOR_OPS.flip(o) },
+      { label: '⇆ Espejo', title: 'Que mire hacia el otro lado (en una pared: a la de enfrente)', run: () => DECOR_OPS.mirror(o) },
+      { label: '⟳ Girar', title: 'Un cuarto de vuelta: suelo → pared izquierda → techo → pared derecha', run: () => DECOR_OPS.rotate(o) },
+    ],
+  };
+}
+// La decoración que se va a colocar: el tipo del desplegable con la orientación elegida.
+const decorFromChoice = (dt = 'neurona') => ({ ...(S.decorChoice ??= { flip: false, invert: false }), type: dt });
+// La pieza que sale en lo alto de la paleta: la decoración (si estás colocando una) o la rampa.
+function palettePiece(bc) {
+  if (S.tool === 'place' && S.kind === 'decor') {
+    const o = (S.decorChoice ??= { flip: false, invert: false });
+    o.type = S.decorType ?? 'neurona';
+    return decorPieceOf(o);
+  }
+  return slopePiece(bc);
+}
 // Decoración en el lienzo: una muestra de la estructura en su sitio (como en el juego).
 const DECOR_PREV = {};
 function drawDecor(o, z, alpha) {
@@ -1135,7 +1188,7 @@ function setTool(t) {
   if (t !== 'area' && S.area) { S.area = null; S.float = null; }
   S.tool = t;
   for (const b of document.querySelectorAll('[data-tool]')) b.classList.toggle('on', b.dataset.tool === t);
-  if (typeof renderInspector === 'function' && S.id) renderInspector();
+  if (typeof renderInspector === 'function' && S.id) { renderInspector(); renderPalette(); }
   $('kind-row').style.display = t === 'place' ? '' : 'none';
   showDecorRow();
 }
@@ -1143,14 +1196,11 @@ function renderTools() {
   $('tools').innerHTML = TOOLS.map(([id, label, key]) => `<button data-tool="${id}" title="${label} (${key})">${label}<kbd>${key}</kbd></button>`).join('');
   for (const b of document.querySelectorAll('[data-tool]')) b.onclick = () => setTool(b.dataset.tool);
   $('kind').innerHTML = Object.entries(KINDS).filter(([k]) => k !== 'exits').map(([k, K]) => `<option value="${k}">${K.label}</option>`).join('');
-  $('kind').onchange = () => { S.kind = $('kind').value; S.noduleLux = false; showDecorRow(); };
+  $('kind').onchange = () => { S.kind = $('kind').value; S.noduleLux = false; showDecorRow(); if (S.id) renderPalette(); };
   $('decor-type').innerHTML = Object.entries(DECOR).map(([k, d]) => `<option value="${k}">${d.name}</option>`).join('');
   if (!DECOR[S.decorType]) S.decorType = 'neurona';
   $('decor-type').value = S.decorType;
-  $('decor-rot').onclick = rotateDecorChoice;
-  $('decor-flip').onclick = flipDecorChoice;
-  showDecorAnchor();
-  $('decor-type').onchange = () => { S.decorType = $('decor-type').value; draw(); };
+  $('decor-type').onchange = () => { S.decorType = $('decor-type').value; renderPalette(); draw(); };
   showDecorRow();
   $('brush').oninput = () => { S.brush = Number($('brush').value); $('brush-v').textContent = S.brush; };
   setTool('brush');
@@ -1164,16 +1214,14 @@ function slopeIcon(t, size, wall, air) {
 }
 function renderPalette() {
   const bc = biomeColors(room()?.biome);
-  const cur = TILE_BY_CHAR[S.tile];
   // Al final, accesos a elementos que se buscan junto a los objetos (los nódulos no son
   // casillas: pulsarlos pasa a "Colocar elementos" con ese nódulo).
   const extras = [['nodule', 'Nódulo óseo (elemento: suelta hueso)', '#e8dcc8', 'n'], ['noduleLux', 'Nódulo lumínico (elemento: suelta célula)', '#ffd23f', 'n*'], ['lamp', 'Luminaria colgante (elemento: luz tenue)', '#9affc8', 'l']];
-  // Con una rampa elegida: la pieza en grande y cómo voltearla o reflejarla (T también voltea).
-  const piece = cur?.slope || cur?.ceil ? `<div class="piece">${slopeIcon(cur, 42, bc.wall, bc.air)}<div><b>${cur.name}</b><div class="row"><button id="pc-flip" title="Rampa de techo ⇄ de suelo (tecla T)">⇅ Voltear (${cur.ceil ? 'suelo' : 'techo'})</button><button id="pc-mirror" title="Que suba o baje hacia el otro lado">⇆ Espejo</button></div></div></div>` : '';
-  $('palette').innerHTML = piece + TILES.map((t) => `<button class="sw${t.c === S.tile ? ' on' : ''}" data-c="${t.c}" title="${t.name}">${t.slope || t.ceil ? slopeIcon(t, 14, bc.wall, bc.air) : `<i style="background:${t.c === '#' ? bc.wall : t.c === '.' ? bc.air : t.color}"></i>`}<b>${t.c}</b><span>${t.name}</span></button>`).join('')
+  // La pieza elegida (rampa o decoración) en grande, con cómo orientarla (T voltea).
+  const pc = palettePiece(bc);
+  $('palette').innerHTML = (pc ? pieceCard(pc, 'pc') : '') + TILES.map((t) => `<button class="sw${t.c === S.tile ? ' on' : ''}" data-c="${t.c}" title="${t.name}">${t.slope || t.ceil ? slopeIcon(t, 14, bc.wall, bc.air) : `<i style="background:${t.c === '#' ? bc.wall : t.c === '.' ? bc.air : t.color}"></i>`}<b>${t.c}</b><span>${t.name}</span></button>`).join('')
     + extras.map(([id, name, col, mark]) => `<button class="sw${S.tool === 'place' && (id === 'lamp' ? S.kind === 'lamps' : S.kind === 'nodules' && !!S.noduleLux === (id === 'noduleLux')) ? ' on' : ''}" data-el="${id}" title="${name}"><i style="background:${col}"></i><b>${mark}</b><span>${name}</span></button>`).join('');
-  if ($('pc-flip')) $('pc-flip').onclick = () => { S.tile = FLIP[S.tile]; renderPalette(); };
-  if ($('pc-mirror')) $('pc-mirror').onclick = () => { S.tile = MIRROR[S.tile]; renderPalette(); };
+  if (pc) wirePiece(pc, 'pc', null, () => { renderPalette(); draw(); });
   for (const b of document.querySelectorAll('#palette .sw')) b.onclick = () => {
     if (b.dataset.el) {
       S.kind = b.dataset.el === 'lamp' ? 'lamps' : 'nodules';
@@ -1341,7 +1389,7 @@ function renderInspector() {
     if (kind === 'enemies' && k === 'type') html += field('tipo', { v, options: ENEMY_TYPES }, (nv) => { o.type = nv; }, 'select');
     else if (kind === 'decor' && k === 'side') continue;
     else if (kind === 'decor' && (k === 'invert' || k === 'flip')) {
-      if (k === 'invert') html += `<p class="dim">${ANCHOR_NAME[anchorOf(o)]}${o.flip ? ' · en espejo' : ''}</p><div class="row"><button id="dc-rot" title="Suelo → pared izquierda → techo → pared derecha">⟳ Girar</button><button id="dc-flip">⇆ Espejo</button></div>`;
+      if (k === 'invert') html += pieceCard(decorPieceOf(o), 'dc');
     }
     else if (kind === 'decor' && k === 'type') html += field('estructura', { v: DECOR[v]?.name ?? v, options: Object.values(DECOR).map((d) => d.name) }, (nv) => { o.type = Object.keys(DECOR).find((key) => DECOR[key].name === nv) ?? o.type; }, 'select');
     else if (kind === 'exits' && k === 'to') html += field('lleva a', { v, options: Object.keys(S.rooms) }, (nv) => { o.to = nv; }, 'select');
@@ -1371,8 +1419,7 @@ function renderInspector() {
   if (kind === 'links') wireLinkButtons(o);
   if (kind === 'faces' && $('face-reset')) $('face-reset').onclick = () => { snapshot(); for (const k of ['taunts', 'thanks', 'opens', 'hints']) delete o[k]; touch(); renderInspector(); };
   $('del').onclick = deleteSelected;
-  if ($('dc-rot')) $('dc-rot').onclick = () => { snapshot(); setAnchor(o, nextAnchor(anchorOf(o))); touch(); renderInspector(); draw(); };
-  if ($('dc-flip')) $('dc-flip').onclick = () => { snapshot(); o.flip = !o.flip; touch(); renderInspector(); draw(); };
+  if (kind === 'decor') wirePiece(decorPieceOf(o), 'dc', snapshot, () => { touch(); renderInspector(); draw(); });
   $('dup').onclick = () => {
     if (kind === 'pods') return;
     snapshot();
@@ -2092,8 +2139,10 @@ addEventListener('keydown', (e) => {
   const t = e.code === 'KeyV' ? TOOLS.find(([id]) => id === 'area') : TOOLS.find(([, , k]) => `Key${k}` === e.code);   // V: el atajo de antes
   if (t) setTool(t[0]);
   if (e.code === 'Delete' || e.code === 'Backspace') deleteSelected();
-  if (e.code === 'KeyT' && S.tool === 'place' && S.kind === 'decor') { rotateDecorChoice(); $('msg').textContent = `Decoración ${ANCHOR_NAME[S.decorAnchor]} (T vuelve a girar).`; return; }
-  if (e.code === 'KeyT' && FLIP[S.tile]) { S.tile = FLIP[S.tile]; renderPalette(); $('msg').textContent = `Rampa volteada: ${TILE_BY_CHAR[S.tile].name} (T vuelve a voltear).`; return; }
+  if (e.code === 'KeyT') {
+    const pc = palettePiece(biomeColors(room()?.biome));
+    if (pc) { pc.ops[0].run(); renderPalette(); draw(); $('msg').textContent = `${palettePiece(biomeColors(room()?.biome)).name}: volteada (T vuelve a voltear).`; return; }
+  }
   if (e.code === 'KeyG') { S.view = S.view === 'game' ? 'schema' : 'game'; $('view').checked = S.view === 'game'; draw(); }
   if (e.code === 'BracketRight') { S.brush = Math.min(9, S.brush + 1); $('brush').value = S.brush; $('brush-v').textContent = S.brush; }
   if (e.code === 'BracketLeft') { S.brush = Math.max(1, S.brush - 1); $('brush').value = S.brush; $('brush-v').textContent = S.brush; }

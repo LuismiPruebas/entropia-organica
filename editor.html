@@ -54,7 +54,7 @@
     #wizard .wiz { margin: 0; font-size: 12px; }
     /* La pieza elegida (rampas): en grande, con voltear y espejo. */
     .piece { display: flex; gap: 8px; align-items: center; background: #1d1219; border: 1px solid #ffd23f; border-radius: 4px; padding: 6px; margin-bottom: 6px; font-size: 11px; }
-    .piece .row { margin-top: 4px; }
+    .piece .row { margin-top: 4px; flex-wrap: wrap; gap: 4px; }
     #palette .sw svg { margin-right: 6px; border: 1px solid var(--line); }
     /* Bestiario: los enemigos con su aspecto, para elegir el que se coloca. */
     #bestiary { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
@@ -117,7 +117,7 @@
     <div id="tools"></div>
     <label>Tamaño del pincel <b id="brush-v">1</b> ( [ y ] )<input id="brush" type="range" min="1" max="9" value="1"></label>
     <div id="kind-row"><label>Elemento a colocar<select id="kind"></select></label>
-      <label id="decor-row" style="display:none">Estructura<select id="decor-type"></select><button id="decor-rot" type="button" title="Girar un cuarto de vuelta: suelo → pared izquierda → techo → pared derecha (tecla T)">⟳ Girar</button><button id="decor-flip" type="button" title="Espejo (izquierda ⇆ derecha)">⇆ Espejo</button><span id="decor-anchor" class="dim"></span></label></div>
+      <label id="decor-row" style="display:none">Estructura<select id="decor-type"></select></label></div>
     <h4>Inspector</h4>
     <div id="inspector"></div>
     <div id="room"></div>
