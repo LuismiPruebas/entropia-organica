@@ -22,7 +22,7 @@ export class Hud {
   dialogue(lines, opts = {}) {
     if (this.dlg) this.endDialogue();
     lines = lines.filter(Boolean);
-    if (!lines.length) return;
+    if (!lines.length) { opts.onEnd?.(); return; }   // sin texto: como si ya se hubiera leído
     this.dlg = { lines, i: 0, shown: 0, ...opts };
     const el = $('dialogue');
     el.hidden = false;

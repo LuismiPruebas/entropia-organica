@@ -114,6 +114,9 @@ export class Face {
         // Te lo agradece (y abre sus membranas al decirlo); se queda hasta que pases.
         this.#talk([this.data.thanks, this.data.opens], (i) => { if (i === 1) this.#free(); }, () => { this.#free(); this.next = 9; });
       }
+      // Por si su agradecimiento no llegó a mostrarse o se cerró sin liberarlo: queda libre igual
+      // (cerrar la conversación cuenta como haberla leído).
+      else if (this.thanked && g.hud.dlg?.owner !== this) { this.#free(); this.next = 9; }
     } else if (this.state === 'free') {
       if (near && this.next <= 0 && this.data.hints.length && !g.hud.dialogueActive) {
         const i = st.faceHints?.[this.biome] ?? 0;
