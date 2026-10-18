@@ -147,9 +147,21 @@ export const KINDS = {
   decor: {
     label: 'Decoración (sistema nervioso)', color: '#8a6ab8',
     make: (x, y) => ({ x, y, type: 'neurona', flip: false, front: false, invert: false }),
-    box: (o) => { const [w, h] = decorBox(o); return [o.x - Math.floor((w - 1) / 2), o.invert ? o.y : o.y - h + 1, w, h]; },
-    move: (o, x, y) => { const [w, h] = decorBox(o); o.x = x + Math.floor((w - 1) / 2); o.y = o.invert ? y : y + h - 1; },
-    text: (o) => `${DECOR[o.type]?.name ?? o.type}${o.invert ? ' (techo)' : ''}`,
+    // En una pared lateral va tumbada: ancho y alto cambian; (x, y) es la casilla pegada a
+    // esa pared, a media altura.
+    box: (o) => {
+      const [w, h] = decorBox(o);
+      if (o.side === 'left') return [o.x, o.y - Math.floor((w - 1) / 2), h, w];
+      if (o.side === 'right') return [o.x - h + 1, o.y - Math.floor((w - 1) / 2), h, w];
+      return [o.x - Math.floor((w - 1) / 2), o.invert ? o.y : o.y - h + 1, w, h];
+    },
+    move: (o, x, y) => {
+      const [w, h] = decorBox(o);
+      if (o.side === 'left') { o.x = x; o.y = y + Math.floor((w - 1) / 2); return; }
+      if (o.side === 'right') { o.x = x + h - 1; o.y = y + Math.floor((w - 1) / 2); return; }
+      o.x = x + Math.floor((w - 1) / 2); o.y = o.invert ? y : y + h - 1;
+    },
+    text: (o) => `${DECOR[o.type]?.name ?? o.type}${o.side === 'left' ? ' (pared izq.)' : o.side === 'right' ? ' (pared der.)' : o.invert ? ' (techo)' : ''}`,
   },
   // Evento de texto: al entrar en la zona salta un diálogo (se queda hasta que el jugador
   // pasa) o un aviso (se va solo). once: solo la primera vez.

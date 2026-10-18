@@ -391,10 +391,26 @@ function drawFace(o, z, alpha) {
   g.drawImage(shrineThumb(), (o.x + 0.5) * z - (SHRINE_W / 32) * z, (o.y + 1) * z - (SHRINE_H / 16) * z, (SHRINE_W / 16) * z, (SHRINE_H / 16) * z);
   g.globalAlpha = 1;
 }
+// Desplegable de decoración: "<tipo>", "<tipo>-techo", "<tipo>-izq", "<tipo>-der".
+const decorFromChoice = (dt = 'neurona') => {
+  const m = dt.match(/^(.*?)(?:-(techo|izq|der))?$/);
+  return { type: m[1], invert: m[2] === 'techo', ...(m[2] === 'izq' ? { side: 'left' } : m[2] === 'der' ? { side: 'right' } : {}) };
+};
 // Decoración en el lienzo: una muestra de la estructura en su sitio (como en el juego).
 const DECOR_PREV = {};
 function drawDecor(o, z, alpha) {
   const T = DECOR[o.type] ?? DECOR.neurona, img = (DECOR_PREV[o.type] ??= decorPreview(o.type));
+  if (o.side === 'left' || o.side === 'right') {
+    // Tumbada contra la pared: girada un cuarto de vuelta alrededor de su centro.
+    const k = z / 16, base = o.side === 'left' ? o.x * z : (o.x + 1) * z;
+    const cx = base + (o.side === 'left' ? 1 : -1) * (T.h / 2) * k, cy = (o.y + 0.5) * z;
+    g.globalAlpha = alpha; g.save();
+    g.translate(cx, cy); g.rotate(o.side === 'left' ? Math.PI / 2 : -Math.PI / 2);
+    if (o.flip) g.scale(-1, 1);
+    g.drawImage(img, -(T.w / 2) * k, -(T.h / 2) * k, T.w * k, T.h * k);
+    g.restore(); g.globalAlpha = 1;
+    return;
+  }
   const x = (o.x + 0.5) * z - (T.w / 32) * z, y = o.invert ? o.y * z : (o.y + 1) * z - (T.h / 16) * z;
   g.globalAlpha = alpha;
   g.save();
@@ -407,14 +423,20 @@ function drawDecor(o, z, alpha) {
 // Muros eléctricos: entre cada neurona del suelo y la del techo que tiene encima.
 function drawElectricWalls(z, r) {
   const list = r.decor ?? [];
-  for (const { floor, ceil } of neuronPairs(list)) {
-    const a = list[floor], b = list[ceil];
-    const x = ((a.x + b.x) / 2 + 0.5) * z, y0 = b.y * z, y1 = (a.y + 1) * z;     // de techo a suelo
-    g.strokeStyle = '#82d2ff'; g.lineWidth = 3; g.setLineDash([6, 4]);
-    g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke(); g.setLineDash([]);
-    const w = { ...WALL_DEFAULT, ...(a.wall ?? {}) };
-    g.fillStyle = '#82d2ff'; g.font = 'bold 11px monospace'; g.textAlign = 'left'; g.textBaseline = 'middle';
-    g.fillText(`⚡ muro: ${w.on}s on / ${w.off}s off${w.delay ? ` · desfase ${w.delay}s` : ''}`, x + 6, (y0 + y1) / 2);
+  for (const { floor, ceil, horiz } of neuronPairs(list)) {
+    const a = list[floor], b = list[ceil], w = { ...WALL_DEFAULT, ...(a.wall ?? {}) };
+    const label = `⚡ muro: ${w.on}s on / ${w.off}s off${w.delay ? ` · desfase ${w.delay}s` : ''}`;
+    g.strokeStyle = '#82d2ff'; g.lineWidth = 3; g.setLineDash([6, 4]); g.beginPath();
+    g.fillStyle = '#82d2ff'; g.font = 'bold 11px monospace'; g.textBaseline = 'middle';
+    if (horiz) {
+      const y = ((a.y + b.y) / 2 + 0.5) * z, x0 = a.x * z, x1 = (b.x + 1) * z;     // de pared a pared
+      g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); g.setLineDash([]);
+      g.textAlign = 'center'; g.fillText(label, (x0 + x1) / 2, y - 10);
+    } else {
+      const x = ((a.x + b.x) / 2 + 0.5) * z, y0 = b.y * z, y1 = (a.y + 1) * z;     // de techo a suelo
+      g.moveTo(x, y0); g.lineTo(x, y1); g.stroke(); g.setLineDash([]);
+      g.textAlign = 'left'; g.fillText(label, x + 6, (y0 + y1) / 2);
+    }
   }
 }
 function showDecorRow() { if ($('decor-row')) $('decor-row').style.display = S.tool === 'place' && S.kind === 'decor' ? '' : 'none'; }
@@ -655,7 +677,7 @@ function draw() {
   // Fantasma del enemigo que se va a colocar.
   if (S.tool === 'place' && S.kind === 'enemies' && S.hover && S.enemyType) drawEnemy({ type: S.enemyType, x: S.hover[0], y: S.hover[1] }, z, 0.55);
   if (S.tool === 'place' && S.kind === 'faces' && S.hover) drawFace({ x: S.hover[0], y: S.hover[1] }, z, 0.45);
-  if (S.tool === 'place' && S.kind === 'decor' && S.hover) drawDecor({ x: S.hover[0], y: S.hover[1], type: (S.decorType ?? 'neurona').replace(/-techo$/, ''), invert: (S.decorType ?? '').endsWith('-techo') }, z, 0.5);
+  if (S.tool === 'place' && S.kind === 'decor' && S.hover) drawDecor({ x: S.hover[0], y: S.hover[1], ...decorFromChoice(S.decorType) }, z, 0.5);
   drawElectricWalls(z, r);
   drawArea(z);
   // Rectángulo en curso.
@@ -795,7 +817,7 @@ cv.addEventListener('mousedown', (e) => {
       const o = K.make(x, y, room());
       if (S.kind === 'nodules' && S.noduleLux) o.push('luz'); // desde la paleta: nódulo lumínico
       if (S.kind === 'enemies' && S.enemyType) o.type = S.enemyType; // el elegido en el Bestiario
-      if (S.kind === 'decor') { const dt = S.decorType ?? 'neurona'; o.type = dt.replace(/-techo$/, ''); o.invert = dt.endsWith('-techo'); }   // la elegida en el desplegable
+      if (S.kind === 'decor') Object.assign(o, decorFromChoice(S.decorType));   // la elegida en el desplegable
       if (o) { (room()[S.kind] ??= []).push(o); S.sel = { kind: S.kind, index: room()[S.kind].length - 1 }; }
       else if (S.kind === 'pods') S.sel = { kind: 'pods', index: room().pods.at.length - 1 };
       touch(); renderInspector(); return;
@@ -1111,7 +1133,7 @@ function renderTools() {
   for (const b of document.querySelectorAll('[data-tool]')) b.onclick = () => setTool(b.dataset.tool);
   $('kind').innerHTML = Object.entries(KINDS).filter(([k]) => k !== 'exits').map(([k, K]) => `<option value="${k}">${K.label}</option>`).join('');
   $('kind').onchange = () => { S.kind = $('kind').value; S.noduleLux = false; showDecorRow(); };
-  $('decor-type').innerHTML = Object.entries(DECOR).map(([k, d]) => `<option value="${k}">${d.name}</option>` + (k === WALL_TYPE ? `<option value="${k}-techo">${d.name} (colgado del techo)</option>` : '')).join('');
+  $('decor-type').innerHTML = Object.entries(DECOR).map(([k, d]) => `<option value="${k}">${d.name}</option>` + (k === WALL_TYPE ? `<option value="${k}-techo">${d.name} (colgado del techo)</option><option value="${k}-izq">${d.name} (en la pared izquierda)</option><option value="${k}-der">${d.name} (en la pared derecha)</option>` : '')).join('');
   $('decor-type').value = S.decorType ??= 'neurona';
   $('decor-type').onchange = () => { S.decorType = $('decor-type').value; draw(); };
   showDecorRow();
@@ -1302,6 +1324,15 @@ function renderInspector() {
   else for (const [k, v] of Object.entries(o)) {
     if (kind === 'exits' && k === 'toLink') continue;
     if (kind === 'enemies' && k === 'type') html += field('tipo', { v, options: ENEMY_TYPES }, (nv) => { o.type = nv; }, 'select');
+    else if (kind === 'decor' && k === 'side') continue;
+    else if (kind === 'decor' && k === 'invert') {
+      const AN = { suelo: 'suelo', techo: 'techo (colgada)', left: 'pared izquierda', right: 'pared derecha' };
+      html += field('anclada a', { v: AN[o.side ?? (o.invert ? 'techo' : 'suelo')], options: Object.values(AN) }, (nv) => {
+        const key = Object.keys(AN).find((a) => AN[a] === nv);
+        o.invert = key === 'techo';
+        if (key === 'left' || key === 'right') o.side = key; else delete o.side;
+      }, 'select');
+    }
     else if (kind === 'decor' && k === 'type') html += field('estructura', { v: DECOR[v]?.name ?? v, options: Object.values(DECOR).map((d) => d.name) }, (nv) => { o.type = Object.keys(DECOR).find((key) => DECOR[key].name === nv) ?? o.type; }, 'select');
     else if (kind === 'exits' && k === 'to') html += field('lleva a', { v, options: Object.keys(S.rooms) }, (nv) => { o.to = nv; }, 'select');
     else if (kind === 'exits' && k === 'side') html += field('lado', { v, options: ['left', 'right', 'top', 'bottom'] }, (nv) => { o.side = nv; }, 'select');
@@ -1310,8 +1341,11 @@ function renderInspector() {
   if (kind === 'exits') html += field('llega al punto (opcional: en vez de "spawn")', { v: o.toLink ?? '', options: ['', ...(S.rooms[o.to]?.links ?? []).map((l) => l.id)] }, (nv) => { if (nv) o.toLink = nv; else delete o.toLink; }, 'select');
   if (kind === 'decor' && o.type === WALL_TYPE) {
     const list = room().decor ?? [], i = list.indexOf(o), pair = neuronPairs(list).find((p) => p.floor === i || p.ceil === i);
-    if (!pair) html += `<p class="dim">Pon otro ganglio ${o.invert ? 'en el suelo, debajo' : 'colgado del techo (invertido), encima'} en esta misma columna (o una al lado) y entre las dos se forma un muro eléctrico.</p>`;
-    else if (pair.ceil === i) html += `<p class="dim">Forma un muro eléctrico con el ganglio del suelo de debajo: sus tiempos se ajustan en aquel.</p>`;
+    const hint = o.side === 'left' ? 'en la pared derecha, enfrente, en esta misma fila (o una al lado)'
+      : o.side === 'right' ? 'en la pared izquierda, enfrente, en esta misma fila (o una al lado)'
+      : o.invert ? 'en el suelo, debajo, en esta misma columna (o una al lado)' : 'colgado del techo, encima, en esta misma columna (o una al lado)';
+    if (!pair) html += `<p class="dim">Pon otro ganglio ${hint} y entre los dos se forma un muro eléctrico.</p>`;
+    else if (pair.ceil === i) html += `<p class="dim">Forma un muro eléctrico con el ganglio ${pair.horiz ? 'de la pared izquierda' : 'del suelo de debajo'}: sus tiempos se ajustan en aquel.</p>`;
     else {
       const w = { ...WALL_DEFAULT, ...(o.wall ?? {}) }, setWall = (k, v) => { o.wall = { ...(o.wall ?? {}), [k]: Math.max(0, Math.round(v * 10) / 10) }; if (o.wall[k] === WALL_DEFAULT[k]) delete o.wall[k]; if (!Object.keys(o.wall).length) delete o.wall; };
       html += `<h4 style="margin-top:8px">Muro eléctrico</h4>`;

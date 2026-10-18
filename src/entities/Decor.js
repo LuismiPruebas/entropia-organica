@@ -6,13 +6,15 @@ import { canvasSprite } from './Puzzles.js';
 // "Decoración (sistema nervioso)") para dar variedad al fondo. Animadas, sin colisión.
 // De fondo por defecto (las paredes de la sala las tapan); con front: true, por delante.
 //
-// En la sala: decor: [{ x, y, type, flip?, front?, invert? }]. (x, y) es la casilla del
-// centro de su base; con invert: true la estructura va boca abajo, colgada del techo de
-// esa casilla.
+// En la sala: decor: [{ x, y, type, flip?, front?, invert?, side? }]. (x, y) es la casilla
+// del centro de su base; con invert: true la estructura va boca abajo, colgada del techo de
+// esa casilla; con side: 'left' | 'right', tumbada y pegada a la pared de ese lado.
 //
 // Muro eléctrico: un ganglio en el suelo y otro colgado del techo (2x2 casillas cada uno), en la misma columna
 // (o una al lado), se tienden un haz de rayos de techo a suelo que se enciende cada poco
-// (wall: { on, off, delay } en el del suelo, en segundos). Avisa cargando antes de
+// (wall: { on, off, delay } en el del suelo, en segundos). Igual en horizontal: uno en la
+// pared izquierda y otro en la derecha, en la misma fila (o una al lado); los tiempos, en
+// el de la izquierda. Avisa cargando antes de
 // encenderse; encendido, hiere y empuja. Las neuronas son solo decoración.
 
 const K = '#140c10';
@@ -312,12 +314,24 @@ export class Decor {
     const order = def.front ? 2 : -5;
     this.spr = canvasSprite(game, T.w, T.h, order);
     this.spr.glow.renderOrder = order;
-    // Base centrada en (x, y); invertida, colgada del techo de esa casilla.
-    this.x0 = (def.x + 0.5) * TILE - T.w / 2;
-    this.y0 = def.invert ? def.y * TILE : (def.y + 1) * TILE - T.h;
-    this.spr.place(this.x0, this.y0);
-    this.spr.mesh.scale.x = this.spr.glow.scale.x = def.flip ? -1 : 1;
-    this.spr.mesh.scale.y = this.spr.glow.scale.y = def.invert ? -1 : 1;
+    this.side = def.side === 'left' || def.side === 'right' ? def.side : null;
+    if (this.side) {
+      // Tumbada contra la pared: la base, en el borde de la casilla que da a esa pared, y
+      // el sprite girado un cuarto de vuelta alrededor de su centro.
+      this.base = this.side === 'left' ? def.x * TILE : (def.x + 1) * TILE;
+      const cx = this.base + (this.side === 'left' ? T.h / 2 : -T.h / 2), cy = (def.y + 0.5) * TILE;
+      this.x0 = cx - T.w / 2; this.y0 = cy - T.h / 2;
+      this.spr.place(this.x0, this.y0);
+      this.spr.mesh.rotation.z = this.spr.glow.rotation.z = this.side === 'left' ? -Math.PI / 2 : Math.PI / 2;
+      this.spr.mesh.scale.x = this.spr.glow.scale.x = def.flip ? -1 : 1;
+    } else {
+      // Base centrada en (x, y); invertida, colgada del techo de esa casilla.
+      this.x0 = (def.x + 0.5) * TILE - T.w / 2;
+      this.y0 = def.invert ? def.y * TILE : (def.y + 1) * TILE - T.h;
+      this.spr.place(this.x0, this.y0);
+      this.spr.mesh.scale.x = this.spr.glow.scale.x = def.flip ? -1 : 1;
+      this.spr.mesh.scale.y = this.spr.glow.scale.y = def.invert ? -1 : 1;
+    }
     this.jolt = 0;
     this.t = Math.random() * 10;
     this.drawnAt = -1;
@@ -346,6 +360,11 @@ export class Decor {
   // Dónde está el soma en el mundo (para los muros eléctricos).
   get soma() {
     const T = this.type, [sx, sy] = T.soma ?? [T.w / 2, T.h / 2];
+    if (this.side) {
+      // Del centro del sprite, girado como él (a la izquierda: un cuarto de vuelta horario).
+      const dx = (this.def.flip ? T.w - sx : sx) - T.w / 2, dy = sy - T.h / 2, cx = this.x0 + T.w / 2, cy = this.y0 + T.h / 2;
+      return this.side === 'left' ? { x: cx - dy, y: cy + dx } : { x: cx + dy, y: cy - dx };
+    }
     return { x: this.x0 + (this.def.flip ? T.w - sx : sx), y: this.def.invert ? this.y0 + T.h - sy : this.y0 + sy };
   }
 
@@ -355,17 +374,29 @@ export class Decor {
 // Parejas de ganglios que forman un muro: uno en el suelo y otro colgado del techo
 // por encima, a una casilla como mucho de su columna. Devuelve [{ floor, ceil }] (los
 // índices en la lista de decoración).
+// En horizontal: uno en la pared izquierda y otro en la derecha, a su altura (una fila de
+// diferencia como mucho): { floor: el de la izquierda, ceil: el de la derecha, horiz: true }.
 export function neuronPairs(list) {
-  const out = [], used = new Set();
+  const out = [], used = new Set(), isWall = (d) => d.type === WALL_TYPE;
   list.forEach((d, i) => {
-    if (d.type !== WALL_TYPE || d.invert) return;
+    if (!isWall(d) || d.side || d.invert) return;
     let best = -1, bd = Infinity;
     list.forEach((c, j) => {
-      if (c.type !== WALL_TYPE || !c.invert || used.has(j) || c.y >= d.y || Math.abs(c.x - d.x) > 1) return;
+      if (!isWall(c) || c.side || !c.invert || used.has(j) || c.y >= d.y || Math.abs(c.x - d.x) > 1) return;
       const dd = d.y - c.y + Math.abs(c.x - d.x) * 4;
       if (dd < bd) { bd = dd; best = j; }
     });
     if (best >= 0) { used.add(best); out.push({ floor: i, ceil: best }); }
+  });
+  list.forEach((d, i) => {
+    if (!isWall(d) || d.side !== 'left') return;
+    let best = -1, bd = Infinity;
+    list.forEach((c, j) => {
+      if (!isWall(c) || c.side !== 'right' || used.has(j) || c.x <= d.x || Math.abs(c.y - d.y) > 1) return;
+      const dd = c.x - d.x + Math.abs(c.y - d.y) * 4;
+      if (dd < bd) { bd = dd; best = j; }
+    });
+    if (best >= 0) { used.add(best); out.push({ floor: i, ceil: best, horiz: true }); }
   });
   return out;
 }
@@ -381,18 +412,36 @@ export class ElectricWall {
     const w = { ...WALL_DEFAULT, ...(a.def.wall ?? {}) };
     this.on = Math.max(0.2, w.on); this.off = Math.max(0.2, w.off);
     this.t = -(w.delay ?? 0);
-    // De techo a suelo: la descarga recorre también el cuerpo de los dos ganglios, así
-    // que no se puede pasar por debajo ni por encima de los somas.
-    const top = b.soma, bot = a.soma;
-    this.x = (top.x + bot.x) / 2; this.y0 = b.y0 + 2; this.y1 = a.y0 + a.type.h - 2;
     this.W = 28;
-    this.h = Math.max(8, this.y1 - this.y0);
-    this.spr = canvasSprite(game, this.W, Math.ceil(this.h), 3);
-    this.spr.place(this.x - this.W / 2, this.y0);
+    this.horiz = !!a.side;
+    if (this.horiz) {
+      // De pared a pared (a = izquierda, b = derecha): de la base de uno a la del otro. El
+      // haz se dibuja como el vertical y el sprite se gira un cuarto de vuelta.
+      this.y = (a.soma.y + b.soma.y) / 2; this.x0 = a.base + 2; this.x1 = b.base - 2;
+      this.h = Math.max(8, this.x1 - this.x0);
+      this.spr = canvasSprite(game, this.W, Math.ceil(this.h), 3);
+      const cx = (this.x0 + this.x1) / 2;
+      this.spr.place(cx - this.W / 2, this.y - Math.ceil(this.h) / 2);
+      this.spr.mesh.rotation.z = this.spr.glow.rotation.z = Math.PI / 2;
+    } else {
+      // De techo a suelo: la descarga recorre también el cuerpo de los dos ganglios, así
+      // que no se puede pasar por debajo ni por encima de los somas.
+      const top = b.soma, bot = a.soma;
+      this.x = (top.x + bot.x) / 2; this.y0 = b.y0 + 2; this.y1 = a.y0 + a.type.h - 2;
+      this.h = Math.max(8, this.y1 - this.y0);
+      this.spr = canvasSprite(game, this.W, Math.ceil(this.h), 3);
+      this.spr.place(this.x - this.W / 2, this.y0);
+    }
     this.phase = 'off';
   }
 
-  get center() { return { x: this.x, y: (this.y0 + this.y1) / 2 }; }
+  get center() { return this.horiz ? { x: (this.x0 + this.x1) / 2, y: this.y } : { x: this.x, y: (this.y0 + this.y1) / 2 }; }
+  // ¿Toca el haz al jugador?
+  #touches(p) {
+    return this.horiz
+      ? p.y + p.h > this.y - 5 && p.y < this.y + 5 && p.x + p.w > this.x0 && p.x < this.x1
+      : p.x + p.w > this.x - 5 && p.x < this.x + 5 && p.y + p.h > this.y0 && p.y < this.y1;
+  }
 
   update(dt) {
     const g = this.game, p = g.player, cyc = this.on + this.off;
@@ -407,8 +456,8 @@ export class ElectricWall {
     const k = phase === 'on' ? 1 : phase === 'warn' ? (u - (this.off - WARN)) / WARN : 0;
     this.a.state.charge = this.b.state.charge = k;
     // Encendido: hiere y aparta al que lo toque.
-    if (phase === 'on' && p.x + p.w > this.x - 5 && p.x < this.x + 5 && p.y + p.h > this.y0 && p.y < this.y1) {
-      g.hurtPlayer(12, this.x, 'muro eléctrico');
+    if (phase === 'on' && this.#touches(p)) {
+      g.hurtPlayer(12, this.center.x, 'muro eléctrico');
       if (Math.random() < 0.5) g.glowParticles.emit(p.cx, p.cy, { vx: (Math.random() - 0.5) * 80, vy: -40, life: 0.3, color: [0.6, 0.9, 1] });
     }
     this.#draw(phase, k);
