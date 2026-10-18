@@ -460,6 +460,12 @@ export class Game {
       this.input.pressed.delete('KeyE');
       this.input.pressed.delete('Enter');
     }
+    // Salir (Esc, o el botón de volver del mando) cierra los textos: el diálogo entero, o
+    // la voz de un personaje y el aviso que haya en pantalla.
+    if (this.input.hit('Escape') && (this.hud.dialogueActive || this.hud.textShown)) {
+      if (this.hud.dialogueActive) this.hud.endDialogue(); else this.hud.dismiss();
+      this.input.pressed.delete('Escape');
+    }
     const st = this.state, p = this.player, input = this.input;
     this.eyeColor = eyeColor(st.light / 100);
     this.beamColor = beamColor(st.light / 100);

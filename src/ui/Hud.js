@@ -67,6 +67,13 @@ export class Hud {
     this.msgTime = 0;
   }
 
+  // ¿Hay una voz o un aviso en pantalla? Y quitarlos (botón de salir).
+  get textShown() { return this.barkTime > 0 || this.msgTime > 0; }
+  dismiss() {
+    this.barkTime = 0; $('bark').hidden = true;
+    this.msgTime = 0; this.msg.classList.remove('show');
+  }
+
   say(text, seconds = 2.5) {
     if (this.dlg || this.barkTime > 0) return;   // mientras habla alguien, los avisos no lo tapan
     this.msg.textContent = text;
