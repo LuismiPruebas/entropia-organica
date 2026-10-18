@@ -112,6 +112,7 @@ export class EntityFactory {
       const enemy = this.createEnemy(e.type, e.x, e.y, world);
       enemy.key = key;
       if (e.crawl) enemy.crawl = e.crawl; // recorrido por las paredes (Matriarca)
+      if (e.noDna) enemy.noDna = true;     // en esta sala no suelta su ADN (p. ej. un jefe en otro mapa)
       room.enemies.push(enemy);
     });
 

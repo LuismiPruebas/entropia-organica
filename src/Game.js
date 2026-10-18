@@ -295,7 +295,7 @@ export class Game {
     this.audio.stopBossMusic(0.25);
     this.room.cleansed = true;
     if (e.key) st.bosses.add(e.key);
-    if (d.drop?.dna) this.dropPickup('dna', e.cx, e.cy, undefined, { mutation: d.drop.dna });
+    if (d.drop?.dna && !e.noDna) this.dropPickup('dna', e.cx, e.cy, undefined, { mutation: d.drop.dna });
     (d.drop?.items ?? []).forEach((k, i) => this.dropPickup(k, e.cx + (i + 1) * 12, e.cy - 6));
     for (let i = 0; i < (d.drop?.fragments ?? 0); i++) {
       this.dropPickup('fragment', e.cx + (i - 0.5) * 14, e.cy, undefined, { frag: d.frag });
