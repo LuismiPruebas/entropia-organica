@@ -27,9 +27,9 @@ export const BIOMES = {
     // Silencio habitado: sin zumbido de fondo; de vez en cuando emergen chasquidos,
     // notas de cristal, gemidos metálicos o susurros.
     sound: { drone: 43.6, wave: 'sine', filter: 120, q: 1, lfo: 0.1, level: 0, bed: { freq: 2400, q: 2, level: 0.004 }, layer: 'emergent',
-      // Versión de fondo de 'Alien Womb' (solo sus pasajes tranquilos, más grave, sin agudos,
+      // Versión de fondo de 'Chitinous Clicks' (solo sus pasajes tranquilos, más grave, sin agudos,
       // volumen plano y reverberación). Se alterna con el ambiente: suena entera cada 40-90 s.
-      music: { src: 'assets/music/alien-womb-fondo.mp3', vol: 0.6, first: 15, gap: [40, 90], duck: 0.55 } },
+      music: { src: 'assets/music/chitinous-fondo.mp3', vol: 0.6, first: 15, gap: [40, 90], duck: 0.55 } },
     mapColor: '#b0283a',
     fragments: ['neural', 'ocular', 'balistico'],
   },

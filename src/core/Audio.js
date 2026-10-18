@@ -4,7 +4,7 @@
 import { startBossMusic } from './BossMusic.js';
 
 // Temas de jefe con pista grabada (los demás siguen siendo los generados de BossMusic.js).
-const BOSS_TRACKS = { ganglio: 'assets/music/chitinous-clicks.mp3' };
+const BOSS_TRACKS = { ganglio: 'assets/music/alien-womb.mp3' };
 import { VOICES, VOICE_GAIN } from './Voices.js';
 
 // Variación de tono por llamada: ninguna criatura suena dos veces igual.
