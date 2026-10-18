@@ -160,12 +160,26 @@ export class PlayerBody {
     // Nado (pose.swim 0..1, pose.stroke 1→0 tras cada brazada): el cuerpo se echa hacia
     // delante; brazos, piernas, émbolos y tentáculo se mueven según lo que tengas.
     const swim = pose.swim ?? 0, stroke = pose.stroke ?? 0;
-    const lean = (hanging ? pose.rope.x * 3 : moving ? (ninja ? 2.5 : 1.5) : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 5 + swim * 0.5; // se abalanza (al nadar, Player inclina el sprite entero)
+    // Cuerpo en el combo (pose.punchN): el revés (2º) arranca agachado y echado hacia
+    // delante y se estira hacia arriba y atrás; el tajo pesado (3º) se alza de puntillas
+    // echándose atrás y cae con todo el peso hacia delante, flexionando las rodillas.
+    let cLean = 0, cHip = 0, cSh = 0, cCrouch = 0;
+    const pp = (pose.punch ?? 0) > 0 ? 1 - Math.min(1, pose.punch) : -1, pn = pose.punchN ?? 1;
+    if (pp >= 0 && pn > 1) {
+      const env = pp < 0.6 ? 1 : Math.max(0, 1 - (pp - 0.6) / 0.4);
+      const u = Math.min(1, pp / 0.45), e = u * u * (3 - 2 * u);
+      if (pn === 2) { cLean = (3 - 5.5 * e) * env; cHip = (2 - 4 * e) * env; cSh = (1 - 2.5 * e) * env; }
+      else {
+        const w = Math.min(1, pp / 0.5), down = w * w;               // primero alza (w pequeño) y luego cae de golpe
+        cLean = (-3 + 9 * down) * env; cSh = (-2 + 3 * down) * env; cHip = (-2 + 2 * down) * env; cCrouch = 0.75 * down * env;
+      }
+    }
+    const lean = (hanging ? pose.rope.x * 3 : moving ? (ninja ? 2.5 : 1.5) : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 5 + swim * 0.5 + cLean; // se abalanza (al nadar, Player inclina el sprite entero)
     // Agachado (pose.crouch 0..1): la cadera baja casi al suelo, el tronco se encoge y
     // se echa hacia delante; las rodillas se doblan con un pie adelantado.
-    const crouch = pose.crouch ?? 0;
-    const hip = [CX + swingLag - crouch - dashK, GROUND - 11 - bob * (1 - crouch) * (1 - dashK) + (has('pistones') ? -1 : 0) + crouch * CROUCH_DROP + dashK * 4]; // y baja la cadera al lanzarse
-    const sh = [CX + lean + crouch * 2, hip[1] - 8 + crouch + dashK * 2 + (pose.onGround && !moving ? -breath * 0.6 : 0)];
+    const crouch = Math.max(pose.crouch ?? 0, cCrouch);
+    const hip = [CX + swingLag - crouch - dashK, GROUND - 11 - bob * (1 - crouch) * (1 - dashK) + (has('pistones') ? -1 : 0) + crouch * CROUCH_DROP + dashK * 4 + cHip]; // y baja la cadera al lanzarse
+    const sh = [CX + lean + crouch * 2, hip[1] - 8 + crouch + dashK * 2 + cSh + (pose.onGround && !moving ? -breath * 0.6 : 0)];
     const head = [sh[0] + 1, sh[1] - 6];
     const aim = pose.aim ?? 0;
     pose.strike = strike;
