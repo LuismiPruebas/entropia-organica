@@ -461,59 +461,74 @@ function nervFront(seed, n) {
   }
   return front;
 }
-// 2 · Córtex silencioso: un único axón largo y mielinizado que cruza en diagonal (sin
-// costura) y una neurona lejana y tenue. Pocos impulsos, mucha calma.
+// 2 · Córtex piramidal: unas pocas neuronas piramidales separadas (soma triangular,
+// dendrita apical que sube recta con ramitas y dendritas basales cortas). Los impulsos
+// suben despacio por la apical. Calmado y vertical: nada cruza la pantalla.
 function nervioso2() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
-  const axon = [];
-  for (let i = 0; i <= MID_W; i++) axon.push([i, 40 + (i / MID_W) * 0 + Math.sin((i / MID_W) * Math.PI * 2) * 26 + Math.sin((i / MID_W) * Math.PI * 4) * 6]);
-  for (const [x, y] of axon) { dot(g, x - 1, y - 1, '#4a2266', 3, 3); dot(g, x, y - 1, '#7a4aa0'); }
-  for (let i = 4; i < axon.length; i += 16) ball(g, axon[i][0], axon[i][1], 3, '#a878c8', '#e0c0f8', '#5a3080');
-  // Neurona lejana: pequeña, apagada, con dendritas cortas.
-  const r = rng(52), sx = 170, sy = 130;
-  const paths = [axon];
-  for (let k = 0; k < 6; k++) {
-    let x = sx, y = sy, a = (k / 6) * Math.PI * 2 + r() * 0.4;
-    const pts = [];
-    for (let i = 0; i < 16 + r() * 8; i++) { dot(g, x, y, '#3e1c56', 2, 2); pts.push([x, y]); x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.3; }
-    paths.push(pts.reverse());
+  const r = rng(52), paths = [], somas = [];
+  for (const [sx, sy, sz, len] of [[52, 150, 7, 90], [150, 120, 5, 70], [214, 176, 6, 100], [104, 64, 4, 50]]) {
+    // Dendrita apical: sube recta, con ramitas a los lados.
+    const apical = [];
+    let x = sx;
+    for (let i = 0; i < len; i++) {
+      const y = sy - sz - i, w = i < len * 0.3 ? 3 : i < len * 0.7 ? 2 : 1;
+      x += (r() - 0.5) * 0.35;
+      dotW(g, x - (w >> 1), y, '#5a2a7a', w, 1); dotW(g, x - (w >> 1), y, '#9a68c8', 1, 1);
+      apical.push([x, y]);
+      if (i > 8 && i % 11 === 0) { let bx = x, by = y, a = -Math.PI / 2 + (r() < 0.5 ? -1 : 1) * (0.7 + r() * 0.4); for (let k = 0; k < 8 + r() * 6; k++) { dotW(g, bx, by, '#4a2268'); bx += Math.cos(a); by += Math.sin(a); a += (r() - 0.5) * 0.3; } }
+    }
+    paths.push(apical);
+    // Dendritas basales: cortas, hacia abajo y a los lados.
+    for (let k = 0; k < 4; k++) { let bx = sx, by = sy, a = Math.PI / 2 + (k - 1.5) * 0.55; for (let i = 0; i < 10 + r() * 8; i++) { dotW(g, bx, by, '#4a2268'); bx += Math.cos(a); by += Math.sin(a); a += (r() - 0.5) * 0.3; } }
+    // Soma triangular sombreado (luz por la izquierda).
+    for (let y = 0; y <= sz * 2; y++) {
+      const half = (y / (sz * 2)) * sz;
+      for (let xx = -half; xx <= half; xx++) dotW(g, sx + xx, sy - sz + y, xx < -half * 0.3 ? '#c090e8' : xx > half * 0.5 ? '#4a2068' : '#8a58b8');
+    }
+    dotW(g, sx - 1, sy - 1, '#3a1658', 2, 2);
+    gl.fillStyle = 'rgba(150,140,255,0.22)'; gl.fillRect(sx - 2, sy - 2, 4, 4);
+    somas.push([sx, sy]);
   }
-  ball(g, sx, sy, 6, '#5a3078', '#8a60b0', '#341848', '#26102e');
-  gl.fillStyle = 'rgba(120,140,255,0.15)'; gl.fillRect(sx - 2, sy - 2, 4, 4);
-  return { mid, midGlow: glow, front: nervFront(53, 4), anim: { neural: { paths, somas: [[sx, sy]], calm: true } } };
+  return { mid, midGlow: glow, front: nervFront(53, 4), anim: { neural: { paths, somas, calm: true } } };
 }
-// 3 · Sustancia blanca: varios nervios gruesos y paralelos con anillos de mielina, por
-// los que corren impulsos.
+// 3 · Mielina en corte: anillos grandes de mielina (axones vistos de frente) que flotan;
+// su núcleo late con luz.
 function nervioso3() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
-  const paths = [];
-  for (const [y0, amp, ph, th] of [[34, 7, 0.4, 7], [92, 10, 2.1, 9], [150, 6, 4.0, 6]]) {
-    const pts = wavy(y0, amp, (Math.PI * 2 * 2) / MID_W, ph);
-    ringedTube(g, pts, th, '#6a3a90', '#b088d8', '#3a1a58', '#d8b8f0', 9);
-    for (let i = 0; i < pts.length; i += 3) { gl.fillStyle = 'rgba(140,110,255,0.05)'; gl.fillRect(Math.round(pts[i][0]), Math.round(pts[i][1]), 1, 1); }
-    paths.push(pts, pts.slice().reverse());
-  }
-  // Fibras finas sueltas entre los haces.
   const r = rng(61);
-  for (let k = 0; k < 6; k++) { const y0 = r() * MID_H; for (const [x, y] of wavy(y0, 3, (Math.PI * 2) / MID_W, r() * 6)) dot(g, x, y, '#4a2464'); }
-  return { mid, midGlow: glow, front: nervFront(63, 7), anim: { neural: { paths, somas: [] } } };
+  for (const [x0, y0, R] of [[40, 40, 13], [128, 92, 17], [214, 36, 10], [70, 150, 11], [190, 150, 14], [236, 100, 7], [12, 104, 8]]) {
+    const th = Math.max(3, R * 0.34);
+    for (let y = -R - 1; y <= R + 1; y++) for (let x = -R - 1; x <= R + 1; x++) {
+      const d = Math.hypot(x, y);
+      if (d > R) continue;
+      if (d > R - th) {
+        const lit = (-x - y) / (R * 1.4) * 0.5 + 0.5, band = Math.floor(d * 1.5) % 2;
+        dotW(g, x0 + x, y0 + y, d > R - 0.8 ? '#2a1238' : lit > 0.68 ? '#d8b8f0' : lit < 0.3 ? '#4a2a66' : band ? '#9a74c0' : '#8662ae');
+      } else dotW(g, x0 + x, y0 + y, d < R * 0.25 ? '#4a1a5a' : '#1e0c2a');
+    }
+    gl.fillStyle = 'rgba(160,110,255,0.4)';
+    const c = Math.max(2, Math.round(R * 0.4));
+    gl.fillRect(Math.round(x0 - c / 2), Math.round(y0 - c / 2), c, c);
+  }
+  return { mid, midGlow: glow, front: nervFront(63, 5), anim: { pulseGlow: 0.45, motes: { n: 14, colors: ['rgba(190,160,255,0.7)'], vx: 2, vy: -2, size: 1, shape: 'dot', wobble: 6 } } };
 }
-// 4 · Nebulosa sináptica: dos grandes neuronas lejanas en penumbra, con el núcleo
-// encendido, y partículas de neurotransmisor que flotan.
+// 4 · Nebulosa sináptica: racimos de vesículas brillantes flotando en la penumbra, con
+// partículas de neurotransmisor a la deriva.
 function nervioso4() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
   const r = rng(71);
-  for (const [sx, sy, R] of [[64, 70, 12], [190, 140, 9]]) {
-    for (let k = 0; k < 7; k++) {
-      let x = sx, y = sy, a = (k / 7) * Math.PI * 2 + r() * 0.5, w = 4;
-      for (let i = 0; i < 40; i++) { dot(g, x - w / 2, y - w / 2, '#2c1240', Math.max(1, Math.round(w)), Math.max(1, Math.round(w))); x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.25; w = Math.max(1, w - 0.08); }
+  for (const [cx, cy, n] of [[58, 60, 9], [180, 130, 12], [214, 44, 6], [96, 160, 7]]) {
+    for (let k = 0; k < n; k++) {
+      const a = r() * Math.PI * 2, d = r() * 14, x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.8, rad = 2 + r() * 2.5;
+      ball(g, x, y, rad, '#7a3a98', '#e0b0ff', '#3a1650', '#24102e');
+      dot(g, x - rad * 0.4, y - rad * 0.4, '#fff0ff');
+      gl.fillStyle = r() < 0.5 ? 'rgba(200,120,255,0.35)' : 'rgba(120,200,255,0.3)';
+      gl.fillRect(Math.round(x - 1), Math.round(y - 1), 3, 3);
     }
-    ball(g, sx, sy, R, '#341850', '#4a2468', '#22102e', '#1a0a24');
-    ball(g, sx - 1, sy - 1, R * 0.4, '#a060d8', '#e0b0ff', '#5a2890');
-    gl.fillStyle = 'rgba(170,120,255,0.35)'; gl.fillRect(sx - R * 0.4, sy - R * 0.4, R * 0.8, R * 0.8);
   }
   return {
     mid, midGlow: glow, front: nervFront(73, 3),
