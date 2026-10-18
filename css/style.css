@@ -163,6 +163,32 @@ body {
 }
 #dialogue.npc .next { color: #ffd27a; }
 
+/* Voz suelta de un personaje (no espera): la misma membrana, compacta, abajo a la izquierda. */
+#bark {
+  position: absolute;
+  left: 10px;
+  bottom: 12px;
+  max-width: 220px;
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+  padding: 5px 8px 5px 5px;
+  font-size: 5px;
+  line-height: 1.7;
+  color: #f4e0c8;
+  text-shadow: 1px 1px 0 #000;
+  background: radial-gradient(ellipse at 12% 40%, rgba(170, 40, 60, .3), transparent 60%), rgba(22, 5, 10, .9);
+  border-radius: 9px 4px 10px 4px / 5px 9px 4px 10px;
+  box-shadow: 0 0 0 1px #000, 0 0 0 2px #7a2a34, 0 0 0 3px #000, 0 0 12px rgba(200, 40, 70, .22);
+  pointer-events: none;
+  transition: opacity .3s;
+}
+#bark[hidden] { display: none; }
+#bark.out { opacity: 0; }
+#bark .face { flex: none; width: 20px; height: 20px; image-rendering: pixelated; border-radius: 5px 2px 6px 2px; box-shadow: 0 0 0 1px #000, 0 0 0 2px #5a1a24; }
+#bark .who { font-size: 4px; letter-spacing: 1px; color: #ffd27a; margin-bottom: 1px; }
+#bark .who:empty { display: none; }
+
 #dialogue.narr {
   width: 100%;
   bottom: 14px;

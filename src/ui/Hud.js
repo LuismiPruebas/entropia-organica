@@ -7,7 +7,8 @@ export const caps = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCas
 
 // Retrato del que habla (26x26, pixel art): una cara de carne que mueve la boca mientras
 // se escribe el texto. k: 0 poseída (gris violácea, ojos rojos, dientes) · 1 liberada.
-function drawPortrait(cv, t, talking, k) {
+function drawPortrait(cv, t, talking, k, kind) {
+  if (kind === 'bucle') return drawBucle(cv, t, talking);
   const g = cv.getContext('2d'), mix = (a, b) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
   const rgb = (c) => `rgb(${c.join(',')})`;
   const skin = mix([96, 62, 78], [196, 140, 112]), dark = mix([52, 26, 40], [120, 70, 60]), lite = mix([140, 96, 120], [232, 184, 150]);
@@ -42,6 +43,27 @@ function drawPortrait(cv, t, talking, k) {
   }
 }
 
+// Pensamiento Bucle: una cara pálida casi a oscuras, cuencas vacías y una boca que
+// repite; un hilo da vueltas a su alrededor.
+function drawBucle(cv, t, talking) {
+  const g = cv.getContext('2d');
+  g.fillStyle = '#05040a'; g.fillRect(0, 0, 26, 26);
+  for (let y = 0; y < 26; y++) for (let x = 0; x < 26; x++) {
+    const dx = (x + 0.5 - 12) / 7, dy = (y + 0.5 - 13) / 9, d = dx * dx + dy * dy;
+    if (d > 1) continue;
+    const lit = -dx * 0.6 - dy * 0.4;                     // luz desde arriba a la izquierda
+    g.fillStyle = d > 0.8 ? '#2a2630' : lit > 0.35 ? '#c8c0c8' : lit > -0.1 ? '#8a8290' : '#4a4452';
+    g.fillRect(x, y, 1, 1);
+  }
+  g.fillStyle = '#000'; g.fillRect(8, 10, 3, 3); g.fillRect(14, 10, 3, 3);
+  if ((t % 2.4) < 1.2) { g.fillStyle = '#6a5a80'; g.fillRect(9, 11, 1, 1); g.fillRect(15, 11, 1, 1); }
+  const open = talking ? [0, 1, 1, 0][Math.floor(t * 10) % 4] : 0;
+  g.fillStyle = '#1a141e'; g.fillRect(10, 17, 4, 1 + open);
+  // El hilo del bucle, girando.
+  g.fillStyle = 'rgba(170,150,210,0.8)';
+  for (let i = 0; i < 18; i++) { const a = t * 1.5 + i * 0.35, r = 10.5; g.fillRect(Math.round(12.5 + Math.cos(a) * r), Math.round(13 + Math.sin(a) * r * 0.9), 1, 1); }
+}
+
 export class Hud {
   constructor() {
     this.root = $('hud');
@@ -66,6 +88,7 @@ export class Hud {
     el.querySelector('.who').textContent = opts.speaker ? caps(opts.speaker) : '';
     // Con alguien que habla: conversación (retrato y nombre). Sin nadie: narración.
     el.className = opts.speaker ? 'npc' : 'narr';
+    $('bark').hidden = true; this.barkTime = 0;
     this.cache.dlgTxt = this.cache.dlgNext = null;
     this.msg.classList.remove('show');
     this.msgTime = 0;
@@ -87,6 +110,21 @@ export class Hud {
     this.dlg = null;
     $('dialogue').hidden = true;
     d.onEnd?.();
+  }
+
+  // Voz: una frase suelta de un personaje (no espera a que pases). Con su retrato y su
+  // nombre, del mismo aspecto que las conversaciones, más pequeña y se va sola.
+  //   opts: { speaker, owner (k: liberado), portrait: 'anfitrion' | 'bucle' }
+  bark(text, seconds = 3, opts = {}) {
+    if (this.dlg) return;
+    const el = $('bark');
+    el.querySelector('.who').textContent = caps(opts.speaker ?? '');
+    el.querySelector('.txt').textContent = text;
+    el.hidden = false;
+    el.classList.remove('out');
+    this.barkOpts = opts;
+    this.barkTime = seconds;
+    this.barkTalk = Math.min(seconds, 0.6 + text.length * 0.045);
   }
 
   say(text, seconds = 2.5) {
@@ -130,7 +168,14 @@ export class Hud {
       if (this.cache.dlgTxt !== txt) el.querySelector('.txt').textContent = this.cache.dlgTxt = txt;
       const next = this.typing ? '' : `${d.key ?? 'E'} ${d.i < d.lines.length - 1 ? '>' : 'x'}`;
       if (this.cache.dlgNext !== next) el.querySelector('.next').textContent = this.cache.dlgNext = next;
-      if (d.speaker) drawPortrait(el.querySelector('.face'), this.t ?? 0, this.typing, d.owner?.k ?? 0);
+      if (d.speaker) drawPortrait(el.querySelector('.face'), this.t ?? 0, this.typing, d.owner?.k ?? 0, d.portrait);
+    }
+    if (this.barkTime > 0) {
+      this.barkTime -= dt; this.barkTalk -= dt;
+      const el = $('bark');
+      if (this.barkTime <= 0.3) el.classList.add('out');
+      if (this.barkTime <= 0) el.hidden = true;
+      else drawPortrait(el.querySelector('.face'), this.t ?? 0, this.barkTalk > 0, this.barkOpts.owner?.k ?? 0, this.barkOpts.portrait);
     }
     this.t = (this.t ?? 0) + dt;
     const t = this.t;

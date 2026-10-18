@@ -273,7 +273,7 @@ export const DECOR = {
       d.wt = (d.wt ?? 0) - 1 / 60;
       if (d.wt > 0 || game.hud.dialogueActive) return;
       const i = (d.wi = ((d.wi ?? -1) + 1) % T.whisper.length);
-      game.say(`«${T.whisper[i]}»`, 2.6);
+      game.hud.bark(T.whisper[i], 2.6, { speaker: 'Pensamiento Bucle', portrait: 'bucle' });
       d.wt = 3.4;
     },
   },

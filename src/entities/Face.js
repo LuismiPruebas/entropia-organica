@@ -56,7 +56,7 @@ export class Face {
 
   #say(text, sec) {
     const g = this.game;
-    g.say(`«${text}»`, sec);
+    g.hud.bark(text, sec, { speaker: 'El Anfitrión', owner: this });
     this.talk = Math.min(sec, 0.6 + text.length * 0.045);
     g.audio.play(this.k > 0.5 ? 'faceFree' : 'faceSpeak', this.center);
   }

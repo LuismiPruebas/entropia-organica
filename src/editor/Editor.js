@@ -525,9 +525,13 @@ function draw() {
   }
   // Velo de membrana: tinte por encima (la casilla de debajo se sigue viendo).
   if (r.veil?.length) {
-    g.fillStyle = 'rgba(214,150,186,0.45)';
+    g.fillStyle = 'rgba(214,150,186,0.18)';
     for (const [vx, vy] of r.veil) g.fillRect(vx * z, vy * z, z, z);
-    if (z >= 10) { g.strokeStyle = 'rgba(240,180,215,0.5)'; g.lineWidth = 1; for (const [vx, vy] of r.veil) { g.beginPath(); g.moveTo(vx * z, vy * z + z); g.lineTo(vx * z + z, vy * z); g.stroke(); } }
+    if (z >= 6) {
+      g.strokeStyle = 'rgba(245,190,225,0.55)'; g.lineWidth = 1; g.beginPath();
+      for (const [vx, vy] of r.veil) { g.moveTo(vx * z, vy * z + z / 2); g.lineTo(vx * z + z / 2, vy * z); g.moveTo(vx * z + z / 2, vy * z + z); g.lineTo(vx * z + z, vy * z + z / 2); }
+      g.stroke();
+    }
   }
   // Rejilla y celdas del mapa.
   if (z >= 8) {
@@ -788,8 +792,10 @@ cv.addEventListener('mousedown', (e) => {
   }
   snapshot();
   // La goma (o el clic derecho con cualquier herramienta de pintar) deja aire.
-  const c = S.tile === 'G' ? (S.tool === 'erase' || erase ? '-G' : 'G')
+  let c = S.tile === 'G' ? (S.tool === 'erase' || erase ? '-G' : 'G')
     : S.tool === 'erase' ? (erase ? S.tile : '.') : erase ? (S.tile === '.' ? '#' : '.') : S.tile;
+  // Borrar va por capas: primero el velo (si el trazo empieza sobre él), luego lo de debajo.
+  if ((S.tool === 'erase' || erase) && c === '.' && hasVeil(room(), x, y)) c = '-G';
   if (S.tool === 'fill') { floodFill(x, y, c); touch(); return; }
   if (S.tool === 'rect') { S.drag = { rect: true, from: [x, y], to: [x, y], c }; draw(); return; }
   paintAt(x, y, c, S.brush, S.tool === 'blob' || S.tool === 'erase');
@@ -1911,10 +1917,30 @@ function findFloor() {
   for (let y = 1; y < H() - 1; y++) for (let x = 1; x < W() - 1; x++) if (!SOLID.has(getTile(x, y)) && !SOLID.has(getTile(x, y - 1)) && SOLID.has(getTile(x, y + 1))) return [x, y];
   return [1, 1];
 }
+// Al abrir el editor se apunta su código y cómo estaba cada sala en el archivo. Al guardar
+// se comprueba de nuevo: si el editor se actualizó o alguien (p. ej. Claude) cambió esas
+// salas en el archivo, guardar desde esta pestaña desharía esos cambios: se avisa antes.
+const sortKeys = (v) => (Array.isArray(v) ? v.map(sortKeys) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])])) : v);
+const canon = (v) => JSON.stringify(sortKeys(v ?? null));
+const CODE_FILES = ['src/editor/Editor.js', 'src/editor/schema.js', 'src/editor/serialize.js'];
+const codeStamp = () => Promise.all(CODE_FILES.map((f) => fetch(f, { cache: 'no-store' }).then((r) => r.text()).catch(() => ''))).then((a) => a.join('\n'));
+const BASE = { code: codeStamp(), rooms: Object.fromEntries(Object.entries(LEVELS).map(([id, r]) => [id, canon(r)])) };
+async function staleWarning(ids) {
+  const msgs = [];
+  if ((await codeStamp()) !== (await BASE.code)) msgs.push('El editor se ha actualizado desde que abriste esta pestaña.');
+  try {
+    const disk = (await import(`../data/worlds/${WORLD_FILE}?t=${Date.now()}`)).LEVELS;
+    const changedOnDisk = ids.filter((id) => disk[id] && BASE.rooms[id] && canon(disk[id]) !== BASE.rooms[id]);
+    if (changedOnDisk.length) msgs.push(`Las salas ${changedOnDisk.join(', ')} han cambiado en el archivo desde que lo abriste; si guardas, esos cambios se pierden.`);
+  } catch { /* sin servidor: no se puede comprobar */ }
+  return msgs.length ? msgs.join('\n') + '\n\nRecarga la pestaña (F5) antes de guardar.\n¿Guardar igualmente?' : null;
+}
 async function save() {
   if (validate() && !confirm('Hay problemas en los datos (mira la lista). ¿Guardar igualmente?')) return;
   const changed = {};
   for (const id of S.dirty) if (S.rooms[id]) changed[id] = S.rooms[id];
+  const stale = await staleWarning(Object.keys(changed));
+  if (stale && !confirm(stale)) { $('msg').textContent = 'No se ha guardado: recarga la pestaña (F5) y vuelve a hacer los cambios.'; return; }
   const startChanged = S.dirty.has('__start') ? S.start : null;
   try {
     S.fileHandle ??= await loadHandle();
@@ -1946,6 +1972,7 @@ async function save() {
       a.download = WORLD_FILE; a.click();
       $('msg').textContent = `Tu navegador no deja escribir archivos: se ha descargado ${WORLD_FILE}. Sustituye src/data/worlds/${WORLD_FILE} por él.`;
     }
+    for (const [id, r] of Object.entries(changed)) BASE.rooms[id] = canon(r);
     S.dirty.clear(); S.removed.clear();
     renderRoomList();
   } catch (e) {
