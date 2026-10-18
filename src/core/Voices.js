@@ -228,7 +228,7 @@ export const VOICES = {
 export const VOICE_GAIN = {
   neuronWarble: 1.6, neuronAlert: 0.8, neuronHurt: 3,
   swarmBuzz: 4.1, swarmAlert: 2.5, swarmHurt: 2.75,
-  pollBuzz: 3.5, pollScream: 2.8, pollHurt: 3, pollDie: 2.8,
+  pollBuzz: 2.3, pollScream: 1.8, pollHurt: 2, pollDie: 1.9,
   cellChirp: 0.52, cellHurt: 0.75,
   eyeSquelch: 3.3, eyeAlert: 1.7, eyeHurt: 1.95,
   sacInhale: 2.75, sacHurt: 4,

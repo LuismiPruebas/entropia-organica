@@ -977,6 +977,7 @@ export class AudioSys {
 
     clearInterval(this.layerTimer);
     this.layerT = 0;
+    this.layerGain = sound.layerGain ?? 1;
     // Una o varias capas a la vez (p. ej. respiración + arpegio).
     const layers = [].concat(sound.layer ?? []).map((n) => LAYERS[n]).filter(Boolean);
     if (layers.length) this.layerTimer = setInterval(() => { const t = this.layerT++; for (const l of layers) l(this, t); }, 150);
@@ -985,7 +986,7 @@ export class AudioSys {
   // Sonido ambiental sin posición pero con un paneo dado.
   ambient(pan, fn, wet = false) {
     const c = this.ctx, g = c.createGain();
-    g.gain.value = 1;
+    g.gain.value = this.layerGain ?? 1;              // volumen de las capas del bioma (sound.layerGain)
     if (wet && this.reverb) g.connect(this.reverb);
     if (c.createStereoPanner) {
       const p = c.createStereoPanner();
