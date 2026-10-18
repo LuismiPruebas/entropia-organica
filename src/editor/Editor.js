@@ -391,11 +391,22 @@ function drawFace(o, z, alpha) {
   g.drawImage(shrineThumb(), (o.x + 0.5) * z - (SHRINE_W / 32) * z, (o.y + 1) * z - (SHRINE_H / 16) * z, (SHRINE_W / 16) * z, (SHRINE_H / 16) * z);
   g.globalAlpha = 1;
 }
-// Desplegable de decoración: "<tipo>", "<tipo>-techo", "<tipo>-izq", "<tipo>-der".
+// Decoración: el tipo del desplegable, girado (anclada al suelo, a una pared o al techo) y
+// en espejo según los botones (como las rampas). Girar va en el sentido de las agujas:
+// suelo → pared izquierda → techo → pared derecha.
+const ANCHORS = ['suelo', 'left', 'techo', 'right'];
+const ANCHOR_NAME = { suelo: 'en el suelo', left: 'en la pared izquierda', techo: 'colgada del techo', right: 'en la pared derecha' };
+const anchorOf = (o) => o.side ?? (o.invert ? 'techo' : 'suelo');
+const setAnchor = (o, a) => { o.invert = a === 'techo'; if (a === 'left' || a === 'right') o.side = a; else delete o.side; };
+const nextAnchor = (a) => ANCHORS[(ANCHORS.indexOf(a) + 1) % ANCHORS.length];
 const decorFromChoice = (dt = 'neurona') => {
-  const m = dt.match(/^(.*?)(?:-(techo|izq|der))?$/);
-  return { type: m[1], invert: m[2] === 'techo', ...(m[2] === 'izq' ? { side: 'left' } : m[2] === 'der' ? { side: 'right' } : {}) };
+  const o = { type: dt, flip: !!S.decorFlip };
+  setAnchor(o, S.decorAnchor ?? 'suelo');
+  return o;
 };
+function showDecorAnchor() { if ($('decor-anchor')) $('decor-anchor').textContent = `${ANCHOR_NAME[S.decorAnchor ?? 'suelo']}${S.decorFlip ? ' · en espejo' : ''}`; }
+function rotateDecorChoice() { S.decorAnchor = nextAnchor(S.decorAnchor ?? 'suelo'); showDecorAnchor(); draw(); }
+function flipDecorChoice() { S.decorFlip = !S.decorFlip; showDecorAnchor(); draw(); }
 // Decoración en el lienzo: una muestra de la estructura en su sitio (como en el juego).
 const DECOR_PREV = {};
 function drawDecor(o, z, alpha) {
@@ -1133,8 +1144,12 @@ function renderTools() {
   for (const b of document.querySelectorAll('[data-tool]')) b.onclick = () => setTool(b.dataset.tool);
   $('kind').innerHTML = Object.entries(KINDS).filter(([k]) => k !== 'exits').map(([k, K]) => `<option value="${k}">${K.label}</option>`).join('');
   $('kind').onchange = () => { S.kind = $('kind').value; S.noduleLux = false; showDecorRow(); };
-  $('decor-type').innerHTML = Object.entries(DECOR).map(([k, d]) => `<option value="${k}">${d.name}</option>` + (k === WALL_TYPE ? `<option value="${k}-techo">${d.name} (colgado del techo)</option><option value="${k}-izq">${d.name} (en la pared izquierda)</option><option value="${k}-der">${d.name} (en la pared derecha)</option>` : '')).join('');
-  $('decor-type').value = S.decorType ??= 'neurona';
+  $('decor-type').innerHTML = Object.entries(DECOR).map(([k, d]) => `<option value="${k}">${d.name}</option>`).join('');
+  if (!DECOR[S.decorType]) S.decorType = 'neurona';
+  $('decor-type').value = S.decorType;
+  $('decor-rot').onclick = rotateDecorChoice;
+  $('decor-flip').onclick = flipDecorChoice;
+  showDecorAnchor();
   $('decor-type').onchange = () => { S.decorType = $('decor-type').value; draw(); };
   showDecorRow();
   $('brush').oninput = () => { S.brush = Number($('brush').value); $('brush-v').textContent = S.brush; };
@@ -1325,13 +1340,8 @@ function renderInspector() {
     if (kind === 'exits' && k === 'toLink') continue;
     if (kind === 'enemies' && k === 'type') html += field('tipo', { v, options: ENEMY_TYPES }, (nv) => { o.type = nv; }, 'select');
     else if (kind === 'decor' && k === 'side') continue;
-    else if (kind === 'decor' && k === 'invert') {
-      const AN = { suelo: 'suelo', techo: 'techo (colgada)', left: 'pared izquierda', right: 'pared derecha' };
-      html += field('anclada a', { v: AN[o.side ?? (o.invert ? 'techo' : 'suelo')], options: Object.values(AN) }, (nv) => {
-        const key = Object.keys(AN).find((a) => AN[a] === nv);
-        o.invert = key === 'techo';
-        if (key === 'left' || key === 'right') o.side = key; else delete o.side;
-      }, 'select');
+    else if (kind === 'decor' && (k === 'invert' || k === 'flip')) {
+      if (k === 'invert') html += `<p class="dim">${ANCHOR_NAME[anchorOf(o)]}${o.flip ? ' · en espejo' : ''}</p><div class="row"><button id="dc-rot" title="Suelo → pared izquierda → techo → pared derecha">⟳ Girar</button><button id="dc-flip">⇆ Espejo</button></div>`;
     }
     else if (kind === 'decor' && k === 'type') html += field('estructura', { v: DECOR[v]?.name ?? v, options: Object.values(DECOR).map((d) => d.name) }, (nv) => { o.type = Object.keys(DECOR).find((key) => DECOR[key].name === nv) ?? o.type; }, 'select');
     else if (kind === 'exits' && k === 'to') html += field('lleva a', { v, options: Object.keys(S.rooms) }, (nv) => { o.to = nv; }, 'select');
@@ -1361,6 +1371,8 @@ function renderInspector() {
   if (kind === 'links') wireLinkButtons(o);
   if (kind === 'faces' && $('face-reset')) $('face-reset').onclick = () => { snapshot(); for (const k of ['taunts', 'thanks', 'opens', 'hints']) delete o[k]; touch(); renderInspector(); };
   $('del').onclick = deleteSelected;
+  if ($('dc-rot')) $('dc-rot').onclick = () => { snapshot(); setAnchor(o, nextAnchor(anchorOf(o))); touch(); renderInspector(); draw(); };
+  if ($('dc-flip')) $('dc-flip').onclick = () => { snapshot(); o.flip = !o.flip; touch(); renderInspector(); draw(); };
   $('dup').onclick = () => {
     if (kind === 'pods') return;
     snapshot();
@@ -2080,6 +2092,7 @@ addEventListener('keydown', (e) => {
   const t = e.code === 'KeyV' ? TOOLS.find(([id]) => id === 'area') : TOOLS.find(([, , k]) => `Key${k}` === e.code);   // V: el atajo de antes
   if (t) setTool(t[0]);
   if (e.code === 'Delete' || e.code === 'Backspace') deleteSelected();
+  if (e.code === 'KeyT' && S.tool === 'place' && S.kind === 'decor') { rotateDecorChoice(); $('msg').textContent = `Decoración ${ANCHOR_NAME[S.decorAnchor]} (T vuelve a girar).`; return; }
   if (e.code === 'KeyT' && FLIP[S.tile]) { S.tile = FLIP[S.tile]; renderPalette(); $('msg').textContent = `Rampa volteada: ${TILE_BY_CHAR[S.tile].name} (T vuelve a voltear).`; return; }
   if (e.code === 'KeyG') { S.view = S.view === 'game' ? 'schema' : 'game'; $('view').checked = S.view === 'game'; draw(); }
   if (e.code === 'BracketRight') { S.brush = Math.min(9, S.brush + 1); $('brush').value = S.brush; $('brush-v').textContent = S.brush; }
