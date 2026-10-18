@@ -36,7 +36,7 @@ export const PLASMA = { name: 'Coágulo de plasma', heal: 30 };
 export const ITEMS = {
   shield: { name: 'Perla de Nácar', time: 10, price: { bio: 130 } }, // invulnerable
   regen: { name: 'Célula Madre', time: 10, price: { bio: 130 } },   // regenera integridad
-  plasma: { name: 'Coágulo de plasma', time: 0, price: { bio: 30 }, heal: PLASMA.heal }, // cura al momento
+  plasma: { name: 'Coágulo de plasma', time: 0, price: { bio: 45 }, heal: PLASMA.heal }, // cura al momento
 };
 // Infección: te pudre al menos 10 s (poco daño, pero arcadas que te dejan vendido; ver
 // Player). La anula la Dermis Nanocutánea; la curan el útero, el Tejido sano, la Célula
