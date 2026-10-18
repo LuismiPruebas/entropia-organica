@@ -85,11 +85,23 @@ function setTile(x, y, c) {
   if (r[x] === c) return;
   room().grid[y] = r.slice(0, x) + c + r.slice(x + 1);
 }
+// Velo de membrana: una capa encima de las casillas (r.veil = [[x, y], ...]); pintarlo
+// no cambia lo que hay debajo. 'G' lo pone y '-G' lo quita.
+const hasVeil = (r, x, y) => (r.veil ?? []).some(([vx, vy]) => vx === x && vy === y);
+function setVeil(r, x, y, on) {
+  if (x < 0 || y < 0 || y >= r.grid.length || x >= r.grid[0].length || hasVeil(r, x, y) === on) return;
+  if (on) (r.veil ??= []).push([x, y]);
+  else { r.veil = r.veil.filter(([vx, vy]) => vx !== x || vy !== y); if (!r.veil.length) delete r.veil; }
+}
+// El velo dentro de un rectángulo, relativo a su esquina; y quitarlo de ahí.
+const veilIn = (r, [x, y, w, h]) => (r.veil ?? []).filter(([vx, vy]) => inRect([x, y, w, h], vx, vy)).map(([vx, vy]) => [vx - x, vy - y]);
+function clearVeil(r, rc) { if (r.veil) { r.veil = r.veil.filter(([vx, vy]) => !inRect(rc, vx, vy)); if (!r.veil.length) delete r.veil; } }
 function paintAt(x, y, c, size = S.brush, round = false) {
   const R = Math.floor((size - 1) / 2);
   for (let dy = -R; dy <= size - 1 - R; dy++) for (let dx = -R; dx <= size - 1 - R; dx++) {
     if (round && dx * dx + dy * dy > (size / 2) * (size / 2) + 0.5) continue;
-    setTile(x + dx, y + dy, c);
+    if (c === 'G' || c === '-G') setVeil(room(), x + dx, y + dy, c === 'G');
+    else setTile(x + dx, y + dy, c);
   }
   // Borrar a aire también quita las marcas de objeto oculto de esas casillas:
   // la marca va con el objeto que esconde.
@@ -102,6 +114,18 @@ function paintAt(x, y, c, size = S.brush, round = false) {
   }
 }
 function floodFill(x, y, c) {
+  // Con el velo: cubre (o descubre) la zona de casillas iguales, sin cambiarlas.
+  if (c === 'G' || c === '-G') {
+    const from = getTile(x, y), stack = [[x, y]], seen = new Set();
+    while (stack.length) {
+      const [px, py] = stack.pop(), k = px + ',' + py;
+      if (seen.has(k) || px < 0 || py < 0 || px >= W() || py >= H() || getTile(px, py) !== from) continue;
+      seen.add(k);
+      setVeil(room(), px, py, c === 'G');
+      stack.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
+    }
+    return;
+  }
   const from = getTile(x, y);
   if (from === c) return;
   const stack = [[x, y]], seen = new Set();
@@ -128,6 +152,7 @@ function shiftRoom(dx, dy) {
   };
   for (const key of Object.keys(KINDS)) if (key !== 'exits' && key !== 'pods') for (const o of r[key] ?? []) shift(o);
   if (r.pods) r.pods.at = r.pods.at.map(([x, y]) => [x + dx, y + dy]);
+  if (r.veil) r.veil = r.veil.map(([x, y]) => [x + dx, y + dy]);
   for (const ex of r.exits ?? []) {
     if (ex.at && (ex.side === 'left' || ex.side === 'right')) ex.at = ex.at.map((v) => v + dy);
     if (ex.at && (ex.side === 'top' || ex.side === 'bottom')) ex.at = ex.at.map((v) => v + dx);
@@ -498,6 +523,12 @@ function draw() {
       }
     }
   }
+  // Velo de membrana: tinte por encima (la casilla de debajo se sigue viendo).
+  if (r.veil?.length) {
+    g.fillStyle = 'rgba(214,150,186,0.45)';
+    for (const [vx, vy] of r.veil) g.fillRect(vx * z, vy * z, z, z);
+    if (z >= 10) { g.strokeStyle = 'rgba(240,180,215,0.5)'; g.lineWidth = 1; for (const [vx, vy] of r.veil) { g.beginPath(); g.moveTo(vx * z, vy * z + z); g.lineTo(vx * z + z, vy * z); g.stroke(); } }
+  }
   // Rejilla y celdas del mapa.
   if (z >= 8) {
     g.strokeStyle = 'rgba(255,255,255,0.05)'; g.lineWidth = 1; g.beginPath();
@@ -757,7 +788,8 @@ cv.addEventListener('mousedown', (e) => {
   }
   snapshot();
   // La goma (o el clic derecho con cualquier herramienta de pintar) deja aire.
-  const c = S.tool === 'erase' ? (erase ? S.tile : '.') : erase ? (S.tile === '.' ? '#' : '.') : S.tile;
+  const c = S.tile === 'G' ? (S.tool === 'erase' || erase ? '-G' : 'G')
+    : S.tool === 'erase' ? (erase ? S.tile : '.') : erase ? (S.tile === '.' ? '#' : '.') : S.tile;
   if (S.tool === 'fill') { floodFill(x, y, c); touch(); return; }
   if (S.tool === 'rect') { S.drag = { rect: true, from: [x, y], to: [x, y], c }; draw(); return; }
   paintAt(x, y, c, S.brush, S.tool === 'blob' || S.tool === 'erase');
@@ -907,10 +939,11 @@ function liftArea() {
   const rc = areaRect(S.area), [x, y, w, h] = rc;
   snapshot();
   const tiles = Array.from({ length: h }, (_, j) => Array.from({ length: w }, (_, i) => getTile(x + i, y + j)));
-  const elems = elementsIn(rc);
+  const elems = elementsIn(rc), veil = veilIn(room(), rc);
   fillRect(room(), rc);
+  clearVeil(room(), rc);
   S.gameCanvasFor = null; CTX_CACHE.delete(S.id);         // la vista de juego, ya sin lo levantado
-  S.float = { tiles, elems, x, y, w, h, dx: 0, dy: 0 };
+  S.float = { tiles, elems, veil, x, y, w, h, dx: 0, dy: 0 };
 }
 // Coloca el bloque que se arrastra a (dx, dy) de su origen; sus elementos lo siguen.
 function floatTo(dx, dy) {
@@ -924,6 +957,8 @@ function dropFloat() {
   const F = S.float;
   if (!F) return;
   for (let j = 0; j < F.h; j++) for (let i = 0; i < F.w; i++) setTile(F.x + F.dx + i, F.y + F.dy + j, F.tiles[j][i]);
+  clearVeil(room(), [F.x + F.dx, F.y + F.dy, F.w, F.h]);
+  for (const [i, j] of F.veil) setVeil(room(), F.x + F.dx + i, F.y + F.dy + j, true);
   S.area = { x0: F.x + F.dx, y0: F.y + F.dy, x1: F.x + F.dx + F.w - 1, y1: F.y + F.dy + F.h - 1 };
   S.float = null;
   if (S.clip?.cut && S.clip.room === S.id) S.clip.cut = false; // lo cortado ya no está ahí
@@ -955,6 +990,7 @@ function areaDelete() {
   snapshot();
   removeElements(elementsIn(rc));
   fillRect(room(), rc);
+  clearVeil(room(), rc);
   touch(); renderInspector(); draw();
 }
 // Guarda la zona (casillas y elementos, con su sitio dentro de ella) para pegarla.
@@ -964,6 +1000,7 @@ function areaCopy(cutIt = false) {
   S.clip = {
     room: S.id, rect: rc, w, h, cut: cutIt, src,
     tiles: Array.from({ length: h }, (_, j) => Array.from({ length: w }, (_, i) => getTile(x + i, y + j))),
+    veil: veilIn(r, rc),
     elems: src.map(({ kind, o }) => ({ kind, o: clone(o), at: elemPos(kind, o, r).map((v, k) => v - rc[k]) })),
   };
   $('msg').textContent = cutIt
@@ -982,9 +1019,11 @@ function areaPaste() {
   if (c.cut) {
     const src = S.rooms[c.room];
     if (src && c.room !== S.id) { snapshotRoom(c.room); S.dirty.add(c.room); CTX_CACHE.delete(c.room); }
-    if (src) { removeElements(c.src, src); fillRect(src, c.rect); }
+    if (src) { removeElements(c.src, src); fillRect(src, c.rect); clearVeil(src, c.rect); }
   }
   for (let j = 0; j < c.h; j++) for (let i = 0; i < c.w; i++) setTile(hx + i, hy + j, c.tiles[j][i]);
+  clearVeil(room(), [hx, hy, c.w, c.h]);
+  for (const [i, j] of c.veil ?? []) setVeil(room(), hx + i, hy + j, true);
   const r = room(), elems = addCopies(c.elems);
   elems.forEach((e, i) => {
     const at = c.elems[i].at, [bx, by] = elemPos(e.kind, e.o, r);

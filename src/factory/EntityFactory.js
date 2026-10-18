@@ -60,7 +60,8 @@ export class EntityFactory {
     const room = { id, def, world, biome, ambient: def.ambient ?? biome.ambient, enemies: [], pickups: [], anchors: [], nodes: [], photo: [], meshes: [], tier: roomTier(id) };
     const hidden = new Set((def.hidden ?? []).map(([x, y]) => `${x},${y}`));
     const photoSeen = new Set();
-    const veilCells = new Set();       // velo de membrana ('G'): aire para la física, capa delante
+    // Velo de membrana: capa propia (def.veil) por delante; no cambia la casilla de debajo.
+    const veilCells = new Set((def.veil ?? []).filter(([x, y]) => x >= 0 && y >= 0 && x < world.w && y < world.h).map(([x, y]) => `${x},${y}`));
 
     for (let cy = 0; cy < world.h; cy++) {
       for (let cx = 0; cx < world.w; cx++) {

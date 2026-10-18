@@ -19,7 +19,7 @@ export const TILES = [
   { c: 'Z', name: 'Membrana del Rostro (se abre al liberarlo)', color: '#9a6ad0' },
   { c: 'f', name: 'Membrana fotosensible (Ojo I)', color: '#c8a0c0' },
   { c: 'm', name: 'Mucosa resbaladiza', color: '#6a8a30' },
-  { c: 'G', name: 'Velo de membrana (translúcido, sin colisión, por delante)', color: '#c890b0' },
+  { c: 'G', name: 'Velo de membrana (capa encima: no borra lo de debajo · clic derecho lo quita)', color: '#c890b0' },
   // Pendientes (core/Physics.js -> SLOPES): suelo inclinado, pared por debajo de la recta.
   { c: '/', name: 'Rampa 45° (sube a la derecha)', color: '#8a3a58', slope: [16, 0] },
   { c: 'k', name: 'Rampa 45° (sube a la izquierda)', color: '#8a3a58', slope: [0, 16] },
@@ -215,4 +215,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'faces', 'texts', 'decor', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
