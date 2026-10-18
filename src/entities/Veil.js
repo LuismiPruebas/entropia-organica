@@ -43,12 +43,12 @@ function paintVeil(cells, tint, seed) {
       const er = e - rag;
       // Ondas suaves de grosor (se desplazan entre fotogramas).
       const n = Math.sin(x * 0.11 + y * 0.05 + f * 1.4) * 0.5 + Math.sin(y * 0.17 - x * 0.07 + f * 0.9) * 0.5;
-      let a = 0.4 + n * 0.08 + (er < 3 ? (3 - er) * 0.12 : 0);
+      let a = 0.56 + n * 0.08 + (er < 3 ? (3 - er) * 0.12 : 0);
       let k = 0.85 + n * 0.14 - (er < 1.5 ? 0.3 : 0);         // brillo (el filo, más oscuro)
       if (r() < 0.004) { k = 1.5; a += 0.25; }                 // mota húmeda
       const i = (y * W + x) * 4;
       d[i] = Math.min(255, tr * k); d[i + 1] = Math.min(255, tg * k); d[i + 2] = Math.min(255, tb * k);
-      d[i + 3] = Math.round(Math.min(0.85, a) * 255);
+      d[i + 3] = Math.round(Math.min(0.93, a) * 255);
     }
     g.putImageData(img, 0, 0);
     // Venas finas que serpentean por la membrana.
@@ -73,9 +73,9 @@ export class Veil {
   constructor(game, room, cells, i) {
     this.game = game;
     this.cells = cells;
-    // Tono: una carne pálida teñida del color de su bioma.
+    // Tono: una carne pálida amarillenta (como grasa o pus seco), algo teñida de su bioma.
     const base = hex(room.biome?.mapColor ?? '#b0283a');
-    const tint = '#' + base.map((v, i) => Math.round(v * 0.7 + [240, 170, 190][i] * 0.3).toString(16).padStart(2, '0')).join('');
+    const tint = '#' + base.map((v, i) => Math.round(v * 0.35 + [236, 206, 128][i] * 0.65).toString(16).padStart(2, '0')).join('');
     const p = paintVeil(cells, tint, (cells[0][0] * 31 + cells[0][1] * 17 + i) | 0);
     this.box = { x: p.x, y: p.y, w: p.w, h: p.h };
     this.texs = p.frames.map((c) => canvasTexture(c));
