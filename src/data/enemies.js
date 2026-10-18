@@ -135,11 +135,13 @@ export const ENEMIES = {
     behavior: 'pollinator',
     hp: 36, w: 16, h: 18,
     sight: 170, speed: 70, lightFear: 0.75, darkMult: 1.4,
-    // Embestida si estás cerca; si no, se pasea por encima de ti soltando vainas de esporas.
+    // Embestida si estás cerca; si no, se pasea por encima de ti soltando vainas de esporas
+    // o, a ratos, se lanza en picado.
     ramRange: 64, ramReachY: 40, windup: 0.5, ramSpeed: 235, ramTime: 0.42, recover: 0.75, ramCool: 2.2, ramDamage: 12,
     height: 76, sweep: 46, dropEvery: 1.0, sporeDamage: 5,
+    diveChance: 0.55, diveRange: 160, diveTime: 0.65, // a ratos se lanza en picado desde arriba
     contactDamage: 7,
-    habits: 'Vuela alto y se pasea de lado a lado por encima de ti, cagando vainas de esporas que revientan al caer. Si te acercas, se encoge alzando las garras y embiste. Aguanta bastante; solo un ojo muy desarrollado le hace huir.',
+    habits: 'Vuela alto y se pasea de lado a lado por encima de ti, cagando vainas de esporas que revientan al caer; a ratos, en vez de eso, se lanza en picado. Si te acercas, se encoge alzando las garras y embiste. Aguanta bastante; solo un ojo muy desarrollado le hace huir.',
     drop: { biomass: 10 },
     sounds: { reveal: 'moan', windup: 'stalkerWindup', ram: 'stalkerLunge', attack: 'matCough', die: 'swarmDie', hurt: 'swarmHurt' },
     lore: 'Fumigador de la planta en 1984. Lo bajaron a la Cavidad a sellar los conductos con un traje de goma que no aguantó. Las esporas no lo mataron: le enseñaron a volar. Aún pone cara de disculpa antes de lanzarse contra ti.',

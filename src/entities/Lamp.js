@@ -10,7 +10,7 @@ import { spriteMesh, canvasTexture } from '../core/Sprites.js';
 
 // Color de la bolita según el bioma.
 const BULB = {
-  nervioso: '#9affc8', pulmonar: '#c8ff6a', digestivo: '#ffd26a', corazon: '#ff6a7a', oseo: '#ffe0a0', circulatorio: '#ff8ab0',
+  nervioso: '#9affc8', pulmonar: '#bcd4ff', digestivo: '#ffd26a', corazon: '#ff6a7a', oseo: '#ffe0a0', circulatorio: '#ff8ab0',
 };
 const W = 7;
 const K = '#140c10';

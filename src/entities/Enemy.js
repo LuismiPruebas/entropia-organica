@@ -271,8 +271,12 @@ export const BEHAVIORS = {
     } else if (e.state === 'hunt') {
       e.lost = s.sees ? 0 : (e.lost ?? 0) + dt;
       if (e.lost > 4) e.state = 'patrol';
-      if (s.sees && s.dist < d.ramRange && Math.abs(s.dy) < d.ramReachY && e.cool <= 0) {
-        e.state = 'windup'; e.timer = d.windup; e.aimA = Math.atan2(s.dy, s.dx);
+      // A ratos, en vez de soltarte esporas, se lanza en picado desde arriba.
+      e.decide = (e.decide ?? 1.5) - dt;
+      const dive = s.sees && e.cool <= 0 && e.decide <= 0 && s.dy > 30 && s.dist < d.diveRange && Math.random() < d.diveChance;
+      if (e.decide <= 0) e.decide = 1 + Math.random() * 0.6;
+      if (dive || (s.sees && s.dist < d.ramRange && Math.abs(s.dy) < d.ramReachY && e.cool <= 0)) {
+        e.state = 'windup'; e.timer = d.windup; e.aimA = Math.atan2(s.dy, s.dx); e.dive = dive;
         g.audio.play(d.sounds?.windup ?? 'charge', e);
       } else {
         // Se pasea por encima de ti, de lado a lado.
@@ -295,7 +299,7 @@ export const BEHAVIORS = {
       e.vx = -Math.cos(e.aimA) * back; e.vy = -Math.sin(e.aimA) * back;
       e.shakeX = Math.random() < 0.5 ? -1 : 1;
       if (e.timer <= 0) {
-        e.state = 'ram'; e.timer = d.ramTime;
+        e.state = 'ram'; e.timer = e.dive ? d.diveTime : d.ramTime;
         e.vx = Math.cos(e.aimA) * d.ramSpeed; e.vy = Math.sin(e.aimA) * d.ramSpeed;
         g.audio.play(d.sounds?.ram ?? 'whip', e);
       }

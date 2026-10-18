@@ -92,10 +92,10 @@ const MATERIALS = {
     myelin: '#c070b0', light: '#f0a8e0', outline: '#2a0c28',
     pulse: null, // sin venas que laten: su azul se confundía con los impulsos de las neuronas del fondo
   },
-  // Cavidad Pulmonar (turquesa y coral): tejido esponjoso cuajado de alvéolos.
+  // Cavidad Pulmonar (azul grisáceo y coral): tejido esponjoso cuajado de alvéolos.
   spongy: {
-    base: ['#2e8a7e', '#2a7e74', '#246e66'], groove: '#12403e', deep: '#164a48',
-    myelin: '#6ac8b4', light: '#b8f8e4', tissue: '#e0788a', outline: '#0e3634',
+    base: ['#4a5a70', '#44546a', '#3c4a5e'], groove: '#161e2a', deep: '#1c2634',
+    myelin: '#8a9cb6', light: '#d0dcec', tissue: '#e0788a', outline: '#10161f',
     pulse: 'rgba(255,150,175,0.7)',
   },
   // Digestivo (ámbar y mostaza): mucosa intestinal con pliegues, criptas y vellosidades.
@@ -296,7 +296,7 @@ function paintOrifice(g, gl, { x0, x1, row, dir }) {
 // far = lo más hondo; marble = vetas; fat = grasa; vein = venas oscuras.
 const MASS = {
   fibrous: { near: '#92387c', far: '#5e2258', marble: '#bc54a0', fat: '#e8a8d8', vein: '#5a3290' },
-  spongy: { near: '#2a7a70', far: '#1c5a56', marble: '#44a094', fat: '#e8909e', vein: '#8a3050' },
+  spongy: { near: '#425268', far: '#2a3648', marble: '#5e7290', fat: '#e8909e', vein: '#8a3050' },
   villous: { near: '#9a6018', far: '#6c4210', marble: '#bc8632', fat: '#f4c868', vein: '#7a4060' },
   osseous: { near: '#8a6a50', far: '#5a3e2e', marble: '#b09070', fat: '#e0d0b0', vein: '#6a2018' },
   muscle: { near: '#961a2a', far: '#640e1c', marble: '#bc3044', fat: '#f4b888', vein: '#6a0c1e' },
@@ -960,17 +960,17 @@ function myelinBeads(g, gl, x, oy, r) {
 function ciliaTuft(g, x, oy, dir, r) {
   for (let i = 0; i < 6; i++) {
     const y = oy + 2 + i * 2, len = 2 + Math.floor(r() * 3);
-    px(g, dir < 0 ? x - len : x, y, i % 2 ? '#b8f8e4' : '#6ac8b4', len, 1);
+    px(g, dir < 0 ? x - len : x, y, i % 2 ? '#d0dcec' : '#8a9cb6', len, 1);
   }
 }
 // Saco alveolar colgante, translúcido.
 function hangingSac(g, gl, x, y, r) {
   const h = 4 + Math.floor(r() * 4);
   px(g, x, y, '#e0788a', 1, 2);
-  px(g, x - 2, y + 2, '#3a9a8c', 5, h);
+  px(g, x - 2, y + 2, '#5a6e88', 5, h);
   px(g, x - 2, y + 2, '#e0788a', 1, h);
-  px(g, x - 1, y + 3, '#b8f8e4', 2, h - 2);
-  px(gl, x - 1, y + 3, 'rgba(160,255,220,0.18)', 2, h - 2);
+  px(g, x - 1, y + 3, '#d0dcec', 2, h - 2);
+  px(gl, x - 1, y + 3, 'rgba(180,205,255,0.18)', 2, h - 2);
 }
 // Vellosidad colgante del techo del intestino.
 function hangingVillus(g, x, y, r) {

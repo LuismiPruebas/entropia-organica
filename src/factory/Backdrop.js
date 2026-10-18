@@ -2,7 +2,7 @@
 // costuras, pintada píxel a píxel. Cada bioma tiene su familia de color (sin negros ni
 // grises: el tono más hondo sigue siendo un color) y sus motivos:
 //   nervioso   tejido violeta con neuronas estrelladas, glía y axones mielinizados
-//   pulmonar   parénquima turquesa cuajado de alvéolos con capilares coral
+//   pulmonar   parénquima azul grisáceo cuajado de alvéolos con capilares coral
 //   digestivo  carne escamada como empedrado (oliva y ocre), venas rojizas y goterones de mucosa
 //   corazon    músculo carmesí estriado, con discos intercalares y capilares
 // Todo lo que se repite usa coordenadas envueltas (módulo del tamaño), así los bordes
@@ -169,14 +169,14 @@ const BACKDROPS = {
     return sf.canvas();
   },
 
-  // Cavidad Pulmonar: turquesa y verde agua, con alvéolos y capilares coral.
+  // Cavidad Pulmonar: azul grisáceo (pizarra), con alvéolos y capilares coral.
   pulmonar() {
     const sf = surface();
-    const P = { lo: '#123c44', mid: '#1e5a5e', hi: '#2e7a74', membrane: '#c8606a', cell: '#3a948a', shine: '#a8f0dc', nucleus: '#1a4a50' };
+    const P = { lo: '#18202c', mid: '#283444', hi: '#3a4a5e', membrane: '#c8606a', cell: '#4e6078', shine: '#c8d4e4', nucleus: '#1e2836' };
     tissue(sf, P, 21, 4);
     // Alvéolos: racimos de sacos abombados (como uvas), con pared coral y el fondo del
     // saco más hondo abajo a la derecha.
-    const mem = hexRgb('#c85a68'), wall = hexRgb('#58b8a8'), shine = hexRgb('#d0fff0'), shade = hexRgb('#14444a');
+    const mem = hexRgb('#c85a68'), wall = hexRgb('#7488a2'), shine = hexRgb('#e2eaf4'), shade = hexRgb('#141a26');
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
       const [d1, d2, id, cx, cy] = cells(x, y, 9, 4);
       const cs = S / 9, edge = (d2 - d1) / cs;
@@ -195,9 +195,9 @@ const BACKDROPS = {
     for (let n = 0; n < 6; n++) {
       const x = r() * S, y = r() * S, rad = 6 + r() * 6;
       for (let a = 0; a < Math.PI * 2; a += 0.04) for (let k = 0; k < 3; k++) {
-        sf.blend(x + Math.cos(a) * (rad + k), y + Math.sin(a) * (rad + k), hexRgb(k === 0 ? '#e8fff4' : '#8ad8c4'), 0.8);
+        sf.blend(x + Math.cos(a) * (rad + k), y + Math.sin(a) * (rad + k), hexRgb(k === 0 ? '#eef2f8' : '#98aac2'), 0.8);
       }
-      disc(sf, x, y, rad - 1, '#1e5a5e', '#3a8a84', '#164a50', { k: 0.8 });
+      disc(sf, x, y, rad - 1, '#283444', '#4a5c74', '#1a2432', { k: 0.8 });
     }
     // Esporas suspendidas: motas violáceas con halo.
     for (let n = 0; n < 30; n++) disc(sf, r() * S, r() * S, 1.5 + r() * 1.5, '#8a6ac8', '#c8b0ff', '#4a3a80', { k: 0.8 });

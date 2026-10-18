@@ -39,13 +39,13 @@ export const BIOMES = {
     material: 'spongy',
     growth: 'alveoli',
     growthDensity: 0.45,
-    bg: { base: '#123c44' },
-    camo: '#164a4a',
-    // Turquesa y verde agua de pulmón húmedo, con acentos coral.
-    ambient: [0.15, 0.2, 0.19],
+    bg: { base: '#18202c' },
+    camo: '#1c2532',
+    // Azul grisáceo de pulmón frío (pizarra), con las venas y los acentos en rojo coral.
+    ambient: [0.16, 0.18, 0.22],
     // Respiración y un arpegio lento y siniestro en menor; apenas un aire de fondo.
     sound: { drone: 32.7, wave: 'triangle', filter: 160, q: 1, lfo: 0.21, level: 0.012, bed: { freq: 520, q: 0.6, level: 0.025 }, layer: ['breath', 'arpeggio'] },
-    mapColor: '#5ad0a0',
+    mapColor: '#8aa0c4',
     fragments: ['ocular', 'dermal', 'neural'],
   },
   digestivo: {

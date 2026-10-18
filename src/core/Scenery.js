@@ -132,7 +132,7 @@ function pulmonar() {
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
   const r = rng(23);
   // Árbol bronquial: tubos rosados con anillos de cartílago; al final de cada rama,
-  // un racimo de alvéolos como uvas (turquesa con la pared coral).
+  // un racimo de alvéolos como uvas (azul grisáceo con la pared coral).
   const branch = (x, y, a, len, thick, depth) => {
     const pts = [];
     let px = x, py = y;
@@ -144,21 +144,21 @@ function pulmonar() {
     } else {
       for (let k = 0; k < 7; k++) {
         const bx = px + (r() - 0.5) * 14, by = py + (r() - 0.5) * 12, rad = 2.5 + r() * 2.5;
-        ball(g, bx, by, rad, '#3aa898', '#b8fff0', '#1a6a64', '#e0788a');
-        dot(gl, bx - 1, by - 1, 'rgba(160,255,230,0.25)', 2, 2);
+        ball(g, bx, by, rad, '#647a96', '#d6e0ee', '#2a384c', '#e0788a');
+        dot(gl, bx - 1, by - 1, 'rgba(180,205,255,0.25)', 2, 2);
       }
     }
   };
   branch(64, MID_H + 4, -Math.PI / 2, 46, 11, 3);
   branch(192, MID_H + 4, -Math.PI / 2 + 0.1, 40, 9, 3);
   const [front, f] = canvas(FRONT_W, FRONT_H);
-  // Bosque de cilios en primer plano, verde agua oscuro.
+  // Bosque de cilios en primer plano, pizarra oscura.
   for (let x = 0; x < FRONT_W; x += 2) {
     const h = 6 + Math.floor(Math.abs(Math.sin(x * 0.07)) * 22 + r() * 8);
-    f.fillStyle = '#0e3a3a'; f.fillRect(x, FRONT_H - h, 1, h);
-    f.fillStyle = '#2a6a64'; f.fillRect(x, FRONT_H - h, 1, 1);
+    f.fillStyle = '#121a26'; f.fillRect(x, FRONT_H - h, 1, h);
+    f.fillStyle = '#3a4a60'; f.fillRect(x, FRONT_H - h, 1, 1);
   }
-  return { mid, midGlow: glow, front, anim: { breathe: 4.8, motes: { n: 26, colors: ['rgba(190,170,255,0.8)', 'rgba(170,255,230,0.6)'], vx: 4, vy: -3, size: 1, wobble: 6 } } };
+  return { mid, midGlow: glow, front, anim: { breathe: 4.8, motes: { n: 26, colors: ['rgba(190,170,255,0.8)', 'rgba(195,215,255,0.6)'], vx: 4, vy: -3, size: 1, wobble: 6 } } };
 }
 
 // Tubo escamado (Digestivo): carne empedrada a lo largo de un recorrido, con sombreado
