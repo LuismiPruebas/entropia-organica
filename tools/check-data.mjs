@@ -30,7 +30,7 @@ for (const [id, lv] of Object.entries(LEVELS)) {
     const d = ENEMIES[e.type];
     if (d) {
       const hanging = ['ceilingEye', 'pod', 'bossGland'].includes(d.behavior);
-      const floating = ['darter', 'pollinator'].includes(d.behavior);
+      const floating = ['darter', 'pollinator', 'mothSpin'].includes(d.behavior);
       const bx = e.x * TILE + (TILE - d.w) / 2;
       const by = hanging ? e.y * TILE : floating ? e.y * TILE + (TILE - d.h) / 2 : (e.y + 1) * TILE - d.h;
       if (new TileWorld(lv.grid).rectSolid(bx + 0.5, by + 0.5, d.w - 1, d.h - 1)) fail(`la caja de ${e.type} (${d.w}x${d.h}) empieza dentro de la roca en [${e.x},${e.y}]`);

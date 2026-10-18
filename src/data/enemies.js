@@ -170,6 +170,24 @@ export const ENEMIES = {
     sounds: { reveal: 'sacInhale', windup: 'sacInhale', attack: 'spine', die: 'sacDie', hurt: 'sacHurt' },
     lore: 'Los pulmones de la Cavidad aprendieron a andar. Respira por la cabeza y dispara por el pecho; entre una cosa y otra solo hay un tubo y cuatro patas de alambre.',
   },
+  hierofante: {
+    frag: 'ocular', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
+    name: 'Hierofante',
+    biome: 'pulmonar',
+    creature: 'hierofante',
+    gore: { blood: '#2a8a8a', flesh: ['#26302f', '#3c4a48', '#a8823a', '#4af0f0'] },
+    voice: ['flicker'],
+    behavior: 'mothSpin',
+    rotatable: true, // en el editor se gira: pegada al techo o a una pared
+    hp: 16, w: 12, h: 12,
+    sight: 240, wakeRange: 210, wakeTime: 0.7, faceDist: 64, faceTime: 0.8,
+    spinUp: 0.55, spinSpeed: 175, spinTime: 3.2, spinCool: 1.6, dizzyTime: 1.1, spinDamage: 9,
+    contactDamage: 0, // en reposo no hace daño; girando, spinDamage
+    habits: 'Descansa pegada a una pared o al techo con las alas abiertas, como una polilla. Si te ve, las pliega como una túnica, se te pone delante y, de pronto, las despliega y gira como una peonza rebotando por la sala. Al parar queda mareada un instante.',
+    drop: { biomass: 5 },
+    sounds: { reveal: 'matSummon', windup: 'whip', spin: 'swing', bounce: 'clack', die: 'sacDie', hurt: 'cellHurt' },
+    lore: 'Los mineros del 84 juraban haber visto a un cura en los conductos, con su capucha y su cruz de luz. Nadie bajó a confesarse.',
+  },
   fauce: {
     frag: 'ocular', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Fauce Colgante',

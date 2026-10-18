@@ -247,6 +247,82 @@ export const BEHAVIORS = {
     e.dir = Math.sign(e.vx) || e.dir;
   },
 
+  // Hierofante: descansa pegada a una pared o al techo; al verte pliega las alas como una
+  // túnica, se despega y se te pone delante; luego despliega las alas, gira como una
+  // peonza y sale disparada rebotando por la sala (hiere al contacto); al parar queda
+  // mareada (vulnerable) y vuelve a ponerse delante de ti.
+  mothSpin(e, dt, g) {
+    const d = e.def, s = senses(e, g);
+    e.state ??= 'rest';
+    tick(e, dt);
+    e.shakeX = 0;
+    const ease = (v, to, r) => v + (to - v) * Math.min(1, dt * r);
+    e.spinA = (e.spinA ?? 0) + dt * (e.spinRate ?? 0);
+    e.contactDamage = e.state === 'spin' ? d.spinDamage : d.contactDamage;
+    const hover = () => {
+      // Delante de ti, a tu altura, meciéndose.
+      const side = Math.sign(e.cx - s.p.cx) || 1;
+      const tx = s.p.cx + side * d.faceDist, ty = s.p.cy - 8 + Math.sin(e.t * 2.4) * 4;
+      e.vx = ease(e.vx, (tx - e.cx) * 2.5, 4); e.vy = ease(e.vy, (ty - e.cy) * 2.5, 4);
+      g.world.move(e, dt);
+    };
+    if (e.state === 'rest') {
+      e.fold = 0; e.spinRate = 0; e.vx = e.vy = 0;
+      if (!e.anchor) fall(e, g, dt);                         // en el suelo, posada
+      if (s.sees && s.dist < d.wakeRange) { e.state = 'wake'; e.timer = d.wakeTime; g.audio.play(d.sounds?.reveal ?? 'flicker', e); }
+    } else if (e.state === 'wake') {
+      // Pliega las alas en túnica y se despega de su superficie.
+      const u = 1 - Math.max(0, e.timer) / d.wakeTime;
+      e.fold = u; e.unrot = u;
+      const away = { techo: [0, 1], left: [1, 0], right: [-1, 0] }[e.anchor] ?? [0, -1];
+      e.vx = away[0] * 22; e.vy = away[1] * 22;
+      g.world.move(e, dt);
+      if (e.timer <= 0) { e.state = 'face'; e.anchor = null; e.unrot = 0; e.timer = d.faceTime; }
+    } else if (e.state === 'face') {
+      e.fold = ease(e.fold ?? 1, 1, 6); e.spinRate = ease(e.spinRate, 0, 4);
+      hover();
+      if (e.timer <= 0 && e.cool <= 0 && s.sees) { e.state = 'spinup'; e.timer = d.spinUp; g.audio.play(d.sounds?.windup ?? 'whip', e); }
+    } else if (e.state === 'spinup') {
+      // Despliega las alas como aspas y empieza a girar cada vez más rápido.
+      const u = 1 - Math.max(0, e.timer) / d.spinUp;
+      e.spinK = u; e.spinRate = 4 + u * 26;
+      e.vx = ease(e.vx, 0, 6); e.vy = ease(e.vy, 0, 6);
+      g.world.move(e, dt);
+      if (e.timer <= 0) {
+        const a = Math.atan2(s.dy, s.dx);
+        e.vx = Math.cos(a) * d.spinSpeed; e.vy = Math.sin(a) * d.spinSpeed;
+        e.state = 'spin'; e.timer = d.spinTime; e.spinK = 1;
+      }
+    } else if (e.state === 'spin') {
+      // Peonza: avanza recto, rebota en paredes, suelo y techo, y se tuerce un poco hacia ti.
+      e.spinRate = 30;
+      const sp = Math.hypot(e.vx, e.vy) || 1;
+      e.vx += (s.dx / s.dist) * 140 * dt; e.vy += (s.dy / s.dist) * 140 * dt;
+      const k = d.spinSpeed / Math.hypot(e.vx, e.vy);
+      e.vx *= k; e.vy *= k;
+      const vx0 = e.vx, vy0 = e.vy;
+      g.world.move(e, dt);
+      const bounced = e.hitWall || e.hitCeiling || e.onGround;
+      if (e.hitWall) e.vx = -vx0;
+      if (e.hitCeiling || e.onGround) e.vy = -vy0;
+      if (bounced) {
+        g.audio.play(d.sounds?.bounce ?? 'clack', e);
+        for (let i = 0; i < 6; i++) g.glowParticles.emit(e.cx, e.cy, { vx: (Math.random() - 0.5) * 120, vy: (Math.random() - 0.5) * 120, life: 0.3, color: [1, 0.75, 0.3] });
+      }
+      if (Math.random() < 0.5) g.glowParticles.emit(e.cx + (Math.random() - 0.5) * 20, e.cy, { vx: -e.vx * 0.1, vy: -e.vy * 0.1, life: 0.3, color: [0.3, 0.9, 0.9] });
+      e.spinSnd = (e.spinSnd ?? 0) - dt;
+      if (e.spinSnd <= 0) { e.spinSnd = 0.24; g.audio.play(d.sounds?.spin ?? 'swing', e); }
+      void sp;
+      if (e.timer <= 0) { e.state = 'dizzy'; e.timer = d.dizzyTime; }
+    } else if (e.state === 'dizzy') {
+      // Mareada: frena, el giro se apaga y se tambalea; es el momento de pegarle.
+      e.spinRate = ease(e.spinRate, 0, 2.5); e.spinK = ease(e.spinK ?? 1, 0, 2);
+      e.vx = ease(e.vx, 0, 3); e.vy = ease(e.vy, 12, 3);
+      g.world.move(e, dt);
+      if (e.timer <= 0) { e.state = 'face'; e.timer = d.faceTime; e.cool = d.spinCool; e.fold = 1; }
+    }
+  },
+
   // Zancudo Alveolar: corre sobre sus patas hasta quedarse a media distancia; se agacha,
   // hincha la cabeza (aviso largo) y la vacía de golpe disparando un abanico de espinas
   // por el esfínter del pecho. A ratos la hincha a medias y levita, se acerca amenazante
@@ -1706,7 +1782,7 @@ export class Enemy {
     this.x = tx * TILE + (TILE - this.w) / 2;
     // Ojos, fauces y la glándula cuelgan del techo; las neuronas flotan en su tile; el resto pisa el suelo.
     const hanging = ['ceilingEye', 'pod', 'bossGland'].includes(def.behavior);
-    const floating = ['darter', 'pollinator'].includes(def.behavior);
+    const floating = ['darter', 'pollinator', 'mothSpin'].includes(def.behavior);
     this.y = hanging ? ty * TILE : floating ? ty * TILE + (TILE - this.h) / 2 : (ty + 1) * TILE - this.h;
     // Las fauces necesitan saber cuánto pueden caer (para dibujar su tallo).
     if (def.behavior === 'pod' && world) {
@@ -1838,11 +1914,11 @@ export class Enemy {
     if (this.def.boss || ['ceilingEye', 'pod', 'spore', 'leaper'].includes(this.def.behavior) || this.hard) return;
     this.knock = 0.38;
     this.kvx = dir * force * (this.def.knockResist ?? 1);   // knockResist: fracción del empujón
-    this.kvy = ['darter', 'pollinator'].includes(this.def.behavior) ? -30 : -110;
+    this.kvy = ['darter', 'pollinator', 'mothSpin'].includes(this.def.behavior) ? -30 : -110;
   }
 
   #stagger(dt) {
-    const g = this.game, floats = ['darter', 'pollinator'].includes(this.def.behavior);
+    const g = this.game, floats = ['darter', 'pollinator', 'mothSpin'].includes(this.def.behavior);
     this.knock -= dt;
     this.vx = this.kvx;
     this.kvx *= 0.85;

@@ -17,6 +17,7 @@ import { RHINO } from './RhinoBeetle.js';
 import { TOAD } from './Toad.js';
 import { POLLINATOR } from './Pollinator.js';
 import { STILT } from './Stilt.js';
+import { HIEROPHANT } from './Hierophant.js';
 
 const P = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
 
@@ -439,6 +440,7 @@ export const CREATURES = {
   matriarca: MOTH,
   polinizador: POLLINATOR,
   zancudo: STILT,
+  hierofante: HIEROPHANT,
 
   // GLÁNDULA GÁSTRICA: masa cerebral colgada de tubos elásticos (entities/Gland.js).
   glandula: GLAND,
