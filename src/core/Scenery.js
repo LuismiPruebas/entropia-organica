@@ -461,33 +461,38 @@ function nervFront(seed, n) {
   }
   return front;
 }
-// 2 · Córtex: la misma red hexagonal, más grande y cercana, con nodos-neurona que
-// brillan; los impulsos viajan de nodo en nodo por las aristas.
+// 2 · Córtex: el Bosque neuronal simplificado: dos neuronas con dendritas menos
+// ramificadas y sin el axón que las une; los impulsos recorren las dendritas.
 function nervioso2() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
-  const cols = 4, rows = 4, w = MID_W / cols, h = MID_H / rows;           // celdas de 64 x 48
-  const node = (i, j) => [((i % cols) + cols) % cols * w + (((j % rows) + rows) % rows % 2 ? w / 2 : 0), (((j % rows) + rows) % rows) * h + 10];
-  const edges = [];
-  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
-    const a = node(i, j);
-    edges.push([a, [a[0] + w, a[1]]]);
-    const odd = j % 2;
-    edges.push([a, [a[0] + w / 2, a[1] + h]], [a, [a[0] - w / 2, a[1] + h]]);
-  }
+  const r = rng(11);
   const paths = [];
-  for (const [a, b] of edges) {
-    const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])), pts = [];
-    for (let k = 0; k <= n; k++) { const x = a[0] + ((b[0] - a[0]) * k) / n, y = a[1] + ((b[1] - a[1]) * k) / n; dotW(g, x, y, '#4a2a72', 2, 2); dotW(g, x, y, '#8a62c0'); pts.push([((x % MID_W) + MID_W) % MID_W, ((y % MID_H) + MID_H) % MID_H]); }
-    paths.push(pts, pts.slice().reverse());
+  const dendrite = (x, y, a, len, thick, depth, trail) => {
+    let px = x, py = y;
+    const pts = [...trail];
+    for (let i = 0; i < len; i++) {
+      const w = Math.max(1, Math.round(thick));
+      g.fillStyle = '#7a3aa0'; g.fillRect(Math.round(px), Math.round(py), w, w);
+      g.fillStyle = '#c080f0'; g.fillRect(Math.round(px), Math.round(py), 1, 1);
+      if (w > 2) { g.fillStyle = '#4a1a70'; g.fillRect(Math.round(px) + w - 1, Math.round(py) + w - 1, 1, 1); }
+      pts.push([px, py]);
+      px += Math.cos(a); py += Math.sin(a);
+      a += (r() - 0.5) * 0.25;
+    }
+    if (depth > 0) for (let k = 0; k < 2; k++) dendrite(px, py, a + (k - 0.5) * (0.6 + r() * 0.3), len * 0.6, thick * 0.65, depth - 1, pts);
+    else { paths.push(pts.slice().reverse()); ball(g, px, py, 1.6, '#e070c0', '#ffc0f0', '#8a2a70'); }
+  };
+  const neurons = [[70, 110], [190, 56]];
+  for (const [sx, sy] of neurons) {
+    const arms = 5;
+    for (let k = 0; k < arms; k++) dendrite(sx, sy, (k / arms) * Math.PI * 2 + r() * 0.4, 16 + r() * 6, 3, 2, [[sx, sy]]);
+    ball(g, sx, sy, 9, '#a060d8', '#e0b0ff', '#5a2890', '#3a1060');
+    ball(g, sx - 1, sy - 1, 3.5, '#5a2890', '#9a60d0', '#3a1060');
+    gl.fillStyle = 'rgba(150,170,255,0.22)'; gl.fillRect(sx - 2, sy - 2, 4, 4);
   }
-  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
-    const [x, y] = node(i, j);
-    ball(g, x, y, 4, '#9a6ad8', '#f0dcff', '#4a2a7a', '#2a1448');
-    gl.fillStyle = 'rgba(170,140,255,0.45)'; gl.fillRect(Math.round(x) - 2, Math.round(y) - 2, 4, 4);
-    gl.fillStyle = 'rgba(120,100,220,0.12)'; gl.fillRect(Math.round(x) - 5, Math.round(y) - 5, 10, 10);
-  }
-  return { mid, midGlow: glow, front: nervFront(53, 3), anim: { neural: { paths, somas: [] } } };
+  for (let k = 0; k < 4; k++) ball(g, r() * MID_W, r() * MID_H, 2 + r() * 2, '#b03a78', '#f080b0', '#6a1848');
+  return { mid, midGlow: glow, front: nervFront(53, 4), anim: { neural: { paths, somas: neurons } } };
 }
 // 3 · Circunvoluciones: sobre los pliegues, unos vasos de las meninges que se ramifican
 // (cortos, sin cruzar la pantalla); todo el plano respira muy despacio.

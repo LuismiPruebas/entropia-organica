@@ -333,25 +333,31 @@ const BACKDROPS = {
 // ----------------------------------------------------------------------------------
 // Variantes de fondo por sala (lv.backdrop: 2, 3...). Misma familia de color que su
 // bioma para que se sienta el mismo lugar, pero otro paisaje.
-// Sistema Nervioso 2 · Córtex: una red hexagonal regular y luminosa (como un panal de
-// circuitos): nodos que brillan en los vértices unidos por líneas finas. Uniforme, limpio.
+// Sistema Nervioso 2 · Córtex: el Bosque neuronal simplificado. Mismo tejido violeta,
+// pero solo unas pocas neuronas estrelladas y algo de glía: sin axones ni vasos.
 BACKDROPS['nervioso:2'] = () => {
   const sf = surface();
-  tissue(sf, { lo: '#24103a', mid: '#2e164a', hi: '#3a1e5a' }, 21, 2);
-  const H = 16, W = H * Math.sqrt(3);                       // panal: celdas de 16 px
-  const line = hexRgb('#6a42a0'), node = hexRgb('#b88ae8'), nodeL = hexRgb('#f0dcff'), halo = hexRgb('#4e2e7a');
-  const cols = Math.round(S / W), rows = Math.round(S / (H * 1.5));
-  const w = S / cols, h = S / rows;                          // ajustado para que case sin costura
-  const pts = [];
-  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) pts.push([i * w + (j % 2 ? w / 2 : 0), j * h]);
-  const seg = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])); for (let k = 0; k <= n; k++) sf.blend(a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n, line, 0.55); };
-  for (const [x, y] of pts) {
-    seg([x, y], [x + w, y]);                                   // horizontal
-    seg([x, y], [x + w / 2, y + h]); seg([x, y], [x - w / 2, y + h]);
+  const P = { lo: '#2a1238', mid: '#43205c', hi: '#5e2c78', membrane: '#28102e', cell: '#4e2668', shine: '#8a5ab0', nucleus: '#7a3a6a' };
+  tissue(sf, P, 11, 3);
+  lobules(sf, 8, 3, P, { strength: 0.3, membrane: 0.1, nucleus: false });
+  const r = rng(27);
+  const dendrite = (x, y, a, len, w, depth) => {
+    for (let i = 0; i < len; i++) {
+      for (let k = 0; k < w; k++) sf.blend(x - Math.sin(a) * k, y + Math.cos(a) * k, hexRgb('#9a5ac8'), 0.8);
+      a += (r() - 0.5) * 0.3; x += Math.cos(a); y += Math.sin(a);
+    }
+    if (depth > 0) for (const s of [-1, 1]) dendrite(x, y, a + s * (0.45 + r() * 0.3), len * 0.6, Math.max(1, w - 1), depth - 1);
+    else if (r() < 0.3) disc(sf, x, y, 1.4, '#ffb070', '#ffe0a0', '#c06030');
+  };
+  for (const [x, y] of [[50, 70], [180, 40], [120, 190], [230, 160]]) {
+    const arms = 5;
+    for (let a = 0; a < arms; a++) dendrite(x, y, (a / arms) * Math.PI * 2 + r() * 0.5, 11, 2, 1);
+    disc(sf, x, y, 5, '#9a5ac8', '#d8a8f8', '#5a2a80');
+    disc(sf, x, y, 2, '#4a2060', '#b080d0', '#2a1040');
   }
-  for (const [x, y] of pts) {
-    for (let yy = -3; yy <= 3; yy++) for (let xx = -3; xx <= 3; xx++) { const d = Math.hypot(xx, yy); if (d < 3.2) sf.blend(x + xx, y + yy, halo, 0.5 * (1 - d / 3.2)); }
-    disc(sf, x, y, 1.6, '#b88ae8', '#f0dcff', '#7a4ab0');
+  for (let n = 0; n < 8; n++) {
+    const x = r() * S, y = r() * S, rad = 2.5 + r() * 2.5;
+    disc(sf, x, y, rad, '#8a2a5a', '#c85a8a', '#5a1838');
   }
   return sf.canvas();
 };
