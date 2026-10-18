@@ -265,9 +265,9 @@ export const BEHAVIORS = {
       const a0 = Math.atan2(s.p.cy - sy, s.p.cx - sx);
       for (let i = 0; i < d.spines; i++) {
         const a = a0 + (i - (d.spines - 1) / 2) * (d.spread / (d.spines - 1)) + (Math.random() - 0.5) * 0.06;
-        g.spawnProjectile({ x: sx - 4, y: sy - 1, w: 7, h: 2, vx: Math.cos(a) * d.spineSpeed, vy: Math.sin(a) * d.spineSpeed, life: 1.6, damage: d.spineDamage, kind: 'alvSpine', owner: 'enemy' });
+        g.spawnProjectile({ x: sx - 4, y: sy - 1, w: 7, h: 2, vx: Math.cos(a) * d.spineSpeed, vy: Math.sin(a) * d.spineSpeed, life: 1.2, damage: d.spineDamage, kind: 'alvSpine', owner: 'enemy' });
       }
-      for (let i = 0; i < 8; i++) g.particles.emit(sx, sy, { vx: Math.cos(a0) * 80 + (Math.random() - 0.5) * 60, vy: Math.sin(a0) * 80 + (Math.random() - 0.5) * 60, life: 0.35, color: [0.75, 0.3, 0.25] });
+      for (let i = 0; i < 8; i++) g.particles.emit(sx, sy, { vx: Math.cos(a0) * 150 + (Math.random() - 0.5) * 70, vy: Math.sin(a0) * 150 + (Math.random() - 0.5) * 70, life: 0.3, color: [0.75, 0.3, 0.25] });
       g.audio.play(d.sounds?.attack ?? 'spine', e);
       e.k = -0.25; e.flash = 1;
       e.state = 'recoil'; e.timer = d.recoil; e.cool = d.fireCool;

@@ -158,7 +158,7 @@ export const ENEMIES = {
     hp: 30, w: 14, h: 36,
     sight: 190, speed: 82,
     keepFar: 130, keepNear: 70, // anda rápido hasta quedarse a esa distancia
-    inflateTime: 1.1, spines: 5, spread: 0.55, spineSpeed: 210, spineDamage: 6, fireCool: 2.2, recoil: 0.55,
+    inflateTime: 1.1, spines: 5, spread: 0.5, spineSpeed: 330, spineDamage: 6, fireCool: 2.2, recoil: 0.55,
     floatChance: 0.35, hoverH: 34, floatTime: 2.6, // a ratos hincha la cabeza a medias y levita para amenazarte
     contactDamage: 7,
     habits: 'Corre sobre sus patas larguísimas y se queda a media distancia. Se agacha e hincha la cabeza de alvéolos hasta ponerla al rojo, y la vacía de golpe: el esfínter del pecho escupe un abanico de espinas. A veces la hincha a medias y levita sobre el suelo, con las patas colgando, para acercarse amenazante y disparar desde arriba.',
