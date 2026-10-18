@@ -306,7 +306,7 @@ export const BEHAVIORS = {
       const u = 1 - Math.max(0, e.timer) / d.wakeTime;
       e.fold = u; e.unrot = u;
       const away = { techo: [0, 1], left: [1, 0], right: [-1, 0] }[e.anchor] ?? [0, -1];
-      e.vx = away[0] * 22; e.vy = away[1] * 22;
+      e.vx = away[0] * 70; e.vy = away[1] * 70;      // se despega de golpe
       g.world.move(e, dt);
       if (e.timer <= 0) { e.state = 'face'; e.anchor = null; e.unrot = 0; e.timer = d.faceTime; }
     } else if (e.state === 'face') {
