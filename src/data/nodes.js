@@ -43,6 +43,7 @@ export const nodeOf = (roomId) => {
     suppressor: s.suppressor === false ? null : s.suppressor === true ? (base.suppressor ?? { scrap: 6 }) : base.suppressor,
     trade: s.trade === '' ? null : TRADES[s.trade] ?? base.trade,
     shield: s.shield ?? true,
+    plasma: s.plasma ?? true,
     regen: s.regen ?? true,
   };
 };

@@ -355,7 +355,15 @@ export class Game {
   useItem(kind) {
     const st = this.state, it = ITEMS[kind];
     if (st.timers[kind] > 0) return this.say(`${it.name}: aún te dura.`, 1.2);
-    if (!st.useItem(kind)) return this.say(`No llevas ninguna ${it.name}.`, 1.2);
+    if (kind === 'plasma' && st.items.plasma > 0 && st.integrity >= st.maxIntegrity) return this.say('Tu integridad está al máximo: guardas el coágulo.', 1.5);
+    if (!st.useItem(kind)) return this.say(`No llevas ningún ${it.name}.`.replace('ningún Perla', 'ninguna Perla').replace('ningún Célula', 'ninguna Célula'), 1.2);
+    if (kind === 'plasma') {
+      const p = this.player;
+      this.audio.play('womb');
+      this.flash(p.cx, p.cy, 80, [1, 0.3, 0.35], 0.25);
+      for (let i = 0; i < 10; i++) this.glowParticles.emit(p.cx + (Math.random() - 0.5) * 10, p.cy, { vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 40, life: 0.6, color: [1, 0.3, 0.35] });
+      return this.say(`Coágulo de plasma: +${it.heal} integridad.`, 1.8);
+    }
     const p = this.player;
     this.audio.play(kind === 'shield' ? 'reveal' : 'womb');
     this.flash(p.cx, p.cy, 90, kind === 'shield' ? [0.4, 0.9, 1] : [0.3, 1, 0.45], 0.3);

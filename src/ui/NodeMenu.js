@@ -119,6 +119,15 @@ const ICON = {
     px(g, 9 + Math.cos(a) * 3.5, 9 + Math.sin(a) * 3.5, '#4ff0ff', 2, 2);
     px(g, 6, 6, '#ffffff');
   },
+  // Coágulo de plasma: una gota de sangre espesa con el corazón encendido.
+  plasma(g, t) {
+    const beat = (t * 1.3) % 1 < 0.15 ? 0.5 : 0;
+    blob(g, 9, 10, 6 + beat, 5.6 + beat, '#140c10');
+    blob(g, 9, 10, 5 + beat, 4.6 + beat, '#a01828');
+    px(g, 8, 3, '#140c10', 2, 3); px(g, 8, 4, '#a01828', 2, 2);
+    blob(g, 9, 11, 2.2, 2, '#ff4a5a');
+    px(g, 6, 7, '#ffb0b8', 2, 1);
+  },
   // Célula Madre: una célula verde que late, con el núcleo en cruz.
   regen(g, t) {
     const k = 1 + Math.sin(t * 4) * 0.08;
@@ -240,11 +249,11 @@ export class NodeMenu {
       ...Object.entries(ITEMS).filter(([kind]) => node[kind] !== false).map(([kind, it]) => ({
         tab: 'tienda',
         icon: [kind],
-        label: `${it.name} ×${st.items[kind]}`,
-        effect: kind === 'shield' ? `<span class="c-o2">invulnerable ${it.time} s</span>` : `<span class="c-int">regeneras ${it.time} s</span>`,
+        label: kind === 'plasma' ? `Cuajar coágulo ×${st.items[kind]}` : `${it.name} ×${st.items[kind]}`,
+        effect: kind === 'shield' ? `<span class="c-o2">invulnerable ${it.time} s</span>` : kind === 'plasma' ? `<span class="c-int">+${it.heal} integridad al usarlo</span> <span class="dim">(te lo llevas: úsalo ${g.itemKey(kind)})</span>` : `<span class="c-int">regeneras ${it.time} s</span>`,
         cost: `${price(it.price)}${why(it.price.bio > st.biomassMax && 'amplía tu reserva', !st.canPay(it.price) && 'no te alcanza')}`,
         enabled: st.canPay(it.price),
-        run: () => { if (st.buyItem(kind)) { g.audio.play('womb'); g.say(`El útero cría una ${it.name}. Úsala ${g.itemKey(kind)}.`, 2.5); } },
+        run: () => { if (st.buyItem(kind)) { g.audio.play('womb'); g.say(kind === 'plasma' ? `El útero cuaja tu biomasa en un coágulo. Úsalo ${g.itemKey(kind)}.` : `El útero cría una ${it.name}. Úsala ${g.itemKey(kind)}.`, 2.5); } },
       })),
       ...[...st.dna].map((id) => {
         const m = MUTATIONS[id];

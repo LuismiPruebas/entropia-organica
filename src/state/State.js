@@ -30,12 +30,14 @@ export const CELL_STORE_FROM = 80;
 export const CELL_AUTO_BELOW = 50;
 // Consumibles raros: se guardan y se usan desde el Genoma.
 // Apenas los sueltan las criaturas (los jefes, siempre uno); el útero los vende caros.
+// Coágulo de plasma: cura al momento. Suelto en el mapa se usa al cogerlo; el útero lo
+// cuaja con biomasa y te lo llevas para usarlo cuando quieras (desde el Genoma).
+export const PLASMA = { name: 'Coágulo de plasma', heal: 30 };
 export const ITEMS = {
   shield: { name: 'Perla de Nácar', time: 10, price: { bio: 130 } }, // invulnerable
   regen: { name: 'Célula Madre', time: 10, price: { bio: 130 } },   // regenera integridad
+  plasma: { name: 'Coágulo de plasma', time: 0, price: { bio: 30 }, heal: PLASMA.heal }, // cura al momento
 };
-// Coágulo de plasma: cura al momento al cogerlo (solo se encuentra; el útero no lo vende).
-export const PLASMA = { name: 'Coágulo de plasma', heal: 30 };
 // Infección: te pudre al menos 10 s (poco daño, pero arcadas que te dejan vendido; ver
 // Player). La anula la Dermis Nanocutánea; la curan el útero, el Tejido sano, la Célula
 // Madre y la Perla de Nácar.
@@ -115,8 +117,8 @@ export class GameState {
     this.weapon = null;          // arma del cañón elegida (WEAPONS); null = culata
     this.scrap = 12;
     this.cells = 0;              // células lumínicas en reserva: se gastan solas bajo CELL_AUTO_BELOW
-    this.items = { shield: 0, regen: 0 }; // consumibles guardados (ITEMS)
-    this.timers = { shield: 0, regen: 0, suppress: 0 }; // segundos que le quedan a cada efecto activo
+    this.items = { shield: 0, regen: 0, plasma: 0 }; // consumibles guardados (ITEMS)
+    this.timers = { shield: 0, regen: 0, plasma: 0, suppress: 0 }; // segundos que le quedan a cada efecto activo
     this.flashlightOn = true;
     this.mutations = new Set();   // instaladas
     this.dna = new Set();         // muestras recogidas sin instalar
@@ -267,7 +269,9 @@ export class GameState {
   // Consumible: lo gasta y arranca su efecto. No se pisa con uno igual aún activo.
   useItem(kind) {
     if (this.dead || !this.items[kind] || this.timers[kind] > 0) return false;
+    if (kind === 'plasma' && this.integrity >= this.maxIntegrity) return false; // no hace falta: se guarda
     this.items[kind]--;
+    if (kind === 'plasma') { this.heal(ITEMS.plasma.heal); return true; }
     this.timers[kind] = ITEMS[kind].time;
     if (kind === 'shield' || kind === 'regen') this.infection = 0;
     return true;
@@ -515,7 +519,7 @@ export class GameState {
 
   respawn() {
     this.dead = false;
-    this.timers = { shield: 0, regen: 0, suppress: this.timers.suppress }; // el supresor sigue actuando
+    this.timers = { shield: 0, regen: 0, plasma: 0, suppress: this.timers.suppress }; // el supresor sigue actuando
     this.rest();
     this.integrity = Math.ceil(this.maxIntegrity * 0.5);
     this.oxygen = this.oxygenMax;

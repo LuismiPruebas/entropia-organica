@@ -1823,6 +1823,7 @@ function renderRoomPanel() {
       ['extender', 'Extensor de tolerancia', true],
       ['shield', 'Perla de Nácar', true],
       ['regen', 'Célula Madre', true],
+      ['plasma', 'Coágulo de plasma (cuajar)', true],
     ];
     for (const [k, label, def] of SELL) html += field(label, sells[k] ?? def, (v) => setWomb((o) => { o.sells = { ...(o.sells ?? {}) }; if (v === def) delete o.sells[k]; else o.sells[k] = v; }));
     const tradeNow = sells.trade !== undefined ? sells.trade : base.trade ? (base.trade.get.bio ? 'carne' : 'hueso') : '';

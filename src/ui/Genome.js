@@ -325,11 +325,11 @@ export class Genome {
     const f = vital ? null : this.focus; // con una vejiga señalada, a la derecha queda lo básico
     if (f?.startsWith('item:')) {
       const k = f.slice(5), it = ITEMS[k], have = st.items[k], left = st.timers[k];
-      const fx = k === 'shield' ? `Nada te hiere durante ${it.time} s: ni golpes, ni ácido, ni infección.` : `Regeneras ${REGEN_RATE} de integridad por segundo durante ${it.time} s.`;
+      const fx = k === 'shield' ? `Nada te hiere durante ${it.time} s: ni golpes, ni ácido, ni infección.` : k === 'plasma' ? `Recuperas ${it.heal} de integridad al momento.` : `Regeneras ${REGEN_RATE} de integridad por segundo durante ${it.time} s.`;
       this.info.innerHTML = `
-        <b class="i-name" style="color:${k === 'shield' ? '#4ff0ff' : '#7dff9a'}">${caps(it.name)} <span class="i-amount">x${have}</span></b>
+        <b class="i-name" style="color:${k === 'shield' ? '#4ff0ff' : k === 'plasma' ? '#ff5a6a' : '#7dff9a'}">${caps(it.name)} <span class="i-amount">x${have}</span></b>
         <p class="i-fx">▶ ${fx}</p>
-        <p class="i-dim">${left > 0 ? `Activa: le quedan ${Math.ceil(left)} s.` : have ? 'Intro / clic: usarla ahora (el Genoma se cierra).' : 'No llevas ninguna. Muy rara en las criaturas; un jefe siempre suelta una. El útero la cría por biomasa.'}</p>`;
+        <p class="i-dim">${left > 0 ? `Activa: le quedan ${Math.ceil(left)} s.` : have ? 'Intro / clic: usarla ahora (el Genoma se cierra).' : k === 'plasma' ? 'No llevas ninguno. El útero cuaja coágulos con tu biomasa.' : 'No llevas ninguna. Muy rara en las criaturas; un jefe siempre suelta una. El útero la cría por biomasa.'}</p>`;
       return;
     }
     if (f?.startsWith('mem:')) {
