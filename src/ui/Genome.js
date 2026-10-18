@@ -329,7 +329,7 @@ export class Genome {
       this.info.innerHTML = `
         <b class="i-name" style="color:${k === 'shield' ? '#4ff0ff' : k === 'plasma' ? '#ff5a6a' : '#7dff9a'}">${caps(it.name)} <span class="i-amount">x${have}</span></b>
         <p class="i-fx">▶ ${fx}</p>
-        <p class="i-dim">${left > 0 ? `Activa: le quedan ${Math.ceil(left)} s.` : have ? 'Intro / clic: usarla ahora (el Genoma se cierra).' : k === 'plasma' ? 'No llevas ninguno. El útero cuaja coágulos con tu biomasa.' : 'No llevas ninguna. Muy rara en las criaturas; un jefe siempre suelta una. El útero la cría por biomasa.'}</p>`;
+        <p class="i-dim">${left > 0 ? `Activa: le quedan ${Math.ceil(left)} s.` : have ? 'Intro / clic: usarla ahora (el Genoma se cierra).' : k === 'plasma' ? 'No llevas ninguno. Se encuentran por el organismo, y el útero los cuaja con tu biomasa.' : 'No llevas ninguna. Muy rara en las criaturas; un jefe siempre suelta una. El útero la cría por biomasa.'}</p>`;
       return;
     }
     if (f?.startsWith('mem:')) {

@@ -52,14 +52,13 @@ export const PICKUPS = {
         ? `Timo Necrótico (${st.thymusMax}/${st.thymusMax}): tu sistema inmune calla para siempre. El rechazo ya no existe.`
         : `Timo Necrótico (${st.thymus}/${st.thymusMax}): tu sistema inmune olvida pelear un poco más. El rechazo crece más despacio y tarda más en hacerte fallar.`),
   },
-  // Coágulo de plasma: integridad al momento. Con la integridad al máximo no se coge
-  // (se queda para luego).
+  // Coágulo de plasma: no cura al cogerlo; se guarda y se usa cuando quieras (Genoma),
+  // como la Perla y la Célula Madre. Lo que cura al momento es otra cosa (Tejido sano).
   plasma: {
     sprite: 'plasma',
-    sound: 'pickup',
-    canTake: (st) => st.integrity < st.maxIntegrity,
-    apply: (st) => st.heal(PLASMA.heal),
-    text: `Coágulo de plasma: +${PLASMA.heal} integridad.`,
+    sound: 'dna',
+    apply: (st) => { st.items.plasma++; },
+    text: (p, st) => `Coágulo de plasma (${st.items.plasma}): úsalo ${p.game.itemKey('plasma')} y recuperas ${PLASMA.heal} de integridad.`,
   },
   tissue: {
     sprite: 'tissue',

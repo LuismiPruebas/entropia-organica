@@ -30,8 +30,8 @@ export const CELL_STORE_FROM = 80;
 export const CELL_AUTO_BELOW = 50;
 // Consumibles raros: se guardan y se usan desde el Genoma.
 // Apenas los sueltan las criaturas (los jefes, siempre uno); el útero los vende caros.
-// Coágulo de plasma: cura al momento. Suelto en el mapa se usa al cogerlo; el útero lo
-// cuaja con biomasa y te lo llevas para usarlo cuando quieras (desde el Genoma).
+// Coágulo de plasma: cura al usarlo, no al cogerlo. Se encuentra por el mapa o el útero
+// lo cuaja con biomasa; se guarda y se usa cuando quieras (desde el Genoma).
 export const PLASMA = { name: 'Coágulo de plasma', heal: 30 };
 export const ITEMS = {
   shield: { name: 'Perla de Nácar', time: 10, price: { bio: 130 } }, // invulnerable
