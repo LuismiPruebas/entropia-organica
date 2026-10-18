@@ -140,6 +140,7 @@ export const ENEMIES = {
     ramRange: 64, ramReachY: 40, windup: 0.5, ramSpeed: 235, ramTime: 0.42, recover: 0.75, ramCool: 2.2, ramDamage: 15,
     height: 76, sweep: 46, dropEvery: 1.0, sporeDamage: 7,
     diveChance: 0.55, diveRange: 160, diveTime: 0.65, // a ratos se lanza en picado desde arriba
+    meleeResist: 0.6, knockResist: 0.5, // caparazón duro: los golpes le hacen poco y apenas lo mueven
     contactDamage: 9,
     habits: 'Vuela alto y se pasea de lado a lado por encima de ti, cagando vainas de esporas que revientan al caer; a ratos, en vez de eso, se lanza en picado. Si te acercas, se encoge alzando las garras y embiste. Aguanta bastante; solo un ojo muy desarrollado le hace huir.',
     drop: { biomass: 10 },

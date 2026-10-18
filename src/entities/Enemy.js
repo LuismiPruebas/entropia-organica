@@ -1737,7 +1737,7 @@ export class Enemy {
   knockback(dir, force) {
     if (this.def.boss || ['ceilingEye', 'pod', 'spore', 'leaper'].includes(this.def.behavior) || this.hard) return;
     this.knock = 0.38;
-    this.kvx = dir * force;
+    this.kvx = dir * force * (this.def.knockResist ?? 1);   // knockResist: fracción del empujón
     this.kvy = ['darter', 'pollinator'].includes(this.def.behavior) ? -30 : -110;
   }
 
@@ -1812,6 +1812,8 @@ export class Enemy {
       }
       n *= this.def.backBonus ?? 1.6;
     }
+    // Aguante al cuerpo a cuerpo (def.meleeResist: fracción del daño que le llega).
+    if (kind === 'melee' && this.def.meleeResist) n *= this.def.meleeResist;
     // Endurecido (ojo con el párpado cerrado): todo rebota.
     if (this.hard && kind !== 'acid') {
       if (!silent) this.game.audio.play('ricochet', this);
