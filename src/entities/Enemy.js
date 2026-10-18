@@ -247,6 +247,81 @@ export const BEHAVIORS = {
     e.dir = Math.sign(e.vx) || e.dir;
   },
 
+  // Polinizador: vuela. Te busca por arriba y se pasea de lado a lado sobre ti soltando
+  // vainas de esporas (las de la Matriarca: revientan al caer). Si estás cerca, se
+  // encoge alzando las garras (aviso), embiste en línea recta y se recupera aturdido.
+  pollinator(e, dt, g) {
+    const d = e.def, s = senses(e, g), W = g.world.pixelW;
+    e.home ??= { x: e.cx, y: e.cy };
+    e.state ??= 'patrol';
+    tick(e, dt);
+    e.shakeX = 0;
+    e.puff = Math.max(0, (e.puff ?? 0) - dt * 3);
+    e.contactDamage = d.contactDamage;
+    // Vuelo con inercia hacia un punto.
+    const steer = (tx, ty, speed) => {
+      const dx = tx - e.cx, dy = ty - e.cy, dist = Math.hypot(dx, dy) || 1, v = Math.min(speed, dist * 3);
+      const k = Math.min(1, dt * 3.5);
+      e.vx += ((dx / dist) * v - e.vx) * k;
+      e.vy += ((dy / dist) * v - e.vy) * k;
+    };
+    if (e.state === 'patrol') {
+      steer(e.home.x + Math.sin(e.t * 0.6 + e.seed) * 36, e.home.y + Math.sin(e.t * 1.7 + e.seed) * 6, d.speed * 0.5);
+      if (s.sees) { e.state = 'hunt'; e.lost = 0; }
+    } else if (e.state === 'hunt') {
+      e.lost = s.sees ? 0 : (e.lost ?? 0) + dt;
+      if (e.lost > 4) e.state = 'patrol';
+      if (s.sees && s.dist < d.ramRange && Math.abs(s.dy) < d.ramReachY && e.cool <= 0) {
+        e.state = 'windup'; e.timer = d.windup; e.aimA = Math.atan2(s.dy, s.dx);
+        g.audio.play(d.sounds?.windup ?? 'charge', e);
+      } else {
+        // Se pasea por encima de ti, de lado a lado.
+        const tx = clamp(s.p.cx + Math.sin(e.t * 1.1 + e.seed) * d.sweep, 20, W - 20);
+        steer(tx, s.p.cy - d.height + Math.sin(e.t * 2.3) * 4, speedMods(e, g, d.speed));
+        e.drop = (e.drop ?? d.dropEvery) - dt;
+        if (s.sees && e.drop <= 0 && Math.abs(s.p.cx - e.cx) < 28 && e.cy < s.p.cy - 24) {
+          e.drop = d.dropEvery; e.puff = 1;
+          g.spawnProjectile({
+            x: e.cx - 4, y: e.y + e.h - 2, w: 7, h: 7, vx: e.vx * 0.35, vy: 25, gravity: 420, life: 3,
+            damage: d.sporeDamage, kind: 'sporeLob', owner: 'enemy', burstRadius: 26, burstDamage: d.sporeDamage,
+          });
+          g.audio.play(d.sounds?.attack ?? 'spit', e);
+        }
+      }
+    } else if (e.state === 'windup') {
+      // Recula, se encoge temblando y apunta; en el último instante deja de corregir.
+      if (e.timer > 0.15) e.aimA = Math.atan2(s.dy, s.dx);
+      const back = 45 * Math.max(0, e.timer / d.windup);
+      e.vx = -Math.cos(e.aimA) * back; e.vy = -Math.sin(e.aimA) * back;
+      e.shakeX = Math.random() < 0.5 ? -1 : 1;
+      if (e.timer <= 0) {
+        e.state = 'ram'; e.timer = d.ramTime;
+        e.vx = Math.cos(e.aimA) * d.ramSpeed; e.vy = Math.sin(e.aimA) * d.ramSpeed;
+        g.audio.play(d.sounds?.ram ?? 'whip', e);
+      }
+    } else if (e.state === 'ram') {
+      e.contactDamage = d.ramDamage;
+      if (Math.random() < 0.5) g.particles.emit(e.cx, e.cy, { vx: -e.vx * 0.1, vy: -e.vy * 0.1, life: 0.3, color: [0.55, 0.45, 0.3] });
+      if (e.timer <= 0 || e.hitWall || e.hitCeiling || e.onGround) {
+        e.state = 'recover'; e.timer = d.recover;
+        if (e.hitWall || e.hitCeiling || e.onGround) { e.vx *= -0.3; e.vy = -40; g.audio.play('thump', e); }
+      }
+    } else {
+      e.vx *= 0.9; e.vy = e.vy * 0.9 - 8 * dt;
+      if (e.timer <= 0) { e.state = 'hunt'; e.cool = d.ramCool; }
+    }
+    g.world.move(e, dt);
+    // Mira hacia donde ataca; si no, a ti (o hacia donde vuela).
+    if (e.state === 'windup' || e.state === 'ram') e.dir = Math.cos(e.aimA) >= 0 ? 1 : -1;
+    else if (s.sees) e.dir = Math.sign(s.dx) || e.dir;
+    else e.dir = Math.sign(e.vx) || e.dir;
+    // Inclinación (en su pose local, mirando a la derecha): se echa atrás al cargar,
+    // se lanza de cabeza al embestir y se ladea un poco al volar.
+    const fwd = e.vx * e.dir;
+    const want = e.state === 'windup' ? -0.4 : e.state === 'ram' ? Math.atan2(e.vy, Math.abs(e.vx)) + 0.25 : clamp(fwd / 260, -0.25, 0.25);
+    e.tilt = (e.tilt ?? 0) + (want - (e.tilt ?? 0)) * Math.min(1, dt * 10);
+  },
+
   // Ojo de techo: vigila; al verte carga (el iris se dilata), escupe una ráfaga de
   // tres y cierra el párpado: endurecido, las balas rebotan hasta que vuelve a abrir.
   ceilingEye(e, dt, g) {
@@ -1536,7 +1611,7 @@ export class Enemy {
     this.x = tx * TILE + (TILE - this.w) / 2;
     // Ojos, fauces y la glándula cuelgan del techo; las neuronas flotan en su tile; el resto pisa el suelo.
     const hanging = ['ceilingEye', 'pod', 'bossGland'].includes(def.behavior);
-    const floating = ['darter'].includes(def.behavior);
+    const floating = ['darter', 'pollinator'].includes(def.behavior);
     this.y = hanging ? ty * TILE : floating ? ty * TILE + (TILE - this.h) / 2 : (ty + 1) * TILE - this.h;
     // Las fauces necesitan saber cuánto pueden caer (para dibujar su tallo).
     if (def.behavior === 'pod' && world) {
@@ -1628,7 +1703,7 @@ export class Enemy {
     const away = Math.sign(this.cx - p.cx) || 1;
     this.dir = away;
     this.state = this.def.behavior === 'golem' ? 'walk' : this.state;
-    if (this.def.behavior === 'darter') {
+    if (this.def.behavior === 'darter' || this.def.behavior === 'pollinator') {
       const dx = this.cx - p.cx, dy = this.cy - p.cy, d = Math.hypot(dx, dy) || 1;
       this.vx = (dx / d) * 90; this.vy = (dy / d) * 90;
       g.world.move(this, dt);
@@ -1659,11 +1734,11 @@ export class Enemy {
     if (this.def.boss || ['ceilingEye', 'pod', 'spore', 'leaper'].includes(this.def.behavior) || this.hard) return;
     this.knock = 0.38;
     this.kvx = dir * force;
-    this.kvy = ['darter'].includes(this.def.behavior) ? -30 : -110;
+    this.kvy = ['darter', 'pollinator'].includes(this.def.behavior) ? -30 : -110;
   }
 
   #stagger(dt) {
-    const g = this.game, floats = ['darter'].includes(this.def.behavior);
+    const g = this.game, floats = ['darter', 'pollinator'].includes(this.def.behavior);
     this.knock -= dt;
     this.vx = this.kvx;
     this.kvx *= 0.85;

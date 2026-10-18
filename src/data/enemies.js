@@ -124,6 +124,26 @@ export const ENEMIES = {
     sounds: { reveal: 'spit', die: 'sacDie', hurt: 'sacHurt' },
     lore: 'Un pulmón diminuto que solo sabe hacer una cosa: inspirar hasta reventar. La nube que suelta lleva la misma infección que cubre las paredes de la Cavidad.',
   },
+  polinizador: {
+    lucifugo: 3, // huye del haz solo con el ojo muy desarrollado (línea del ojo a nivel 3)
+    frag: 'dermal', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
+    name: 'Polinizador',
+    biome: 'pulmonar',
+    creature: 'polinizador',
+    gore: { blood: '#8a7a2a', flesh: ['#5a3420', '#7e4c2c', '#7e7638', '#a87458'] },
+    voice: ['swarmBuzz', 'swarmBuzz', 'moan'],
+    behavior: 'pollinator',
+    hp: 36, w: 16, h: 18,
+    sight: 170, speed: 70, lightFear: 0.75, darkMult: 1.4,
+    // Embestida si estás cerca; si no, se pasea por encima de ti soltando vainas de esporas.
+    ramRange: 64, ramReachY: 40, windup: 0.5, ramSpeed: 235, ramTime: 0.42, recover: 0.75, ramCool: 2.2, ramDamage: 12,
+    height: 76, sweep: 46, dropEvery: 1.0, sporeDamage: 5,
+    contactDamage: 7,
+    habits: 'Vuela alto y se pasea de lado a lado por encima de ti, cagando vainas de esporas que revientan al caer. Si te acercas, se encoge alzando las garras y embiste. Aguanta bastante; solo un ojo muy desarrollado le hace huir.',
+    drop: { biomass: 10 },
+    sounds: { reveal: 'moan', windup: 'stalkerWindup', ram: 'stalkerLunge', attack: 'matCough', die: 'swarmDie', hurt: 'swarmHurt' },
+    lore: 'Fumigador de la planta en 1984. Lo bajaron a la Cavidad a sellar los conductos con un traje de goma que no aguantó. Las esporas no lo mataron: le enseñaron a volar. Aún pone cara de disculpa antes de lanzarse contra ti.',
+  },
   fauce: {
     frag: 'ocular', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Fauce Colgante',

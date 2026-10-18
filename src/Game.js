@@ -720,7 +720,9 @@ export class Game {
       const near = Math.hypot(e.cx - lp.x, e.cy - lp.y) < ambR * 0.8 && this.world.lineOfSight(lp.x, lp.y, e.cx, e.cy);
       e.setLit(beam.lit, near);
       // Ojo Pineal: las criaturas lucífugas huyen de tu haz.
-      if (eye2 && beam.lit && e.def.lucifugo && !e.def.boss) {
+      // lucifugo: true huye con el Ojo Pineal; un número pide ese nivel de la línea del ojo.
+      const fears = typeof e.def.lucifugo === 'number' ? st.lineLevel('ojo') >= e.def.lucifugo : eye2 && e.def.lucifugo;
+      if (fears && beam.lit && !e.def.boss) {
         if (!(e.scared > 0) && !st.seenScare) { st.seenScare = true; this.say('Tu ojo pineal quema: la criatura huye de tu luz.', 2.5); }
         e.scared = 1.2;
       }
