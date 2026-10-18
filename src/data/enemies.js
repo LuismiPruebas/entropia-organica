@@ -179,11 +179,11 @@ export const ENEMIES = {
     voice: ['flicker'],
     behavior: 'mothSpin',
     rotatable: true, // en el editor se gira: pegada al techo o a una pared
-    hp: 16, w: 12, h: 12,
-    sight: 240, wakeRange: 210, wakeTime: 0.7, faceDist: 64, faceTime: 0.8,
+    hp: 16, w: 9, h: 9,
+    sight: 240, wakeRange: 210, wakeTime: 0.7, faceDist: 64, faceTime: 0.8, seekSpeed: 130, restTime: 1.4,
     spinUp: 0.55, spinSpeed: 175, spinTime: 3.2, spinCool: 1.6, dizzyTime: 1.1, spinDamage: 9,
     contactDamage: 0, // en reposo no hace daño; girando, spinDamage
-    habits: 'Descansa pegada a una pared o al techo con las alas abiertas, como una polilla. Si te ve, las pliega como una túnica, se te pone delante y, de pronto, las despliega y gira como una peonza rebotando por la sala. Al parar queda mareada un instante.',
+    habits: 'Descansa pegada a la pared o al techo más cercano con las alas abiertas, como una polilla, y va tomando su color hasta casi confundirse con ella. Si te ve, las pliega como una túnica, se te pone delante y, de pronto, las despliega y gira como una peonza rebotando por la sala. Al parar queda mareada un instante, vuelve a pegarse a una pared y repite.',
     drop: { biomass: 5 },
     sounds: { reveal: 'matSummon', windup: 'whip', spin: 'swing', bounce: 'clack', die: 'sacDie', hurt: 'cellHurt' },
     lore: 'Los mineros del 84 juraban haber visto a un cura en los conductos, con su capucha y su cruz de luz. Nadie bajó a confesarse.',

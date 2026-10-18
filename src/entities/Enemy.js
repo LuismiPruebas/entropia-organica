@@ -253,7 +253,10 @@ export const BEHAVIORS = {
   // mareada (vulnerable) y vuelve a ponerse delante de ti.
   mothSpin(e, dt, g) {
     const d = e.def, s = senses(e, g);
-    e.state ??= 'rest';
+    // Si no la han pegado a nada en el editor, empieza buscando la pared o el techo más cercano.
+    e.state ??= e.anchor ? 'rest' : 'seek';
+    // Mimetismo: pegada y quieta, va tomando el color de la pared (lo usa su dibujo).
+    e.mimic = Math.max(0, Math.min(1, (e.mimic ?? 0) + (e.state === 'rest' ? dt / 1.5 : -dt * 4)));
     tick(e, dt);
     e.shakeX = 0;
     const ease = (v, to, r) => v + (to - v) * Math.min(1, dt * r);
@@ -266,10 +269,38 @@ export const BEHAVIORS = {
       e.vx = ease(e.vx, (tx - e.cx) * 2.5, 4); e.vy = ease(e.vy, (ty - e.cy) * 2.5, 4);
       g.world.move(e, dt);
     };
-    if (e.state === 'rest') {
-      e.fold = 0; e.spinRate = 0; e.vx = e.vy = 0;
+    if (e.state === 'seek') {
+      // Vuela con las alas plegadas hasta la pared o el techo más cercano y se pega.
+      e.fold = ease(e.fold ?? 1, 1, 6); e.spinRate = ease(e.spinRate ?? 0, 0, 4); e.spinK = ease(e.spinK ?? 0, 0, 4);
+      if (!e.perch) {
+        const L = 220, ox = e.cx, oy = e.cy, opts = [];
+        for (const [a, dx, dy] of [['left', -1, 0], ['right', 1, 0], ['techo', 0, -1]]) {
+          const h = g.world.raycast(ox, oy, ox + dx * L, oy + dy * L);
+          if (!h) continue;
+          const tx = a === 'left' ? h.cx + 1 : a === 'right' ? h.cx - 1 : h.cx, ty = a === 'techo' ? h.cy + 1 : h.cy;
+          opts.push({ a, tx, ty, dist: Math.hypot(h.x - ox, h.y - oy) });
+        }
+        e.perch = opts.sort((p, q) => p.dist - q.dist)[0] ?? { a: null };
+      }
+      const pc = e.perch;
+      if (!pc.a) { e.state = 'face'; e.timer = d.faceTime; }
+      else {
+        // Dónde queda pegada (como setAnchor) y vuelo hasta allí.
+        const px = pc.a === 'left' ? pc.tx * TILE : pc.a === 'right' ? (pc.tx + 1) * TILE - e.w : pc.tx * TILE + (TILE - e.w) / 2;
+        const py = pc.a === 'techo' ? pc.ty * TILE : pc.ty * TILE + (TILE - e.h) / 2;
+        const dx = px - e.x, dy = py - e.y, dist = Math.hypot(dx, dy);
+        e.vx = ease(e.vx, (dx / (dist || 1)) * d.seekSpeed, 5); e.vy = ease(e.vy, (dy / (dist || 1)) * d.seekSpeed, 5);
+        g.world.move(e, dt);
+        if (dist < 3 || e.hitWall || e.hitCeiling) {
+          e.setAnchor(pc.a, pc.tx, pc.ty);
+          e.perch = null; e.state = 'rest'; e.timer = d.restTime; e.fold = 0; e.vx = e.vy = 0;
+        }
+      }
+    } else if (e.state === 'rest') {
+      e.fold = ease(e.fold ?? 0, 0, 5); e.spinRate = 0; e.vx = e.vy = 0;
       if (!e.anchor) fall(e, g, dt);                         // en el suelo, posada
-      if (s.sees && s.dist < d.wakeRange) { e.state = 'wake'; e.timer = d.wakeTime; g.audio.play(d.sounds?.reveal ?? 'flicker', e); }
+      // Se queda pegada un rato antes de volver a atacar.
+      if (e.timer <= 0 && s.sees && s.dist < d.wakeRange) { e.state = 'wake'; e.timer = d.wakeTime; g.audio.play(d.sounds?.reveal ?? 'flicker', e); }
     } else if (e.state === 'wake') {
       // Pliega las alas en túnica y se despega de su superficie.
       const u = 1 - Math.max(0, e.timer) / d.wakeTime;
@@ -319,7 +350,7 @@ export const BEHAVIORS = {
       e.spinRate = ease(e.spinRate, 0, 2.5); e.spinK = ease(e.spinK ?? 1, 0, 2);
       e.vx = ease(e.vx, 0, 3); e.vy = ease(e.vy, 12, 3);
       g.world.move(e, dt);
-      if (e.timer <= 0) { e.state = 'face'; e.timer = d.faceTime; e.cool = d.spinCool; e.fold = 1; }
+      if (e.timer <= 0) { e.state = 'seek'; e.perch = null; e.fold = 1; }
     }
   },
 

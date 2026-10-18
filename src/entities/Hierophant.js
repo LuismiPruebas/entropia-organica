@@ -12,7 +12,11 @@
 //   e.spinA  ángulo del giro · e.spinK 0..1 cuánto gira (alas desplegadas en hélice)
 //   e.anchor superficie en reposo ('techo', 'left', 'right' o nada = suelo): gira el dibujo
 const S = 36, C = 18;
-const P = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
+// Todo el dibujo se hace en coordenadas de diseño y se escala por K alrededor del centro
+// (píxeles enteros, sin suavizado): así se ajusta su tamaño sin rehacer las formas.
+const K = 0.78, PX = 18, PY = 17;
+const RAW = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
+const P = (g, x, y, c, w = 1, h = 1) => RAW(g, PX + (x - PX) * K, PY + (y - PY) * K, c, Math.max(1, Math.round(w * K)), Math.max(1, Math.round(h * K)));
 const COL = {
   out: '#0a0c0c', cloth: '#26302f', clothD: '#161d1d', clothL: '#3c4a48', fold: '#1c2524',
   panel: '#2e5a5e', panelL: '#4a8a8c', gold: '#a8823a', goldL: '#e0b866', goldD: '#5a4420',
@@ -35,9 +39,10 @@ function inPoly(x, y, pts) {
 // Polígono relleno con una función de color por píxel, contorno y ribete dorado en los
 // lados que se indiquen (índices de arista).
 function poly(g, pts, fill, goldEdges = []) {
-  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const sp = pts.map(([x, y]) => [PX + (x - PX) * K, PY + (y - PY) * K]);
+  const xs = sp.map((p) => p[0]), ys = sp.map((p) => p[1]);
   for (let y = Math.floor(Math.min(...ys)); y <= Math.ceil(Math.max(...ys)); y++) for (let x = Math.floor(Math.min(...xs)); x <= Math.ceil(Math.max(...xs)); x++) {
-    if (inPoly(x + 0.5, y + 0.5, pts)) P(g, x, y, fill(x, y));
+    if (inPoly(x + 0.5, y + 0.5, sp)) RAW(g, x, y, fill(PX + (x + 0.5 - PX) / K - 0.5, PY + (y + 0.5 - PY) / K - 0.5));
   }
   pts.forEach((a, i) => {
     const b = pts[(i + 1) % pts.length];
@@ -158,11 +163,21 @@ export const HIEROPHANT = {
   size: () => [S, S],
   origin: (e) => [e.cx - C, e.cy - C + 2],
   noFlip: true,
-  draw(g, gl, e, t) {
+  draw(g, gl, e, t, game) {
     off ??= [document.createElement('canvas'), document.createElement('canvas')];
     for (const c of off) { c.width = c.height = S; }
     const o = off[0].getContext('2d'), ol = off[1].getContext('2d');
     pose(o, ol, e, t);
+    // Mimetismo: pegada a la pared se tiñe de su color (el del tejido del bioma) y su
+    // brillo se apaga casi del todo; solo el cristal sigue latiendo, muy tenue.
+    const m = e.mimic ?? 0;
+    if (m > 0) {
+      o.save(); o.globalCompositeOperation = 'source-atop';
+      o.globalAlpha = 0.72 * m; o.fillStyle = game?.room?.biome?.mimic ?? game?.room?.biome?.camo ?? '#3a4458';
+      o.fillRect(0, 0, S, S); o.restore();
+      ol.save(); ol.globalCompositeOperation = 'destination-out';
+      ol.globalAlpha = 0.85 * m; ol.fillRect(0, 0, S, S); ol.restore();
+    }
     // Giro: en reposo, hacia su superficie; girando, el bamboleo de la peonza.
     const rest = { techo: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 }[e.anchor] ?? 0;
     const rot = (e.state === 'rest' || e.state === 'wake') ? rest * (1 - (e.unrot ?? 0)) : e.state === 'spin' ? Math.sin(t * 9) * 0.18 : e.state === 'dizzy' ? Math.sin(t * 5) * 0.45 : 0;

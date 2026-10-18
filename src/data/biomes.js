@@ -41,6 +41,7 @@ export const BIOMES = {
     growthDensity: 0.45,
     bg: { base: '#18202c' },
     camo: '#1c2532',
+    mimic: '#44546a', // color de la pared (Hierofante mimetizado)
     // Azul grisáceo de pulmón frío (pizarra), con las venas y los acentos en rojo coral.
     ambient: [0.16, 0.18, 0.22],
     // Respiración y un arpegio lento y siniestro en menor; apenas un aire de fondo.
