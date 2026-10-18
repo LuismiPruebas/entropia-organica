@@ -25,6 +25,7 @@ const GAIN = {
   stalkerChitter: 9, neuronWarble: 4, swarmBuzz: 8, cellChirp: 2.5, eyeSquelch: 2.5, sacInhale: 6.5,
   podChatter: 3, colonySquirm: 12, vestigioBreath: 5.4, eelGurgle: 2.5,
   gangAura: 4.5, matBreath: 3.2, glandRumble: 5.6,
+  pollBuzz: 6, pollMutter: 6, pollWindup: 5, pollLunge: 2, pollDrop: 3, pollHurt: 3,
   chimAura: 4, chimHowl: 2.2, chimBark: 2, choirSing: 3, choirMoan: 4, choirScream: 2.5, headScream: 3,
 };
 
@@ -337,6 +338,53 @@ const SOUNDS = {
       t += rnd(0.12, 0.2);
     }
     a.creature(o, { f0: rnd(80, 100), f1: 70, dur: 0.35, vol: 0.12, formant: 420, rough: 1, vib: 18 });
+  },
+  // --- Polinizador: alas de insecto y una garganta que fue de persona ---
+  // Vuela: el zumbido grave de las alas (aleteo que tiembla) y, debajo, un murmullo
+  // humano con la boca cerrada.
+  pollBuzz: (a, o) => {
+    for (let i = 0; i < 3; i++) a.creature(o, { f0: rnd(105, 150), f1: rnd(100, 160), dur: 0.9, vol: 0.07, formant: rnd(600, 900), q: 2, rough: 1, vib: rnd(28, 36), delay: i * 0.03 });
+    a.creature(o, { f0: rnd(125, 140), f1: rnd(105, 118), dur: 0.7, vol: 0.05, formant: 480, q: 5, rough: 0.25, vib: 5, delay: 0.15 });
+  },
+  // Gimotea como alguien que pide perdón ("ah... ah"), con las alas de fondo.
+  pollMutter: (a, o) => {
+    const f = rnd(200, 240);
+    a.creature(o, { f0: f, f1: f * 0.78, dur: 0.32, vol: 0.09, formant: 850, q: 6, rough: 0.3, vib: 7 });
+    a.creature(o, { f0: f * 0.95, f1: f * 0.62, dur: 0.45, vol: 0.08, formant: 750, q: 6, rough: 0.35, vib: 6, delay: 0.42 });
+    a.creature(o, { f0: 130, f1: 120, dur: 0.9, vol: 0.04, formant: 700, q: 2, rough: 1, vib: 32 });
+  },
+  // Carga (0,5 s): las alas suben a un chillido, aspira entre dientes y castañetea.
+  pollWindup: (a, o) => {
+    a.creature(o, { f0: 170, f1: 440, dur: 0.5, vol: 0.1, formant: 1500, q: 2, rough: 1, vib: 42 });
+    a.noise(o, { dur: 0.45, vol: 0.16, type: 'bandpass', f0: 600, f1: 2000, q: 3 });
+    for (let i = 0; i < 6; i++) a.noise(o, { dur: 0.012, vol: 0.18 + i * 0.03, type: 'bandpass', f0: rnd(2600, 3800), q: 10, delay: 0.1 + i * 0.06 });
+  },
+  // Se lanza: grito humano rasgado a dos voces y el golpe de aire de las alas.
+  pollLunge: (a, o) => {
+    a.noise(o, { dur: 0.35, vol: 0.3, type: 'lowpass', f0: 3200, f1: 500 });
+    a.creature(o, { f0: rnd(360, 420), f1: rnd(820, 950), dur: 0.4, vol: 0.14, formant: 1200, q: 3, rough: 0.7, vib: 12 });
+    a.creature(o, { f0: rnd(700, 800), f1: rnd(1500, 1700), dur: 0.3, vol: 0.06, formant: 2200, q: 4, rough: 1, vib: 30, delay: 0.03 });
+  },
+  // Suelta una vaina: un pujido ahogado y el chasquido húmedo de la espora al salir.
+  pollDrop: (a, o) => {
+    a.creature(o, { f0: rnd(115, 130), f1: 78, dur: 0.2, vol: 0.12, formant: 450, q: 4, rough: 1, vib: 4 });
+    a.noise(o, { dur: 0.12, vol: 0.4, type: 'lowpass', f0: 1100, f1: 200, delay: 0.14 });
+    a.tone(o, { type: 'sine', f0: 220, f1: 520, dur: 0.06, vol: 0.1, delay: 0.16 });
+  },
+  // Herido: un quejido humano corto y el crujido de la quitina.
+  pollHurt: (a, o) => {
+    a.noise(o, { dur: 0.04, vol: 0.4, type: 'highpass', f0: 2800, f1: 1400 });
+    a.creature(o, { f0: rnd(480, 560), f1: rnd(280, 320), dur: 0.22, vol: 0.12, formant: 1100, q: 5, rough: 0.5, vib: 10 });
+  },
+  // Muere: el cuerpo cruje, un lamento humano que cae, las alas que se atascan y
+  // chisporrotean hasta pararse, y un último golpe húmedo.
+  pollDie: (a, o) => {
+    deathImpact(a, o, 1);
+    a.noise(o, { dur: 0.08, vol: 0.5, type: 'bandpass', f0: 2400, f1: 700, q: 4 });
+    a.creature(o, { f0: rnd(420, 470), f1: 95, dur: 1.1, vol: 0.13, formant: 800, q: 4, rough: 0.6, vib: 6, delay: 0.05 });
+    a.creature(o, { f0: 150, f1: 55, dur: 1.2, vol: 0.07, formant: 700, q: 2, rough: 1, vib: 34, delay: 0.1 });
+    for (let i = 0; i < 8; i++) a.noise(o, { dur: 0.03, vol: 0.2 - i * 0.02, type: 'bandpass', f0: rnd(500, 900), q: 4, delay: 0.5 + i * rnd(0.07, 0.12) });
+    a.noise(o, { dur: 0.15, vol: 0.35, type: 'lowpass', f0: 900, f1: 150, delay: 1.3 });
   },
   // Neurona: gorjeo eléctrico que tiembla, como una señal que se escapa.
   neuronWarble: (a, o) => {

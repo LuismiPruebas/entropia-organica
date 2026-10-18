@@ -131,7 +131,7 @@ export const ENEMIES = {
     biome: 'pulmonar',
     creature: 'polinizador',
     gore: { blood: '#8a0a14', flesh: ['#5a3420', '#7e4c2c', '#7e7638', '#a87458'] },
-    voice: ['swarmBuzz', 'swarmBuzz', 'moan'],
+    voice: ['pollBuzz', 'pollBuzz', 'pollMutter'],
     behavior: 'pollinator',
     hp: 36, w: 16, h: 18,
     sight: 170, speed: 70, lightFear: 0.75, darkMult: 1.4,
@@ -143,7 +143,7 @@ export const ENEMIES = {
     contactDamage: 9,
     habits: 'Vuela alto y se pasea de lado a lado por encima de ti, cagando vainas de esporas que revientan al caer; a ratos, en vez de eso, se lanza en picado. Si te acercas, se encoge alzando las garras y embiste. Aguanta bastante; solo un ojo muy desarrollado le hace huir.',
     drop: { biomass: 10 },
-    sounds: { reveal: 'moan', windup: 'stalkerWindup', ram: 'stalkerLunge', attack: 'matCough', die: 'swarmDie', hurt: 'swarmHurt' },
+    sounds: { reveal: 'pollMutter', windup: 'pollWindup', ram: 'pollLunge', attack: 'pollDrop', die: 'pollDie', hurt: 'pollHurt' },
     lore: 'Fumigador de la planta en 1984. Lo bajaron a la Cavidad a sellar los conductos con un traje de goma que no aguantó. Las esporas no lo mataron: le enseñaron a volar. Aún pone cara de disculpa antes de lanzarse contra ti.',
   },
   fauce: {
