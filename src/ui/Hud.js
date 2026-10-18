@@ -63,10 +63,12 @@ export class Hud {
     el.hidden = false;
     el.classList.remove('out');
     this.barkTime = seconds;
+    this.msg.classList.remove('show');    // la voz manda sobre la información
+    this.msgTime = 0;
   }
 
   say(text, seconds = 2.5) {
-    if (this.dlg) return;                 // mientras hay un diálogo, los avisos no lo tapan
+    if (this.dlg || this.barkTime > 0) return;   // mientras habla alguien, los avisos no lo tapan
     this.msg.textContent = text;
     this.msg.classList.add('show');
     this.msgTime = seconds;
