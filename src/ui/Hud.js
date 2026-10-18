@@ -5,6 +5,43 @@ const $ = (id) => document.getElementById(id);
 // Mayúsculas sin tildes: la fuente pixel no tiene vocales acentuadas en mayúscula.
 export const caps = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 
+// Retrato del que habla (26x26, pixel art): una cara de carne que mueve la boca mientras
+// se escribe el texto. k: 0 poseída (gris violácea, ojos rojos, dientes) · 1 liberada.
+function drawPortrait(cv, t, talking, k) {
+  const g = cv.getContext('2d'), mix = (a, b) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+  const rgb = (c) => `rgb(${c.join(',')})`;
+  const skin = mix([96, 62, 78], [196, 140, 112]), dark = mix([52, 26, 40], [120, 70, 60]), lite = mix([140, 96, 120], [232, 184, 150]);
+  const iris = mix([255, 40, 50], [255, 190, 90]);
+  g.clearRect(0, 0, 26, 26);
+  // Fondo: una cavidad húmeda.
+  g.fillStyle = '#12060a'; g.fillRect(0, 0, 26, 26);
+  g.fillStyle = 'rgba(120,30,50,0.35)'; g.fillRect(2, 2, 22, 22);
+  // Cabeza: óvalo de carne con sombra a la derecha y brillo arriba a la izquierda.
+  for (let y = 0; y < 26; y++) for (let x = 0; x < 26; x++) {
+    const dx = (x + 0.5 - 13) / 9, dy = (y + 0.5 - 14) / 11, d = dx * dx + dy * dy;
+    if (d > 1) continue;
+    g.fillStyle = rgb(d > 0.78 || dx > 0.55 ? dark : dx < -0.2 && dy < -0.3 ? lite : skin);
+    g.fillRect(x, y, 1, 1);
+  }
+  // Venas de la posesión (se van al liberarlo).
+  if (k < 0.6) { g.fillStyle = `rgba(30,10,24,${0.8 - k})`; for (const [x, y] of [[7, 6], [8, 7], [8, 8], [18, 7], [17, 8], [19, 17], [18, 18], [6, 16]]) g.fillRect(x, y, 1, 1); }
+  // Ojos: miran de un lado a otro a saltos y parpadean.
+  const look = Math.round(Math.sin(Math.floor(t * 1.3) * 2.7)), blink = (t % 3.7) < 0.12;
+  for (const ex of [8, 15]) {
+    g.fillStyle = rgb(dark); g.fillRect(ex - 1, 10, 5, 3);
+    if (blink) { g.fillStyle = rgb(skin); g.fillRect(ex - 1, 11, 5, 1); continue; }
+    g.fillStyle = k < 0.5 ? '#d8c0b0' : '#f0e4d0'; g.fillRect(ex, 11, 3, 1);
+    g.fillStyle = rgb(iris); g.fillRect(ex + 1 + look, 11, 1, 1);
+  }
+  // Boca: se abre y cierra al hablar; poseído, con dientes.
+  const open = talking ? [0, 1, 2, 1][Math.floor(t * 14) % 4] : 0;
+  g.fillStyle = rgb(dark); g.fillRect(9, 18, 8, 1);
+  if (open) {
+    g.fillStyle = '#2a0408'; g.fillRect(9, 18, 8, open + 1);
+    if (k < 0.5) { g.fillStyle = '#e8dcc0'; for (let x = 9; x < 17; x += 2) { g.fillRect(x, 18, 1, 1); g.fillRect(x + 1, 18 + open, 1, 1); } }
+  }
+}
+
 export class Hud {
   constructor() {
     this.root = $('hud');
@@ -27,6 +64,9 @@ export class Hud {
     const el = $('dialogue');
     el.hidden = false;
     el.querySelector('.who').textContent = opts.speaker ? caps(opts.speaker) : '';
+    // Con alguien que habla: conversación (retrato y nombre). Sin nadie: narración.
+    el.className = opts.speaker ? 'npc' : 'narr';
+    this.cache.dlgTxt = this.cache.dlgNext = null;
     this.msg.classList.remove('show');
     this.msgTime = 0;
     opts.onLine?.(0);
@@ -90,6 +130,7 @@ export class Hud {
       if (this.cache.dlgTxt !== txt) el.querySelector('.txt').textContent = this.cache.dlgTxt = txt;
       const next = this.typing ? '' : `${d.key ?? 'E'} ${d.i < d.lines.length - 1 ? '>' : 'x'}`;
       if (this.cache.dlgNext !== next) el.querySelector('.next').textContent = this.cache.dlgNext = next;
+      if (d.speaker) drawPortrait(el.querySelector('.face'), this.t ?? 0, this.typing, d.owner?.k ?? 0);
     }
     this.t = (this.t ?? 0) + dt;
     const t = this.t;
