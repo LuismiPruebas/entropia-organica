@@ -487,24 +487,30 @@ export class PlayerBody {
     limb(g, el[0], el[1], hand[0], hand[1], 2, P.muscle);
     blob(g, hand[0], hand[1], 1.6, 1.6, K);
     blob(g, hand[0], hand[1], 1.1, 1.1, P.muscle);
-    if (blade || ((c.pose.bladeLv ?? 0) >= 2 && k > 0)) this.#armBlade(g, gl, el, hand, c.pose.bladeLv ?? 2, t);
+    // Afilado: 0 en guardia (escudo), sube de golpe al empezar el tajo y se recoge al final.
+    const pu = c.pose.punch ?? 0, sharp = pu > 0 ? Math.min(1, (1 - pu) / 0.12, pu / 0.18) : 0;
+    if (blade || ((c.pose.bladeLv ?? 0) >= 2 && k > 0)) this.#armBlade(g, gl, el, hand, c.pose.bladeLv ?? 2, t, blade ? sharp : 1);
     this.muzzle = { x: hand[0] + Math.cos(aim) * 2, y: hand[1] + Math.sin(aim) * 2 };
   }
 
   // Placa-hoja de quitina (Dermis II y III): placas solapadas sobre el antebrazo, como un
   // escudo, que acaban en una hoja afilada más allá del puño. Con la Dermis III es más
-  // larga y la recorre un circuito cian.
-  #armBlade(g, gl, el, hand, lv, t) {
+  // larga y la recorre un circuito cian. sharp 0..1: en guardia (0) es un escudo de placas
+  // con un remate romo; al golpear (1) la hoja se afila y sale entera.
+  #armBlade(g, gl, el, hand, lv, t, sharp = 1) {
     const dx = hand[0] - el[0], dy = hand[1] - el[1], l = Math.hypot(dx, dy) || 1;
     const ux = dx / l, uy = dy / l, nx = -uy, ny = ux;
-    // Escudo: dos placas sobre el antebrazo, del lado de fuera.
-    for (const u of [0.25, 0.75]) {
-      const bx = el[0] + dx * u - nx * 1.2, by = el[1] + dy * u - ny * 1.2;
-      blob(g, bx, by, 2.2, 1.6, K);
-      blob(g, bx, by, 1.6, 1.1, C.plate, C.plateD, C.plateL);
+    // Escudo: placas sobre el antebrazo, del lado de fuera; en guardia más anchas y
+    // abombadas (tres, solapadas), al golpear se recogen pegadas al brazo.
+    const sh = 1 - sharp;
+    for (const u of sh > 0.5 ? [0.1, 0.5, 0.9] : [0.25, 0.75]) {
+      const bx = el[0] + dx * u - nx * (1.2 + sh * 1.2), by = el[1] + dy * u - ny * (1.2 + sh * 1.2);
+      blob(g, bx, by, 2.2 + sh * 1, 1.6 + sh * 0.9, K);
+      blob(g, bx, by, 1.6 + sh * 1, 1.1 + sh * 0.9, C.plate, C.plateD, C.plateL);
     }
-    // Hoja: cuña que se afina hasta la punta, filo claro y lomo oscuro.
-    const L = lv >= 3 ? 10 : 7, tx = hand[0] + ux * L, ty = hand[1] + uy * L;
+    // Hoja: cuña que se afina hasta la punta, filo claro y lomo oscuro. En guardia solo
+    // asoma un remate corto y romo; al golpear sale entera.
+    const L = Math.max(2, Math.round((lv >= 3 ? 10 : 7) * (0.2 + 0.8 * sharp))), tx = hand[0] + ux * L, ty = hand[1] + uy * L;
     for (let i = 0; i <= L; i++) {
       const w = Math.max(0.5, 2.2 * (1 - i / L));
       const x = hand[0] + ux * i, y = hand[1] + uy * i;
