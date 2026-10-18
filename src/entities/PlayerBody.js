@@ -171,7 +171,7 @@ export class PlayerBody {
       if (pn === 2) { cLean = (3 - 5.5 * e) * env; cHip = (2 - 4 * e) * env; cSh = (1 - 2.5 * e) * env; }
       else {
         const w = Math.min(1, pp / 0.5), down = w * w;               // primero alza (w pequeño) y luego cae de golpe
-        cLean = (-3 + 9 * down) * env; cSh = (-2 + 3 * down) * env; cHip = (-2 + 2 * down) * env; cCrouch = 0.75 * down * env;
+        cLean = (-3 + 9 * down) * env; cSh = (-2 + 4 * down) * env; cHip = (-2 + 3 * down) * env; cCrouch = 0.5 * down * env;
       }
     }
     const lean = (hanging ? pose.rope.x * 3 : moving ? (ninja ? 2.5 : 1.5) : air ? (pose.vy < 0 ? -0.5 : 0.5) : 0) + strike * 1.5 + dashK * 5 + swim * 0.5 + cLean; // se abalanza (al nadar, Player inclina el sprite entero)
@@ -337,7 +337,7 @@ export class PlayerBody {
     if (wpn === 'simbionte') part('simbionte', (tg, gl2) => this.#cannon(tg, gl2, ctx));
     else if (wpn === 'escopeta') part('escopeta', (tg) => this.#shotgun(tg, ctx));
     else if (wpn === 'astillas') part('astillas', (tg) => this.#gunArm(tg, ctx));
-    else if (wpn === 'cuchilla') part('nanocutis', (tg, gl2) => this.#bareArm(tg, ctx, gl2));
+    else if (wpn === 'cuchilla') part('quitina2', (tg, gl2) => this.#bareArm(tg, ctx, gl2));
     else this.#bareArm(g, ctx, gl);
     return this;
   }

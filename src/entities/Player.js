@@ -1113,7 +1113,7 @@ export class Player {
     this.swooshK = T.swoosh * (last && T.combo === 3 ? 1.25 : 1);
     const dmgMul = last && T.combo === 3 ? 1.5 : 1;
     // Con la cuchilla, cada tajo te lanza hacia delante (el último, más).
-    if (st.weaponId === BLADE.id) {
+    if (st.weaponId === BLADE.id && T.combo >= 3) {
       this.vx = this.facing * (last ? 110 : 70);              // un paso corto, controlable
       this.wallLock = Math.max(this.wallLock ?? 0, 0.06);
     }
@@ -1181,6 +1181,11 @@ export class Player {
     // Nadando, todo el cuerpo se tumba hacia delante (con cualquier mutación); la mira
     // se compensa para que el arma siga apuntando donde apuntas.
     this.tilt = this.swimK * 0.5;
+    // Tajo pesado (3er golpe del combo): todo el cuerpo se vuelca hacia el suelo al rematar.
+    if ((this.punchN ?? 1) === 3 && this.punch > 0) {
+      const pp = 1 - this.punch / MELEE_TIME, down = Math.min(1, pp / 0.5) ** 2, env = pp < 0.6 ? 1 : Math.max(0, 1 - (pp - 0.6) / 0.4);
+      this.tilt += (-0.1 + 0.3 * down) * env;
+    }
     const rt = this.retch > 0 ? 1 - this.retch / RETCH_TIME : 0;
     this.retchK = rt ? Math.min(1, rt / 0.22, (1 - rt) / 0.14) : 0;
     const heaveJolt = rt && ((rt > 0.32 && rt < 0.5) || (rt > 0.6 && rt < 0.86)) ? Math.sin(this.anim * 40) * 0.06 : 0;
