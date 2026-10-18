@@ -69,12 +69,15 @@ body {
 #boss-bar .bar[hidden] { display: none; }
 #boss-bar .fill { display: block; height: 100%; background: #c0283a; box-shadow: 0 0 4px #ff2040; transition: width .2s; }
 
-/* Textos del juego: cajas sencillas y orgánicas (bordes irregulares que respiran).
-   Cada tipo con su color y su sitio:
-     #message          aviso / información   arriba, verde pálido
-     #dialogue.npc     conversación          abajo, carne (espera a E)
-     #bark             voz suelta            abajo a la izquierda, carne (se va sola)
-     #dialogue.narr    narración             abajo, lila, sin nombre */
+/* Textos del juego, en tres niveles que se distinguen por forma, color y sitio:
+     #message         información (has cogido algo, te han herido...): una cápsula
+                      pequeña, lisa y verde fría, abajo en el centro; se va sola.
+     #dialogue.narr   narración en off (ambiental, de contexto): sin caja, una franja de
+                      sombra que se difumina por los lados, texto lila; espera a E.
+     #dialogue.npc    conversación con un personaje: membrana de carne de bordes
+                      irregulares que respiran, con su nombre; espera a E.
+     #bark            voz suelta de un personaje: la misma membrana, pequeña, a la
+                      izquierda; se va sola. */
 @keyframes text-membrane {
   0%, 100% { border-radius: 10px 4px 12px 5px / 6px 11px 4px 10px; }
   33% { border-radius: 5px 11px 4px 12px / 11px 4px 10px 6px; }
@@ -87,21 +90,22 @@ body {
   line-height: 1.75;
   text-shadow: 1px 1px 0 #000;
   pointer-events: none;
-  border-radius: 10px 4px 12px 5px / 6px 11px 4px 10px;
-  animation: text-membrane 7s ease-in-out infinite;
 }
+
+/* Información: cápsula. */
 #message {
   left: 50%;
-  top: 42px;                 /* por debajo de las vejigas (HUD) */
-  transform: translate(-50%, -2px);
+  bottom: 12px;
+  transform: translate(-50%, 2px);
   width: max-content;
-  max-width: calc(100% - 96px);
-  padding: 3px 10px 2px;
+  max-width: calc(100% - 64px);
+  padding: 2px 9px 1px;
   text-align: center;
-  color: #d4ecd8;
-  background: radial-gradient(ellipse at 50% 120%, rgba(40, 110, 70, .28), transparent 70%), rgba(6, 14, 10, .78);
-  border: 1px solid rgba(120, 220, 150, .22);
-  box-shadow: 0 0 6px rgba(0, 0, 0, .6), inset 0 0 5px rgba(60, 160, 100, .18);
+  color: #cfe8d6;
+  background: rgba(6, 16, 11, .55);
+  border: 1px solid rgba(120, 220, 150, .3);
+  border-radius: 999px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, .45);
   opacity: 0;
   transition: opacity .2s, transform .2s;
 }
@@ -112,40 +116,46 @@ body {
   left: 50%;
   bottom: 10px;
   transform: translateX(-50%);
-  width: min(78%, 300px);
-  padding: 5px 11px 7px;
 }
 #dialogue[hidden] { display: none; }
 #dialogue .who, #bark .who { font-size: 4px; letter-spacing: 1px; margin-bottom: 2px; }
 #dialogue .who:empty, #bark .who:empty { display: none; }
 #dialogue .next { position: absolute; right: 6px; bottom: 1px; font-size: 4px; animation: dlg-blink 1s steps(2) infinite; }
+
+/* Conversación: membrana de carne. */
 #dialogue.npc, #bark {
   color: #f2e2cc;
-  background: radial-gradient(ellipse at 20% 0%, rgba(150, 40, 55, .3), transparent 65%), rgba(18, 5, 9, .84);
-  border: 1px solid rgba(220, 120, 110, .3);
-  box-shadow: 0 0 8px rgba(0, 0, 0, .7), inset 0 0 7px rgba(130, 30, 45, .35);
+  background: radial-gradient(ellipse at 20% 0%, rgba(150, 40, 55, .25), transparent 65%), rgba(20, 5, 10, .6);
+  border: 1px solid rgba(220, 120, 110, .4);
+  box-shadow: 0 0 6px rgba(0, 0, 0, .5), inset 0 0 7px rgba(130, 30, 45, .3);
+  border-radius: 10px 4px 12px 5px / 6px 11px 4px 10px;
+  animation: text-membrane 7s ease-in-out infinite;
 }
+#dialogue.npc { width: min(78%, 300px); padding: 5px 11px 7px; }
 #dialogue.npc .who, #bark .who { color: #ffd27a; }
 #dialogue.npc .next { color: #ffd27a; }
 #bark {
   left: 10px;
-  bottom: 12px;
-  max-width: 200px;
+  bottom: 30px;
+  max-width: 170px;
   padding: 4px 10px 5px;
   transition: opacity .3s;
 }
 #bark[hidden] { display: none; }
 #bark.out { opacity: 0; }
+
+/* Narración en off: sin caja, una franja de sombra. */
 #dialogue.narr {
-  bottom: 14px;
+  width: 100%;
+  bottom: 12px;
+  padding: 5px 70px 7px;
   text-align: center;
-  color: #ddd0e6;
-  background: radial-gradient(ellipse at 50% 100%, rgba(90, 50, 120, .25), transparent 70%), rgba(10, 5, 14, .8);
-  border: 1px solid rgba(170, 130, 210, .2);
-  box-shadow: 0 0 8px rgba(0, 0, 0, .7), inset 0 0 7px rgba(80, 40, 110, .3);
+  color: #e0d2ea;
+  letter-spacing: .4px;
+  background: linear-gradient(90deg, transparent, rgba(10, 4, 14, .55) 22%, rgba(10, 4, 14, .55) 78%, transparent);
 }
 #dialogue.narr .who { display: none; }
-#dialogue.narr .next { color: #b498cc; }
+#dialogue.narr .next { right: 74px; color: #b498cc; }
 @keyframes dlg-blink { 50% { opacity: 0.2; } }
 
 #prompt {
