@@ -294,24 +294,30 @@ function mapFree(id, x, y) {
 function startPlacing() {
   if (!S.id) { createRoomAt(0, 0, 2, 1); return; }
   S.placing = { cell: null, from: null };
+  S.newBiome = room()?.biome ?? 'nervioso';
   showNewRoomBox(true);
   $('msg').textContent = 'Nueva sala: clic en un hueco libre (tamaño mínimo) o arrastra para marcar todo su espacio. Esc o clic derecho para cancelar. Aléjate con la rueda para ver más.';
   draw();
 }
-// Cajita flotante mientras se coloca una sala nueva: el fondo que tendrá.
+// Cajita flotante mientras se coloca una sala nueva: primero su bioma y luego su fondo
+// (si ese bioma tiene varios). Empieza con el bioma de la sala abierta.
 function showNewRoomBox(on) {
   let el = $('newroom-box');
-  const bgs = BACKDROP_VARIANTS[room()?.biome ?? 'nervioso'];
-  if (!on || !bgs || bgs.length < 2) { if (el) el.hidden = true; return; }
+  if (!on) { if (el) el.hidden = true; return; }
+  if (!BIOMES[S.newBiome]) S.newBiome = room()?.biome ?? 'nervioso';
+  const bgs = BACKDROP_VARIANTS[S.newBiome];
   if (!el) {
     el = document.createElement('div'); el.id = 'newroom-box'; el.className = 'wiz';
     el.style.cssText = 'position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;';
     cv.parentElement.style.position = 'relative';
     cv.parentElement.appendChild(el);
   }
-  el.innerHTML = `Fondo de la sala nueva: <select id="newroom-bg">${bgs.map((b, i) => `<option value="${i + 1}"${i + 1 === (S.newBackdrop ?? 1) ? ' selected' : ''}>${b}</option>`).join('')}</select>`;
+  if (!bgs || (S.newBackdrop ?? 1) > bgs.length) S.newBackdrop = 1;
+  el.innerHTML = `Sala nueva · bioma: <select id="newroom-biome">${Object.entries(BIOMES).map(([id, b]) => `<option value="${id}"${id === S.newBiome ? ' selected' : ''}>${b.name}</option>`).join('')}</select>`
+    + (bgs?.length > 1 ? ` · fondo: <select id="newroom-bg">${bgs.map((b, i) => `<option value="${i + 1}"${i + 1 === S.newBackdrop ? ' selected' : ''}>${b}</option>`).join('')}</select>` : '');
   el.hidden = false;
-  $('newroom-bg').onchange = (e) => { S.newBackdrop = Number(e.target.value); };
+  $('newroom-biome').onchange = (e) => { S.newBiome = e.target.value; S.newBackdrop = 1; showNewRoomBox(true); };
+  if ($('newroom-bg')) $('newroom-bg').onchange = (e) => { S.newBackdrop = Number(e.target.value); };
 }
 function placingRect() {
   const p = S.placing;
@@ -342,7 +348,7 @@ function drawPlacing(z, r) {
 function createRoomAt(x, y, cw, ch) {
   const id = nextRoomId(), w = cw * CELL[0], h = ch * CELL[1];
   const grid = Array.from({ length: h }, (_, yy) => (yy === 0 || yy === h - 1 ? '#'.repeat(w) : '#' + '.'.repeat(w - 2) + '#'));
-  const biome = room()?.biome ?? 'nervioso';
+  const biome = BIOMES[S.newBiome] ? S.newBiome : room()?.biome ?? 'nervioso';
   // La vista no salta: la sala nueva queda en el mismo sitio de la pantalla.
   const keep = S.id && room()?.map ? { zoom: S.zoom, pan: { x: S.pan.x + (x - room().map[0]) * CELL[0] * S.zoom, y: S.pan.y + (y - room().map[1]) * CELL[1] * S.zoom } } : null;
   S.rooms[id] = { name: 'Sala nueva', biome, map: [x, y, cw, ch], grid, exits: [] };
