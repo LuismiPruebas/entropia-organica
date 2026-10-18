@@ -163,7 +163,9 @@ export const ENEMIES = {
     inflateTime: 1.1, spines: 5, spread: 0.5, spineSpeed: 330, spineDamage: 6, fireCool: 2.2, recoil: 0.55,
     floatChance: 0.35, hoverH: 34, floatTime: 2.6, // a ratos hincha la cabeza a medias y levita para amenazarte
     contactDamage: 7,
-    habits: 'Corre sobre sus patas larguísimas y se queda a media distancia. Se agacha e hincha la cabeza de alvéolos hasta ponerla al rojo, y la vacía de golpe: el esfínter del pecho escupe un abanico de espinas. A veces la hincha a medias y levita sobre el suelo, con las patas colgando, para acercarse amenazante y disparar desde arriba.',
+    meleeResist: 0.6, knockResist: 0.5, // los golpes le hacen poco y apenas lo mueven
+    counterChance: 0.4, counterInflate: 0.35, // golpeado de frente cuerpo a cuerpo, a veces se hincha de golpe y escupe
+    habits: 'Corre sobre sus patas larguísimas y se queda a media distancia. Se agacha e hincha la cabeza de alvéolos hasta ponerla al rojo, y la vacía de golpe: el esfínter del pecho escupe un abanico de espinas. A veces la hincha a medias y levita sobre el suelo, con las patas colgando, para acercarse amenazante y disparar desde arriba. Aguanta bien los golpes, y si le pegas de frente a veces se hincha de golpe y te escupe las espinas a bocajarro.',
     drop: { biomass: 8 },
     sounds: { reveal: 'sacInhale', windup: 'sacInhale', attack: 'spine', die: 'sacDie', hurt: 'sacHurt' },
     lore: 'Los pulmones de la Cavidad aprendieron a andar. Respira por la cabeza y dispara por el pecho; entre una cosa y otra solo hay un tubo y cuatro patas de alambre.',

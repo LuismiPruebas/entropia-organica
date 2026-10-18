@@ -260,6 +260,14 @@ export const BEHAVIORS = {
     const ease = (v, to, r) => v + (to - v) * Math.min(1, dt * r);
     if (s.sees) e.dir = Math.sign(s.dx) || e.dir;
     if (e.onGround) e.groundY = e.y;
+    // Contraataque: le has golpeado de frente; se hincha de golpe y escupe enseguida.
+    if (e.counter) {
+      e.counter = false;
+      if (e.state === 'walk' || e.state === 'float') {
+        e.quick = true; e.state = 'inflate'; e.timer = d.counterInflate;
+        g.audio.play(d.sounds?.windup ?? 'sacInhale', e);
+      }
+    }
     const fire = () => {
       const sx = e.cx + e.dir * 4, sy = e.y + e.h - 22;
       const a0 = Math.atan2(s.p.cy - sy, s.p.cx - sx);
@@ -269,7 +277,7 @@ export const BEHAVIORS = {
       }
       for (let i = 0; i < 8; i++) g.particles.emit(sx, sy, { vx: Math.cos(a0) * 150 + (Math.random() - 0.5) * 70, vy: Math.sin(a0) * 150 + (Math.random() - 0.5) * 70, life: 0.3, color: [0.75, 0.3, 0.25] });
       g.audio.play(d.sounds?.attack ?? 'spine', e);
-      e.k = -0.25; e.flash = 1;
+      e.k = -0.25; e.flash = 1; e.quick = false;
       e.state = 'recoil'; e.timer = d.recoil; e.cool = d.fireCool;
     };
     if (e.state === 'walk') {
@@ -299,7 +307,7 @@ export const BEHAVIORS = {
       else if (e.timer <= 0) e.state = 'descend';
     } else if (e.state === 'inflate') {
       // Se agacha (o se queda flotando) e hincha la cabeza hasta el máximo; tiembla al final.
-      const total = e.floating ? d.inflateTime * 0.8 : d.inflateTime, u = 1 - Math.max(0, e.timer) / total;
+      const total = e.quick ? d.counterInflate : e.floating ? d.inflateTime * 0.8 : d.inflateTime, u = 1 - Math.max(0, e.timer) / total;
       e.k = Math.max(e.k ?? 0, e.floating ? 0.55 + u * 0.45 : u * u * (3 - 2 * u));
       if (e.floating) { const ty = (e.groundY ?? e.y) - d.hoverH; e.vy = ease(e.vy, (ty - e.y) * 3, 6); e.vx = ease(e.vx, 0, 4); g.world.move(e, dt); }
       else { e.vx = 0; fall(e, g, dt); }
