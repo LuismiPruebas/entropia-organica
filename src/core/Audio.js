@@ -2,6 +2,9 @@
 // play(name, {x, y}) aplica paneo y atenuación según la distancia al oyente.
 
 import { startBossMusic } from './BossMusic.js';
+
+// Temas de jefe con pista grabada (los demás siguen siendo los generados de BossMusic.js).
+const BOSS_TRACKS = { ganglio: 'assets/music/chitinous-clicks.mp3' };
 import { VOICES, VOICE_GAIN } from './Voices.js';
 
 // Variación de tono por llamada: ninguna criatura suena dos veces igual.
@@ -655,8 +658,14 @@ export class AudioSys {
     this.master.gain.value = 0.55;
     this.master.connect(this.ctx.destination);
     // Fondo de zona (zumbido y capas del bioma): se apaga despacio durante los jefes.
+    // zone (zumbido y capas) -> duck (se agacha mientras suena la pista del bioma) -> zoneBus.
+    // La pista grabada del bioma entra también en zoneBus: el jefe lo apaga todo junto.
+    this.zoneBus = this.ctx.createGain();
+    this.zoneBus.connect(this.master);
+    this.duck = this.ctx.createGain();
+    this.duck.connect(this.zoneBus);
     this.zone = this.ctx.createGain();
-    this.zone.connect(this.master);
+    this.zone.connect(this.duck);
     const len = this.ctx.sampleRate;
     this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
@@ -797,14 +806,15 @@ export class AudioSys {
   // ---------- Música de los jefes aberración (core/BossMusic.js) ----------
   startBossMusic(theme) {
     if (!this.ctx || this.bossMusic) return;
-    this.bossMusic = startBossMusic(this, theme);
+    const file = BOSS_TRACKS[theme];
+    this.bossMusic = file ? this.#track(file, this.master, { loop: true, vol: 0.75, fadeIn: 1.5 }) : startBossMusic(this, theme);
     this.#fadeZone(0.0001, 5);
     this.bossTheme = theme;
   }
 
   // Fundido lento del fondo de zona (el silencio se impone antes de la música del jefe).
   #fadeZone(to, seconds) {
-    const g = this.zone.gain, t = this.ctx.currentTime;
+    const g = this.zoneBus.gain, t = this.ctx.currentTime;
     g.cancelScheduledValues(t);
     g.setValueAtTime(Math.max(0.0001, g.value), t);
     g.exponentialRampToValueAtTime(to, t + seconds);
@@ -816,6 +826,72 @@ export class AudioSys {
     this.#fadeZone(1, 4);
     this.bossMusic = null;
     this.bossTheme = null;
+  }
+
+  // ---------- Pistas grabadas (assets/music) ----------
+  // Reproduce un mp3 por la mezcla del juego. Devuelve { stop(fade), el }.
+  #track(src, dest, { loop = false, vol = 0.6, fadeIn = 3, onend } = {}) {
+    const c = this.ctx, el = new Audio(src), g = c.createGain();
+    el.loop = loop;
+    el.preload = 'auto';
+    try { c.createMediaElementSource(el).connect(g); g.connect(dest); }
+    catch { el.volume = vol; }                      // sin Web Audio: el volumen del elemento
+    const t = c.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + fadeIn);
+    if (onend) el.addEventListener('ended', onend);
+    el.play().catch(() => {});
+    let stopped = false;
+    return {
+      el,
+      stop: (fade = 2) => {
+        if (stopped) return;
+        stopped = true;
+        const t = c.currentTime;
+        g.gain.cancelScheduledValues(t);
+        g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + fade);
+        setTimeout(() => { el.pause(); el.removeAttribute('src'); el.load(); g.disconnect(); }, fade * 1000 + 100);
+      },
+    };
+  }
+
+  // La pista del bioma se alterna con el ambiente generado: tras un rato de ambiente
+  // suena la pista entera (el ambiente se agacha) y al acabar vuelve el ambiente solo.
+  #biomeMusic(music) {
+    if (this.biomeMusicDef === music) return;
+    this.biomeMusicDef = music;
+    clearTimeout(this.biomeMusicTimer);
+    this.biomeTrack?.stop(3);
+    this.biomeTrack = null;
+    this.#duck(1, 3);
+    if (!music) return;
+    const [lo, hi] = music.gap ?? [60, 120];
+    const next = (first) => {
+      const wait = first ? (music.first ?? 15) : lo + Math.random() * (hi - lo);
+      this.biomeMusicTimer = setTimeout(() => {
+        if (this.biomeMusicDef !== music) return;
+        this.#duck(music.duck ?? 0.35, 6);
+        const track = this.#track(music.src, this.zoneBus, {
+          vol: music.vol ?? 0.6, fadeIn: 6,
+          onend: () => {
+            if (this.biomeTrack !== track) return;
+            this.biomeTrack = null;
+            this.#duck(1, 6);
+            next(false);
+          },
+        });
+        this.biomeTrack = track;
+      }, wait * 1000);
+    };
+    next(true);
+  }
+
+  #duck(to, seconds) {
+    const g = this.duck.gain, t = this.ctx.currentTime;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(Math.max(0.0001, g.value), t);
+    g.exponentialRampToValueAtTime(to, t + seconds);
   }
 
   // Zumbido grave de fondo con un filtro que "respira".
@@ -877,6 +953,7 @@ export class AudioSys {
   setBiome(sound) {
     if (!this.ctx || !this.drone || !sound || this.biomeSound === sound) return;
     this.biomeSound = sound;
+    this.#biomeMusic(sound.music ?? null);
     const c = this.ctx, t = c.currentTime, d = this.drone;
     // Timbre, tono y filtro del zumbido base.
     [sound.drone, sound.drone * 1.01, sound.drone * 2].forEach((f, i) => {
