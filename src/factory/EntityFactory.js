@@ -41,7 +41,9 @@ export function roomTier(id) {
   return Math.min(1, (depth[id] ?? TIER_DEPTH) / TIER_DEPTH);
 }
 
-const PICKUP_CHARS = { b: 'biomass', B: 'battery', S: 'scrap', O: 'oxygen', H: 'heart', Q: 'cyst', h: 'tissue', u: 'plasma', g: 'thymus', '*': 'fragment', P: 'shield', C: 'regen' };
+const PICKUP_CHARS = { b: 'biomass', B: 'battery', S: 'scrap', O: 'oxygen', H: 'heart', Q: 'cyst', h: 'tissue', u: 'plasma', g: 'thymus', '*': 'fragment', i: 'fragment', c: 'fragment', d: 'fragment', x: 'fragment', P: 'shield', C: 'regen' };
+// Fragmentos de tipo fijo (no dependen de la casilla, como el '*').
+const FRAG_CHARS = { i: 'ocular', c: 'neural', d: 'dermal', x: 'balistico' };
 
 // Puente entre los datos (levels/enemies) y la escena de Three.js.
 export class EntityFactory {
@@ -93,7 +95,7 @@ export class EntityFactory {
           if (owned) continue;
           const kind = DNA_CHARS[c] ? 'dna' : PICKUP_CHARS[c];
           room.pickups.push(new Pickup(g, kind, center.x, center.y + 3, {
-            key, mutation: DNA_CHARS[c], hidden: hidden.has(`${cx},${cy}`), frag: fixedFrag(biome, cx, cy),
+            key, mutation: DNA_CHARS[c], hidden: hidden.has(`${cx},${cy}`), frag: FRAG_CHARS[c] ?? fixedFrag(biome, cx, cy),
           }));
         }
       }
@@ -128,7 +130,7 @@ export class EntityFactory {
       if (g.state.collected.has(key)) continue;
       const kind = DNA_CHARS[d.item] ? 'dna' : PICKUP_CHARS[d.item];
       const pk = new Pickup(g, kind, d.x * TILE + TILE / 2, d.y * TILE + TILE / 2 + 3, {
-        key, frag: fixedFrag(biome, d.x, d.y), mutation: DNA_CHARS[d.item],
+        key, frag: FRAG_CHARS[d.item] ?? fixedFrag(biome, d.x, d.y), mutation: DNA_CHARS[d.item],
       });
       room.pickups.push(pk);
       if (!g.state.flags.has(`boss:${d.until}`)) room.sacs.push(new YolkSac(g, d, pk));
