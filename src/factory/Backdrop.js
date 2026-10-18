@@ -333,61 +333,63 @@ const BACKDROPS = {
 // ----------------------------------------------------------------------------------
 // Variantes de fondo por sala (lv.backdrop: 2, 3...). Misma familia de color que su
 // bioma para que se sienta el mismo lugar, pero otro paisaje.
-// Sistema Nervioso 2 · Córtex piramidal: tejido violeta suave salpicado de neuronas
-// piramidales pequeñas y tenues (soma triangular y una dendrita que sube recta).
+// Sistema Nervioso 2 · Córtex: una red hexagonal regular y luminosa (como un panal de
+// circuitos): nodos que brillan en los vértices unidos por líneas finas. Uniforme, limpio.
 BACKDROPS['nervioso:2'] = () => {
   const sf = surface();
-  tissue(sf, { lo: '#1e0c2a', mid: '#2c1440', hi: '#3a1c52' }, 21, 2);
-  const r = rng(24);
-  const c = hexRgb('#4e2a68'), cl = hexRgb('#7a4a98');
-  for (let n = 0; n < 22; n++) {
-    const x0 = r() * S, y0 = r() * S, sz = 2 + r() * 2.5, len = 12 + r() * 22;
-    for (let y = 0; y <= sz * 1.6; y++) for (let x = -sz; x <= sz; x++) if (Math.abs(x) <= (y / (sz * 1.6)) * sz) sf.blend(x0 + x, y0 + y, x < 0 ? cl : c, 0.7);
-    for (let y = 1; y < len; y++) { sf.blend(x0 + Math.sin(y * 0.2 + n) * 0.6, y0 - y, c, 0.6 * (1 - y / len) + 0.2); if (y % 7 === 0) for (let k = 1; k < 4; k++) sf.blend(x0 + (n % 2 ? k : -k), y0 - y - k * 0.6, c, 0.35); }
-    for (const sd of [-1, 1]) for (let k = 0; k < 5; k++) sf.blend(x0 + sd * (sz + k * 0.8), y0 + sz * 1.6 + k * 0.6, c, 0.4);
+  tissue(sf, { lo: '#24103a', mid: '#2e164a', hi: '#3a1e5a' }, 21, 2);
+  const H = 16, W = H * Math.sqrt(3);                       // panal: celdas de 16 px
+  const line = hexRgb('#6a42a0'), node = hexRgb('#b88ae8'), nodeL = hexRgb('#f0dcff'), halo = hexRgb('#4e2e7a');
+  const cols = Math.round(S / W), rows = Math.round(S / (H * 1.5));
+  const w = S / cols, h = S / rows;                          // ajustado para que case sin costura
+  const pts = [];
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) pts.push([i * w + (j % 2 ? w / 2 : 0), j * h]);
+  const seg = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])); for (let k = 0; k <= n; k++) sf.blend(a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n, line, 0.55); };
+  for (const [x, y] of pts) {
+    seg([x, y], [x + w, y]);                                   // horizontal
+    seg([x, y], [x + w / 2, y + h]); seg([x, y], [x - w / 2, y + h]);
+  }
+  for (const [x, y] of pts) {
+    for (let yy = -3; yy <= 3; yy++) for (let xx = -3; xx <= 3; xx++) { const d = Math.hypot(xx, yy); if (d < 3.2) sf.blend(x + xx, y + yy, halo, 0.5 * (1 - d / 3.2)); }
+    disc(sf, x, y, 1.6, '#b88ae8', '#f0dcff', '#7a4ab0');
   }
   return sf.canvas();
 };
-// Sistema Nervioso 3 · Mielina en corte: axones cortados de través, como al microscopio:
-// un mosaico de anillos lila de mielina, cada uno con su núcleo oscuro.
+// Sistema Nervioso 3 · Circunvoluciones: los pliegues del cerebro. Crestas redondeadas
+// (giros) iluminadas desde arriba a la izquierda y surcos hondos en sombra.
 BACKDROPS['nervioso:3'] = () => {
   const sf = surface();
-  tissue(sf, { lo: '#1a0a26', mid: '#26103a', hi: '#341a4c' }, 31, 3);
-  const r = rng(33);
-  const ring = hexRgb('#8a64aa'), ringL = hexRgb('#b894d4'), ringD = hexRgb('#4a2a62'), core = hexRgb('#22102e'), dotc = hexRgb('#6a3a7a');
-  for (let n = 0; n < 230; n++) {
-    const x0 = r() * S, y0 = r() * S, R = 2.5 + r() * 4.5, th = Math.max(1.1, R * 0.32);
-    for (let y = -Math.ceil(R) - 1; y <= Math.ceil(R) + 1; y++) for (let x = -Math.ceil(R) - 1; x <= Math.ceil(R) + 1; x++) {
-      const d = Math.hypot(x, y);
-      if (d > R) continue;
-      if (d > R - th) sf.blend(x0 + x, y0 + y, x + y < -R * 0.4 ? ringL : x + y > R * 0.6 ? ringD : ring, 0.85);
-      else sf.blend(x0 + x, y0 + y, core, 0.8);
-    }
-    if (R > 4) sf.blend(x0 - 0.5, y0 - 0.5, dotc, 0.8);
+  const h = new Float32Array(S * S);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const n = tfbm(x, y, 4, 31) * 0.75 + tfbm(x + 40, y - 30, 8, 32) * 0.25;
+    const v = Math.abs(Math.sin(n * 26));                      // giros anchos de anchura parecida
+    h[y * S + x] = Math.pow(v, 0.4);                           // cúpula redondeada; el surco es el cero
+  }
+  const H = (x, y) => h[(((y % S) + S) % S) * S + (((x % S) + S) % S)];
+  const ramp = ['#160620', '#341240', '#56245e', '#7c3a80', '#a85a9e', '#d084bc'].map(hexRgb);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const v = H(x, y), lit = (H(x - 2, y - 2) - H(x + 2, y + 2)) * 1.6;   // luz arriba-izquierda
+    let k = 0.25 + v * 0.35 + lit * 0.55;
+    if (v < 0.3) k = 0.02;                                      // surco: línea honda y estrecha
+    else if (v < 0.42) k = Math.min(k, 0.2);
+    sf.set(x, y, ramp[Math.max(0, Math.min(5, Math.floor(k * 6)))]);
   }
   return sf.canvas();
 };
-// Sistema Nervioso 4 · Nebulosa sináptica: violeta hondo con destellos desenfocados
-// (vesículas) y un polvo fino de neurotransmisor.
+// Sistema Nervioso 4 · Ventrículo: el interior de una cavidad llena de líquido: paredes
+// de membrana carnosa, abombada, con sus vasitos.
 BACKDROPS['nervioso:4'] = () => {
   const sf = surface();
-  tissue(sf, { lo: '#160820', mid: '#22102e', hi: '#30163e' }, 41, 3);
-  const r = rng(42);
-  const glow = (x0, y0, rad, col, k) => {
-    const c = hexRgb(col);
-    for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++) {
-      const q = Math.hypot(x, y) / rad;
-      if (q < 1) sf.blend(x0 + x, y0 + y, c, k * (1 - q) * (1 - q));
-    }
-  };
-  for (let n = 0; n < 16; n++) glow(r() * S, r() * S, 8 + r() * 18, r() < 0.6 ? '#7a3aa0' : r() < 0.5 ? '#a0407a' : '#3a6aa0', 0.35 + r() * 0.25);
-  for (let n = 0; n < 120; n++) sf.blend(r() * S, r() * S, hexRgb(r() < 0.5 ? '#c8a0e8' : '#90c8f0'), 0.35 + r() * 0.4);
+  const P = { lo: '#2a1034', mid: '#3e1a48', hi: '#542660', membrane: '#24082a', cell: '#6a3074', shine: '#b06aa8', nucleus: '#4a1650' };
+  tissue(sf, P, 41, 3);
+  lobules(sf, 6, 42, P, { strength: 0.6, membrane: 0.14, nucleus: false });
+  vessels(sf, 7, 43, '#7a2050', '#b04878', { len: 120, thick: 1, branch: 0.04 });
   return sf.canvas();
 };
 
 // Fondos que ofrece cada bioma (para el editor). El primero es el de siempre.
 export const BACKDROP_VARIANTS = {
-  nervioso: ['Bosque neuronal', 'Córtex piramidal', 'Mielina en corte', 'Nebulosa sináptica'],
+  nervioso: ['Bosque neuronal', 'Córtex', 'Circunvoluciones', 'Ventrículo'],
 };
 export const backdropKey = (biome, variant) => (variant > 1 && BACKDROPS[`${biome}:${variant}`] ? `${biome}:${variant}` : biome);
 
