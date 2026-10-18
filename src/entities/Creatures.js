@@ -16,6 +16,7 @@ import { MOTH } from './Moth.js';
 import { RHINO } from './RhinoBeetle.js';
 import { TOAD } from './Toad.js';
 import { POLLINATOR } from './Pollinator.js';
+import { STILT } from './Stilt.js';
 
 const P = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
 
@@ -425,6 +426,7 @@ export const CREATURES = {
   // MATRIARCA: esfinge de las esporas, mitad polilla y mitad mantis (entities/Moth.js).
   matriarca: MOTH,
   polinizador: POLLINATOR,
+  zancudo: STILT,
 
   // GLÁNDULA GÁSTRICA: masa cerebral colgada de tubos elásticos (entities/Gland.js).
   glandula: GLAND,

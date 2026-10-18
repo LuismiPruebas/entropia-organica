@@ -241,6 +241,18 @@ export const PROJECTILES = {
       for (let i = 0; i < 3; i++) game.particles.emit(p.cx, p.cy, { vx: R(-60, 60), vy: R(-70, -10), life: R(0.2, 0.4), gravity: 520, color: [0.85, 0.78, 0.66] });
     },
   },
+  // Zancudo Alveolar: espina de cartílago con punta oscura y una estela caliente.
+  alvSpine: {
+    size: [10, 3], frames: 1, orient: 'velocity',
+    physics: { gravity: 60 },
+    paint(g, gl) {
+      px(g, 0, 1, '#6a2a20', 2, 1); px(g, 2, 1, '#c8a080', 5, 1); px(g, 2, 0, '#e8c8a0', 4, 1); px(g, 3, 2, '#8a6048', 3, 1);
+      px(g, 7, 1, '#f0dcc0', 2, 1); px(g, 9, 1, '#3a1a14');                      // punta
+      px(gl, 0, 1, 'rgba(255,120,40,0.7)', 3, 1);
+    },
+    trail(game, p, dt) { if (every(p, dt, 0.04)) game.glowParticles.emit(p.cx, p.cy, { vx: -p.vx * 0.05, vy: -p.vy * 0.05, life: 0.18, color: [1, 0.5, 0.2] }); },
+    impact(game, p) { for (let i = 0; i < 4; i++) game.particles.emit(p.cx, p.cy, { vx: R(-60, 60), vy: R(-70, -10), life: R(0.2, 0.4), gravity: 500, color: [0.8, 0.62, 0.48] }); },
+  },
   // Espinas del arma simbionte: hueso con la punta teñida y gotitas rosas.
   spine: {
     size: [9, 3], frames: 1, orient: 'velocity',

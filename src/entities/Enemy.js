@@ -247,6 +247,79 @@ export const BEHAVIORS = {
     e.dir = Math.sign(e.vx) || e.dir;
   },
 
+  // Zancudo Alveolar: corre sobre sus patas hasta quedarse a media distancia; se agacha,
+  // hincha la cabeza (aviso largo) y la vacía de golpe disparando un abanico de espinas
+  // por el esfínter del pecho. A ratos la hincha a medias y levita, se acerca amenazante
+  // por el aire, dispara desde arriba y vuelve a bajar.
+  inflater(e, dt, g) {
+    const d = e.def, s = senses(e, g);
+    e.state ??= 'walk';
+    tick(e, dt);
+    e.shakeX = 0;
+    e.flash = Math.max(0, (e.flash ?? 0) - dt * 5);
+    const ease = (v, to, r) => v + (to - v) * Math.min(1, dt * r);
+    if (s.sees) e.dir = Math.sign(s.dx) || e.dir;
+    if (e.onGround) e.groundY = e.y;
+    const fire = () => {
+      const sx = e.cx + e.dir * 4, sy = e.y + e.h - 22;
+      const a0 = Math.atan2(s.p.cy - sy, s.p.cx - sx);
+      for (let i = 0; i < d.spines; i++) {
+        const a = a0 + (i - (d.spines - 1) / 2) * (d.spread / (d.spines - 1)) + (Math.random() - 0.5) * 0.06;
+        g.spawnProjectile({ x: sx - 4, y: sy - 1, w: 7, h: 2, vx: Math.cos(a) * d.spineSpeed, vy: Math.sin(a) * d.spineSpeed, life: 1.6, damage: d.spineDamage, kind: 'alvSpine', owner: 'enemy' });
+      }
+      for (let i = 0; i < 8; i++) g.particles.emit(sx, sy, { vx: Math.cos(a0) * 80 + (Math.random() - 0.5) * 60, vy: Math.sin(a0) * 80 + (Math.random() - 0.5) * 60, life: 0.35, color: [0.75, 0.3, 0.25] });
+      g.audio.play(d.sounds?.attack ?? 'spine', e);
+      e.k = -0.25; e.flash = 1;
+      e.state = 'recoil'; e.timer = d.recoil; e.cool = d.fireCool;
+    };
+    if (e.state === 'walk') {
+      e.k = ease(e.k ?? 0, Math.sin(e.t * 2) * 0.05, 4);           // la cabeza respira
+      let speed = 0;
+      if (s.sees) {
+        if (s.dist > d.keepFar) speed = d.speed;
+        else if (s.dist < d.keepNear) { speed = d.speed * 0.8; e.dir = -e.dir; }
+        if (e.cool <= 0 && s.dist < d.sight) {
+          e.floating = Math.random() < d.floatChance;
+          e.state = e.floating ? 'float' : 'inflate';
+          e.timer = e.floating ? d.floatTime : d.inflateTime;
+          if (!e.floating) g.audio.play(d.sounds?.windup ?? 'sacInhale', e);
+        }
+      } else speed = d.speed * 0.3;
+      groundWalk(e, g, dt, speedMods(e, g, speed), !!s.sees);
+      if (s.sees) e.dir = Math.sign(s.dx) || e.dir;
+      e.walkPh = (e.walkPh ?? 0) + Math.abs(e.vx) * dt * 0.35;
+    } else if (e.state === 'float') {
+      // Hincha la cabeza a medias y se eleva sobre el suelo; se te acerca por el aire.
+      e.k = ease(e.k ?? 0, 0.55 + Math.sin(e.t * 3) * 0.05, 3);
+      const ty = (e.groundY ?? e.y) - d.hoverH;
+      e.vy = ease(e.vy, (ty - e.y) * 3, 6);
+      e.vx = ease(e.vx, s.sees && s.dist > 60 ? Math.sign(s.dx) * 35 : 0, 3);
+      g.world.move(e, dt);
+      if (e.timer <= d.floatTime - 1.2 && e.cool <= 0 && s.sees) { e.state = 'inflate'; e.timer = d.inflateTime * 0.8; g.audio.play(d.sounds?.windup ?? 'sacInhale', e); }
+      else if (e.timer <= 0) e.state = 'descend';
+    } else if (e.state === 'inflate') {
+      // Se agacha (o se queda flotando) e hincha la cabeza hasta el máximo; tiembla al final.
+      const total = e.floating ? d.inflateTime * 0.8 : d.inflateTime, u = 1 - Math.max(0, e.timer) / total;
+      e.k = Math.max(e.k ?? 0, e.floating ? 0.55 + u * 0.45 : u * u * (3 - 2 * u));
+      if (e.floating) { const ty = (e.groundY ?? e.y) - d.hoverH; e.vy = ease(e.vy, (ty - e.y) * 3, 6); e.vx = ease(e.vx, 0, 4); g.world.move(e, dt); }
+      else { e.vx = 0; fall(e, g, dt); }
+      if (u > 0.75) e.shakeX = Math.random() < 0.5 ? -1 : 1;
+      if (e.timer <= 0) fire();
+    } else if (e.state === 'recoil') {
+      // Vaciada de golpe: la cabeza vuelve despacio a su tamaño.
+      e.k = ease(e.k, 0, 3);
+      if (e.floating) { e.vx = ease(e.vx, -e.dir * 20, 4); e.vy = ease(e.vy, 0, 4); g.world.move(e, dt); }
+      else { e.vx = 0; fall(e, g, dt); }
+      if (e.timer <= 0) e.state = e.floating ? 'descend' : 'walk';
+    } else if (e.state === 'descend') {
+      // Deshincha la cabeza y vuelve a apoyarse.
+      e.k = ease(e.k, 0, 2.5);
+      e.vx = ease(e.vx, 0, 3);
+      fall(e, g, dt);
+      if (e.onGround) { e.state = 'walk'; e.floating = false; e.cool = Math.max(e.cool, 0.8); }
+    }
+  },
+
   // Polinizador: vuela. Te busca por arriba y se pasea de lado a lado sobre ti soltando
   // vainas de esporas (las de la Matriarca: revientan al caer). Si estás cerca, se
   // encoge alzando las garras (aviso), embiste en línea recta y se recupera aturdido.

@@ -147,6 +147,25 @@ export const ENEMIES = {
     sounds: { reveal: 'pollBuzz', windup: 'pollScream', ram: 'whip', attack: 'bubble', die: 'pollDie', hurt: 'pollHurt' },
     lore: 'Fumigador de la planta en 1984. Lo bajaron a la Cavidad a sellar los conductos con un traje de goma que no aguantó. Las esporas no lo mataron: le enseñaron a volar. Aún pone cara de disculpa antes de lanzarse contra ti.',
   },
+  zancudo: {
+    frag: 'ocular', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
+    name: 'Zancudo Alveolar',
+    biome: 'pulmonar',
+    creature: 'zancudo',
+    gore: { blood: '#8a0a14', flesh: ['#b04048', '#8a2a32', '#4c2c54', '#d8707a'] },
+    voice: ['sacInhale', 'click'],
+    behavior: 'inflater',
+    hp: 30, w: 14, h: 36,
+    sight: 190, speed: 82,
+    keepFar: 130, keepNear: 70, // anda rápido hasta quedarse a esa distancia
+    inflateTime: 1.1, spines: 5, spread: 0.55, spineSpeed: 210, spineDamage: 6, fireCool: 2.2, recoil: 0.55,
+    floatChance: 0.35, hoverH: 34, floatTime: 2.6, // a ratos hincha la cabeza a medias y levita para amenazarte
+    contactDamage: 7,
+    habits: 'Corre sobre sus patas larguísimas y se queda a media distancia. Se agacha e hincha la cabeza de alvéolos hasta ponerla al rojo, y la vacía de golpe: el esfínter del pecho escupe un abanico de espinas. A veces la hincha a medias y levita sobre el suelo, con las patas colgando, para acercarse amenazante y disparar desde arriba.',
+    drop: { biomass: 8 },
+    sounds: { reveal: 'sacInhale', windup: 'sacInhale', attack: 'spine', die: 'sacDie', hurt: 'sacHurt' },
+    lore: 'Los pulmones de la Cavidad aprendieron a andar. Respira por la cabeza y dispara por el pecho; entre una cosa y otra solo hay un tubo y cuatro patas de alambre.',
+  },
   fauce: {
     frag: 'ocular', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Fauce Colgante',
