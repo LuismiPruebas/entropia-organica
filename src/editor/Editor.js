@@ -458,7 +458,38 @@ function decorPieceOf(o) {
 // La decoración que se va a colocar: el tipo del desplegable con la orientación elegida.
 const decorFromChoice = (dt = 'neurona') => ({ ...(S.decorChoice ??= { flip: false, invert: false }), type: dt });
 // La pieza que sale en lo alto de la paleta: la decoración (si estás colocando una) o la rampa.
+// Enemigo orientable (def.rotatable, p. ej. el Saco Esporífero): misma pieza que la
+// decoración; se guarda igual (invert: techo, side: pared).
+function enemyIcon(o, size = 42) {
+  const th = enemyThumb(o.type);
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  if (th) {
+    const x = c.getContext('2d'), k = Math.min((size - 6) / th.w, (size - 6) / th.h, 3);
+    x.imageSmoothingEnabled = false;
+    x.translate(size / 2, size / 2);
+    x.rotate({ suelo: 0, left: Math.PI / 2, techo: Math.PI, right: -Math.PI / 2 }[anchorOf(o)]);
+    x.drawImage(th.canvas, (-th.w / 2) * k, (-th.h / 2) * k, th.w * k, th.h * k);
+  }
+  return `<img src="${c.toDataURL()}" width="${size}" height="${size}" style="image-rendering:pixelated">`;
+}
+function enemyPieceOf(o) {
+  const a = anchorOf(o);
+  return {
+    icon: enemyIcon(o), name: ENEMIES[o.type]?.name ?? o.type, sub: ANCHOR_NAME[a],
+    ops: [
+      { label: `⇅ Voltear (${a === 'techo' ? 'suelo' : a === 'suelo' ? 'techo' : 'arriba ⇄ abajo'})`, title: 'Del suelo al techo y al revés (tecla T)', run: () => DECOR_OPS.flip(o) },
+      { label: '⇆ Espejo', title: 'En una pared, a la de enfrente', run: () => DECOR_OPS.mirror(o) },
+      { label: '⟳ Girar', title: 'Un cuarto de vuelta: suelo → pared izquierda → techo → pared derecha', run: () => DECOR_OPS.rotate(o) },
+    ],
+  };
+}
+const isRotatable = (type) => !!ENEMIES[type]?.rotatable;
 function palettePiece(bc) {
+  if (S.tool === 'place' && S.kind === 'enemies' && isRotatable(S.enemyType)) {
+    const o = (S.enemyChoice ??= { invert: false });
+    o.type = S.enemyType;
+    return enemyPieceOf(o);
+  }
   if (S.tool === 'place' && S.kind === 'decor') {
     const o = (S.decorChoice ??= { flip: false, invert: false });
     o.type = S.decorType ?? 'neurona';
@@ -517,7 +548,16 @@ function drawEnemy(o, z, alpha) {
   const [bx, by, bw, bh] = KINDS.enemies.box(o, room()), k = z / 16;
   const dw = th.w * k, dh = th.h * k;
   g.globalAlpha = alpha;
-  g.drawImage(th.canvas, (bx + bw / 2) * z - dw / 2, (by + bh) * z - dh, dw, dh);
+  const a = isRotatable(o.type) ? anchorOf(o) : 'suelo';
+  if (a !== 'suelo') {
+    // Pegado al techo o a una pared de su casilla.
+    const cx = (o.x + 0.5) * z, cy = (o.y + 0.5) * z;
+    const ox = a === 'left' ? -z / 2 : a === 'right' ? z / 2 : 0, oy = a === 'techo' ? -z / 2 : 0;
+    g.save(); g.translate(cx + ox, cy + oy);
+    g.rotate({ left: Math.PI / 2, techo: Math.PI, right: -Math.PI / 2 }[a]);
+    g.drawImage(th.canvas, -dw / 2, -dh, dw, dh);
+    g.restore();
+  } else g.drawImage(th.canvas, (bx + bw / 2) * z - dw / 2, (by + bh) * z - dh, dw, dh);
   g.globalAlpha = 1;
 }
 // ---------------------------------------------------------------- bestiario (panel)
@@ -887,6 +927,7 @@ cv.addEventListener('mousedown', (e) => {
       const o = K.make(x, y, room());
       if (S.kind === 'nodules' && S.noduleLux) o.push('luz'); // desde la paleta: nódulo lumínico
       if (S.kind === 'enemies' && S.enemyType) o.type = S.enemyType; // el elegido en el Bestiario
+      if (S.kind === 'enemies' && isRotatable(o.type) && S.enemyChoice) { if (S.enemyChoice.side) o.side = S.enemyChoice.side; if (S.enemyChoice.invert) o.invert = true; }
       if (S.kind === 'decor') Object.assign(o, decorFromChoice(S.decorType));   // la elegida en el desplegable
       if (o) { (room()[S.kind] ??= []).push(o); S.sel = { kind: S.kind, index: room()[S.kind].length - 1 }; }
       else if (S.kind === 'pods') S.sel = { kind: 'pods', index: room().pods.at.length - 1 };
@@ -1418,6 +1459,7 @@ function renderInspector() {
       html += field('desfase (segundos; para alternar varios muros)', w.delay, (v) => setWall('delay', v), 'number');
     }
   }
+  if (kind === 'enemies' && isRotatable(o.type)) html += pieceCard(enemyPieceOf(o), 'en');
   if (kind === 'enemies') html += `<p class="dim">${ENEMIES[o.type]?.name ?? ''} · ${ENEMIES[o.type]?.w}x${ENEMIES[o.type]?.h}px · ${ENEMIES[o.type]?.behavior}</p>`;
   if (kind === 'pods') html += field('abre la compuerta', room().pods.opens, (v) => { room().pods.opens = v; }) + field('orden (índices)', room().pods.order, (v) => { room().pods.order = v; });
   html += `<div class="row"><button id="del">Eliminar</button><button id="dup">Duplicar</button></div>`;
@@ -1426,6 +1468,7 @@ function renderInspector() {
   if (kind === 'faces' && $('face-reset')) $('face-reset').onclick = () => { snapshot(); for (const k of ['taunts', 'thanks', 'opens', 'hints']) delete o[k]; touch(); renderInspector(); };
   $('del').onclick = deleteSelected;
   if (kind === 'decor') wirePiece(decorPieceOf(o), 'dc', snapshot, () => { touch(); renderInspector(); draw(); });
+  if (kind === 'enemies' && isRotatable(o.type)) wirePiece(enemyPieceOf(o), 'en', snapshot, () => { touch(); renderInspector(); draw(); });
   $('dup').onclick = () => {
     if (kind === 'pods') return;
     snapshot();

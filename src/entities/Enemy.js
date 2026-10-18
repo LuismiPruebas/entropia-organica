@@ -433,7 +433,7 @@ export const BEHAVIORS = {
   spore(e, dt, g) {
     const p = g.player, d = e.def;
     const dist = Math.hypot(p.cx - e.cx, p.cy - e.cy);
-    if (!e.armed && dist < d.trigger) {
+    if (!e.armed && dist < d.trigger && g.world.lineOfSight(e.cx, e.cy, p.cx, p.cy)) {
       e.armed = true;
       e.fuse = d.fuse;
       g.audio.play('charge', e);
@@ -443,6 +443,7 @@ export const BEHAVIORS = {
       e.flash = Math.floor(e.fuse * 16) % 2 ? 0.05 : 0;
       if (e.fuse <= 0) e.die();
     }
+    if (e.anchor) return;                                  // pegado al techo o a una pared
     e.vy = Math.min(380, e.vy + GRAVITY * dt);
     e.vx = 0;
     g.world.move(e, dt);
@@ -1773,6 +1774,15 @@ export class Enemy {
 
   overlaps(box) { return overlap(this, box); }
 
+  // Pegado a una superficie de su casilla: 'techo' (cuelga del de arriba) o la pared
+  // 'left' / 'right'. Sin gravedad; se dibuja girado hacia ella.
+  setAnchor(a, tx, ty) {
+    this.anchor = a;
+    if (a === 'techo') { this.x = tx * TILE + (TILE - this.w) / 2; this.y = ty * TILE; }
+    if (a === 'left') { this.x = tx * TILE; this.y = ty * TILE + (TILE - this.h) / 2; }
+    if (a === 'right') { this.x = (tx + 1) * TILE - this.w; this.y = ty * TILE + (TILE - this.h) / 2; }
+  }
+
   // Huye de tu luz (Ojo Pineal): se aparta de ti a toda prisa, por el suelo o por el aire.
   #flee(dt) {
     const g = this.game, p = g.player;
@@ -2020,11 +2030,11 @@ export class Enemy {
   #burst() {
     const g = this.game, d = this.def, p = g.player;
     g.audio.play('acid', this);
-    for (let i = 0; i < 30; i++) {
-      const a = Math.random() * Math.PI * 2, s = 20 + Math.random() * 60;
-      g.glowParticles.emit(this.cx, this.cy, { vx: Math.cos(a) * s, vy: Math.sin(a) * s - 10, life: 0.9, color: [0.55, 0.65, 0.12] });
+    for (let i = 0; i < 46; i++) {
+      const a = Math.random() * Math.PI * 2, s = 20 + Math.random() * (d.radius * 1.3);
+      g.glowParticles.emit(this.cx, this.cy, { vx: Math.cos(a) * s, vy: Math.sin(a) * s - 10, life: 1.1, color: [0.55, 0.65, 0.12] });
     }
-    if (Math.hypot(p.cx - this.cx, p.cy - this.cy) < d.radius) g.hurtPlayer(d.burstDamage, this.cx, 'esporas');
+    if (Math.hypot(p.cx - this.cx, p.cy - this.cy) < d.radius) g.hurtPlayer(d.burstDamage, this.cx, 'esporas', d.infects ? 'infection' : undefined);
   }
 
   render() {

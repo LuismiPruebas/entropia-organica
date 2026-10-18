@@ -118,7 +118,8 @@ export const ENEMIES = {
     voice: ['sacInhale', 'bubble'],
     behavior: 'spore',
     hp: 8, w: 13, h: 12,
-    trigger: 30, fuse: 0.55, radius: 44, burstDamage: 6,
+    trigger: 72, fuse: 0.7, radius: 56, burstDamage: 6, infects: true, // sus esporas infectan
+    rotatable: true, // en el editor se gira: suelo, techo o paredes
     contactDamage: 0,
     drop: { biomass: 3 },
     sounds: { reveal: 'spit', die: 'sacDie', hurt: 'sacHurt' },

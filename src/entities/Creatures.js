@@ -37,6 +37,7 @@ function ellipse(g, cx, cy, rx, ry, c, rim) {
 }
 
 const bottom = (e, w, h) => [e.cx - w / 2, e.y + e.h - h];
+let SAC_OFF = null;              // lienzos de trabajo del saco (se dibuja y luego se gira)
 const center = (e, w, h) => [e.cx - w / 2, e.cy - h / 2];
 
 // ---------------------------------------------------------------------------
@@ -189,20 +190,31 @@ export const CREATURES = {
 
   // SACO ESPORÍFERO (Cavidad Pulmonar): saco de carne venoso que late y, si te
   // acercas, se hincha hasta reventar.
+  // Se dibuja con las raíces abajo y se gira hacia su superficie (e.anchor: suelo,
+  // 'techo', 'left', 'right').
   saco: {
-    size: () => [22, 20],
-    origin: (e) => bottom(e, 22, 20),
+    size: () => [24, 24],
+    origin: (e) => (e.anchor === 'techo' ? [e.cx - 12, e.y] : e.anchor === 'left' ? [e.x, e.cy - 12] : e.anchor === 'right' ? [e.x + e.w - 24, e.cy - 12] : [e.cx - 12, e.y + e.h - 24]),
     noFlip: true,
     draw(g, gl, e, t) {
+      SAC_OFF ??= [document.createElement('canvas'), document.createElement('canvas')];
+      for (const c of SAC_OFF) { c.width = c.height = 24; }
+      const o = SAC_OFF[0].getContext('2d'), ol = SAC_OFF[1].getContext('2d');
       const swell = e.armed ? 1.25 + Math.sin(t * 30) * 0.08 : 1 + Math.sin(t * 3) * 0.06;
-      const cx = 11, cy = 11, rx = Math.round(6 * swell), ry = Math.round(5 * swell);
-      // Raíces que se hunden en el suelo.
-      for (const dx of [-4, -1, 2, 5]) line(g, cx + dx / 2, cy + ry - 1, cx + dx, 19 + Math.sin(t * 2 + dx), '#4a2430');
-      ellipse(g, cx, cy, rx, ry, '#7a8a2a', '#3a4410');
-      for (let k = 0; k < 3; k++) line(g, cx - rx + 2 + k * 3, cy - ry + 2, cx - 2 + k * 2, cy + ry - 2, '#5a3a2a');
+      const cx = 12, cy = 14, rx = Math.round(6 * swell), ry = Math.round(5 * swell);
+      // Raíces que se hunden en la superficie.
+      for (const dx of [-4, -1, 2, 5]) line(o, cx + dx / 2, cy + ry - 1, cx + dx, 22 + Math.sin(t * 2 + dx), '#4a2430');
+      ellipse(o, cx, cy, rx, ry, '#7a8a2a', '#3a4410');
+      for (let k = 0; k < 3; k++) line(o, cx - rx + 2 + k * 3, cy - ry + 2, cx - 2 + k * 2, cy + ry - 2, '#5a3a2a');
       for (const [sx, sy] of [[-3, -2], [2, -3], [3, 1], [-2, 2], [0, 0]]) {
-        P(g, cx + sx * swell, cy + sy * swell, '#d8d070');
-        P(gl, cx + sx * swell, cy + sy * swell, '#d8d070');
+        P(o, cx + sx * swell, cy + sy * swell, '#d8d070');
+        P(ol, cx + sx * swell, cy + sy * swell, '#d8d070');
+      }
+      const rot = { techo: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 }[e.anchor] ?? 0;
+      for (const [dst, src] of [[g, SAC_OFF[0]], [gl, SAC_OFF[1]]]) {
+        dst.save(); dst.imageSmoothingEnabled = false;
+        dst.translate(12, 12); dst.rotate(rot); dst.drawImage(src, -12, -12);
+        dst.restore();
       }
     },
   },

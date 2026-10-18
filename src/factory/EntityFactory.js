@@ -116,6 +116,8 @@ export class EntityFactory {
       enemy.key = key;
       if (e.crawl) enemy.crawl = e.crawl; // recorrido por las paredes (Matriarca)
       if (e.noDna) enemy.noDna = true;     // en esta sala no suelta su ADN (p. ej. un jefe en otro mapa)
+      // Orientado en el editor (techo o pared): se pega a esa superficie.
+      if (ENEMIES[e.type]?.rotatable && (e.side || e.invert)) enemy.setAnchor(e.side ?? 'techo', e.x, e.y);
       room.enemies.push(enemy);
     });
 
