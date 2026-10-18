@@ -525,13 +525,6 @@ export const LEVELS = {
       '##############################################....##############################',
     ],
     enemies: [
-      { type: 'polinizador', x: 44, y: 8 },
-      { type: 'polinizador', x: 52, y: 9 },
-      { type: 'polinizador', x: 49, y: 6 },
-      { type: 'polinizador', x: 56, y: 6 },
-      { type: 'polinizador', x: 42, y: 5 },
-      { type: 'polinizador', x: 41, y: 10 },
-      { type: 'polinizador', x: 56, y: 10 },
       { type: 'polinizador', x: 53, y: 5 },
       { type: 'zancudo', x: 34, y: 12 },
       { type: 'zancudo', x: 53, y: 12 },
@@ -539,6 +532,7 @@ export const LEVELS = {
       { type: 'espora', x: 56, y: 12 },
       { type: 'espora', x: 62, y: 12 },
       { type: 'espora', x: 50, y: 12 },
+      { type: 'hierofante', x: 34, y: 7 },
     ],
     links: [
       { id: 'p1', x: 46, y: 12, w: 4, h: 2, to: 'A6', toLink: 'p4', trigger: 'touch', look: 'hidden' },
