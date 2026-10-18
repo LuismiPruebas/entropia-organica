@@ -3,7 +3,7 @@ import { MUTATIONS } from '../data/mutations.js';
 import { spriteMesh, placeMesh, setMap, canvasTexture } from '../core/Sprites.js';
 import { PlayerBody, BODY_W, BODY_H, CROUCH_DROP } from './PlayerBody.js';
 import { TILE, overlap } from '../core/Physics.js';
-import { INFECTION, OXYGEN_COST } from '../state/State.js';
+import { INFECTION, OXYGEN_COST, BLADE } from '../state/State.js';
 
 export const GRAVITY = 900;
 const JUMP_V = 320;
@@ -43,6 +43,17 @@ const MELEE_DAMAGE = 14;     // culatazo: más que una astilla, pero hay que est
 const MELEE_REACH = 22;      // alcance desde el borde del cuerpo
 const MELEE_KNOCK = 210;     // empujón que aparta a la criatura
 const MELEE_TIME = 0.24;     // duración del gesto (para la animación)
+// Cuerpo a cuerpo según la línea Dermis (placas de quitina): daño, alcance, golpes del
+// combo y tamaño del arco. I: golpea más y el arco crece · II: placa-hoja en el antebrazo
+// y combo de dos · III: además la Cuchilla de Quitina (arma propia, R) con combo de tres
+// tajos que te hacen avanzar.
+const MELEE_TIERS = [
+  { dmg: 14, reach: 22, combo: 1, swoosh: 1 },
+  { dmg: 18, reach: 24, combo: 1, swoosh: 1.3 },
+  { dmg: 20, reach: 28, combo: 2, swoosh: 1.45 },
+  { dmg: 24, reach: 32, combo: 3, swoosh: 1.65 },
+];
+const COMBO_WINDOW = 0.55;   // tiempo para encadenar el siguiente golpe
 const HIT_STOP = 0.035;      // congelado al acertar: da peso al impacto
 // Arcadas de la infección: lo que dura cada una y una entrada "muerta" mientras dura
 // (nada pulsado; la mira y el ratón siguen donde estaban).
@@ -950,10 +961,17 @@ export class Player {
     if (input.hit('KeyR') && st.weapons.length > 1) {
       const w = st.cycleWeapon();
       audio.play('click', this);
-      this.game.say(`Cañón: ${MUTATIONS[w].name}`, 1.2);
+      this.game.say(w === BLADE.id ? `Arma: ${BLADE.name}` : `Cañón: ${MUTATIONS[w].name}`, 1.2);
       this.burstLeft = 0;
     }
     const weapon = st.weaponId;
+    this.comboT = Math.max(0, (this.comboT ?? 0) - dt);
+
+    // Cuchilla de Quitina: el gatillo encadena los tajos (y cada uno te hace avanzar).
+    if (weapon === BLADE.id) {
+      if (input.down('Mouse0')) { this.burstLeft = 0; this.#melee(); }
+      return;
+    }
 
     // Sin cañón, el brazo es solo una culata. Con él, si tienes una criatura pegada,
     // también golpeas: a quemarropa el culatazo manda.
@@ -1068,8 +1086,10 @@ export class Player {
   // aparta y aturde un instante a la criatura... pero hay que estar pegado a ella.
   // Al acertar arrancas carne (biomasa), a riesgo de infectarte.
   // Caja del golpe cuerpo a cuerpo, delante de ti.
+  #meleeTier() { return MELEE_TIERS[Math.min(3, this.game.state.lineLevel('dermis'))]; }
   #meleeBox() {
-    return { x: this.facing > 0 ? this.x + this.w : this.x - MELEE_REACH, y: this.y + 2, w: MELEE_REACH, h: this.h - 4 };
+    const reach = this.#meleeTier().reach;
+    return { x: this.facing > 0 ? this.x + this.w : this.x - reach, y: this.y + 2, w: reach, h: this.h - 4 };
   }
 
   // ¿Hay una criatura (o un blanco) al alcance del puño?
@@ -1082,8 +1102,21 @@ export class Player {
     let infectious = false;
     const g = this.game, st = g.state;
     if (this.fireCd > 0) return;
-    this.fireCd = 0.38;
+    // Combo: si golpeas dentro de la ventana, el siguiente tajo de la serie.
+    const T = this.#meleeTier();
+    this.comboN = this.comboT > 0 && (this.comboN ?? 0) < T.combo ? this.comboN + 1 : 1;
+    const last = this.comboN === T.combo && T.combo > 1;
+    this.comboT = COMBO_WINDOW;
+    this.fireCd = T.combo > 1 ? (last ? 0.42 : 0.2) : 0.38;
     this.punch = MELEE_TIME;
+    this.punchN = this.comboN;
+    this.swooshK = T.swoosh * (last && T.combo === 3 ? 1.25 : 1);
+    const dmgMul = last && T.combo === 3 ? 1.5 : 1;
+    // Con la cuchilla, cada tajo te lanza hacia delante (el último, más).
+    if (st.weaponId === BLADE.id) {
+      this.vx = this.facing * (last ? 230 : 150);
+      this.wallLock = Math.max(this.wallLock ?? 0, 0.12);
+    }
     if (!st.seenMelee) {
       st.seenMelee = true;
       g.say('Cuerpo a cuerpo: sin munición, o con una criatura pegada, golpeas. Duele, aparta... y te obliga a estar cerca.', 3);
@@ -1095,10 +1128,10 @@ export class Player {
     for (const e of g.room.enemies) {
       if (!e.alive || !e.overlaps(box)) continue;
       // Contra una coraza intacta el golpe rebota y no absorbe nada.
-      if (e.hurt(MELEE_DAMAGE, 'melee')) {
+      if (e.hurt(T.dmg * dmgMul, 'melee')) {
         hit = true;
         if (e.def?.infects) infectious = true;   // reventar el tejido de algo que infecta
-        e.knockback(this.facing, MELEE_KNOCK);
+        e.knockback(this.facing, MELEE_KNOCK * (last ? 1.4 : 1));
       }
     }
     if (hit) {
@@ -1158,6 +1191,7 @@ export class Player {
       vx: this.vx * this.facing, vy: this.vy,
       onGround: this.onGround, clinging: !!this.clinging, rope, reach, charge: this.charge,
       weapon: st.weaponId, recoil: this.recoil ?? 0, armRaise: this.#armRaise(dt),
+      punchN: this.punchN ?? 1, bladeLv: st.lineLevel('dermis'),
     });
     this.bodyTex.needsUpdate = true;
     this.bodyGlowTex.needsUpdate = true;
@@ -1185,10 +1219,13 @@ export class Player {
     const pk = this.punch / MELEE_TIME; // 1 al empezar, 0 al acabar
     this.swoosh.visible = pk > 0.15;
     if (this.swoosh.visible) {
-      const k = 1 - pk;
+      const k = 1 - pk, sk = this.swooshK ?? 1, n = this.punchN ?? 1;
       this.swoosh.material.opacity = Math.min(0.6, pk);
-      this.swoosh.scale.set(this.facing * (0.55 + k * 0.3), 0.65 + k * 0.25, 1);
-      this.swoosh.position.set(Math.round(this.cx + this.facing * (9 + k * 5)), -Math.round(this.y + 13), 0);
+      // El revés (2º golpe) se voltea: el arco sube; el tajo (3º) baja desde arriba.
+      this.swoosh.scale.set(this.facing * (0.55 + k * 0.3) * sk, (0.65 + k * 0.25) * sk * (n === 2 ? -1 : 1), 1);
+      this.swoosh.position.set(Math.round(this.cx + this.facing * (9 + k * 5) * (0.8 + sk * 0.2)), -Math.round(this.y + 13 - (n === 3 ? 3 : n === 2 ? -1 : 0)), 0);
+      const lv = st.lineLevel('dermis');
+      this.swoosh.material.color.setRGB(lv >= 3 ? 0.6 : 1, 1, lv >= 3 ? 1 : lv >= 2 ? 0.85 : 1);
     }
     // Marca de fijado: se cierra sobre el blanco y late con el color del ojo.
     const lk = this.lock?.alive ? this.lock : null;

@@ -63,6 +63,15 @@ const BASE = {
 };
 // Armas del cañón (state.WEAPONS), para dibujar el brazo.
 const WEAPON_IDS = ['astillas', 'simbionte', 'escopeta'];
+// Ángulo del brazo durante un golpe del combo (pose.punchN): 1 estocada al frente,
+// 2 revés de abajo arriba, 3 tajo pesado desde lo alto hacia abajo.
+function strikeAim(rest, k, pose) {
+  if (!((pose.punch ?? 0) > 0)) return rest;
+  const n = pose.punchN ?? 1, pt = 1 - Math.min(1, pose.punch);
+  if (n === 2) return 0.9 - 2.1 * Math.min(1, pt / 0.45);
+  if (n === 3) { const u = Math.min(1, pt / 0.5); return -1.7 + 2.4 * u * u; }
+  return rest * (1 - k);
+}
 const C = {
   bone: '#e8dcc8', boneD: '#a89a80', metal: '#9a9aa2', metalD: '#55555e',
   flesh: '#8a3048', fleshL: '#c0607a', fleshD: '#4a1424', tumor: '#a8486a', tumorL: '#d88aa0',
@@ -314,7 +323,8 @@ export class PlayerBody {
     if (wpn === 'simbionte') part('simbionte', (tg, gl2) => this.#cannon(tg, gl2, ctx));
     else if (wpn === 'escopeta') part('escopeta', (tg) => this.#shotgun(tg, ctx));
     else if (wpn === 'astillas') part('astillas', (tg) => this.#gunArm(tg, ctx));
-    else this.#bareArm(g, ctx);
+    else if (wpn === 'cuchilla') part('nanocutis', (tg, gl2) => this.#bareArm(tg, ctx, gl2));
+    else this.#bareArm(g, ctx, gl);
     return this;
   }
 
@@ -439,16 +449,19 @@ export class PlayerBody {
 
   // Sin cañón: el brazo desnudo, con el puño cerrado (solo culatazos). Cuelga hacia
   // abajo balanceándose al andar; se alza hacia la mira solo si apuntas (pose.armRaise).
-  #bareArm(g, c) {
+  #bareArm(g, c, gl) {
     const { P, sh, t, moving, phase } = c;
     const k = c.pose.strike ?? 0;
+    const blade = c.pose.weapon === 'cuchilla';
     const swing = moving ? Math.sin(phase + Math.PI) * 0.45 : Math.sin(t * 1.6) * 0.06;
     const hang = Math.PI / 2 - 0.2 + swing;
-    const raise = c.pose.armRaise ?? 0;
+    // Con la cuchilla, el brazo se lleva en guardia: medio alzado, la hoja al frente.
+    const raise = blade ? Math.max(0.55, c.pose.armRaise ?? 0) : c.pose.armRaise ?? 0;
     const rest = hang + (c.aim - hang) * raise;
-    const aim = k > 0 ? rest * (1 - k) : rest;
+    const aim = strikeAim(rest, k, c.pose);
+    const ext = (c.pose.punchN ?? 1) > 1 && (c.pose.punch ?? 0) > 0 ? Math.max(k, 0.8) : k;
     const s = [sh[0] + 3, sh[1] + 1];
-    let hand = [s[0] + Math.cos(aim) * (7 + k * 6), s[1] + Math.sin(aim) * (7 + k * 6)];
+    let hand = [s[0] + Math.cos(aim) * (7 + ext * 6), s[1] + Math.sin(aim) * (7 + ext * 6)];
     if (c.pose.clinging && raise < 0.5 && k <= 0) hand = [s[0] + 5, s[1] - 4 - (c.climbing ? Math.sin(c.cl + Math.PI) * 3 : 0)];
     else if (c.swim > 0.3 && c.air && !c.hanging && raise < 0.5 && k <= 0) {
       // Brazada a contratiempo: cuando el de atrás tira, este se estira al frente.
@@ -460,7 +473,42 @@ export class PlayerBody {
     limb(g, el[0], el[1], hand[0], hand[1], 2, P.muscle);
     blob(g, hand[0], hand[1], 1.6, 1.6, K);
     blob(g, hand[0], hand[1], 1.1, 1.1, P.muscle);
+    if (blade || ((c.pose.bladeLv ?? 0) >= 2 && k > 0)) this.#armBlade(g, gl, el, hand, c.pose.bladeLv ?? 2, t);
     this.muzzle = { x: hand[0] + Math.cos(aim) * 2, y: hand[1] + Math.sin(aim) * 2 };
+  }
+
+  // Placa-hoja de quitina (Dermis II y III): placas solapadas sobre el antebrazo, como un
+  // escudo, que acaban en una hoja afilada más allá del puño. Con la Dermis III es más
+  // larga y la recorre un circuito cian.
+  #armBlade(g, gl, el, hand, lv, t) {
+    const dx = hand[0] - el[0], dy = hand[1] - el[1], l = Math.hypot(dx, dy) || 1;
+    const ux = dx / l, uy = dy / l, nx = -uy, ny = ux;
+    // Escudo: dos placas sobre el antebrazo, del lado de fuera.
+    for (const u of [0.25, 0.75]) {
+      const bx = el[0] + dx * u - nx * 1.2, by = el[1] + dy * u - ny * 1.2;
+      blob(g, bx, by, 2.2, 1.6, K);
+      blob(g, bx, by, 1.6, 1.1, C.plate, C.plateD, C.plateL);
+    }
+    // Hoja: cuña que se afina hasta la punta, filo claro y lomo oscuro.
+    const L = lv >= 3 ? 10 : 7, tx = hand[0] + ux * L, ty = hand[1] + uy * L;
+    for (let i = 0; i <= L; i++) {
+      const w = Math.max(0.5, 2.2 * (1 - i / L));
+      const x = hand[0] + ux * i, y = hand[1] + uy * i;
+      seg(g, x - nx * (w + 0.6), y - ny * (w + 0.6), x + nx * (w * 0.5 + 0.6), y + ny * (w * 0.5 + 0.6), K, 1);
+    }
+    for (let i = 0; i < L; i++) {
+      const w = Math.max(0.4, 2 * (1 - i / L));
+      const x = hand[0] + ux * i, y = hand[1] + uy * i;
+      seg(g, x - nx * w, y - ny * w, x + nx * w * 0.4, y + ny * w * 0.4, C.plate, 1);
+      px(g, x - nx * w, y - ny * w, C.plateL);                       // filo
+    }
+    px(g, tx, ty, C.plateL);
+    if (lv >= 3) for (let i = 1; i < L - 1; i++) {
+      const on = Math.sin(t * 8 - i * 0.8) > 0;
+      const x = hand[0] + ux * i, y = hand[1] + uy * i;
+      px(g, x, y, on ? C.cyan : '#1a6a7a');
+      if (on && gl) px(gl, x, y, C.cyan);
+    }
   }
 
   // Escopeta de Esquirlas: dos bocas de hueso cortas y anchas envueltas en carne. El
@@ -475,6 +523,7 @@ export class PlayerBody {
     const hand = [s[0] + Math.cos(aim) * reach, s[1] + Math.sin(aim) * reach];
     const el = ik(s[0], s[1], hand[0], hand[1], 4, 4, 1);
     limb(g, s[0], s[1], el[0], el[1], 2, P.armorM, P.armorL);
+    if ((c.pose.bladeLv ?? 0) >= 2 && kp > 0) this.#armBlade(g, null, el, hand, c.pose.bladeLv, c.t);
     const ca = Math.cos(aim), sa = Math.sin(aim), nx = -sa, ny = ca;
     const ex = hand[0] + ca * 7, ey = hand[1] + sa * 7;
     // dos cañones paralelos
@@ -505,6 +554,7 @@ export class PlayerBody {
     const el = ik(s[0], s[1], hand[0], hand[1], 4, 4, 1);
     limb(g, s[0], s[1], el[0], el[1], 2, P.armorM, P.armorL);
     limb(g, el[0], el[1], hand[0], hand[1], 2, P.muscle);
+    if ((c.pose.bladeLv ?? 0) >= 2 && k > 0) this.#armBlade(g, null, el, hand, c.pose.bladeLv, c.t);
     // Tubo de hueso alineado con la mira, con anillos y astillas en la boca.
     const ex = hand[0] + Math.cos(aim) * 7, ey = hand[1] + Math.sin(aim) * 7;
     seg(g, hand[0], hand[1], ex, ey, K, 5);
@@ -664,6 +714,7 @@ export class PlayerBody {
     const hand = [s[0] + Math.cos(aim) * (6 + kp * 6), s[1] + Math.sin(aim) * (6 + kp * 6)];
     const el = ik(s[0], s[1], hand[0], hand[1], 4, 4, 1);
     limb(g, s[0], s[1], el[0], el[1], 2, P.armorM);
+    if ((pose.bladeLv ?? 0) >= 2 && kp > 0) this.#armBlade(g, gl, el, hand, pose.bladeLv, t);
     const swell = 3 + Math.sin(t * 5) * 0.4 + k * 1.6;
     const ca = Math.cos(aim), sa = Math.sin(aim);
     const mx = hand[0] + ca * 7, my = hand[1] + sa * 7;

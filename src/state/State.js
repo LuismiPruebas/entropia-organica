@@ -57,6 +57,12 @@ export const CAPACITY_PER_EXTENDER = 1;
 export const EXTENDER_PRICES = [30, 45, 65, 90, 120, 155, 195, 240, 290, 345, 405, 470, 540, 615];
 // Armas del cañón, en orden de su línea.
 export const WEAPONS = ['astillas', 'simbionte', 'escopeta'];
+// Con la Dermis III (placas de quitina) el antebrazo es también un arma cuerpo a cuerpo:
+// se elige con R como un cañón más.
+export const BLADE = {
+  id: 'cuchilla', name: 'Cuchilla de Quitina',
+  controls: 'El antebrazo es una hoja de placas. Clic / R1: combo de tres tajos avanzando (el tercero, pesado). [R] / R2 vuelve al cañón.',
+};
 const REJECTION_CRITICAL = 100;
 // Rechazo gradual: por debajo de failFrom (40 %, más con los timos) no pasa nada; desde ahí las
 // mutaciones fallan cada vez más (hasta REJECTION_FAIL_MAX al 100 %); al 100 % además
@@ -145,7 +151,7 @@ export class GameState {
     const owned = this.weapons;
     return owned.includes(this.weapon) ? this.weapon : owned[owned.length - 1] ?? null;
   }
-  get weapons() { return WEAPONS.filter((id) => this.mutations.has(id)); }
+  get weapons() { return [...WEAPONS.filter((id) => this.mutations.has(id)), ...(this.lineLevel('dermis') >= 3 ? [BLADE.id] : [])]; }
   // Cambia a la siguiente arma instalada (tecla R / gatillo R2 / Genoma).
   cycleWeapon(to) {
     const owned = this.weapons;

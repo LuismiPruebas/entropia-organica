@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, LINE_ORDER, FRAGMENTS, SYNERGIES, CLASHES, ROMAN, linesOf } from '../data/mutations.js';
-import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW } from '../state/State.js';
+import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW, BLADE } from '../state/State.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { PlayerBody, BODY_W, BODY_H } from '../entities/PlayerBody.js';
 import { caps } from './Hud.js';
@@ -339,7 +339,7 @@ export class Genome {
     }
     const m = MUTATIONS[f];
     if (!m) {
-      const w = st.weaponId ? MUTATIONS[st.weaponId] : null;
+      const w = st.weaponId ? MUTATIONS[st.weaponId] ?? BLADE : null;
       this.info.innerHTML = `
         <b class="i-name" style="color:#ffd23f">${w ? w.name.toUpperCase() : 'CULATA'}</b>
         <p class="i-fx">${w ? w.controls : 'Sin cañón solo golpeas cuerpo a cuerpo. Busca el ADN del Cañón de Astillas.'}</p>
