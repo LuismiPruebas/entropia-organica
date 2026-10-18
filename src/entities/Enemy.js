@@ -331,6 +331,15 @@ export const BEHAVIORS = {
     e.shakeX = 0;
     e.puff = Math.max(0, (e.puff ?? 0) - dt * 3);
     e.contactDamage = d.contactDamage;
+    // Contraataque: le has golpeado de frente; embiste de nuevo a bocajarro con un aviso corto.
+    if (e.counter) {
+      e.counter = false;
+      if (e.state !== 'windup' && e.state !== 'ram') {
+        e.state = 'windup'; e.timer = d.counterWindup; e.dive = false;
+        e.aimA = Math.atan2(s.dy, s.dx);
+        g.audio.play(d.sounds?.windup ?? 'charge', e);
+      }
+    }
     // Vuelo con inercia hacia un punto.
     const steer = (tx, ty, speed) => {
       const dx = tx - e.cx, dy = ty - e.cy, dist = Math.hypot(dx, dy) || 1, v = Math.min(speed, dist * 3);
@@ -1897,6 +1906,9 @@ export class Enemy {
     }
     // Aguante al cuerpo a cuerpo (def.meleeResist: fracción del daño que le llega).
     if (kind === 'melee' && this.def.meleeResist) n *= this.def.meleeResist;
+    // Contraataque (def.counterChance): si le golpeas de frente cuerpo a cuerpo, a veces
+    // responde enseguida (lo recoge su comportamiento, p. ej. una embestida corta).
+    if (kind === 'melee' && this.def.counterChance && (this.game.player.cx - this.cx) * this.dir > 0 && Math.random() < this.def.counterChance) this.counter = true;
     // Endurecido (ojo con el párpado cerrado): todo rebota.
     if (this.hard && kind !== 'acid') {
       if (!silent) this.game.audio.play('ricochet', this);

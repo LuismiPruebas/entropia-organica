@@ -142,8 +142,9 @@ export const ENEMIES = {
     height: 76, sweep: 46, dropEvery: 1.0, sporeDamage: 7,
     diveChance: 0.55, diveRange: 160, diveTime: 0.65, // a ratos se lanza en picado desde arriba
     meleeResist: 0.6, knockResist: 0.5, // caparazón duro: los golpes le hacen poco y apenas lo mueven
+    counterChance: 0.4, counterWindup: 0.22, // golpeado de frente cuerpo a cuerpo, a veces embiste enseguida
     contactDamage: 9,
-    habits: 'Vuela alto y se pasea de lado a lado por encima de ti, cagando vainas de esporas que revientan al caer; a ratos, en vez de eso, se lanza en picado. Si te acercas, se encoge alzando las garras y embiste. Aguanta bastante; solo un ojo muy desarrollado le hace huir.',
+    habits: 'Vuela alto y se pasea de lado a lado por encima de ti, cagando vainas de esporas que revientan al caer; a ratos, en vez de eso, se lanza en picado. Si te acercas, se encoge alzando las garras y embiste; y si le golpeas de frente, a veces te devuelve la embestida a bocajarro. Aguanta bastante; solo un ojo muy desarrollado le hace huir.',
     drop: { biomass: 10 },
     sounds: { reveal: 'pollBuzz', windup: 'pollScream', ram: 'whip', attack: 'bubble', die: 'pollDie', hurt: 'pollHurt' },
     lore: 'Fumigador de la planta en 1984. Lo bajaron a la Cavidad a sellar los conductos con un traje de goma que no aguantó. Las esporas no lo mataron: le enseñaron a volar. Aún pone cara de disculpa antes de lanzarse contra ti.',
