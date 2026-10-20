@@ -864,6 +864,7 @@ addEventListener('keydown', (e) => { if (e.code === 'Space' && !isTyping()) { sp
 addEventListener('keyup', (e) => { if (e.code === 'Space') spaceDown = false; });
 
 cv.addEventListener('mousedown', (e) => {
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   if (!S.id) return;
   const [x, y] = toTile(e);
   if (S.pickArrive && e.button === 0) {
@@ -1158,7 +1159,7 @@ function areaDelete() {
 }
 // Guarda la zona (casillas y elementos, con su sitio dentro de ella) para pegarla.
 function areaCopy(cutIt = false) {
-  if (!S.area) return;
+  if (!S.area) return elemCopy(cutIt);
   const rc = areaRect(S.area), [x, y, w, h] = rc, r = room(), src = elementsIn(rc);
   S.clip = {
     room: S.id, rect: rc, w, h, cut: cutIt, src,
@@ -1172,6 +1173,20 @@ function areaCopy(cutIt = false) {
   renderInspector(); draw();
 }
 const areaCut = () => areaCopy(true);
+// Copiar o cortar el elemento seleccionado (criatura, lámpara, rostro, decoración...): se
+// pega con su esquina donde esté el ratón, sin tocar las casillas.
+function elemCopy(cutIt) {
+  const o = selected();
+  if (!o || !S.sel || S.sel.kind === 'pods' || S.sel.kind === 'exits') { $('msg').textContent = 'Nada que copiar: marca una zona o selecciona un elemento.'; return; }
+  const kind = S.sel.kind, r = room(), [bx, by, bw, bh] = KINDS[kind].box(o, r);
+  S.clip = {
+    room: S.id, rect: [bx, by, bw, bh], w: bw, h: bh, cut: cutIt, elemOnly: true,
+    src: [{ kind, o }], tiles: null, veil: [],
+    elems: [{ kind, o: clone(o), at: elemPos(kind, o, r).map((v, k) => v - [bx, by][k]) }],
+  };
+  $('msg').textContent = `${KINDS[kind]?.label ?? kind} ${cutIt ? 'cortado' : 'copiado'}: pon el ratón donde lo quieras y pulsa Ctrl+V.`;
+  renderInspector(); draw();
+}
 // Pega con la esquina donde está el ratón. Si era un corte, lo quita del sitio original.
 function areaPaste() {
   const c = S.clip;
@@ -1182,17 +1197,24 @@ function areaPaste() {
   if (c.cut) {
     const src = S.rooms[c.room];
     if (src && c.room !== S.id) { snapshotRoom(c.room); S.dirty.add(c.room); CTX_CACHE.delete(c.room); }
-    if (src) { removeElements(c.src, src); fillRect(src, c.rect); clearVeil(src, c.rect); }
+    if (src) { removeElements(c.src, src); if (!c.elemOnly) { fillRect(src, c.rect); clearVeil(src, c.rect); } }
   }
-  for (let j = 0; j < c.h; j++) for (let i = 0; i < c.w; i++) setTile(hx + i, hy + j, c.tiles[j][i]);
-  clearVeil(room(), [hx, hy, c.w, c.h]);
-  for (const [i, j] of c.veil ?? []) setVeil(room(), hx + i, hy + j, true);
+  if (!c.elemOnly) {
+    for (let j = 0; j < c.h; j++) for (let i = 0; i < c.w; i++) setTile(hx + i, hy + j, c.tiles[j][i]);
+    clearVeil(room(), [hx, hy, c.w, c.h]);
+    for (const [i, j] of c.veil ?? []) setVeil(room(), hx + i, hy + j, true);
+  }
   const r = room(), elems = addCopies(c.elems);
   elems.forEach((e, i) => {
     const at = c.elems[i].at, [bx, by] = elemPos(e.kind, e.o, r);
     moveElement(e, hx + at[0] - bx, hy + at[1] - by);
   });
-  S.area = { x0: hx, y0: hy, x1: hx + c.w - 1, y1: hy + c.h - 1 };
+  if (c.elemOnly) {
+    // Un elemento: queda seleccionado (sin zona).
+    const e = elems[0];
+    S.area = null;
+    S.sel = e ? { kind: e.kind, index: (e.kind === 'pods' ? r.pods.at : r[e.kind]).indexOf(e.o) } : null;
+  } else S.area = { x0: hx, y0: hy, x1: hx + c.w - 1, y1: hy + c.h - 1 };
   $('msg').textContent = c.cut ? 'Zona movida aquí (Ctrl+Z la devuelve).' : 'Zona pegada (Ctrl+V otra vez pega otra copia).';
   if (c.cut) { c.cut = false; c.src = []; } // a partir de ahora, pegar hace copias
   touch(); renderInspector(); draw();
@@ -2169,15 +2191,20 @@ const FLIP = { '/': 'J', J: '/', k: 'L', L: 'k', a: 'r', r: 'a', A: 'R', R: 'A',
 const MIRROR = { '/': 'k', k: '/', a: 'e', e: 'a', A: 'E', E: 'A', J: 'L', L: 'J', r: 'W', W: 'r', R: 'w', w: 'R' };
 
 // ---------------------------------------------------------------- teclado
-const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+const isTyping = () => {
+  const a = document.activeElement;
+  if (!a) return false;
+  if (a.tagName === 'TEXTAREA' || a.isContentEditable) return true;
+  return a.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'button', 'submit', 'color', 'file'].includes(a.type);
+};
 addEventListener('keydown', (e) => {
   if (isTyping()) return;
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); undo(e.shiftKey); return; }
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') { e.preventDefault(); undo(true); return; }
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') { e.preventDefault(); save(); return; }
   if (e.ctrlKey || e.metaKey) {
-    if (e.code === 'KeyC' && S.area) { e.preventDefault(); areaCopy(); }
-    if (e.code === 'KeyX' && S.area) { e.preventDefault(); areaCut(); }
+    if (e.code === 'KeyC' && (S.area || S.sel)) { e.preventDefault(); areaCopy(); }
+    if (e.code === 'KeyX' && (S.area || S.sel)) { e.preventDefault(); areaCut(); }
     if (e.code === 'KeyV' && S.clip && S.id) { e.preventDefault(); areaPaste(); }
     return;                                              // Ctrl + letra nunca cambia de herramienta
   }
