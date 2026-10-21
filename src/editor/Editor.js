@@ -828,8 +828,12 @@ function hitTest(x, y) {
   }
   return null;
 }
+const TILE_OBJ_SPECIAL = new Set(['o', 'N', 'X', 'Y', 'Z', 'f', '^']);
+const isTileObj = (c) => !!TILE_BY_CHAR[c]?.item || TILE_OBJ_SPECIAL.has(c);
 const selected = () => {
   if (!S.sel) return null;
+  // Objeto de casilla seleccionado: su carácter y su sitio.
+  if (S.sel.kind === 'tile') { const c = getTile(S.sel.x, S.sel.y); return isTileObj(c) ? { tile: c, x: S.sel.x, y: S.sel.y } : null; }
   if (S.sel.kind === 'pods') return room().pods?.at[S.sel.index];
   return room()[S.sel.kind]?.[S.sel.index];
 };
@@ -904,12 +908,13 @@ cv.addEventListener('mousedown', (e) => {
     const hit = areaHit(x, y);
     if (e.button === 2) {
       if (hit) { S.sel = hit; deleteSelected(); return; }
+      if (isTileObj(getTile(x, y))) { S.sel = { kind: 'tile', x, y }; deleteSelected(); return; }
       S.area = null; S.float = null; S.sel = null; draw(); renderInspector(); return;
     }
     if (S.area && inRect(areaRect(S.area), x, y)) { liftArea(); S.drag = { areaMove: true, from: [x, y] }; draw(); return; }
     if (hit) { S.area = null; S.sel = hit; renderInspector(); snapshot(); S.drag = { move: true, last: [x, y] }; draw(); return; }
-    if (TILE_BY_CHAR[getTile(x, y)]?.item) {
-      S.sel = null; S.area = { x0: x, y0: y, x1: x, y1: y };
+    if (isTileObj(getTile(x, y))) {
+      S.sel = { kind: 'tile', x, y }; S.area = { x0: x, y0: y, x1: x, y1: y };
       liftArea({ fill: '.', veil: false }); S.drag = { areaMove: true, from: [x, y], single: true }; draw(); return;
     }
     S.sel = null; S.area = { x0: x, y0: y, x1: x, y1: y }; S.drag = { areaSel: true, from: [x, y] }; draw(); renderInspector(); return;
@@ -1018,7 +1023,12 @@ addEventListener('mouseup', () => {
     renderRoomPanel(); draw(); drawMap();
     return;
   }
-  if (d?.areaMove) { dropFloat(); if (d.single) S.area = null; draw(); return; }
+  if (d?.areaMove) {
+    const F = S.float, nx = F ? F.x + F.dx : 0, ny = F ? F.y + F.dy : 0;
+    dropFloat();
+    if (d.single) { S.area = null; S.sel = { kind: 'tile', x: nx, y: ny }; renderInspector(); }
+    draw(); return;
+  }
   if (d?.placing && S.placing) {
     // Un clic deja el tamaño mínimo; un arrastre, el espacio marcado.
     if (S.placing.from && S.placing.cell && S.placing.from[0] === S.placing.cell[0] && S.placing.from[1] === S.placing.cell[1]) S.placing.from = null;
@@ -1091,7 +1101,8 @@ function removeElements(elems, r = room()) {
   }
 }
 // Rellena un rectángulo de una sala con pared o aire (S.areaFill).
-function fillRect(r, [x, y, w, h], fill = S.areaFill) {
+function fillRect(r, [x, y, w, h], fill) {
+  fill ??= S.areaFill;
   for (let j = y; j < y + h; j++) {
     if (j < 0 || j >= r.grid.length) continue;
     const row = r.grid[j], a = Math.max(0, x), b = Math.min(row.length, x + w);
@@ -1177,6 +1188,12 @@ const areaCut = () => areaCopy(true);
 // pega con su esquina donde esté el ratón, sin tocar las casillas.
 function elemCopy(cutIt) {
   const o = selected();
+  if (S.sel?.kind === 'tile' && o) {
+    S.clip = { room: S.id, rect: [o.x, o.y, 1, 1], w: 1, h: 1, cut: cutIt, tileOnly: true, fill: '.', src: [], tiles: [[o.tile]], veil: [], elems: [] };
+    $('msg').textContent = `${TILE_BY_CHAR[o.tile]?.name ?? o.tile} ${cutIt ? 'cortado' : 'copiado'}: pon el ratón donde lo quieras y pulsa Ctrl+V.`;
+    renderInspector(); draw();
+    return;
+  }
   if (!o || !S.sel || S.sel.kind === 'pods' || S.sel.kind === 'exits') { $('msg').textContent = 'Nada que copiar: marca una zona o selecciona un elemento.'; return; }
   const kind = S.sel.kind, r = room(), [bx, by, bw, bh] = KINDS[kind].box(o, r);
   S.clip = {
@@ -1197,19 +1214,22 @@ function areaPaste() {
   if (c.cut) {
     const src = S.rooms[c.room];
     if (src && c.room !== S.id) { snapshotRoom(c.room); S.dirty.add(c.room); CTX_CACHE.delete(c.room); }
-    if (src) { removeElements(c.src, src); if (!c.elemOnly) { fillRect(src, c.rect); clearVeil(src, c.rect); } }
+    if (src) { removeElements(c.src, src); if (!c.elemOnly) { fillRect(src, c.rect, c.fill); if (!c.tileOnly) clearVeil(src, c.rect); } }
   }
   if (!c.elemOnly) {
     for (let j = 0; j < c.h; j++) for (let i = 0; i < c.w; i++) setTile(hx + i, hy + j, c.tiles[j][i]);
-    clearVeil(room(), [hx, hy, c.w, c.h]);
-    for (const [i, j] of c.veil ?? []) setVeil(room(), hx + i, hy + j, true);
+    if (!c.tileOnly) {
+      clearVeil(room(), [hx, hy, c.w, c.h]);
+      for (const [i, j] of c.veil ?? []) setVeil(room(), hx + i, hy + j, true);
+    }
   }
   const r = room(), elems = addCopies(c.elems);
   elems.forEach((e, i) => {
     const at = c.elems[i].at, [bx, by] = elemPos(e.kind, e.o, r);
     moveElement(e, hx + at[0] - bx, hy + at[1] - by);
   });
-  if (c.elemOnly) {
+  if (c.tileOnly) { S.area = null; S.sel = { kind: 'tile', x: hx, y: hy }; }
+  else if (c.elemOnly) {
     // Un elemento: queda seleccionado (sin zona).
     const e = elems[0];
     S.area = null;
@@ -1220,6 +1240,10 @@ function areaPaste() {
   touch(); renderInspector(); draw();
 }
 function drawArea(z) {
+  if (S.sel?.kind === 'tile' && !S.float) {
+    const { x, y } = S.sel;
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 3; g.strokeRect(x * z + 1, y * z + 1, z - 2, z - 2);
+  }
   const c = S.clip;
   if (c?.cut && c.room === S.id) {
     const [x, y, w, h] = c.rect;
@@ -1408,6 +1432,16 @@ function renderInspector() {
   const o = selected();
   if (S.tool === 'area' && !o) { box.innerHTML = areaPanel(); wireAreaPanel(); return; }
   if (!o) { box.innerHTML = '<p class="dim">Selecciona un elemento (M) o coloca uno nuevo (E). Clic derecho borra.</p>'; return; }
+  if (S.sel.kind === 'tile') {
+    const opts = TILES.filter((t) => isTileObj(t.c));
+    box.innerHTML = `<h3>${TILE_BY_CHAR[o.tile]?.name ?? o.tile} <span class="dim">[${o.x}, ${o.y}]</span></h3>
+      <label>cambiar por<select id="ts-type">${opts.map((t) => `<option value="${t.c}"${t.c === o.tile ? ' selected' : ''}>${t.c} · ${t.name}</option>`).join('')}</select></label>
+      <p class="dim">Arrastra para moverlo · Supr o clic derecho lo borra · Ctrl+C / Ctrl+X y Ctrl+V lo copian o cortan.</p>
+      <div class="row"><button id="del">Eliminar</button></div>`;
+    $('ts-type').onchange = (e) => { snapshot(); setTile(o.x, o.y, e.target.value); touch(); renderInspector(); draw(); };
+    $('del').onclick = deleteSelected;
+    return;
+  }
   const kind = S.sel.kind;
   let html = `<h3>${KINDS[kind]?.label ?? kind} <span class="dim">#${S.sel.index}</span></h3>`;
   if (Array.isArray(o)) html += field('posición [x, y]', o, (v) => { o[0] = v[0]; o[1] = v[1]; });
@@ -1506,6 +1540,13 @@ const bossOfRoom = (r) => (r.enemies ?? []).map((e) => e.type).find((t) => ENEMI
 function deleteSelected() {
   if (!S.sel) return;
   snapshot();
+  if (S.sel.kind === 'tile') {
+    const { x, y } = S.sel, r = room();
+    setTile(x, y, '.');
+    if (r.hidden) { r.hidden = r.hidden.filter(([hx, hy]) => hx !== x || hy !== y); if (!r.hidden.length) delete r.hidden; }
+    S.sel = null; touch(); renderInspector(); draw();
+    return;
+  }
   if (S.sel.kind === 'pods') {
     const p = room().pods;
     p.at.splice(S.sel.index, 1);
