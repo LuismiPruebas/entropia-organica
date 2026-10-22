@@ -60,10 +60,12 @@ function paintWomb(s, torn = false) {
     }
   };
   const SHADOW = '#14040a';
-  const flush = (outline = true) => {
+  // dim(p): 0..1, cuánto se funde con el fondo (oscurece y quita contorno, luces y brillo).
+  const flush = (outline = true, dim = null) => {
     if (outline) for (const p of pts) px(g, p.x - 1, p.y - 1, SHADOW, p.w + 2, p.w + 2);
-    for (const p of pts) px(g, p.x, p.y, p.pal[0], p.w, p.w);
+    for (const p of pts) px(g, p.x, p.y, dim ? shade(p.pal[0], 0.75 - 0.5 * dim(p)) : p.pal[0], p.w, p.w);
     for (const p of pts) {
+      if (dim) continue;
       if (p.w > 1) {
         px(g, p.x, p.y, p.pal[1]);                               // luz (arriba a la izquierda)
         px(g, p.x + p.w - 1, p.y + p.w - 1, shade(p.pal[0]));    // sombra (abajo a la derecha)
@@ -75,11 +77,12 @@ function paintWomb(s, torn = false) {
   };
   const inSack = (x, y) => sackDist(x - cx, y - cy, rx, ry) < 1;
 
-  // Cordones que lo cuelgan del techo: suben retorciéndose y se abren en raíces.
-  for (const [dx, lean] of [[-4, -0.35], [0, 0.05], [4, 0.4]]) {
-    branch(cx + dx, top + 2, -Math.PI / 2 + lean, 30, 2, VEINS[dx < 0 ? 0 : dx > 0 ? 4 : 1], 2);
+  // Cordones que lo cuelgan del techo: discretos, se apagan al subir y se funden con la
+  // carne del fondo (sin contorno ni brillo).
+  for (const [dx, lean] of [[-3, -0.3], [3, 0.35]]) {
+    branch(cx + dx, top + 2, -Math.PI / 2 + lean, 22, 2, VEINS[dx < 0 ? 0 : 4], 1, () => true, () => false, 0.07);
   }
-  flush();
+  flush(false, (p) => Math.min(1, Math.max(0, (top - p.y) / Math.max(1, top))));
   // Dos zarcillos laterales que se agarran a la carne de alrededor.
   for (const [side, h] of [[-1, 0.0], [1, 0.3]]) {
     const x0 = cx + side * rx * 0.95, y0 = cy + ry * h;
