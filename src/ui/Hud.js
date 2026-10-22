@@ -6,6 +6,27 @@ const $ = (id) => document.getElementById(id);
 // Mayúsculas sin tildes: la fuente pixel no tiene vocales acentuadas en mayúscula.
 export const caps = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 
+// Minitutorial del HUD: la primera vez que cambia cada valor, su vejiga se hincha y late
+// unos segundos (con un anillo) y al lado sale qué es. De uno en uno, en cola.
+//   sac: la vejiga que se señala · test(antes, ahora): ¿ha cambiado como para explicarlo?
+const HUD_TUTOR = [
+  { id: 'int', sac: 'int', color: '#ff5a6a', test: (a, b) => b.int < a.int,
+    text: '<b>INTEGRIDAD</b> · la vejiga de sangre: <b>tu vida</b>. Si se vacía, mueres. Se recupera en el útero o con coágulos de plasma.' },
+  { id: 'bio', sac: 'bio', color: '#e07a98', test: (a, b) => b.bio !== a.bio,
+    text: '<b>BIOMASA</b> · la carne rosa: <b>tu moneda</b> y lo que comen tus mutaciones. La sueltan las criaturas; en el útero la gastas en curarte y comprar.' },
+  { id: 'o2', sac: 'o2', color: '#4ab8f0', test: (a, b) => b.o2 < a.o2,
+    text: '<b>OXÍGENO</b> · la vejiga azul: <b>tu aliento</b>. Lo gastan el doble salto, la embestida y el salto de pared; se recupera solo si descansas un momento.' },
+  { id: 'lux', sac: 'lux', color: '#ffd23f', test: (a, b) => b.lux < a.lux,
+    text: '<b>LUZ</b> · la vejiga amarilla: <b>la energía de tu ojo</b>. Se gasta con el ojo encendido (F); las células lumínicas la recargan.' },
+  { id: 'rej', sac: 'rej', color: '#c07bff', test: (a, b) => b.rej > a.rej,
+    text: '<b>RECHAZO</b> · la vejiga violeta: <b>tu cuerpo lucha contra los injertos</b>. Alto, las mutaciones fallan; al 100 % te hace daño. Lo calman los supresores del útero.' },
+  { id: 'dead', sac: 'dead', color: '#b0a0a8', test: (a, b) => b.dead > a.dead,
+    text: '<b>CORRUPCIÓN</b> · el bulto oscuro: <b>tejido muerto</b> que te roba vida máxima. Lo cura el Tejido sano.' },
+  { id: 'inf', sac: 'int', color: '#9ad050', test: (a, b) => b.inf && !a.inf,
+    text: '<b>INFECCIÓN</b> · tu sangre se vuelve verde: <b>te pudre poco a poco</b> y te da arcadas. La cura el útero (Sanar tejido).' },
+];
+const TUTOR_TIME = 6;
+
 export class Hud {
   constructor() {
     this.root = $('hud');
@@ -133,6 +154,25 @@ export class Hud {
     gl.clearRect(0, 0, 110, 40);
     const lux = '#' + eye.map((c) => Math.round(Math.min(1, c) * 255).toString(16).padStart(2, '0')).join('');
     const hp = st.integrity / 100, infected = st.infection > 0, bio = st.biomass / st.biomassMax;
+    // Minitutorial: ¿ha cambiado algo por primera vez? A la cola; luego, de uno en uno.
+    const snap = { int: st.integrity, bio: st.biomass, o2: st.oxygen, lux: st.light, rej: st.rejection, dead: st.corrupted, inf: st.infection > 0 };
+    st.hudSeen ??= new Set();
+    this.tutQueue ??= [];
+    if (this.prevSnap) for (const tu of HUD_TUTOR) if (!st.hudSeen.has(tu.id) && tu.test(this.prevSnap, snap)) { st.hudSeen.add(tu.id); this.tutQueue.push(tu); }
+    this.prevSnap = snap;
+    if (this.tut) { this.tut.t -= dt; if (this.tut.t <= 0) { this.tut = null; $('hud-tip').hidden = true; } }
+    if (!this.tut && this.tutQueue.length && !this.dlg) {
+      this.tut = { ...this.tutQueue.shift(), t: TUTOR_TIME };
+      const tip = $('hud-tip');
+      tip.innerHTML = this.tut.text;
+      tip.style.setProperty('--c', this.tut.color);
+      tip.hidden = false;
+    }
+    // La vejiga señalada se hincha (entra rápido, late y vuelve a su tamaño al final).
+    const tk = this.tut ? Math.min(1, (TUTOR_TIME - this.tut.t) / 0.35, this.tut.t / 0.6) * (0.75 + 0.25 * Math.sin(t * 7)) : 0;
+    // Las demás se encogen un poco para dejarle sitio.
+    const big = (it) => (this.tut?.sac === it.id ? { ...it, rMin: it.rMin * (1 + 1.2 * tk) + 4 * tk, rMax: it.rMax * (1 + 0.8 * tk), low: true }
+      : this.tut ? { ...it, rMin: it.rMin * (1 - 0.3 * tk), rMax: it.rMax * (1 - 0.4 * tk) } : it);
     const items = [
       { id: 'int', level: hp, rMin: 2.5, rMax: 11.5, color: infected ? '#6a9a30' : '#c0283a', low: hp < 0.25, boil: infected ? 0.9 : 0.2 },
       { id: 'bio', level: bio, rMin: 2.5, rMax: 8, color: '#e07a98', low: bio < 0.15, boil: 0.15 },
@@ -140,9 +180,18 @@ export class Hud {
       { id: 'lux', level: st.light / 100, rMin: 2.5, rMax: 7.5, color: st.flashlightOn ? lux : '#5a5040', low: st.light < 20, boil: st.flashlightOn ? 0.3 : 0, glow: st.flashlightOn },
       { id: 'rej', level: Math.min(1, st.rejection / 100), rMin: 1.5, rMax: 7, color: st.critical ? '#ff4a8a' : '#a040d8', low: st.critical, boil: Math.min(1, st.rejection / 80) },
       { id: 'dead', level: st.corrupted / 100, rMin: 0, rMax: 7, color: '#3a2a30', dead: true },
-    ];
+    ].map(big);
     this.placenta.update(items, dt, t);
     this.placenta.draw(g, gl, t);
+    // Anillo que late alrededor de la vejiga señalada (en la capa de brillo, se ve a oscuras).
+    const sac = this.tut && this.placenta.sacs.get(this.tut.sac);
+    if (sac && tk > 0.05) {
+      const r = sac.r + 2 + Math.sin(t * 7) * 0.8;
+      for (const c of [g, gl]) {
+        c.strokeStyle = this.tut.color; c.globalAlpha = c === g ? 0.9 : 0.8 * tk; c.lineWidth = 1;
+        c.beginPath(); c.arc(sac.x, sac.y, r, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 1;
+      }
+    }
     // En fila: icono del hueso y su valor (munición de las astillas), luego la célula y el suyo.
     drawBoneIcon(g, 64, 15, t);
     drawNumber(g, 75, 15, st.scrap, st.scrap === 0 ? '#ff5a5a' : '#e8dcc8');

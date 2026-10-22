@@ -54,6 +54,28 @@ body {
 #organs canvas { position: absolute; inset: 0; image-rendering: pixelated; }
 #organs-glow { filter: blur(2px); mix-blend-mode: screen; opacity: 0.9; }
 
+/* Minitutorial del HUD: la explicación junto a la vejiga que se señala. */
+#hud-tip {
+  position: absolute;
+  left: 66px;
+  top: 30px;
+  max-width: 190px;
+  padding: 3px 6px 3px 7px;
+  font-size: 4.5px;
+  line-height: 1.6;
+  color: #f6eee0;
+  text-shadow: 1px 1px 0 #000;
+  background: rgba(8, 4, 8, .93);
+  border: 1px solid var(--c, #7dff9a);
+  border-radius: 6px 3px 7px 3px / 3px 6px 3px 7px;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--c, #7dff9a) 45%, transparent);
+  animation: hud-tip-in .25s ease-out;
+}
+#hud-tip[hidden] { display: none; }
+#hud-tip b { color: var(--c, #7dff9a); font-weight: normal; }
+#hud-tip::before { content: ''; position: absolute; left: -5px; top: 4px; border: 2.5px solid transparent; border-right-color: var(--c, #7dff9a); }
+@keyframes hud-tip-in { from { transform: translateX(-6px); } }
+
 #boss-bar {
   position: absolute;
   left: 50%;
