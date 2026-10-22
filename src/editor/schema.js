@@ -39,7 +39,7 @@ export const TILES = [
   { c: 'S', name: 'Hueso', color: '#e8dcc8', item: true },
   { c: 'O', name: 'Filtro de oxígeno', color: '#4ab8f0', item: true },
   { c: 'Q', name: 'Quiste (+20 biomasa máx)', color: '#d0a0ff', item: true },
-  { c: 'h', name: 'Tejido sano', color: '#ff9aa8', item: true },
+  { c: 'h', name: 'Tejido sano (cura, quita la infección y 10 s de inmunidad)', color: '#ff9aa8', item: true },
   { c: 'u', name: 'Coágulo de plasma (se guarda; +30 integridad al usarlo)', color: '#ff3a4a', item: true },
   { c: 'g', name: 'Timo Necrótico', color: '#a0ffa0', item: true },
   { c: '*', name: 'Fragmento de ADN (tipo según el bioma y la casilla)', color: '#ff60ff', item: true },

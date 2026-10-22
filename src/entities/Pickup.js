@@ -1,6 +1,8 @@
 import { getSprite, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
 import { ITEMS, PLASMA } from '../state/State.js';
+// Tejido sano: segundos de inmunidad a la infección tras cogerlo.
+const TISSUE_IMMUNE = 10;
 
 // 'ojo II', 'extremidades + torso III': de qué órgano es una secuencia, sin desvelarla.
 export const dnaTag = (id) => { const m = MUTATIONS[id]; return `${linesOf(m).map((l) => LINES[l].name.toLowerCase()).join(' + ')} ${ROMAN[m.level]}`; };
@@ -63,8 +65,8 @@ export const PICKUPS = {
   tissue: {
     sprite: 'tissue',
     sound: 'dna',
-    apply: (st) => { st.corrupted = Math.max(0, st.corrupted - 10); st.heal(10); st.infection = 0; },
-    text: (p, st) => 'Tejido sano: recuperas 10 de integridad corrupta y se va cualquier infección.',
+    apply: (st) => { st.corrupted = Math.max(0, st.corrupted - 10); st.heal(10); st.infection = 0; st.timers.immune = TISSUE_IMMUNE; },
+    text: (p, st) => `Tejido sano: recuperas 10 de integridad corrupta, se va cualquier infección y durante ${TISSUE_IMMUNE} s nada te infecta.`,
   },
   dna: {
     sprite: 'dna',

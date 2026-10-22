@@ -121,7 +121,7 @@ export class GameState {
     this.scrap = 12;
     this.cells = 0;              // células lumínicas en reserva: se gastan solas bajo CELL_AUTO_BELOW
     this.items = { shield: 0, regen: 0, plasma: 0 }; // consumibles guardados (ITEMS)
-    this.timers = { shield: 0, regen: 0, plasma: 0, suppress: 0 }; // segundos que le quedan a cada efecto activo
+    this.timers = { shield: 0, regen: 0, plasma: 0, immune: 0, suppress: 0 }; // segundos que le quedan a cada efecto activo (immune: Tejido sano)
     this.flashlightOn = true;
     this.mutations = new Set();   // instaladas
     this.dna = new Set();         // muestras recogidas sin instalar
@@ -253,7 +253,7 @@ export class GameState {
 
   // Estados alterados: la Dermis Nanocutánea los anula.
   applyStatus(kind, seconds) {
-    if (this.immune('status') || this.timers.shield > 0) return false;
+    if (this.immune('status') || this.timers.shield > 0 || (kind === 'infection' && this.timers.immune > 0)) return false;
     if (kind === 'infection') this.infection = Math.max(this.infection, seconds);
     return true;
   }
@@ -522,7 +522,7 @@ export class GameState {
 
   respawn() {
     this.dead = false;
-    this.timers = { shield: 0, regen: 0, plasma: 0, suppress: this.timers.suppress }; // el supresor sigue actuando
+    this.timers = { shield: 0, regen: 0, plasma: 0, immune: 0, suppress: this.timers.suppress }; // el supresor sigue actuando
     this.rest();
     this.integrity = Math.ceil(this.maxIntegrity * 0.5);
     this.oxygen = this.oxygenMax;
