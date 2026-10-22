@@ -27,7 +27,7 @@ const rows = () => [
   ['CUERPO', 'Usar la cavidad activa', `[${keyName('cavityUse')}]`, '{R3} (un toque)', 'botón de la cavidad (un toque)', 'cavity'],
   ['CUERPO', 'Cambiar de cavidad', `[${keyName('cavityNext')}]`, 'mantén {R3} + cruceta ← →', 'mantén el botón de la cavidad + cruceta'],
   ['CUERPO', 'Usar nodo  ·  hablar', '[E]', '{north}', 'USAR', 'interact'],
-  ['CUERPO', 'Pasar  ·  cerrar textos', '[Espacio]  ·  [E]', '{south}', 'SALTAR', 'jump'],
+  ['CUERPO', 'Pasar  ·  cerrar textos', '[E]  ·  [Intro]', '{north}', 'USAR', 'interact'],
   ['MENÚS', 'Genoma (mutaciones, cavidades)', '[I]', '{start}', 'botón del genoma', 'genome'],
   ['MENÚS', 'Mapa', '[M]', '{select}', 'botón del mapa', 'map'],
   ['MENÚS', 'Elegir  ·  aceptar', 'flechas  ·  [Intro]', 'cruceta / stick  ·  {south}', 'cruceta  ·  SALTAR'],

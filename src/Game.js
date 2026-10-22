@@ -569,10 +569,10 @@ export class Game {
     // Cavidades: usar el consumible a mano sin abrir el Genoma.
     this.#cavities(dt);
     this.hud.choosing = this.choosingCavity;
-    // Diálogo abierto: Saltar (Espacio, ✕ / A del mando, SALTAR en táctil), E o Intro lo
-    // pasan, y esa pulsación no hace nada más (no salta).
+    // Diálogo abierto: E o Intro (△ / Y del mando, USAR en táctil) lo pasan, y esa pulsación
+    // no hace nada más. Saltar no los toca: así no se cierran por error al saltar.
     // Explicación del HUD abierta (minitutorial): se acepta igual, o con Esc.
-    const PASS = ['Space', 'KeyE', 'Enter'];
+    const PASS = ['KeyE', 'Enter'];
     if (!this.hud.dialogueActive && this.hud.tutOpen && this.input.hit(...PASS, 'Escape')) {
       this.hud.closeTut();
       for (const k of [...PASS, 'Escape']) this.input.pressed.delete(k);
