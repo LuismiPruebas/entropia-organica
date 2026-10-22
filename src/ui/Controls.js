@@ -55,11 +55,18 @@ export class ControlsPanel {
       const sc = this.el.querySelector('.cp-scroll');
       if (e.code === 'ArrowDown' || e.code === 'KeyS') sc.scrollTop += 24;
       else if (e.code === 'ArrowUp' || e.code === 'KeyW') sc.scrollTop -= 24;
-      else if (['Escape', 'Enter', 'Space', 'KeyE', 'Backspace'].includes(e.code)) this.close();
+      // Intro / Espacio no cierran: el ✕ / A del mando llega como Intro, y pulsarlo es
+      // justo lo que hace que el navegador descubra el mando.
+      else if (['Escape', 'KeyE', 'Backspace'].includes(e.code)) this.close();
     }, true);
-    // Si se conecta o desconecta un mando con el panel abierto, se rehace.
-    addEventListener('gamepadconnected', () => this.open && this.#render());
-    addEventListener('gamepaddisconnected', () => this.open && this.#render());
+    // El navegador no enseña un mando hasta que se pulsa uno de sus botones (aunque ya
+    // esté enchufado): con el panel abierto se mira a menudo y se rehace al aparecer.
+    this.padId = null;
+    setInterval(() => {
+      if (!this.open) return;
+      const id = connectedPad()?.id ?? null;
+      if (id !== this.padId) this.#render();
+    }, 300);
   }
 
   get open() { return !this.el.hidden; }
@@ -71,6 +78,8 @@ export class ControlsPanel {
   #render() {
     const touch = document.body.classList.contains('touch') || matchMedia?.('(hover: none) and (pointer: coarse)').matches;
     const pad = touch ? null : connectedPad();
+    this.padId = pad?.id ?? null;
+    const scroll = this.el.querySelector('.cp-scroll')?.scrollTop ?? 0;
     const ps = pad ? padStyle(pad) : 1;
     const padText = (s) => s.replace(/\{(\w+)\}/g, (_, b) => `<kbd>${PAD[b]?.[ps] ?? b}</kbd>`);
     const kb = (s) => s.replace(/\[([^\]]+)\]/g, '<kbd>$1</kbd>');
@@ -80,15 +89,16 @@ export class ControlsPanel {
       const head = r[0] !== group ? `<tr class="cp-group"><th colspan="${cols.length + 1}">${(group = r[0])}</th></tr>` : '';
       return `${head}<tr><td class="cp-act">${r[1]}</td>${cols.map(([, i]) => `<td>${i === 3 ? padText(r[i]) : i === 2 ? kb(r[i]) : r[i]}</td>`).join('')}</tr>`;
     }).join('');
-    const note = touch ? '' : pad ? '' : '<p class="cp-note">Conecta un mando y pulsa un botón para ver también sus controles.</p>';
+    const note = touch ? '' : pad ? '' : '<p class="cp-note">¿Tienes un mando enchufado? <b>Pulsa cualquier botón</b>: el navegador no lo muestra hasta entonces y aquí aparecerá su columna.</p>';
     this.el.innerHTML = `
       <div class="cp-box">
         <header><h2>CONTROLES</h2><button class="cp-close" type="button">✕</button></header>
+        ${note}
         <div class="cp-scroll">
           <table><thead><tr><th></th>${cols.map(([t]) => `<th>${t}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
-          ${note}
         </div>
         <footer>${touch ? 'Toca ✕ para volver' : `Esc${pad ? ` / ${PAD.east[ps]}` : ''} para volver`}</footer>
       </div>`;
+    this.el.querySelector('.cp-scroll').scrollTop = scroll;
   }
 }

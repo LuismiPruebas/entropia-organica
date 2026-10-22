@@ -826,7 +826,8 @@ body.touch #controls-btn .dim { display: none; }
 #controls-panel td.cp-act { color: #e8dcc8; width: 34%; }
 #controls-panel tr:not(.cp-group):hover td { background: rgba(255, 255, 255, .03); }
 #controls-panel kbd { display: inline-block; min-width: 5px; padding: 0 1.5px; font: inherit; color: #fff; text-align: center; background: #3a121c; border: 0.5px solid #8a3a4a; border-radius: 1.5px; box-shadow: 0 0.5px 0 #000; }
-#controls-panel .cp-note { margin: 4px 3px 0; font-size: 3.5px; color: #8a6a6a; }
+#controls-panel .cp-note { margin: 2px 0 0; padding: 2px 4px; font-size: 3.5px; color: #c8b0a0; background: rgba(79, 240, 255, .06); border-left: 1px solid #4ff0ff; }
+#controls-panel .cp-note b { color: #4ff0ff; font-weight: normal; }
 #controls-panel footer { font-size: 3.5px; color: #8a6a6a; text-align: right; padding-right: 10px; }
 
 #overlay .blink {
