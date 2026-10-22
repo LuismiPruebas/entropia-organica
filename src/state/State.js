@@ -299,6 +299,8 @@ export class GameState {
     if (this.dead || !this.items[kind] || this.timers[kind] > 0) return false;
     if (kind === 'plasma' && this.integrity >= this.maxIntegrity) return false; // no hace falta: se guarda
     this.items[kind]--;
+    // Al gastar el último, su cavidad queda libre (vuelve a ser un hueco vacío).
+    if (!this.items[kind]) { const i = this.cavities.indexOf(kind); if (i >= 0) this.cavities[i] = null; }
     if (kind === 'plasma') { this.heal(ITEMS.plasma.heal); return true; }
     this.timers[kind] = ITEMS[kind].time;
     if (kind === 'shield' || kind === 'regen') this.infection = 0;

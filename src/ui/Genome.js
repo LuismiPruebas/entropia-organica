@@ -222,6 +222,8 @@ export class Genome {
 
   #placeItem(kind) {
     const st = this.game.state;
+    // Sin unidades no se acomoda (una cavidad solo guarda lo que llevas).
+    if (!st.items[kind] && st.cavities[st.cavity] !== kind) { this.game.audio.play('empty'); return; }
     st.setCavity(st.cavity, kind);
     this.game.audio.play(st.cavities[st.cavity] === kind ? 'womb' : 'click');
     this.#render();
