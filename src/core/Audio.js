@@ -19,6 +19,9 @@ function deathImpact(a, o, vol = 1) {
 
 // Ganancia extra (×) por sonido, ajustada midiendo su energía con
 // tools/sound-meter.html: el objetivo es que las voces se oigan como un disparo.
+// Música de la portada (pista externa).
+const TITLE_TRACK = 'assets/music/hostile-living-interior.mp3';
+
 const GAIN = {
   hit: 2.5, screech: 10, growl: 7, click: 7, crackle: 5, bubble: 3.5, hiss: 4.2, moan: 8.5,
   spit: 3, stalkerWindup: 10, stalkerLunge: 2,
@@ -696,117 +699,17 @@ export class AudioSys {
   }
 
   // ---------- Música de la pantalla de inicio ----------
-  // Progresión menor lenta (Am - F - Dm - E), campanas dispersas y un latido lejano.
+  // Portada: "Hostile Living Interior" en bucle, por el mismo grafo de audio que el resto.
   startTitleMusic() {
     if (!this.ctx || this.music) return;
-    const c = this.ctx;
-    const bus = c.createGain();
-    bus.gain.setValueAtTime(0.0001, c.currentTime);
-    bus.gain.exponentialRampToValueAtTime(1, c.currentTime + 3);
-    bus.connect(this.master);
-    bus.connect(this.reverb);
-
-    const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
-    const CHORDS = [[45, 57, 60, 64], [41, 53, 57, 60], [38, 50, 53, 57], [40, 52, 56, 59]];
-    const BAR = 8;
-    const music = { bus, next: c.currentTime + 0.1, bar: 0, beat: 0 };
-
-    const pad = (notes, t) => {
-      const filter = c.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(300, t);
-      filter.frequency.linearRampToValueAtTime(900, t + BAR / 2);
-      filter.frequency.linearRampToValueAtTime(300, t + BAR);
-      const g = c.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(0.035, t + 2.5);
-      g.gain.setValueAtTime(0.035, t + BAR - 1.5);
-      g.gain.linearRampToValueAtTime(0.0001, t + BAR + 1.5);
-      filter.connect(g).connect(bus);
-      for (const n of notes) {
-        for (const det of [-7, 7]) {
-          const o = c.createOscillator();
-          o.type = 'sawtooth';
-          o.frequency.value = midi(n);
-          o.detune.value = det;
-          o.connect(filter);
-          o.start(t);
-          o.stop(t + BAR + 1.6);
-        }
-      }
-    };
-
-    const bell = (n, t) => {
-      const o = c.createOscillator();
-      const o2 = c.createOscillator();
-      const g = c.createGain();
-      o.type = 'sine';
-      o2.type = 'sine';
-      o.frequency.value = midi(n);
-      o2.frequency.value = midi(n) * 2.76; // parcial inarmónico: timbre de campana
-      const g2 = c.createGain();
-      g2.gain.value = 0.25;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.05, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 3);
-      o.connect(g);
-      o2.connect(g2).connect(g);
-      g.connect(bus);
-      o.start(t);
-      o2.start(t);
-      o.stop(t + 3.1);
-      o2.stop(t + 3.1);
-    };
-
-    const thump = (t, vol) => {
-      const o = c.createOscillator();
-      const g = c.createGain();
-      o.frequency.setValueAtTime(60, t);
-      o.frequency.exponentialRampToValueAtTime(35, t + 0.2);
-      g.gain.setValueAtTime(vol, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-      o.connect(g).connect(bus);
-      o.start(t);
-      o.stop(t + 0.3);
-    };
-
-    // Planificador con margen: cada 200 ms programa lo que cae en el próximo segundo.
-    const schedule = () => {
-      while (music.next < c.currentTime + 1) {
-        const t = music.next;
-        const chord = CHORDS[music.bar % CHORDS.length];
-        if (music.beat === 0) pad(chord, t);
-        if (Math.random() < 0.45) {
-          const n = chord[1 + Math.floor(Math.random() * 3)] + (Math.random() < 0.5 ? 12 : 24);
-          bell(n, t + Math.random() * 0.3);
-        }
-        if (music.beat % 2 === 0) {
-          thump(t, 0.12);
-          thump(t + 0.28, 0.08);
-        }
-        music.beat++;
-        music.next += 1;
-        if (music.beat >= BAR) {
-          music.beat = 0;
-          music.bar++;
-        }
-      }
-    };
-    schedule();
-    music.timer = setInterval(schedule, 200);
-    this.music = music;
+    this.music = this.#track(TITLE_TRACK, this.master, { loop: true, vol: 0.7, fadeIn: 3 });
   }
 
   stopTitleMusic(fade = 2) {
     const m = this.music;
     if (!m) return;
     this.music = null;
-    clearInterval(m.timer);
-    const t = this.ctx.currentTime;
-    m.bus.gain.cancelScheduledValues(t);
-    m.bus.gain.setValueAtTime(m.bus.gain.value, t);
-    m.bus.gain.exponentialRampToValueAtTime(0.0001, t + fade);
-    setTimeout(() => m.bus.disconnect(), (fade + 2) * 1000);
+    m.stop(fade);
   }
 
   // ---------- Música de los jefes aberración (core/BossMusic.js) ----------

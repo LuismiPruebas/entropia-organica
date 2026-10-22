@@ -761,6 +761,24 @@ body {
 
 #overlay[hidden] { display: none; }
 
+/* Portada: el rostro del anfitrión; el título arriba y las llamadas abajo, sobre
+   sombras que dejan respirar la imagen en el centro. */
+#overlay.cover {
+  justify-content: space-between;
+  padding: 10px 0 8px;
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, .78) 0%, rgba(0, 0, 0, 0) 26%, rgba(0, 0, 0, 0) 66%, rgba(0, 0, 0, .85) 100%),
+    url('../assets/img/portada.jpg') center / cover no-repeat,
+    #000;
+  animation: cover-in 2.5s ease-out;
+}
+#overlay.cover .cover-bottom { display: flex; flex-direction: column; align-items: center; }
+#overlay.cover h1 { font-size: 16px; text-shadow: 2px 2px 0 #000, 0 0 10px #000, 0 0 16px #6a0d18; }
+#overlay.cover .sub { margin: 4px 0 0; color: #c8a0a0; text-shadow: 1px 1px 0 #000, 0 0 6px #000; }
+#overlay.cover #controls-btn { margin: 0 0 6px; }
+#overlay.cover .blink { margin: 0; text-shadow: 1px 1px 0 #000, 0 0 6px #000; }
+@keyframes cover-in { from { filter: brightness(0); } }
+
 #overlay h1 {
   margin: 0;
   font-size: 14px;

@@ -1036,6 +1036,7 @@ export class Game {
     const s = this.state.stats;
     this.hud.show(false);
     this.overlay.hidden = false;
+    this.overlay.classList.remove('cover'); // el final no usa la portada
     this.overlay.innerHTML = `
       <h1>EL CORAZON</h1>
       <p class="sub">Fin del prototipo</p>
