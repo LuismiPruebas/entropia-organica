@@ -39,6 +39,10 @@ let game;
 try {
   game = new Game(document.getElementById('game'));
   window.game = game; // depuración desde la consola: game.state.biomass = 100
+  // La música de la portada desde el principio (si el navegador lo impide, suena con la
+  // primera tecla, clic o toque).
+  const qs = new URLSearchParams(location.search);
+  if (!qs.has('room') && !qs.has('play')) { game.audio.init(); game.audio.startTitleMusic(); }
 } catch (err) {
   console.error(err);
   window.bootError?.(`No se pudo iniciar WebGL: ${err.message}`);

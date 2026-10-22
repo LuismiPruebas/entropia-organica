@@ -749,7 +749,12 @@ export class AudioSys {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(vol, t + fadeIn);
     if (onend) el.addEventListener('ended', onend);
-    el.play().catch(() => {});
+    // Si el navegador aún no deja sonar (nadie ha tocado la página), se reintenta con la
+    // primera tecla, clic o toque.
+    el.play().catch(() => {
+      const retry = () => { if (!stopped) el.play().catch(() => {}); for (const ev of ['pointerdown', 'keydown', 'touchend']) removeEventListener(ev, retry); };
+      for (const ev of ['pointerdown', 'keydown', 'touchend']) addEventListener(ev, retry);
+    });
     let stopped = false;
     return {
       el,
