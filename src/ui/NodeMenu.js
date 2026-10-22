@@ -1,6 +1,6 @@
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
 import { rate } from '../entities/Pickup.js';
-import { NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, CELL_PRICE, NODE_CELLS, CELL_STORE_FROM, CELL_AUTO_BELOW, SUPPRESS_CUT, SUPPRESS_TIME, EXTENDERS_IMMUNE } from '../state/State.js';
+import { NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, CELL_PRICE, NODE_CELLS, CELL_STORE_FROM, CELL_AUTO_BELOW, SUPPRESS_CUT, SUPPRESS_TIME } from '../state/State.js';
 import { LEVELS } from '../data/levels.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { nodeOf } from '../data/nodes.js';
@@ -50,7 +50,7 @@ const CATS = {
   heal: { c: '#ff5a6a', info: 'El útero guarda pocas curas; se regeneran con el tiempo.' },
   cell: { c: '#ffd23f', info: `Al ${CELL_STORE_FROM} % o más, además se guarda; las guardadas se gastan solas bajo el ${CELL_AUTO_BELOW} %.` },
   suppressor: { c: '#c07bff', info: 'Calma tus injertos un rato. Con el rechazo alto las mutaciones fallan; al 100 % te dañan.' },
-  extender: { c: '#b48cff', info: 'Tu cuerpo tolera más carga: el rechazo sube más despacio. Cada uno cuesta más (también se forman reuniendo Timos Necróticos). Con 6, inmune al rechazo.' },
+  extender: { c: '#b48cff', info: 'Tu cuerpo tolera más carga: el rechazo sube más despacio. Cada uno cuesta más Alivian mucho, pero solo los 10 Timos Necróticos acaban del todo con el rechazo.' },
   trade: { c: '#c8b8a0', info: 'El útero digiere un recurso y te devuelve el otro.' },
   shield: { c: '#4ff0ff', info: 'Se guarda; se aloja en una cavidad y la usas cuando quieras.' },
   regen: { c: '#7dff9a', info: 'Se guarda; se aloja en una cavidad y la usas cuando quieras.' },
@@ -240,16 +240,16 @@ export class NodeMenu {
         effect: `<span class="c-rej">-${SUPPRESS_CUT} rechazo y no sube en ${SUPPRESS_TIME / 60} min</span> <span class="dim">(ahora ${Math.floor(st.rejection)} %)</span>`,
         cost: `${price(node.suppressor)}${why(st.rejection <= 0 && 'sin rechazo', !st.canPay(node.suppressor) && 'no te alcanza')}`,
         enabled: st.canPay(node.suppressor) && st.rejection > 0,
-        run: () => { if (st.craftSuppressor(node.suppressor)) { g.audio.play('womb'); g.say(`El supresor adormece tus injertos: el rechazo no subirá en ${SUPPRESS_TIME / 60} minutos.`, 3); } },
+        run: () => { if (st.craftSuppressor(node.suppressor)) { g.audio.play('womb'); g.say(`El supresor adormece tus injertos: el rechazo no subirá en un minuto.`, 3); } },
       },
       node.extender && !st.immuneRejection && {
         tab: 'cuidar',
         icon: ['extender'],
-        label: `Extensor de tolerancia ${st.extenders}/${EXTENDERS_IMMUNE}`,
-        effect: `<span class="c-rej">+${CAPACITY_PER_EXTENDER} carga genética</span> <span class="dim">(ahora ${st.load}/${st.capacity}${st.extenders + 1 >= EXTENDERS_IMMUNE ? ' · el último: INMUNE al rechazo' : st.mutations.size ? ` · rechazo ${rate({ before: st.rejectionRate() * 60, after: st.rejectionRate(1) * 60 })}` : ''})</span>`,
+        label: `Extensor de tolerancia${st.extenders ? ` (llevas ${st.extenders})` : ''}`,
+        effect: `<span class="c-rej">+${CAPACITY_PER_EXTENDER} carga genética</span> <span class="dim">(ahora ${st.load}/${st.capacity}${st.mutations.size ? ` · rechazo ${rate({ before: st.rejectionRate() * 60, after: st.rejectionRate(1) * 60 })}` : ''})</span>`,
         cost: `${price(st.extenderPrice)}${why(!st.canPay(st.extenderPrice) && 'no te alcanza')}`,
         enabled: st.canPay(st.extenderPrice),
-        run: () => { const ext = st.buyExtender(); if (ext) { g.audio.play('mutate'); g.say(`El útero te injerta un extensor (${st.extenders}/${EXTENDERS_IMMUNE}): carga ${st.load}/${st.capacity}${ext.immune || st.mutations.size ? `; tu rechazo ${ext.immune ? "" : "sube "}${rate(ext)}` : ''}.`, 4); } },
+        run: () => { const ext = st.buyExtender(); if (ext) { g.audio.play('mutate'); g.say(`El útero te injerta un extensor: carga ${st.load}/${st.capacity}${st.mutations.size ? `; tu rechazo sube ${rate(ext)}` : ''}.`, 4); } },
       },
       node.trade && {
         tab: 'tienda',

@@ -99,7 +99,6 @@ export class DevMenu {
       case 'resetbody':
         st.corrupted = 0;
         st.thymus = 0;
-        st.thymusExt = 0;
         st.extenders = 0;
         st.extendersBought = 0;
         st.biomassBase = 100;

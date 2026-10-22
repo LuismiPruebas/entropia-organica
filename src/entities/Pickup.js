@@ -1,9 +1,9 @@
 import { getSprite, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
-import { ITEMS, PLASMA, EXTENDERS_IMMUNE } from '../state/State.js';
+import { ITEMS, PLASMA, THYMUS_TOTAL } from '../state/State.js';
 
 // "+9,0/min → +5,1/min": cuánto sube el rechazo antes y después de un extensor.
-export const rate = ({ before, after, immune }) => immune ? `desaparece: con ${EXTENDERS_IMMUNE} extensores eres INMUNE al rechazo` : `${before.toFixed(1).replace('.', ',')}/min → ${after.toFixed(1).replace('.', ',')}/min`;
+export const rate = ({ before, after }) => `${before.toFixed(1).replace('.', ',')}/min → ${after.toFixed(1).replace('.', ',')}/min`;
 // Tejido sano: segundos de inmunidad a la infección tras cogerlo.
 const TISSUE_IMMUNE = 10;
 
@@ -50,10 +50,10 @@ export const PICKUPS = {
   thymus: {
     sprite: 'thymus',
     sound: 'dna',
-    apply: (st, p) => { p.ext = st.addThymus(); },
-    text: (p, st) => (p.ext
-      ? `Timos Necróticos reunidos: forman un EXTENSOR DE TOLERANCIA (${st.extenders}/${EXTENDERS_IMMUNE}). Tu rechazo ${p.ext.immune ? "" : "sube "}${rate(p.ext)}. Para el siguiente: ${st.thymusNeed}.`
-      : `Timo Necrótico ${st.thymus}/${st.thymusNeed}: al reunirlos formarán un extensor de tolerancia.`),
+    apply: (st, p) => { p.res = st.addThymus(); },
+    text: (p, st) => (p.res.immune
+      ? `Timo Necrótico ${THYMUS_TOTAL}/${THYMUS_TOTAL}: GEN MUTANTE TOTAL. Tu sistema inmune calla para siempre: el rechazo ya no existe.`
+      : `Timo Necrótico ${st.thymus}/${THYMUS_TOTAL}: tu sistema inmune olvida pelear un poco más${st.mutations.size ? ` (rechazo ${rate(p.res)})` : ''}. Con los ${THYMUS_TOTAL}, el gen mutante total.`),
   },
   // Coágulo de plasma: no cura al cogerlo; se guarda y se usa cuando quieras (Genoma),
   // como la Perla y la Célula Madre. Lo que cura al momento es otra cosa (Tejido sano).
