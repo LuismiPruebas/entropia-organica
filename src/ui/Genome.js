@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, LINE_ORDER, FRAGMENTS, SYNERGIES, CLASHES, ROMAN, linesOf } from '../data/mutations.js';
-import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW, BLADE, OXYGEN_BASE, CAPACITY_PER_EXTENDER } from '../state/State.js';
+import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW, BLADE, OXYGEN_BASE, CAPACITY_PER_EXTENDER, EXTENDERS_IMMUNE } from '../state/State.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { PlayerBody, BODY_W, BODY_H } from '../entities/PlayerBody.js';
 import { caps } from './Hud.js';
@@ -444,9 +444,9 @@ export class Genome {
         `Encendido gasta ${(LIGHT_DRAIN * st.mod('lightDrain')).toFixed(1).replace('.', ',')}/s. Bajo el ${CELL_AUTO_BELOW} % gasta sola una célula de la reserva (${st.cells}).`,
         `Células lumínicas, halladas o del útero: recargan el ojo y, con él al ${CELL_STORE_FROM} % o más, además se guardan.`],
       rej: [`${n(st.rejection)} %`,
-        'Tu cuerpo rechaza los injertos. Hasta el 85 % no te castiga (al 70 % se inflama, solo aviso).',
-        st.timers.suppress > 0 ? `Supresor activo: no sube durante ${Math.ceil(st.timers.suppress)} s más.` : `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde el ${st.failFrom} % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
-        `Lo frenan: Supresor del útero · extensores (${st.extenders}; cada uno +${CAPACITY_PER_EXTENDER} de carga) · Timos Necróticos ${st.thymus}/${st.thymusNeed} para el siguiente extensor.`],
+        st.immuneRejection ? 'Tu sistema inmune calla: ya no rechaza nada.' : 'Tu cuerpo rechaza los injertos. Hasta el 85 % no te castiga (al 70 % se inflama, solo aviso).',
+        st.immuneRejection ? `Con ${EXTENDERS_IMMUNE} extensores el rechazo no sube, no falla y no daña.` : st.timers.suppress > 0 ? `Supresor activo: no sube durante ${Math.ceil(st.timers.suppress)} s más.` : `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde el ${st.failFrom} % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
+        `Lo frenan: Supresor del útero · extensores ${st.extenders}/${EXTENDERS_IMMUNE} (cada uno +${CAPACITY_PER_EXTENDER} de carga; con ${EXTENDERS_IMMUNE}, inmune) · Timos Necróticos ${st.thymus}/${st.thymusNeed} para el siguiente extensor.`],
     }[id];
     this.vinfo.innerHTML = `
       <b class="i-name" style="color:${color}">${name} <span class="i-amount">${amount}</span></b>

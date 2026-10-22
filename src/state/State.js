@@ -82,10 +82,12 @@ const REJECTION_FAIL_MAX = 0.35;
 // Timos Necróticos: se juntan como los fragmentos. Al reunir los que pide el siguiente
 // (3, luego 4, 5...) forman un extensor de tolerancia.
 export const THYMUS_FIRST = 3;
+// Con estos extensores (comprados o formados con timos) el rechazo desaparece para siempre.
+export const EXTENDERS_IMMUNE = 6;
 export const REJECTION_TIERS = [70, 85, 100];
 // Supresor del útero: resta rechazo de golpe y lo frena un buen rato (no sube).
 export const SUPPRESS_CUT = 35;
-export const SUPPRESS_TIME = 120; // segundos
+export const SUPPRESS_TIME = 600; // segundos (10 minutos)
 const HUNGER_FLOOR = 10;          // el hambre de las mutaciones no baja tu biomasa de aquí
 const REJECTION_ESCALATION = 0.15; // cada mutación instalada encarece un 15% el rechazo de la siguiente
 
@@ -184,14 +186,15 @@ export class GameState {
   get rejectionPerSecond() { return this.rejectionRate(); }
   // El ritmo con extensores de más (para enseñar cuánto bajaría con otro).
   rejectionRate(extra = 0) {
-    if (!this.mutations.size) return 0;
+    if (!this.mutations.size || this.extenders + extra >= EXTENDERS_IMMUNE) return 0;
     const cap = this.capacity + CAPACITY_PER_EXTENDER * extra, over = Math.max(0, this.load - cap);
     const press = (CAPACITY_BASE / cap) ** PRESSURE;
     const r = (REJECTION_GROWTH * this.load + DISCORD_GROWTH * this.discord) * press + OVERLOAD_GROWTH * over - HARMONY_RELIEF * this.synergies.length;
     return Math.max(0.01, r);
   }
   get failFrom() { return REJECTION_FAIL_FROM; }
-  get immuneRejection() { return false; }
+  // Con EXTENDERS_IMMUNE extensores el cuerpo deja de rechazar: ni sube, ni falla, ni daña.
+  get immuneRejection() { return this.extenders >= EXTENDERS_IMMUNE; }
   get critical() { return !this.immuneRejection && this.rejection >= REJECTION_CRITICAL; }
 
   has(ability) {
@@ -223,7 +226,7 @@ export class GameState {
   }
 
   // Tramo de rechazo (0 sano, 1 inflamado, 2 rechazo, 3 crisis), para los avisos.
-  get rejectionTier() { return REJECTION_TIERS.filter((t) => this.rejection >= t).length; }
+  get rejectionTier() { return this.immuneRejection ? 0 : REJECTION_TIERS.filter((t) => this.rejection >= t).length; }
 
   // Con el rechazo alto, las mutaciones fallan a veces (cada vez más).
   abilityWorks(ability) {
@@ -269,7 +272,8 @@ export class GameState {
   gainExtender() {
     const before = this.rejectionPerSecond * 60;
     this.extenders++;
-    return { before, after: this.rejectionPerSecond * 60 };
+    if (this.immuneRejection) this.rejection = 0;
+    return { before, after: this.rejectionPerSecond * 60, immune: this.immuneRejection };
   }
 
   // Coge un consumible: se guarda y, si aún no tiene cavidad, ocupa la primera libre.
