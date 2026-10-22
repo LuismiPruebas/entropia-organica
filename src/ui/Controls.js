@@ -1,4 +1,5 @@
 import { keyName } from '../core/Bindings.js';
+import { BUTTONS } from '../core/Gamepad.js';
 
 // Panel de controles: todas las acciones con su tecla/botón en cada sistema.
 // En PC: teclado y ratón, y el mando si hay uno conectado (con los símbolos de
@@ -12,24 +13,24 @@ const PAD = {
   L3: ['L3', 'LS'], R3: ['R3', 'RS'], start: ['Options', 'Menu'], select: ['Create', 'View'],
 };
 
-// [grupo, acción, teclado y ratón, mando (con {botón}), táctil]
+// [grupo, acción, teclado y ratón, mando (con {botón}), táctil, acciones del mando (BUTTONS)]
 const rows = () => [
-  ['MOVIMIENTO', 'Moverse', '[A] / [D]  ·  [←] / [→]', 'stick izq.  ·  cruceta', 'cruceta'],
-  ['MOVIMIENTO', 'Saltar (y saltar de la pared)', '[W]  ·  [Espacio]  ·  [↑]', '{south}', 'SALTAR'],
-  ['MOVIMIENTO', 'Agacharse  ·  trepar con garras', '[S] / [W]  ·  [↓] / [↑]', 'stick / cruceta abajo · arriba', 'cruceta abajo · arriba'],
-  ['MOVIMIENTO', 'Embestida', 'doble toque [A] o [D]', '{L1}  ·  {L3}', 'botón de embestida'],
-  ['MOVIMIENTO', 'Tendón (lanzar · soltar)', '[Q]  ·  clic derecho', '{L2}', 'botón del tendón (arrástralo para apuntar)'],
+  ['MOVIMIENTO', 'Moverse', '[A] / [D]  ·  [←] / [→]', 'stick izq.  ·  cruceta', 'cruceta', 'left,right'],
+  ['MOVIMIENTO', 'Saltar (y saltar de la pared)', '[W]  ·  [Espacio]  ·  [↑]', '{south}', 'SALTAR', 'jump'],
+  ['MOVIMIENTO', 'Agacharse  ·  trepar con garras', '[S] / [W]  ·  [↓] / [↑]', 'stick / cruceta abajo · arriba', 'cruceta abajo · arriba', 'up,down'],
+  ['MOVIMIENTO', 'Embestida', 'doble toque [A] o [D]', '{L1}  ·  {L3}', 'botón de embestida', 'dash'],
+  ['MOVIMIENTO', 'Tendón (lanzar · soltar)', '[Q]  ·  clic derecho', '{L2}', 'botón del tendón (arrástralo para apuntar)', 'grapple'],
   ['COMBATE', 'Apuntar', 'ratón', 'stick der. (360°)', 'toca la pantalla'],
-  ['COMBATE', 'Disparar  ·  golpear de cerca', 'clic izq. (mantén: ráfaga)', '{R1} (mantén: ráfaga)', 'DISPARAR  ·  tocar la pantalla'],
-  ['COMBATE', 'Cambiar de arma', '[R]', '{R2}', 'botón del arma'],
-  ['CUERPO', 'Ojo fotóforo (luz)', '[F]', '{west}', 'botón del ojo'],
-  ['CUERPO', 'Usar la cavidad activa', `[${keyName('cavityUse')}]`, '{R3} (un toque)', 'botón de la cavidad (un toque)'],
+  ['COMBATE', 'Disparar  ·  golpear de cerca', 'clic izq. (mantén: ráfaga)', '{R1} (mantén: ráfaga)', 'DISPARAR  ·  tocar la pantalla', 'fire'],
+  ['COMBATE', 'Cambiar de arma', '[R]', '{R2}', 'botón del arma', 'weapon'],
+  ['CUERPO', 'Ojo fotóforo (luz)', '[F]', '{west}', 'botón del ojo', 'light'],
+  ['CUERPO', 'Usar la cavidad activa', `[${keyName('cavityUse')}]`, '{R3} (un toque)', 'botón de la cavidad (un toque)', 'cavity'],
   ['CUERPO', 'Cambiar de cavidad', `[${keyName('cavityNext')}]`, 'mantén {R3} + cruceta ← →', 'mantén el botón de la cavidad + cruceta'],
-  ['CUERPO', 'Usar nodo  ·  hablar  ·  pasar texto', '[E]', '{north}', 'USAR'],
-  ['MENÚS', 'Genoma (mutaciones, cavidades)', '[I]', '{start}', 'botón del genoma'],
-  ['MENÚS', 'Mapa', '[M]', '{select}', 'botón del mapa'],
+  ['CUERPO', 'Usar nodo  ·  hablar  ·  pasar texto', '[E]', '{north}', 'USAR', 'interact'],
+  ['MENÚS', 'Genoma (mutaciones, cavidades)', '[I]', '{start}', 'botón del genoma', 'genome'],
+  ['MENÚS', 'Mapa', '[M]', '{select}', 'botón del mapa', 'map'],
   ['MENÚS', 'Elegir  ·  aceptar', 'flechas  ·  [Intro]', 'cruceta / stick  ·  {south}', 'cruceta  ·  SALTAR'],
-  ['MENÚS', 'Salir  ·  cerrar textos', '[Esc]', '{east}', 'botón ✕'],
+  ['MENÚS', 'Salir  ·  cerrar textos', '[Esc]', '{east}', 'botón ✕', 'back'],
   ['MENÚS', 'Pantalla completa', '[P]', '—', 'botón de la esquina'],
 ];
 
@@ -62,11 +63,20 @@ export class ControlsPanel {
     // El navegador no enseña un mando hasta que se pulsa uno de sus botones (aunque ya
     // esté enchufado): con el panel abierto se mira a menudo y se rehace al aparecer.
     this.padId = null;
+    // Prueba del mando: lo que pulsas ilumina su fila y abajo sale el número del botón
+    // (sirve para ver si el navegador lee bien un mando).
     setInterval(() => {
       if (!this.open) return;
-      const id = connectedPad()?.id ?? null;
+      const pad = connectedPad(), id = pad?.id ?? null;
       if (id !== this.padId) this.#render();
-    }, 300);
+      if (!pad) return;
+      const down = [];
+      pad.buttons.forEach((b, i) => { if (b.pressed || b.value > 0.4) down.push(i); });
+      const acts = new Set(down.map((i) => BUTTONS[i]).filter(Boolean));
+      for (const tr of this.el.querySelectorAll('tr[data-pad]')) tr.classList.toggle('cp-on', tr.dataset.pad.split(',').some((a) => acts.has(a)));
+      const live = this.el.querySelector('.cp-live');
+      if (live && down.length) live.textContent = `Prueba del mando · pulsado: ${down.map((i) => `botón ${i}${BUTTONS[i] ? '' : ' (sin uso)'}`).join(', ')}  ·  mapeo: ${pad.mapping || 'no estándar'}`;
+    }, 60);
   }
 
   get open() { return !this.el.hidden; }
@@ -87,7 +97,7 @@ export class ControlsPanel {
     let group = '';
     const body = rows().map((r) => {
       const head = r[0] !== group ? `<tr class="cp-group"><th colspan="${cols.length + 1}">${(group = r[0])}</th></tr>` : '';
-      return `${head}<tr><td class="cp-act">${r[1]}</td>${cols.map(([, i]) => `<td>${i === 3 ? padText(r[i]) : i === 2 ? kb(r[i]) : r[i]}</td>`).join('')}</tr>`;
+      return `${head}<tr data-pad="${r[5] ?? ''}"><td class="cp-act">${r[1]}</td>${cols.map(([, i]) => `<td>${i === 3 ? padText(r[i]) : i === 2 ? kb(r[i]) : r[i]}</td>`).join('')}</tr>`;
     }).join('');
     const note = touch ? '' : pad ? '' : '<p class="cp-note">¿Tienes un mando enchufado? <b>Pulsa cualquier botón</b>: el navegador no lo muestra hasta entonces y aquí aparecerá su columna.</p>';
     this.el.innerHTML = `
@@ -97,6 +107,7 @@ export class ControlsPanel {
         <div class="cp-scroll">
           <table><thead><tr><th></th>${cols.map(([t]) => `<th>${t}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
         </div>
+        ${pad ? '<p class="cp-live">Prueba del mando: pulsa un botón y se ilumina su acción.</p>' : ''}
         <footer>${touch ? 'Toca ✕ para volver' : `Esc${pad ? ` / ${PAD.east[ps]}` : ''} para volver`}</footer>
       </div>`;
     this.el.querySelector('.cp-scroll').scrollTop = scroll;
