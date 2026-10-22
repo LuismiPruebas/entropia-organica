@@ -542,8 +542,8 @@ export class Game {
         p.vx = p.facing * 25; p.vy = 40;
       }
     } else if (Math.random() < 0.3 && b.t < BIRTH.end + 2) {
-      // Empapado: gotea líquido amniótico un rato.
-      this.particles.emit(p.cx + (Math.random() - 0.5) * 8, p.y + 6 + Math.random() * 16, { vy: 6, life: 0.8, gravity: 400, color: [0.3, 0.75, 0.5], stain: 'rgba(60,150,100,0.5)' });
+      // Empapado: gotea sangre y plasma un rato.
+      this.particles.emit(p.cx + (Math.random() - 0.5) * 8, p.y + 6 + Math.random() * 16, { vy: 6, life: 0.8, gravity: 400, color: Math.random() < 0.5 ? [0.6, 0.12, 0.18] : [0.62, 0.6, 0.6], stain: 'rgba(120,60,65,0.5)' });
     }
     if (b.t >= BIRTH.end) {
       if (b.say) this.say(b.say, 4);
@@ -1115,7 +1115,7 @@ export class Game {
     for (const f of this.flashes) lights.push({ x: f.x, y: f.y, r: f.r, color: f.color.map((c) => c * (f.t / f.dur) * 0.8) });
     for (const pr of this.projectiles) if (pr.glow) lights.push({ x: pr.cx, y: pr.cy, r: 40, color: pr.glow.map((c) => c * 0.5) });
     // El útero del Nodo ilumina al ritmo de su latido.
-    for (const w of this.room.wombs ?? []) lights.push({ x: w.cx, y: w.cy, r: 60 + 25 * w.beat, color: [0.05, 0.22 + 0.2 * w.beat, 0.12] });
+    for (const w of this.room.wombs ?? []) lights.push({ x: w.cx, y: w.cy, r: 60 + 25 * w.beat, color: [0.24 + 0.18 * w.beat, 0.1 + 0.06 * w.beat, 0.12 + 0.07 * w.beat] });
     // Los jefes irradian su propia luz, que late con ellos.
     for (const e of this.room.enemies) {
       const L = e.alive && e.def.light;
