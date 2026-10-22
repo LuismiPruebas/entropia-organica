@@ -210,6 +210,7 @@ export const LEVELS = {
     nodules: [[21, 9, 'luz'], [15, 10], [24, 27], [18, 39], [4, 40], [8, 9, 'luz'], [15, 39, 'luz']],
     links: [
       { id: 'p1', x: 31, y: 9, w: 1, h: 2, to: 'A2', toLink: 'p1', trigger: 'touch', look: 'hidden' },
+      { id: 'p2', x: 0, y: 35, w: 1, h: 6, to: 'A11', toLink: 'p4', trigger: 'touch', look: 'hidden' },
     ],
     lamps: [[9, 34], [4, 34], [22, 19], [6, 5], [16, 8]],
   },
@@ -616,7 +617,7 @@ export const LEVELS = {
       { id: 'p1', x: 18, y: 0, w: 1, h: 2, to: 'A4', toLink: 'p5', trigger: 'touch', look: 'hidden' },
       { id: 'p2', x: 19, y: 0, w: 1, h: 2, to: 'A4', toLink: 'p6', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 20, y: 0, w: 1, h: 2, to: 'A4', toLink: 'p7', trigger: 'touch', look: 'hidden' },
-      { id: 'p4', x: 63, y: 5, w: 1, h: 4, to: 'A3', toLink: 'p3', trigger: 'touch', look: 'hidden' },
+      { id: 'p4', x: 63, y: 5, w: 1, h: 4, to: 'A3', toLink: 'p2', trigger: 'touch', look: 'hidden' },
     ],
     backdrop: 4,
   },
