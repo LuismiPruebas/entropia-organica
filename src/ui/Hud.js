@@ -155,7 +155,7 @@ export class Hud {
       d.shown = Math.min(line.length, d.shown + dt * 48);
       const el = $('dialogue'), txt = line.slice(0, Math.floor(d.shown));
       if (this.cache.dlgTxt !== txt) el.querySelector('.txt').textContent = this.cache.dlgTxt = txt;
-      const next = this.typing ? '' : `${d.key ?? 'E'} ${d.i < d.lines.length - 1 ? '>' : 'x'}`;
+      const next = this.typing ? '' : d.i < d.lines.length - 1 ? '▸' : '✕';
       if (this.cache.dlgNext !== next) el.querySelector('.next').textContent = this.cache.dlgNext = next;
     }
     if (this.barkTime > 0) {
@@ -188,7 +188,7 @@ export class Hud {
     if (!this.tut && this.tutQueue.length && !this.dlg) {
       this.tut = { ...this.tutQueue.shift(), age: 0 };
       const tip = $('hud-tip');
-      tip.innerHTML = `${typeof this.tut.text === 'function' ? this.tut.text() : this.tut.text}<span class="tip-ok">${this.keyLabel ?? 'E'} ✕</span>`;
+      tip.innerHTML = `${typeof this.tut.text === 'function' ? this.tut.text() : this.tut.text}<span class="tip-ok">✕</span>`;
       tip.onclick = () => this.closeTut();
       tip.style.setProperty('--c', this.tut.color);
       tip.style.top = this.tut.slot ? '38px' : '';   // bajo las cavidades si señala un icono

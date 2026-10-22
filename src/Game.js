@@ -344,10 +344,9 @@ export class Game {
 
   say(text, seconds) { this.hud.say(text, seconds); }
 
-  // Diálogo de lore: se queda hasta que el jugador pasa (E, Usar en mando o pantalla).
+  // Diálogo de lore: se queda hasta que el jugador pasa (Saltar, E o Intro).
   dialogue(lines, opts = {}) {
-    const key = this.pad.active ? 'USAR' : this.touch.active ? 'USAR' : 'E';
-    this.hud.dialogue(lines, { key, ...opts });
+    this.hud.dialogue(lines, opts);
   }
 
   // Cómo se usa la cavidad activa, según con qué juegas.
@@ -512,17 +511,17 @@ export class Game {
     // Cavidades: usar el consumible a mano sin abrir el Genoma.
     this.#cavities(dt);
     this.hud.choosing = this.choosingCavity;
-    // Diálogo abierto: E (o Enter) lo pasa, y esa pulsación no hace nada más.
-    // Explicación del HUD abierta (minitutorial): se acepta con E / Intro o Esc, como un diálogo.
-    this.hud.keyLabel = this.pad.active || this.touch.active ? 'USAR' : 'E';
-    if (!this.hud.dialogueActive && this.hud.tutOpen && this.input.hit('KeyE', 'Enter', 'Escape')) {
+    // Diálogo abierto: Saltar (Espacio, ✕ / A del mando, SALTAR en táctil), E o Intro lo
+    // pasan, y esa pulsación no hace nada más (no salta).
+    // Explicación del HUD abierta (minitutorial): se acepta igual, o con Esc.
+    const PASS = ['Space', 'KeyE', 'Enter'];
+    if (!this.hud.dialogueActive && this.hud.tutOpen && this.input.hit(...PASS, 'Escape')) {
       this.hud.closeTut();
-      for (const k of ['KeyE', 'Enter', 'Escape']) this.input.pressed.delete(k);
+      for (const k of [...PASS, 'Escape']) this.input.pressed.delete(k);
     }
-    if (this.hud.dialogueActive && this.input.hit('KeyE', 'Enter')) {
+    if (this.hud.dialogueActive && this.input.hit(...PASS)) {
       this.hud.advance();
-      this.input.pressed.delete('KeyE');
-      this.input.pressed.delete('Enter');
+      for (const k of PASS) this.input.pressed.delete(k);
     }
     // Salir (Esc, o el botón de volver del mando) cierra los textos: el diálogo entero, o
     // la voz de un personaje y el aviso que haya en pantalla.
