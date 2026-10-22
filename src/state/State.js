@@ -19,8 +19,11 @@ export const NODE_REGEN = 75;     // segundos de juego para regenerar una
 export const NODE_HEAL = 15;      // integridad por cura
 
 export const OXYGEN_COST = { doubleJump: 18, dash: 25, wallKick: 8 };
-const OXYGEN_REGEN = 6;        // por segundo (base, mejorable con mutaciones)
-const OXYGEN_REGEN_DELAY = 0.9; // segundos de descanso antes de recuperar
+// Aliento: máximo de base (más aguante para encadenar saltos desde el primer bioma) y
+// recuperación por segundo tras un breve descanso.
+export const OXYGEN_BASE = 140;
+const OXYGEN_REGEN = 8;        // por segundo (base, mejorable con mutaciones)
+const OXYGEN_REGEN_DELAY = 0.7; // segundos de descanso antes de recuperar
 export const LIGHT_DRAIN = 1.5;       // por segundo con el ojo encendido (era 1.0: las células ahora se acumulan en reserva)
 export const CELL_CHARGE = 100; // luz que devuelve cada célula lumínica de la reserva
 // Una célula recogida o comprada siempre recarga el ojo al 100 %; si ya estaba a esto o
@@ -105,7 +108,7 @@ export class GameState {
     this.corrupted = 0;
     this.biomass = 30;
     this.biomassBase = 100;
-    this.oxygen = 100;
+    this.oxygen = OXYGEN_BASE;
     this.oxygenRest = 0;
     this.infection = 0;          // segundos restantes del estado alterado 'infección'
     this.light = 100;
@@ -147,7 +150,7 @@ export class GameState {
 
   get maxIntegrity() { return BASE_MAX_INTEGRITY - this.corrupted; }
   get biomassMax() { return Math.round(this.biomassBase * this.mod('biomassCap')); }
-  get oxygenMax() { return Math.round(100 * this.mod('oxygenCap')); }
+  get oxygenMax() { return Math.round(OXYGEN_BASE * this.mod('oxygenCap')); }
   // Arma que dispara el gatillo: la elegida si sigue instalada; si no, la mejor.
   get weaponId() {
     const owned = this.weapons;

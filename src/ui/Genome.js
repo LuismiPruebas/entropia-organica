@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, LINE_ORDER, FRAGMENTS, SYNERGIES, CLASHES, ROMAN, linesOf } from '../data/mutations.js';
-import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW, BLADE } from '../state/State.js';
+import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW, BLADE, OXYGEN_BASE } from '../state/State.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { PlayerBody, BODY_W, BODY_H } from '../entities/PlayerBody.js';
 import { caps } from './Hud.js';
@@ -441,7 +441,7 @@ export class Genome {
     const vit = [
       [st.integrity / 100, st.infection > 0 ? '#6a9a30' : '#c0283a', Math.ceil(st.integrity), st.corrupted / 100],
       [st.biomass / st.biomassMax, '#e07a98', Math.floor(st.biomass), 0],
-      [st.oxygen / 100, '#4ab8f0', Math.floor(st.oxygen), 1 - st.oxygenMax / 100],
+      [st.oxygen / OXYGEN_BASE, '#4ab8f0', Math.floor(st.oxygen), Math.max(0, 1 - st.oxygenMax / OXYGEN_BASE)],
       [st.light / 100, '#ffd23f', Math.floor(st.light), 0],
       [Math.min(1, st.rejection / 100), st.critical ? '#ff4a8a' : '#a040d8', Math.floor(st.rejection), 0],
     ];
