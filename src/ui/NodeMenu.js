@@ -53,6 +53,7 @@ const CATS = {
   trade: { c: '#c8b8a0', info: 'El útero digiere un recurso y te devuelve el otro.' },
   shield: { c: '#4ff0ff', info: 'Se guarda; úsala cuando quieras desde el Genoma.' },
   regen: { c: '#7dff9a', info: 'Se guarda; úsala cuando quieras desde el Genoma.' },
+  plasma: { c: '#ff5a6a', info: 'Te lo llevas: úsalo cuando quieras desde el Genoma y recuperas integridad al momento.' },
   travel: { c: '#d0a8ff', info: 'El nervio del organismo te lleva a otro útero que ya conoces.' },
 };
 const HINT = 'Señala una opción para saber qué hace.';
@@ -134,6 +135,27 @@ const ICON = {
     part(g, 9, 9, 6.5 * k, 6.5 * k, '#3ac060', '#14501e', '#9affb0');
     px(g, 8, 5, '#f0fff0', 2, 8); px(g, 5, 8, '#f0fff0', 8, 2);
   },
+  // Cabeceras: doble hélice (evoluciona), corazón que late (cúrate), saco de carne (compra).
+  helix(g, t) {
+    for (let y = 1; y < 17; y++) {
+      const a = t * 4 + y * 0.55, x1 = 9 + Math.sin(a) * 4.5, x2 = 9 - Math.sin(a) * 4.5;
+      if (y % 3 === 0) for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) px(g, x, y, '#2a5a3a');
+      px(g, x1, y, Math.cos(a) > 0 ? '#7dff9a' : '#2a8a4a'); px(g, x2, y, Math.cos(a) > 0 ? '#1e5a30' : '#c07bff');
+    }
+  },
+  heart(g, t) {
+    const k = (t * 1.2) % 1 < 0.15 ? 1.12 : 1;
+    part(g, 6.5, 7, 3.6 * k, 3.4 * k, '#c0283a', '#6a1020', '#ff9aa8');
+    part(g, 11.5, 7, 3.6 * k, 3.4 * k, '#c0283a', '#6a1020');
+    for (let y = 0; y < 6; y++) px(g, 9 - (5 - y) * 0.9 * k, 9 + y, '#c0283a', Math.max(1, (5 - y) * 1.8 * k), 1);
+    px(g, 5, 5, '#ffd0d8');
+  },
+  bag(g, t) {
+    part(g, 9, 11, 6, 5, '#8a5a3a', '#3a2010', '#c8a070');
+    px(g, 7, 4, '#3a2010', 4, 3); px(g, 8, 4, '#c8a070', 2, 2);
+    const b = Math.sin(t * 3) > 0.6 ? 1 : 0;
+    px(g, 6, 10 - b, '#ffd23f', 2, 2); px(g, 10, 12, '#e8dcc8', 2, 1); px(g, 11, 9, '#e07a98', 2, 2);
+  },
   // Viaje: un remolino de carne con el Tercer Ojo en medio.
   travel(g, t) {
     for (let i = 0; i < 26; i++) { const a = i * 0.5 + t * 2, r = 1.5 + i * 0.27; px(g, 9 + Math.cos(a) * r, 9 + Math.sin(a) * r * 0.85, i % 3 ? '#8a4ad0' : '#d0a8ff'); }
@@ -146,20 +168,13 @@ export class NodeMenu {
     this.game = game;
     this.el = document.getElementById('node-menu');
     this.open = false;
-    // A las pestañas solo se sube a propósito (arriba) y de ellas solo se baja (abajo):
-    // a izquierda y derecha, cada uno se queda en su fila.
-    const tab = (b) => b.classList.contains('nm-tab');
-    this.nav = new MenuNav(this.el, 'button', {
+    this.nav = new MenuNav(this.el, '.nm-list button', {
       isOpen: () => this.open,
       onSelect: (b) => { game.audio.play('flicker'); this.#showInfo(b); },
-      allow: (cur, b, dx, dy) => (tab(cur) === tab(b) ? true : tab(b) ? dy < 0 : dy > 0),
     });
     addEventListener('keydown', (e) => {
       if (!this.open) return;
       if (e.code === 'Escape' || e.code === 'KeyE') this.close();
-      // 1-4: pestañas.
-      const n = Number(e.key);
-      if (n >= 1) this.el.querySelectorAll('.nm-tab')[n - 1]?.click();
     });
   }
 
@@ -168,7 +183,6 @@ export class NodeMenu {
     this.openedAt = performance.now();
     this.el.hidden = false;
     this.nav.index = 0;
-    this.tab = null;                 // la elige render: Mutar si hay algo listo para injertar
     this.firstOpen = true;
     this.render();
     const loop = (ms) => {
@@ -270,7 +284,8 @@ export class NodeMenu {
           effect: cost.overload ? `<span class="c-rej">supera tu tolerancia (${st.load + (m.load ?? 1)}/${st.capacity}): el rechazo subirá más deprisa</span>` : '',
           enabled: ready,
           mutation: true,
-          cat: { c: LINES[m.line].color, info: m.brief ?? m.desc },
+          brief: m.brief ?? m.desc,
+          cat: { c: LINES[m.line].color, info: m.desc },
           run: () => { st.install(id); g.audio.play('mutate'); },
         };
       }),
@@ -293,13 +308,19 @@ export class NodeMenu {
       })) : []),
     ].filter(Boolean);
 
-    // Pestañas: solo las que tienen algo. Al abrir, Mutar si hay algo listo para injertar.
-    const TABS = [['mutar', 'MUTAR'], ['cuidar', 'CUIDADOS'], ['tienda', 'TIENDA'], ['viajar', 'VIAJAR']].filter(([t]) => options.some((o) => o.tab === t));
-    if (!this.tab || !TABS.some(([t]) => t === this.tab)) this.tab = options.some((o) => o.tab === 'mutar' && o.enabled) ? 'mutar' : TABS.find(([t]) => t === 'cuidar')?.[0] ?? TABS[0]?.[0];
-    // Primero lo que se puede usar ya (en Mutar, las mutaciones listas para injertar).
-    const shown = options.filter((o) => o.tab === this.tab).sort((a, b) => (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0));
-    if (this.firstOpen) { this.nav.index = TABS.length; this.firstOpen = false; }   // empieza en la primera ficha
-    const TAB_INFO = { mutar: 'Injerta el ADN latente que llevas. Cada injerto cuesta integridad máxima y sube el rechazo.', cuidar: 'Cura, luz para el ojo y lo que calma o amplía tu tolerancia.', tienda: 'Trueques y consumibles raros.', viajar: 'El nervio del organismo te lleva a otro útero que ya conoces.' };
+    // Una sola pantalla, sin pestañas: tres columnas que se ven a la vez, ordenadas por
+    // importancia de izquierda a derecha. EVOLUCIONA (mutar) es la grande y la primera;
+    // cada columna dice con una frase para qué sirve. Debajo, el detalle de lo señalado.
+    const COLS = [
+      { id: 'mutar', title: 'EVOLUCIONA', sub: 'Injerta el ADN que llevas: ganas habilidades nuevas.', c: '#7dff9a', icon: 'helix', tabs: ['mutar'] },
+      { id: 'cuidar', title: 'CÚRATE', sub: 'Integridad, luz del ojo y calma para tus injertos.', c: '#ff5a6a', icon: 'heart', tabs: ['cuidar'] },
+      { id: 'tienda', title: 'COMPRA', sub: 'Trueques y cosas que te llevas.', c: '#ffc860', icon: 'bag', tabs: ['tienda', 'viajar'] },
+    ];
+    const mutReady = options.filter((o) => o.tab === 'mutar' && o.enabled).length;
+    const byCol = COLS.map((col) => options.filter((o) => col.tabs.includes(o.tab)).sort((a, b) => (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0)));
+    const EMPTY_MUT = st.dna.size
+      ? ''
+      : '<p class="nm-empty">No llevas ADN. Lo sueltan los jefes y se esconde por el organismo (una doble hélice que brilla); los <b>fragmentos</b> de un mismo órgano se juntan solos en ADN. Cuando lo tengas, vuelve aquí: <b>es lo que te hace más fuerte</b>.</p>';
 
     this.el.innerHTML = `
       <svg class="nm-veins" viewBox="0 0 250 120" preserveAspectRatio="none">
@@ -309,48 +330,53 @@ export class NodeMenu {
         <span class="nm-close" title="Cerrar">✕</span>
         <h2>NODO SEGURO <span class="nm-name">${node.name}</span></h2>
         <div class="nm-res"><span class="c-int">INT ${Math.ceil(st.integrity)}/${st.maxIntegrity}</span> <span class="c-bio">BIO ${Math.floor(st.biomass)}</span> <span class="c-lux">LUZ ${Math.floor(st.light)}</span> <span class="c-scrap">HUESO ${st.scrap}</span></div>
-        <div class="nm-tabs">${TABS.map(([t, name], i) => { const n = options.filter((o) => o.tab === t).length, ready = options.filter((o) => o.tab === t && o.enabled).length; return `<button class="nm-tab${t === this.tab ? ' on' : ''}" data-tab="${t}" data-title="${name}" data-info="${TAB_INFO[t]}" data-effect="">${i + 1} ${name} <span class="dim">${t === 'mutar' ? `${ready}/${n}` : n}</span></button>`; }).join('')}</div>
-        <div class="nm-scroll"><div class="nm-list${this.tab === 'mutar' ? '' : ' cols'}"></div><div class="nm-bar" hidden><i></i></div></div>
+        <div class="nm-cols">${COLS.map((col, i) => `
+          <section class="nm-col${col.id === 'mutar' ? ' main' : ''}${col.id === 'mutar' && mutReady ? ' ready' : ''}" style="--cc:${col.c}">
+            <h3><canvas class="nm-hicon" width="${S}" height="${S}" data-hicon="${col.icon}"></canvas>${col.title}${col.id === 'mutar' && mutReady ? `<span class="nm-badge">¡${mutReady} NUEVA${mutReady > 1 ? 'S' : ''}!</span>` : ''}</h3>
+            <p class="nm-sub">${col.sub}</p>
+            <div class="nm-list" data-col="${i}">${col.id === 'mutar' ? EMPTY_MUT : ''}</div>
+          </section>`).join('')}</div>
         <div class="nm-info"></div>
       </div>`;
-    const list = this.el.querySelector('.nm-list');
     this.icons = [];
+    for (const c of this.el.querySelectorAll('[data-hicon]')) this.icons.push({ g: c.getContext('2d'), kind: c.dataset.hicon, opts: {} });
     // Se cierra con la misma tecla que lo abre (E, △/Y, USAR), con Esc o con la aspa.
     this.el.querySelector('.nm-close').addEventListener('click', () => this.close());
-    for (const b of this.el.querySelectorAll('.nm-tab')) b.addEventListener('click', () => {
-      if (b.dataset.tab === this.tab) return;
-      this.tab = b.dataset.tab;
-      this.nav.index = TABS.length;      // tras repintar, la primera ficha de la pestaña
-      g.audio.play('flicker');
-      this.render();
+    byCol.forEach((opts, ci) => {
+      const list = this.el.querySelector(`.nm-list[data-col="${ci}"]`);
+      for (const o of opts) {
+        const b = document.createElement('button');
+        b.disabled = !o.enabled;
+        if (o.mutation) b.classList.add('mut');
+        // Cada tipo destaca a su manera: su color en la franja, el fondo, el título y el
+        // brillo del icono. Al señalarla, el panel de abajo explica qué hace.
+        const cat = o.cat ?? CATS[o.icon?.[0]] ?? { c: '#e8dcc8', info: '' };
+        b.style.setProperty('--c', cat.c);
+        b.style.setProperty('--tint', `${cat.c}26`);
+        b.dataset.info = cat.info;
+        b.dataset.title = o.label;
+        b.dataset.effect = o.effect ?? '';
+        b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas><span class="nm-label">${o.label}</span>${o.brief ? `<span class="nm-brief">${o.brief}</span>` : ''}<span class="desc">${o.cost}</span>`;
+        // Con el ratón, la selección sigue al cursor: marco y panel siempre coinciden.
+        b.addEventListener('mouseenter', () => { if (!b.classList.contains('nav-sel')) this.nav.select(b); });
+        if (o.icon) this.icons.push({ g: b.querySelector('canvas').getContext('2d'), kind: o.icon[0], opts: o.icon[1] ?? {} });
+        b.addEventListener('click', () => {
+          // Un clic justo al abrirse viene del gesto que lo abrió (un toque en USAR): se ignora.
+          if (performance.now() - this.openedAt < 350) return;
+          o.run();
+          if (this.open) this.render();
+        });
+        list.appendChild(b);
+      }
     });
-    shown.forEach((o, i) => {
-      const b = document.createElement('button');
-      b.disabled = !o.enabled;
-      if (o.mutation) b.classList.add('mut');
-      // Cada tipo destaca a su manera: su color en la franja, el fondo, el título y el
-      // brillo del icono. Al señalarla, el panel de abajo explica qué hace.
-      const cat = o.cat ?? CATS[o.icon?.[0]] ?? { c: '#e8dcc8', info: '' };
-      b.style.setProperty('--c', cat.c);
-      b.style.setProperty('--tint', `${cat.c}26`);
-      b.dataset.info = cat.info;
-      b.dataset.title = o.label;
-      b.dataset.effect = o.effect ?? '';
-      b.innerHTML = `<canvas class="nm-icon" width="${S}" height="${S}"></canvas><span class="nm-label">${o.label}</span><span class="desc">${o.cost}</span>`;
-      // Con el ratón, la selección sigue al cursor: marco y panel siempre coinciden.
-      b.addEventListener('mouseenter', () => { if (!b.classList.contains('nav-sel')) this.nav.select(b); });
-      if (o.icon) this.icons.push({ g: b.querySelector('canvas').getContext('2d'), kind: o.icon[0], opts: o.icon[1] ?? {} });
-      b.addEventListener('click', () => {
-        // Un clic justo al abrirse viene del gesto que lo abrió (un toque en USAR): se ignora.
-        if (performance.now() - this.openedAt < 350) return;
-        o.run();
-        if (this.open) this.render();
-      });
-      list.appendChild(b);
-    });
+    // Al abrir: la primera mutación lista si la hay; si no, la primera opción disponible.
+    if (this.firstOpen) {
+      const all = [...this.el.querySelectorAll('.nm-list button')];
+      this.nav.index = Math.max(0, all.findIndex((b) => !b.disabled));
+      this.firstOpen = false;
+    }
     this.nav.restore();
-    this.#showInfo(list.querySelector('.nav-sel'));
-    this.#scrollBar(list);
+    this.#showInfo(this.el.querySelector('.nm-list .nav-sel'));
     this.#drawIcons(performance.now() / 1000);
   }
 
