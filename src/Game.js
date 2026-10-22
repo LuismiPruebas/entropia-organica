@@ -139,8 +139,8 @@ export class Game {
       this.player?.rejectSpasm();
       this.say([
         '',
-        'Tus injertos se inflaman: a veces no responderán. Un Supresor del útero lo calma.',
-        'Tu cuerpo rechaza la carne ajena: las mutaciones fallan cada vez más.',
+        'Tus injertos se inflaman (70 %): aún responden, pero no tardarán en fallar. Un Supresor del útero lo calma.',
+        'Tu cuerpo rechaza la carne ajena (85 %): las mutaciones empiezan a fallar.',
         'CRISIS DE RECHAZO: los injertos te devoran por dentro. Busca un útero.',
       ][tier], 4);
     });

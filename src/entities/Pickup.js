@@ -1,6 +1,9 @@
 import { getSprite, spriteMesh, placeMesh } from '../core/Sprites.js';
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
 import { ITEMS, PLASMA } from '../state/State.js';
+
+// "+9,0/min → +5,1/min": cuánto sube el rechazo antes y después de un extensor.
+export const rate = ({ before, after }) => `${before.toFixed(1).replace('.', ',')}/min → ${after.toFixed(1).replace('.', ',')}/min`;
 // Tejido sano: segundos de inmunidad a la infección tras cogerlo.
 const TISSUE_IMMUNE = 10;
 
@@ -47,12 +50,10 @@ export const PICKUPS = {
   thymus: {
     sprite: 'thymus',
     sound: 'dna',
-    apply: (st, p) => { p.had = st.thymus; st.addThymus(); },
-    text: (p, st) => (p.had >= st.thymusMax
-      ? 'Timo Necrótico: tu cuerpo ya no rechaza nada; este se deshace sin efecto.'
-      : st.thymus >= st.thymusMax
-        ? `Timo Necrótico (${st.thymusMax}/${st.thymusMax}): tu sistema inmune calla para siempre. El rechazo ya no existe.`
-        : `Timo Necrótico (${st.thymus}/${st.thymusMax}): tu sistema inmune olvida pelear un poco más. El rechazo crece más despacio y tarda más en hacerte fallar.`),
+    apply: (st, p) => { p.ext = st.addThymus(); },
+    text: (p, st) => (p.ext
+      ? `Timos Necróticos reunidos: forman un EXTENSOR DE TOLERANCIA (carga ${st.load}/${st.capacity}). Tu rechazo sube ${rate(p.ext)}. Para el siguiente: ${st.thymusNeed}.`
+      : `Timo Necrótico ${st.thymus}/${st.thymusNeed}: al reunirlos formarán un extensor de tolerancia.`),
   },
   // Coágulo de plasma: no cura al cogerlo; se guarda y se usa cuando quieras (Genoma),
   // como la Perla y la Célula Madre. Lo que cura al momento es otra cosa (Tejido sano).

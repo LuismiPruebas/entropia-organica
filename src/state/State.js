@@ -59,7 +59,10 @@ const HARMONY_RELIEF = 0.03;   // lo que resta cada sinergia activa
 // Carga genética: lo que tu cuerpo aguanta sin que el rechazo se dispare. Cada
 // extensor la amplía. Ser el mutante perfecto exige muchos extensores.
 export const CAPACITY_BASE = 8;
-export const CAPACITY_PER_EXTENDER = 1;
+export const CAPACITY_PER_EXTENDER = 2;
+// Cuánto aprieta la carga: el rechazo se multiplica por (CAPACITY_BASE / capacidad)^PRESSURE,
+// así cada extensor se nota siempre (con 2 extensores, el rechazo sube casi la mitad).
+const PRESSURE = 1.5;
 // Extensores del útero: cada vez más caros (biomasa). Los Timos Necróticos dan uno.
 export const EXTENDER_PRICES = [30, 45, 65, 90, 120, 155, 195, 240, 290, 345, 405, 470, 540, 615];
 // Armas del cañón, en orden de su línea.
@@ -71,28 +74,15 @@ export const BLADE = {
   controls: 'El antebrazo es una hoja de placas. Clic / R1: combo de tajos (Dermis II: dos; Dermis III: tres avanzando, el último pesado). [R] / R2 vuelve al cañón.',
 };
 const REJECTION_CRITICAL = 100;
-// Rechazo gradual: por debajo de failFrom (40 %, más con los timos) no pasa nada; desde ahí las
-// mutaciones fallan cada vez más (hasta REJECTION_FAIL_MAX al 100 %); al 100 % además
-// el cuerpo se daña. Tramos de aviso (mensajes y señales en el cuerpo): 40, 70, 100.
-export const REJECTION_FAIL_FROM = 40; // sin timos (ver countThymus)
+// Rechazo gradual: hasta cerca del 100 % no castiga. Al 70 % el cuerpo avisa (se inflama,
+// sin efecto); desde el 85 % las mutaciones fallan cada vez más (hasta REJECTION_FAIL_MAX al
+// 100 %) y al 100 % además el cuerpo se daña. Tramos de aviso: 70, 85, 100.
+export const REJECTION_FAIL_FROM = 85;
 const REJECTION_FAIL_MAX = 0.35;
-// Timos Necróticos: tu sistema inmune olvida pelear. Cada uno es un paso permanente de
-// tolerancia y los pasos se reparten según cuántos haya en el mundo (mapa, sacos y lo
-// que sueltan los jefes): pongas los que pongas, el rechazo se frena poco a poco hasta
-// un 70 % y los fallos se retrasan hasta 28 puntos con el penúltimo; el último lo anula
-// por completo (ni sube, ni falla, ni daña).
-const THYMUS_RATE_CUT = 0.7;   // cuánto se frena el rechazo con el penúltimo timo
-const THYMUS_FAIL_DELAY = 28;  // cuántos puntos se retrasan los fallos con el penúltimo
-export function countThymus() {
-  let n = 0;
-  for (const r of Object.values(LEVELS)) {
-    for (const row of r.grid) for (const c of row) if (c === 'g') n++;
-    for (const s of r.sacs ?? []) if (s.item === 'g') n++;
-  }
-  for (const e of Object.values(ENEMIES)) n += (e.drop?.items ?? []).filter((k) => k === 'thymus').length;
-  return Math.max(1, n);
-}
-export const REJECTION_TIERS = [40, 70, 100];
+// Timos Necróticos: se juntan como los fragmentos. Al reunir los que pide el siguiente
+// (3, luego 4, 5...) forman un extensor de tolerancia.
+export const THYMUS_FIRST = 3;
+export const REJECTION_TIERS = [70, 85, 100];
 // Supresor del útero: resta rechazo de golpe y lo frena un buen rato (no sube).
 export const SUPPRESS_CUT = 35;
 export const SUPPRESS_TIME = 120; // segundos
@@ -115,8 +105,8 @@ export class GameState {
     this.infection = 0;          // segundos restantes del estado alterado 'infección'
     this.light = 100;
     this.rejection = 0;
-    this.thymus = 0;             // Timos Necróticos asimilados
-    this.thymusMax = countThymus(); // cuántos hay en el mundo: el último anula el rechazo
+    this.thymus = 0;             // Timos Necróticos reunidos hacia el siguiente extensor
+    this.thymusExt = 0;          // extensores que ya formaron los timos (sube lo que piden)
     this.extenders = 0;          // extensores de tolerancia (amplían la carga genética)
     this.extendersBought = 0;    // los comprados en el útero (fijan el precio del siguiente)
     this.weapon = null;          // arma del cañón elegida (WEAPONS); null = culata
@@ -191,19 +181,17 @@ export class GameState {
   get discord() { return this.clashes.reduce((n, c) => n + c.k, 0); }
   // Ritmo al que tu cuerpo rechaza el tejido ajeno: crece con la carga, se dispara
   // por encima de tu tolerancia y con los órganos que se estorban; las sinergias lo calman.
-  get rejectionPerSecond() {
+  get rejectionPerSecond() { return this.rejectionRate(); }
+  // El ritmo con extensores de más (para enseñar cuánto bajaría con otro).
+  rejectionRate(extra = 0) {
     if (!this.mutations.size) return 0;
-    const r = REJECTION_GROWTH * this.load + OVERLOAD_GROWTH * this.overload + DISCORD_GROWTH * this.discord - HARMONY_RELIEF * this.synergies.length;
-    return Math.max(0.01, r) * this.tolerance;
+    const cap = this.capacity + CAPACITY_PER_EXTENDER * extra, over = Math.max(0, this.load - cap);
+    const press = (CAPACITY_BASE / cap) ** PRESSURE;
+    const r = (REJECTION_GROWTH * this.load + DISCORD_GROWTH * this.discord) * press + OVERLOAD_GROWTH * over - HARMONY_RELIEF * this.synergies.length;
+    return Math.max(0.01, r);
   }
-  // Pasos de tolerancia de los timos: cuánto se frena el rechazo y desde dónde falla.
-  // Fracción del camino recorrido hasta el penúltimo timo (0 sin timos, 1 con el penúltimo).
-  get thymusK() { return Math.min(1, this.thymus / Math.max(1, this.thymusMax - 1)); }
-  get tolerance() { return this.immuneRejection ? 0 : 1 - THYMUS_RATE_CUT * this.thymusK; }
-  get failFrom() { return Math.round(REJECTION_FAIL_FROM + THYMUS_FAIL_DELAY * this.thymusK); }
-  get immuneRejection() { return this.thymus >= this.thymusMax; }
-  // ¿Se puede terminar el juego? Todas las líneas a nivel I (lo exige el Corazón).
-  get complete() { return Object.keys(LINES).every((l) => this.lineLevel(l) > 0); }
+  get failFrom() { return REJECTION_FAIL_FROM; }
+  get immuneRejection() { return false; }
   get critical() { return !this.immuneRejection && this.rejection >= REJECTION_CRITICAL; }
 
   has(ability) {
@@ -235,7 +223,7 @@ export class GameState {
   }
 
   // Tramo de rechazo (0 sano, 1 inflamado, 2 rechazo, 3 crisis), para los avisos.
-  get rejectionTier() { return this.immuneRejection ? 0 : [this.failFrom, 70, 100].filter((t) => this.rejection >= t).length; }
+  get rejectionTier() { return REJECTION_TIERS.filter((t) => this.rejection >= t).length; }
 
   // Con el rechazo alto, las mutaciones fallan a veces (cada vez más).
   abilityWorks(ability) {
@@ -266,13 +254,22 @@ export class GameState {
 
   heal(n) { this.integrity = Math.min(this.maxIntegrity, this.integrity + n); }
 
-  // Un Timo Necrótico: un paso más de tolerancia (el tercero anula el rechazo).
-  // Devuelve cuántos llevas. Con los tres, los que encuentres de más no hacen nada.
+  // Un Timo Necrótico: se suma a los reunidos; al llegar a los que pide el siguiente
+  // extensor, lo forma. Devuelve el extensor formado ({ before, after } por minuto) o null.
+  get thymusNeed() { return THYMUS_FIRST + this.thymusExt; }
   addThymus() {
-    if (this.thymus >= this.thymusMax) return this.thymus;
     this.thymus++;
-    if (this.immuneRejection) this.rejection = 0;
-    return this.thymus;
+    if (this.thymus < this.thymusNeed) return null;
+    this.thymus -= this.thymusNeed;
+    this.thymusExt++;
+    return this.gainExtender();
+  }
+
+  // Un extensor más: +carga tolerada. Devuelve el rechazo por minuto antes y después.
+  gainExtender() {
+    const before = this.rejectionPerSecond * 60;
+    this.extenders++;
+    return { before, after: this.rejectionPerSecond * 60 };
   }
 
   // Coge un consumible: se guarda y, si aún no tiene cavidad, ocupa la primera libre.
@@ -441,8 +438,7 @@ export class GameState {
   buyExtender() {
     if (!this.pay(this.extenderPrice)) return false;
     this.extendersBought++;
-    this.extenders++;
-    return true;
+    return this.gainExtender();
   }
 
   // Lo que costaría asimilar una mutación ahora: el cuerpo saturado rechaza más.

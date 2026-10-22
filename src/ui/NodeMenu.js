@@ -1,4 +1,5 @@
 import { MUTATIONS, LINES, ROMAN, linesOf } from '../data/mutations.js';
+import { rate } from '../entities/Pickup.js';
 import { NODE_REGEN, CAPACITY_PER_EXTENDER, ITEMS, CELL_PRICE, NODE_CELLS, CELL_STORE_FROM, CELL_AUTO_BELOW, SUPPRESS_CUT, SUPPRESS_TIME } from '../state/State.js';
 import { LEVELS } from '../data/levels.js';
 import { dnaTag } from '../entities/Pickup.js';
@@ -49,7 +50,7 @@ const CATS = {
   heal: { c: '#ff5a6a', info: 'El útero guarda pocas curas; se regeneran con el tiempo.' },
   cell: { c: '#ffd23f', info: `Al ${CELL_STORE_FROM} % o más, además se guarda; las guardadas se gastan solas bajo el ${CELL_AUTO_BELOW} %.` },
   suppressor: { c: '#c07bff', info: 'Calma tus injertos un rato. Con el rechazo alto las mutaciones fallan; al 100 % te dañan.' },
-  extender: { c: '#b48cff', info: 'Llevas más mutaciones sin que el rechazo se dispare. Cada uno cuesta más.' },
+  extender: { c: '#b48cff', info: 'Tu cuerpo tolera más carga: el rechazo sube más despacio. Cada uno cuesta más (también se forman reuniendo Timos Necróticos).' },
   trade: { c: '#c8b8a0', info: 'El útero digiere un recurso y te devuelve el otro.' },
   shield: { c: '#4ff0ff', info: 'Se guarda; se aloja en una cavidad y la usas cuando quieras.' },
   regen: { c: '#7dff9a', info: 'Se guarda; se aloja en una cavidad y la usas cuando quieras.' },
@@ -245,10 +246,10 @@ export class NodeMenu {
         tab: 'cuidar',
         icon: ['extender'],
         label: 'Extensor de tolerancia',
-        effect: `<span class="c-rej">+${CAPACITY_PER_EXTENDER} carga genética</span> <span class="dim">(ahora ${st.load}/${st.capacity})</span>`,
+        effect: `<span class="c-rej">+${CAPACITY_PER_EXTENDER} carga genética</span> <span class="dim">(ahora ${st.load}/${st.capacity}${st.mutations.size ? ` · rechazo ${rate({ before: st.rejectionRate() * 60, after: st.rejectionRate(1) * 60 })}` : ''})</span>`,
         cost: `${price(st.extenderPrice)}${why(!st.canPay(st.extenderPrice) && 'no te alcanza')}`,
         enabled: st.canPay(st.extenderPrice),
-        run: () => { if (st.buyExtender()) { g.audio.play('mutate'); g.say('El útero te injerta un extensor: tu cuerpo tolera más carga genética.', 3); } },
+        run: () => { const ext = st.buyExtender(); if (ext) { g.audio.play('mutate'); g.say(`El útero te injerta un extensor: carga ${st.load}/${st.capacity}${st.mutations.size ? `; tu rechazo sube ${rate(ext)}` : ''}.`, 4); } },
       },
       node.trade && {
         tab: 'tienda',
