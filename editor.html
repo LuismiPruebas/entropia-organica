@@ -93,7 +93,8 @@
     <label style="margin:0"><input id="ropen" type="checkbox" checked title="Alcance: membranas abiertas"> membranas</label>
     <button id="reach-clear" title="Quitar el alcance">Quitar</button>
     <button id="validate">Validar</button>
-    <button id="test" title="Abre el juego en esta sala con los cambios sin guardar (punto de prueba: Alt+clic)">Probar ▶</button>
+    <button id="test-spawn" title="Marca dónde aparece el personaje al probar esta sala (también Alt+clic). Se recuerda por sala.">📍 Inicio</button>
+    <button id="test" title="Abre el juego en esta sala con los cambios sin guardar, en su punto de inicio">Probar ▶</button>
     <button id="pickfile" title="Elegir el archivo del mapa (src/data/worlds/…); el editor lo recuerda por mapa">Archivo…</button>
     <button id="save" class="primary" title="Ctrl+S">Guardar</button>
   </header>
@@ -130,7 +131,7 @@
       <b>Pintar:</b> clic izquierdo pinta el tile elegido. <b>Borrar:</b> la Goma (X) deja aire y quita las marcas de objeto oculto; también el clic derecho con cualquier herramienta de pintar.<br>
       <b>Moverse:</b> rueda = zoom · botón central o Espacio + arrastrar = desplazar.<br>
       <b>Elementos:</b> E coloca el elegido · V selecciona y arrastra · Supr o clic derecho borra.<br>
-      <b>Pruebas:</b> Alt+clic marca el punto de prueba (Probar ▶ empieza ahí) · Mayús+clic, origen del alcance.<br>
+      <b>Pruebas:</b> 📍 Inicio (o Alt+clic) marca dónde apareces al probar la sala (se recuerda por sala; sin marcar, por su primer punto de conexión) · Mayús+clic, origen del alcance.<br>
       <b>Celdas del mapa:</b> las líneas azules marcan celdas de 16x14 tiles: los huecos de salida de salas vecinas deben coincidir.<br>
       Ctrl+Z / Ctrl+Y deshacer y rehacer · Ctrl+S guardar.
     </p>

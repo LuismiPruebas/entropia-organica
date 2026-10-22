@@ -40,6 +40,8 @@ const S = {
   undo: {}, redo: {},
   reach: null, reachStart: null, reachDouble: true, reachOpen: true,
   testSpawn: null,
+  testSpawns: (() => { try { return JSON.parse(localStorage.getItem('linfa.editor.spawns') ?? '{}'); } catch { return {}; } })(),
+  pickSpawn: false,
   fileHandle: null,
   gameCanvas: null, gameCanvasFor: null,
 };
@@ -899,6 +901,8 @@ cv.addEventListener('mousedown', (e) => {
   if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   if (!S.id) return;
   const [x, y] = toTile(e);
+  // Marcar el inicio de la prueba (botón 📍 Inicio): el siguiente clic lo fija.
+  if (S.pickSpawn && e.button === 0) { S.pickSpawn = false; $('test-spawn').classList.remove('on'); setTestSpawn(x, y); return; }
   if (S.pickArrive && e.button === 0) {
     const o = S.pickArrive, r = room();
     S.pickArrive = null;
@@ -948,7 +952,7 @@ cv.addEventListener('mousedown', (e) => {
     S.sel = null; S.area = { x0: x, y0: y, x1: x, y1: y }; S.drag = { areaSel: true, from: [x, y] }; draw(); renderInspector(); return;
   }
   // Alt+clic: punto de prueba · Mayús+clic: origen del alcance.
-  if (e.altKey) { S.testSpawn = [x, y]; draw(); return; }
+  if (e.altKey) { setTestSpawn(x, y); return; }
   if (e.shiftKey && S.tool !== 'rect') { S.reachStart = [x, y]; computeReach(); return; }
   const erase = e.button === 2;
   if (S.tool === 'pick') { S.tile = getTile(x, y); renderPalette(); setTool('brush'); return; }
@@ -2092,7 +2096,7 @@ $('map-ghost').onchange = drawMap;
 
 function openRoom(id, keep = null) {
   S.id = id;
-  S.sel = null; S.reach = null; S.reachStart = null; S.testSpawn = null;
+  S.sel = null; S.reach = null; S.reachStart = null; S.testSpawn = S.testSpawns[id] ?? null;
   S.pan = keep?.pan ?? { x: 20, y: 20 };
   const c = cv.getBoundingClientRect();
   S.zoom = keep?.zoom ?? Math.max(4, Math.min(28, Math.floor(Math.min((c.width - 40) / W(), (c.height - 40) / H()))));
@@ -2189,11 +2193,32 @@ function test() {
   const changed = {};
   for (const id of S.dirty) if (S.rooms[id]) changed[id] = S.rooms[id];
   localStorage.setItem('linfa.editor', JSON.stringify({ rooms: S.rooms, start: S.start }));
-  const sp = S.testSpawn ?? (S.start.room === S.id ? S.start.spawn : null) ?? findFloor();
+  const sp = S.testSpawn ?? (S.start.room === S.id ? S.start.spawn : null) ?? linkSpawn() ?? findFloor();
   open(`index.html?editor&room=${encodeURIComponent(S.id)}&spawn=${sp.join(',')}&steps=2`, 'linfa-prueba');
 }
+// Punto de prueba de la sala: se guarda por sala (y entre sesiones). Avisa si ahí no cabe.
+function setTestSpawn(x, y) {
+  if (x < 0 || y < 1 || x >= W() || y >= H()) { $('msg').textContent = 'Fuera de la sala: no se ha marcado.'; return; }
+  S.testSpawn = [x, y];
+  S.testSpawns[S.id] = [x, y];
+  try { localStorage.setItem('linfa.editor.spawns', JSON.stringify(S.testSpawns)); } catch { /* sin almacenamiento */ }
+  const solid = (c) => SOLID.has(c) || TILE_BY_CHAR[c]?.slope;
+  const ok = !solid(getTile(x, y)) && !solid(getTile(x, y - 1));
+  $('msg').textContent = ok ? `Probar ▶ empezará en [${x},${y}].` : `Inicio en [${x},${y}], pero ahí hay pared: el personaje no cabe (2 casillas de alto).`;
+  draw();
+}
+// Sin punto marcado: se entra por el primer punto de conexión (donde llegarías jugando).
+function linkSpawn() {
+  for (const l of room().links ?? []) {
+    const [x, y] = l.arrive ?? [l.x + Math.floor((l.w ?? 1) / 2), l.y + (l.h ?? 2) - 1];
+    if (x >= 0 && y >= 1 && x < W() && y < H() && !SOLID.has(getTile(x, y)) && !SOLID.has(getTile(x, y - 1))) return [x, y];
+  }
+  return null;
+}
+// Último recurso: el primer hueco con suelo, buscando de abajo arriba (lejos de techos y
+// rendijas de arriba, que suelen ser huecos dentro del muro).
 function findFloor() {
-  for (let y = 1; y < H() - 1; y++) for (let x = 1; x < W() - 1; x++) if (!SOLID.has(getTile(x, y)) && !SOLID.has(getTile(x, y - 1)) && SOLID.has(getTile(x, y + 1))) return [x, y];
+  for (let y = H() - 2; y >= 2; y--) for (let x = 1; x < W() - 1; x++) if (!SOLID.has(getTile(x, y)) && !SOLID.has(getTile(x, y - 1)) && SOLID.has(getTile(x, y + 1))) return [x, y];
   return [1, 1];
 }
 // Al abrir el editor se apunta su código y cómo estaba cada sala en el archivo. Al guardar
@@ -2352,6 +2377,11 @@ $('pickfile').onclick = async () => {
 };
 loadHandle().then((h) => { if (h) { S.fileHandle = h; $('msg').textContent = `Archivo recordado: ${h.name}. Guardar escribe ahí directamente.`; } });
 $('test').onclick = test;
+$('test-spawn').onclick = () => {
+  S.pickSpawn = !S.pickSpawn;
+  $('test-spawn').classList.toggle('on', S.pickSpawn);
+  $('msg').textContent = S.pickSpawn ? 'Haz clic en la sala donde quieras aparecer al probar.' : '';
+};
 $('validate').onclick = validate;
 $('newroom').onclick = newRoom;
 $('delroom').onclick = deleteRoom;
