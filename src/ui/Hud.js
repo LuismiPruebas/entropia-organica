@@ -10,6 +10,9 @@ export const caps = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCas
 // Minitutorial del HUD: la primera vez que cambia cada valor, su vejiga se hincha y late
 // unos segundos (con un anillo) y al lado sale qué es. De uno en uno, en cola.
 //   sac: la vejiga que se señala · test(antes, ahora): ¿ha cambiado como para explicarlo?
+// Cómo se usa la cavidad activa (lo escribe el juego según teclado, mando o táctil).
+let cavHow = () => '';
+export const setCavityHelp = (fn) => { cavHow = fn; };
 const HUD_TUTOR = [
   { id: 'int', sac: 'int', color: '#ff5a6a', test: (a, b) => b.int < a.int,
     text: '<b>INTEGRIDAD</b> · la vejiga de sangre: <b>tu vida</b>. Si se vacía, mueres. Se recupera en el útero o con coágulos de plasma.' },
@@ -26,11 +29,11 @@ const HUD_TUTOR = [
   { id: 'scrap', slot: 'scrap', color: '#e0d4b8', test: (a, b) => b.scrap > a.scrap,
     text: '<b>HUESO</b> · se cuenta, no tiene límite: <b>la munición del Cañón de Astillas</b> y la moneda de algunos úteros. La sueltan los nódulos óseos.' },
   { id: 'it:plasma', slot: 'plasma', color: '#ff5a6a', test: (a, b) => b.plasma > a.plasma,
-    text: '<b>COÁGULO DE PLASMA</b> · guardado en tu <b>bolsillo</b> (los iconos bajo el hueso). Úsalo cuando quieras con <b>1</b> (mando: <b>R3</b>): +30 de integridad al momento.' },
+    text: () => `<b>COÁGULO DE PLASMA</b> · se aloja en una <b>cavidad</b> (los huecos bajo el hueso). ${cavHow()}: +30 de integridad al momento.` },
   { id: 'it:shield', slot: 'shield', color: '#4ff0ff', test: (a, b) => b.shield > a.shield,
-    text: '<b>PERLA DE NÁCAR</b> · guardada en tu <b>bolsillo</b>. Úsala con <b>2</b> (mando: mantén <b>R3</b> para elegirla y tócalo): 10 s en los que nada te hiere.' },
+    text: () => `<b>PERLA DE NÁCAR</b> · se aloja en una <b>cavidad</b>. ${cavHow()}: 10 s en los que nada te hiere.` },
   { id: 'it:regen', slot: 'regen', color: '#7dff9a', test: (a, b) => b.regen > a.regen,
-    text: '<b>CÉLULA MADRE</b> · guardada en tu <b>bolsillo</b>. Úsala con <b>3</b> (mando: mantén <b>R3</b> para elegirla y tócalo): regeneras integridad durante 10 s.' },
+    text: () => `<b>CÉLULA MADRE</b> · se aloja en una <b>cavidad</b>. ${cavHow()}: regeneras integridad durante 10 s.` },
   { id: 'inf', sac: 'int', color: '#9ad050', test: (a, b) => b.inf && !a.inf,
     text: '<b>INFECCIÓN</b> · tu sangre se vuelve verde: <b>te pudre poco a poco</b> y te da arcadas. La cura el útero (Sanar tejido).' },
 ];
@@ -167,8 +170,8 @@ export class Hud {
     this.gl ??= $('organs-glow').getContext('2d');
     this.placenta ??= new Placenta(34, 20, 26, 17);
     const g = this.g, gl = this.gl;
-    g.clearRect(0, 0, 110, 40);
-    gl.clearRect(0, 0, 110, 40);
+    g.clearRect(0, 0, 150, 40);
+    gl.clearRect(0, 0, 150, 40);
     const lux = '#' + eye.map((c) => Math.round(Math.min(1, c) * 255).toString(16).padStart(2, '0')).join('');
     const hp = st.integrity / 100, infected = st.infection > 0, bio = st.biomass / st.biomassMax;
     // Minitutorial: ¿ha cambiado algo por primera vez? A la cola; luego, de uno en uno.
@@ -185,10 +188,10 @@ export class Hud {
     if (!this.tut && this.tutQueue.length && !this.dlg) {
       this.tut = { ...this.tutQueue.shift(), age: 0 };
       const tip = $('hud-tip');
-      tip.innerHTML = `${this.tut.text}<span class="tip-ok">${this.keyLabel ?? 'E'} ✕</span>`;
+      tip.innerHTML = `${typeof this.tut.text === 'function' ? this.tut.text() : this.tut.text}<span class="tip-ok">${this.keyLabel ?? 'E'} ✕</span>`;
       tip.onclick = () => this.closeTut();
       tip.style.setProperty('--c', this.tut.color);
-      tip.style.top = this.tut.slot ? '38px' : '';   // bajo la fila del bolsillo si señala un icono
+      tip.style.top = this.tut.slot ? '38px' : '';   // bajo las cavidades si señala un icono
       tip.hidden = false;
     }
     // La vejiga señalada se hincha (entra rápido, late y vuelve a su tamaño al final).
@@ -231,23 +234,36 @@ export class Hud {
     drawCellIcon(g, cx, 13, t, st.cells > 0);
     drawNumber(g, cx + 6, 15, st.cells, st.cells === 0 ? '#6a6050' : '#ffd23f');
     mark('cells', cx, 12, 7 + String(st.cells).length * 4, 9, '#ffd23f');
-    // ---- Bolsillo: los consumibles que llevas (solo los que tienes) y, a continuación,
-    // los efectos que te están durando (icono que parpadea y barra del tiempo que queda).
-    const POCKET = [['plasma', '#ff5a6a'], ['shield', '#4ff0ff'], ['regen', '#7dff9a']];
+    // ---- Cavidades: los huecos de carne con el consumible que llevas a mano en cada una
+    // (icono y cuántos quedan). La activa tiene el borde vivo; debajo, la barra del efecto
+    // que esté durando. Luego, los efectos activos que no van en cavidad.
+    const COLOR = { plasma: '#ff5a6a', shield: '#4ff0ff', regen: '#7dff9a' };
     let bx = 64;
     const by = 25;
-    for (const [k, c] of POCKET) {
-      const n = st.items[k] ?? 0, on = (st.timers[k] ?? 0) > 0;
-      if (!n && !on) continue;
-      drawItemIcon(g, k, bx, by, t, on);
-      if (on) { const left = st.timers[k] / (ITEMS[k].time || 1); g.fillStyle = K; g.fillRect(bx, by + 7, 6, 2); g.fillStyle = c; g.fillRect(bx, by + 7, Math.ceil(6 * left), 1); }
-      drawNumber(g, bx + 8, by + 1, n, n ? '#e8dcc8' : '#6a6050');
-      mark(k, bx, by, 8 + String(n).length * 4, 7, c);
-      // Cómo se usa: con teclado, su tecla (1 / 2 / 3) debajo; con mando, un marco en el
-      // elegido (R3 lo usa, mantener R3 cambia).
-      if (this.padPocket) { if (st.pocketSel === k) { g.strokeStyle = c; g.lineWidth = 1; g.strokeRect(bx - 1.5, by - 1.5, 9 + String(n).length * 4, 10); } }
-      else drawNumber(g, bx + 1, by + 9, { plasma: 1, shield: 2, regen: 3 }[k], '#8a7a6a');
-      bx += 8 + String(n).length * 4 + 3;
+    st.cavities.forEach((k, i) => {
+      const n = k ? st.items[k] ?? 0 : 0, on = k && (st.timers[k] ?? 0) > 0, act = i === st.cavity;
+      const w = 9 + (k ? String(n).length * 4 : 0), c = k ? COLOR[k] : '#c88a98';
+      // El hueco: carne oscura con el borde algo más claro (vivo si es la activa).
+      g.fillStyle = '#1a0a10'; g.beginPath(); g.roundRect(bx, by - 1, w, 9, 3); g.fill();
+      g.strokeStyle = act ? c : '#4a1a26'; g.lineWidth = 1; g.globalAlpha = act ? 0.75 + 0.25 * Math.sin(t * 5) : 1;
+      g.beginPath(); g.roundRect(bx + 0.5, by - 0.5, w - 1, 8, 3); g.stroke(); g.globalAlpha = 1;
+      if (act && this.choosing) { gl.fillStyle = c; gl.globalAlpha = 0.6; gl.fillRect(bx - 1, by - 2, w + 2, 11); gl.globalAlpha = 1; }
+      if (k) {
+        g.globalAlpha = n || on ? 1 : 0.35;
+        drawItemIcon(g, k, bx + 1.5, by + 0.5, t, on);
+        g.globalAlpha = 1;
+        drawNumber(g, bx + 9, by + 1, n, n ? '#e8dcc8' : '#6a6050');
+        if (on) { const left = st.timers[k] / (ITEMS[k].time || 1); g.fillStyle = K; g.fillRect(bx + 1, by + 9, w - 2, 2); g.fillStyle = c; g.fillRect(bx + 1, by + 9, Math.ceil((w - 2) * left), 1); }
+        mark(k, bx, by - 1, w, 9, c);
+      }
+      bx += w + 2;
+    });
+    // Efectos activos de consumibles que no están en ninguna cavidad.
+    for (const k of Object.keys(COLOR)) {
+      if (st.cavities.includes(k) || !((st.timers[k] ?? 0) > 0)) continue;
+      drawItemIcon(g, k, bx, by, t, true);
+      g.fillStyle = K; g.fillRect(bx, by + 7, 6, 2); g.fillStyle = COLOR[k]; g.fillRect(bx, by + 7, Math.ceil(6 * st.timers[k] / (ITEMS[k].time || 1)), 1);
+      bx += 9;
     }
     if ((st.timers.immune ?? 0) > 0) {
       drawItemIcon(g, 'immune', bx, by, t, true);

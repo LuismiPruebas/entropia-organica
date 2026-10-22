@@ -23,12 +23,12 @@ export const PICKUPS = {
   // Consumibles raros: se guardan y se usan cuando quieras.
   shield: {
     sprite: 'pearl', sound: 'dna',
-    apply: (st) => { st.items.shield++; },
+    apply: (st) => st.gainItem('shield'),
     text: (p, st) => `Perla de Nácar (${st.items.shield}): úsala ${p.game.itemKey('shield')} y nada te herirá durante ${ITEMS.shield.time} s.`,
   },
   regen: {
     sprite: 'stemcell', sound: 'dna',
-    apply: (st) => { st.items.regen++; },
+    apply: (st) => st.gainItem('regen'),
     text: (p, st) => `Célula Madre (${st.items.regen}): úsala ${p.game.itemKey('regen')} y tu tejido se regenerará durante ${ITEMS.regen.time} s.`,
   },
   scrap: { sprite: 'scrap', apply: (st) => { st.scrap += SCRAP_PER_PIECE; }, sound: 'pickup', text: `Esquirlas de hueso: +${SCRAP_PER_PIECE}` },
@@ -59,7 +59,7 @@ export const PICKUPS = {
   plasma: {
     sprite: 'plasma',
     sound: 'dna',
-    apply: (st) => { st.items.plasma++; },
+    apply: (st) => st.gainItem('plasma'),
     text: (p, st) => `Coágulo de plasma (${st.items.plasma}): úsalo ${p.game.itemKey('plasma')} y recuperas ${PLASMA.heal} de integridad.`,
   },
   tissue: {

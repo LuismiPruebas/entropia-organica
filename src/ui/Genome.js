@@ -113,7 +113,7 @@ const VITALS = [
   ['lux', 'LUZ', '#ffd23f', 'LUZ'],
   ['rej', 'RCH', '#c07bff', 'RECHAZO'],
 ];
-const focusKey = (n) => (n.dataset.vital ? `vit:${n.dataset.vital}` : n.dataset.item ? `item:${n.dataset.item}` : n.dataset.id ?? `mem:${n.dataset.mem}`);
+const focusKey = (n) => (n.dataset.vital ? `vit:${n.dataset.vital}` : n.dataset.cav ? `cav:${n.dataset.cav}` : n.dataset.item ? `item:${n.dataset.item}` : n.dataset.id ?? `mem:${n.dataset.mem}`);
 
 export class Genome {
   constructor(game) {
@@ -158,6 +158,7 @@ export class Genome {
             <canvas id="g-vitals" width="104" height="46"></canvas>
             ${VITALS.map(([id, label, color], i) => `<div class="g-vital" data-vital="${id}" style="left:${2 + i * 20}px;--c:${color}"><span>${label}</span></div>`).join('')}
           </div>
+          <div class="g-cavs"></div>
           <div class="g-items">${Object.keys(ITEMS).map((k) => `<div class="g-item" data-item="${k}"><canvas width="8" height="8"></canvas><span></span></div>`).join('')}</div>
           <div class="g-vinfo" id="g-vinfo"></div>
         </aside>
@@ -192,29 +193,38 @@ export class Genome {
     this.info = this.el.querySelector('#g-info');
     this.vinfo = this.el.querySelector('#g-vinfo');
     this.el.querySelector('.g-body').addEventListener('click', (e) => {
+      const cav = e.target.closest('.g-cav');
+      if (cav) return this.#pickCavity(Number(cav.dataset.cav));
       const it = e.target.closest('.g-item');
-      if (it) return this.#useItem(it.dataset.item);
+      if (it) return this.#placeItem(it.dataset.item);
       const n = e.target.closest('.g-node');
       if (n) this.#pick(n.dataset.id);
     });
     this.el.querySelector('.g-body').addEventListener('mouseover', (e) => {
-      const n = e.target.closest('[data-id], [data-mem], [data-vital], [data-item]');
+      const n = e.target.closest('[data-id], [data-mem], [data-vital], [data-cav], [data-item]');
       if (n) this.#setFocus(focusKey(n));
     });
     // Flechas: recorre las constantes, el árbol y las memorias; la ficha sigue a la selección.
-    this.nav = new MenuNav(this.el.querySelector('.g-body'), '.g-vital, .g-item, .g-node, .g-memory', {
+    this.nav = new MenuNav(this.el.querySelector('.g-body'), '.g-vital, .g-cav, .g-item, .g-node, .g-memory', {
       isOpen: () => this.open,
       onSelect: (n) => this.#setFocus(focusKey(n)),
-      onPick: (n) => (n.dataset.item ? this.#useItem(n.dataset.item) : this.#pick(n.dataset.id)),
+      onPick: (n) => (n.dataset.cav ? this.#pickCavity(Number(n.dataset.cav)) : n.dataset.item ? this.#placeItem(n.dataset.item) : this.#pick(n.dataset.id)),
     });
   }
 
-  // Consumible: se gasta y el Genoma se cierra para que veas el efecto arrancar.
-  #useItem(kind) {
+  // Cavidades: Intro sobre una la marca (es la que se usa en juego y donde se acomoda);
+  // Intro sobre un consumible lo acomoda en la marcada (o lo saca si ya estaba ahí).
+  #pickCavity(i) {
+    this.game.state.cavity = i;
+    this.game.audio.play('click');
+    this.#render();
+  }
+
+  #placeItem(kind) {
     const st = this.game.state;
-    if (!st.items[kind] || st.timers[kind] > 0) { this.game.audio.play('empty'); return; }
-    this.close();
-    this.game.useItem(kind);
+    st.setCavity(st.cavity, kind);
+    this.game.audio.play(st.cavities[st.cavity] === kind ? 'womb' : 'click');
+    this.#render();
   }
 
   // Intro / clic sobre un arma del cañón ya asimilada: pasa a ser la que disparas.
@@ -265,6 +275,7 @@ export class Genome {
     for (const n of this.el.querySelectorAll('.g-node')) n.classList.toggle('focus', n.dataset.id === id);
     for (const n of this.el.querySelectorAll('.g-vital')) n.classList.toggle('focus', `vit:${n.dataset.vital}` === id);
     for (const n of this.el.querySelectorAll('.g-item')) n.classList.toggle('focus', `item:${n.dataset.item}` === id);
+    for (const n of this.el.querySelectorAll('.g-cav')) n.classList.toggle('focus', `cav:${n.dataset.cav}` === id);
   }
 
   #render() {
@@ -305,11 +316,26 @@ export class Genome {
       ...st.clashes.map((p) => `<span class="g-pair clash" title="${p.text}">✕ ${p.name}${p.k > 1 ? ' x' + p.k : ''}</span>`),
     ].join('');
     this.el.querySelector('#g-mem').innerHTML = st.lore.map((_, i) => `<i class="g-memory" data-mem="${i}"></i>`).join('');
+    // Cavidades: qué lleva cada una; la marcada, resaltada. (Se rehacen si cambia cuántas hay.)
+    const cavs = this.el.querySelector('.g-cavs');
+    if (cavs.children.length !== st.cavities.length + 1) {
+      cavs.innerHTML = '<span class="g-cavlbl">CAVIDADES</span>' + st.cavities.map((_, i) => `<div class="g-cav" data-cav="${i}"><canvas width="8" height="8"></canvas><span></span></div>`).join('');
+    }
+    for (const n of cavs.querySelectorAll('.g-cav')) {
+      const i = Number(n.dataset.cav), k = st.cavities[i];
+      n.classList.toggle('act', i === st.cavity);
+      n.classList.toggle('empty', !k);
+      const g = n.querySelector('canvas').getContext('2d');
+      g.clearRect(0, 0, 8, 8);
+      if (k) drawItemIcon(g, k, 1, 1, 0, false);
+      n.querySelector('span').textContent = k ? `x${st.items[k]}` : '—';
+    }
     // Consumibles: icono, cuántos llevas y si alguno está activo.
     for (const n of this.el.querySelectorAll('.g-item')) {
       const k = n.dataset.item, have = st.items[k], on = st.timers[k] > 0;
       n.classList.toggle('empty', !have && !on);
       n.classList.toggle('on', on);
+      n.classList.toggle('lodged', st.cavities.includes(k));
       const g = n.querySelector('canvas').getContext('2d');
       g.clearRect(0, 0, 8, 8);
       drawItemIcon(g, k, 1, 1, 0, false);
@@ -323,13 +349,23 @@ export class Genome {
     const st = this.game.state, vital = this.focus?.startsWith('vit:');
     this.#renderVital(vital ? this.focus.slice(4) : null);
     const f = vital ? null : this.focus; // con una vejiga señalada, a la derecha queda lo básico
+    if (f?.startsWith('cav:')) {
+      const i = Number(f.slice(4)), k = st.cavities[i];
+      this.info.innerHTML = `
+        <b class="i-name" style="color:#e07a98">CAVIDAD ${i + 1}${i === st.cavity ? ' <span class="i-amount">ACTIVA</span>' : ''}</b>
+        <p class="i-fx">${k ? `Lleva: ${ITEMS[k].name} (x${st.items[k]}).` : 'Vacía.'}</p>
+        <p class="i-dim">Un hueco del cuerpo donde llevas un consumible a mano: solo lo acomodado aquí se usa en pleno juego. Intro / clic: marcarla; luego elige un consumible para acomodarlo en ella.</p>
+        <p class="i-dim">En juego: ${this.game.cavityHelp()}.</p>`;
+      return;
+    }
     if (f?.startsWith('item:')) {
       const k = f.slice(5), it = ITEMS[k], have = st.items[k], left = st.timers[k];
       const fx = k === 'shield' ? `Nada te hiere durante ${it.time} s: ni golpes, ni ácido, ni infección.` : k === 'plasma' ? `Recuperas ${it.heal} de integridad al momento.` : `Regeneras ${REGEN_RATE} de integridad por segundo durante ${it.time} s.`;
       this.info.innerHTML = `
         <b class="i-name" style="color:${k === 'shield' ? '#4ff0ff' : k === 'plasma' ? '#ff5a6a' : '#7dff9a'}">${caps(it.name)} <span class="i-amount">x${have}</span></b>
         <p class="i-fx">▶ ${fx}</p>
-        <p class="i-dim">${left > 0 ? `Activa: le quedan ${Math.ceil(left)} s.` : have ? 'Intro / clic: usarla ahora (el Genoma se cierra).' : k === 'plasma' ? 'No llevas ninguno. Se encuentran por el organismo, y el útero los cuaja con tu biomasa.' : 'No llevas ninguna. Muy rara en las criaturas; un jefe siempre suelta una. El útero la cría por biomasa.'}</p>`;
+        <p class="i-dim">${st.cavities.includes(k) ? `En la cavidad ${st.cavities.indexOf(k) + 1}.` : 'Sin cavidad: no la puedes usar en juego.'} Intro / clic: ${st.cavities[st.cavity] === k ? `sacarla de la cavidad ${st.cavity + 1}` : `acomodarla en la cavidad ${st.cavity + 1} (la marcada)`}.</p>
+        <p class="i-dim">${left > 0 ? `Activa: le quedan ${Math.ceil(left)} s.` : have ? '' : k === 'plasma' ? 'No llevas ninguno. Se encuentran por el organismo, y el útero los cuaja con tu biomasa.' : 'No llevas ninguna. Muy rara en las criaturas; un jefe siempre suelta una. El útero la cría por biomasa.'}</p>`;
       return;
     }
     if (f?.startsWith('mem:')) {

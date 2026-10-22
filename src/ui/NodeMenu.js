@@ -51,9 +51,9 @@ const CATS = {
   suppressor: { c: '#c07bff', info: 'Calma tus injertos un rato. Con el rechazo alto las mutaciones fallan; al 100 % te dañan.' },
   extender: { c: '#b48cff', info: 'Llevas más mutaciones sin que el rechazo se dispare. Cada uno cuesta más.' },
   trade: { c: '#c8b8a0', info: 'El útero digiere un recurso y te devuelve el otro.' },
-  shield: { c: '#4ff0ff', info: 'Se guarda; úsala cuando quieras desde el bolsillo (teclas 1-3 · R3).' },
-  regen: { c: '#7dff9a', info: 'Se guarda; úsala cuando quieras desde el bolsillo (teclas 1-3 · R3).' },
-  plasma: { c: '#ff5a6a', info: 'Te lo llevas: úsalo cuando quieras desde el bolsillo (tecla 1 · R3) y recuperas integridad al momento.' },
+  shield: { c: '#4ff0ff', info: 'Se guarda; se aloja en una cavidad y la usas cuando quieras.' },
+  regen: { c: '#7dff9a', info: 'Se guarda; se aloja en una cavidad y la usas cuando quieras.' },
+  plasma: { c: '#ff5a6a', info: 'Te lo llevas: se aloja en una cavidad: úsalo cuando quieras y recuperas integridad al momento.' },
   travel: { c: '#d0a8ff', info: 'El nervio del organismo te lleva a otro útero que ya conoces.' },
 };
 const HINT = 'Señala una opción para saber qué hace.';

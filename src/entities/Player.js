@@ -347,7 +347,8 @@ export class Player {
     this.jumpBuf -= dt;
     this.coyote -= dt;
 
-    const dir = (input.down('KeyD', 'ArrowRight') ? 1 : 0) - (input.down('KeyA', 'ArrowLeft') ? 1 : 0);
+    // Eligiendo cavidad (R3 mantenido) la cruceta no mueve el cuerpo.
+    const dir = this.game.choosingCavity ? 0 : (input.down('KeyD', 'ArrowRight') ? 1 : 0) - (input.down('KeyA', 'ArrowLeft') ? 1 : 0);
 
     // Hacia dónde mira: las teclas de dirección le dan la vuelta y apuntan al frente;
     // en cuanto se mueve el ratón, la mira vuelve a seguir al cursor.
@@ -766,7 +767,7 @@ export class Player {
   #dashRequest(input, dir) {
     if (input.hit('PadDash')) return dir || this.facing; // botón del mando
     if (DASH_INPUT === 'shift') return input.hit('ShiftLeft', 'ShiftRight') ? (dir || this.facing) : 0;
-    const tap = input.hit('KeyD', 'ArrowRight') ? 1 : input.hit('KeyA', 'ArrowLeft') ? -1 : 0;
+    const tap = this.game.choosingCavity ? 0 : input.hit('KeyD', 'ArrowRight') ? 1 : input.hit('KeyA', 'ArrowLeft') ? -1 : 0;
     if (!tap) return 0;
     const now = this.game.time;
     const isDouble = tap === this.lastTapDir && now - this.lastTapTime < DOUBLE_TAP_WINDOW;

@@ -36,6 +36,8 @@ export const CELL_AUTO_BELOW = 50;
 // Coágulo de plasma: cura al usarlo, no al cogerlo. Se encuentra por el mapa o el útero
 // lo cuaja con biomasa; se guarda y se usa cuando quieras (desde el Genoma).
 export const PLASMA = { name: 'Coágulo de plasma', heal: 30 };
+// Cavidades con las que empiezas (más adelante se podrán ganar más).
+export const CAVITY_BASE = 2;
 export const ITEMS = {
   shield: { name: 'Perla de Nácar', time: 10, price: { bio: 130 } }, // invulnerable
   regen: { name: 'Célula Madre', time: 10, price: { bio: 130 } },   // regenera integridad
@@ -121,6 +123,10 @@ export class GameState {
     this.scrap = 12;
     this.cells = 0;              // células lumínicas en reserva: se gastan solas bajo CELL_AUTO_BELOW
     this.items = { shield: 0, regen: 0, plasma: 0 }; // consumibles guardados (ITEMS)
+    // Cavidades: los huecos del cuerpo donde llevas a mano los consumibles. Solo lo que
+    // está acomodado en una se puede usar en pleno juego (lo demás espera en el Genoma).
+    this.cavities = Array(CAVITY_BASE).fill(null); // tipo de consumible de cada una (o null)
+    this.cavity = 0;             // la cavidad activa (la que se usa)
     this.timers = { shield: 0, regen: 0, plasma: 0, immune: 0, suppress: 0 }; // segundos que le quedan a cada efecto activo (immune: Tejido sano)
     this.flashlightOn = true;
     this.mutations = new Set();   // instaladas
@@ -269,6 +275,25 @@ export class GameState {
     return this.thymus;
   }
 
+  // Coge un consumible: se guarda y, si aún no tiene cavidad, ocupa la primera libre.
+  gainItem(kind) {
+    this.items[kind]++;
+    if (!this.cavities.includes(kind)) {
+      const i = this.cavities.indexOf(null);
+      if (i >= 0) this.cavities[i] = kind;
+    }
+  }
+
+  // Acomoda un consumible en la cavidad i (si ya estaba en otra, se cambian de sitio);
+  // si ya estaba en esa, la vacía.
+  setCavity(i, kind) {
+    const cav = this.cavities;
+    if (cav[i] === kind) { cav[i] = null; return; }
+    const j = cav.indexOf(kind);
+    if (j >= 0) cav[j] = cav[i];
+    cav[i] = kind;
+  }
+
   // Consumible: lo gasta y arranca su efecto. No se pisa con uno igual aún activo.
   useItem(kind) {
     if (this.dead || !this.items[kind] || this.timers[kind] > 0) return false;
@@ -292,7 +317,7 @@ export class GameState {
 
   buyItem(kind) {
     if (!this.pay(ITEMS[kind].price)) return false;
-    this.items[kind]++;
+    this.gainItem(kind);
     return true;
   }
   addBiomass(n) { this.biomass = Math.min(this.biomassMax, this.biomass + n); }

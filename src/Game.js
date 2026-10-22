@@ -13,7 +13,7 @@ import { EntityFactory } from './factory/EntityFactory.js';
 import { Player, GRAVITY } from './entities/Player.js';
 import { Projectile } from './entities/Projectile.js';
 import { Pickup, dnaTag } from './entities/Pickup.js';
-import { Hud, caps } from './ui/Hud.js';
+import { Hud, caps, setCavityHelp } from './ui/Hud.js';
 import { NodeMenu } from './ui/NodeMenu.js';
 import { Genome } from './ui/Genome.js';
 import { DevMenu, DEV_TOOLS } from './ui/DevMenu.js';
@@ -23,6 +23,7 @@ import { MUTATIONS, FRAGMENTS, LINES } from './data/mutations.js';
 import { BIOMES } from './data/biomes.js';
 import { LEVELS } from './data/levels.js';
 import { ITEMS, INFECTION } from './state/State.js';
+import { BINDINGS, keyName } from './core/Bindings.js';
 import { linkArrival } from './entities/Link.js';
 
 const CONE_HALF = Math.PI / 6;
@@ -70,13 +71,12 @@ const PHOTO_LINGER = 2.5;  // segundos que sigue abierta sin luz
 
 // Orquesta los módulos: Entrada -> Lógica/Físicas -> Render, y las reglas
 // que cruzan sistemas (daño por contacto, salidas de sala, revelado...).
-// Consumibles del bolsillo, en el orden del HUD y de las teclas 1 / 2 / 3.
-const POCKET_ORDER = ['plasma', 'shield', 'regen'];
 
 export class Game {
   constructor(canvas) {
     this.visual = new Visual(canvas);
     this.input = new Input(canvas, VIEW_W, VIEW_H);
+    setCavityHelp(() => { const h = this.cavityHelp(); return h[0].toUpperCase() + h.slice(1); });
     this.audio = new AudioSys();
     this.state = new GameState();
     this.factory = new EntityFactory(this);
@@ -350,33 +350,53 @@ export class Game {
     this.hud.dialogue(lines, { key, ...opts });
   }
 
-  // Cómo se usan los consumibles del bolsillo, según con qué juegas.
-  itemKey(kind) {
-    const n = { plasma: 1, shield: 2, regen: 3 }[kind];
-    return this.pad.active ? 'con R3 (mantenlo para elegir cuál)' : this.touch.active ? 'desde el Genoma (botón del ADN)' : n ? `con la tecla ${n}` : 'con las teclas 1 · 2 · 3';
+  // Cómo se usa la cavidad activa, según con qué juegas.
+  cavityHelp() {
+    if (this.pad.active) return 'R3 usa la cavidad activa; mantén R3 y elige con la cruceta';
+    if (this.touch.active) return 'el botón de la cavidad la usa; mantenlo y elige con la cruceta';
+    return `${keyName('cavityUse')} usa la cavidad activa; ${keyName('cavityNext')} pasa a la siguiente`;
   }
 
-  #pocket(dt) {
+  // Dónde está un consumible y cómo se usa, según con qué juegas.
+  itemKey(kind) {
+    const st = this.state, i = st.cavities.indexOf(kind);
+    if (i < 0) return 'acomodándolo en una cavidad desde el Genoma (las tuyas están ocupadas)';
+    const use = this.pad.active ? 'R3' : this.touch.active ? 'el botón de la cavidad' : keyName('cavityUse');
+    const next = this.pad.active ? 'mantén R3 y elige con la cruceta' : this.touch.active ? 'mantenlo y elige con la cruceta' : `${keyName('cavityNext')} cambia de cavidad`;
+    return `con ${use} desde tu cavidad ${i + 1} (${next})`;
+  }
+
+  // Cavidades. Teclado: una tecla usa la activa y otra pasa a la siguiente. Mando (R3) y
+  // táctil: un toque usa la activa; mantenido, la cruceta elige (← →) y el cuerpo se
+  // queda quieto. Al soltar sin haber elegido, no se usa nada si fue largo.
+  #cavities(dt) {
     const st = this.state, input = this.input;
-    const DIG = { Digit1: 'plasma', Digit2: 'shield', Digit3: 'regen' };
-    for (const [code, kind] of Object.entries(DIG)) if (input.hit(code)) this.useItem(kind);
-    const owned = POCKET_ORDER.filter((k) => (st.items[k] ?? 0) > 0);
-    if (!owned.includes(st.pocketSel)) st.pocketSel = owned[0] ?? null;
-    if (input.down('PadPocket')) {
-      this.pocketHold = (this.pocketHold ?? 0) + dt;
-      if (this.pocketHold >= 0.4 && !this.pocketCycled && owned.length) {
-        st.pocketSel = owned[(owned.indexOf(st.pocketSel) + 1) % owned.length];
-        this.pocketCycled = true;
-        this.audio.play('click');
-        this.say(`Bolsillo: ${ITEMS[st.pocketSel].name} (×${st.items[st.pocketSel]}).`, 1.2);
-      }
-    } else {
-      if (this.pocketHold > 0 && !this.pocketCycled) {
-        if (st.pocketSel) this.useItem(st.pocketSel);
-        else this.say('Tu bolsillo está vacío.', 1.2);
-      }
-      this.pocketHold = 0; this.pocketCycled = false;
+    if (input.hit(...BINDINGS.cavityUse)) this.useCavity();
+    if (input.hit(...BINDINGS.cavityNext)) this.cycleCavity(1);
+    if (input.down('PadCavity')) {
+      this.cavHold = (this.cavHold ?? 0) + dt;
+      this.choosingCavity = this.cavHold > 0.12 || this.cavMoved;
+      const d = (input.hit('ArrowRight') ? 1 : 0) - (input.hit('ArrowLeft') ? 1 : 0);
+      if (d) { this.cycleCavity(d); this.cavMoved = true; this.choosingCavity = true; }
+      return;
     }
+    if (this.cavHold > 0 && !this.cavMoved && this.cavHold < 0.35) this.useCavity();
+    this.cavHold = 0; this.cavMoved = false; this.choosingCavity = false;
+  }
+
+  cycleCavity(d) {
+    const st = this.state, n = st.cavities.length;
+    st.cavity = (st.cavity + d + n) % n;
+    this.audio.play('click');
+    const k = st.cavities[st.cavity];
+    this.say(k ? `Cavidad ${st.cavity + 1}: ${ITEMS[k].name} (×${st.items[k]}).` : `Cavidad ${st.cavity + 1}: vacía.`, 1.2);
+  }
+
+  useCavity() {
+    const st = this.state, k = st.cavities[st.cavity];
+    if (!k) { this.audio.play('empty'); return this.say(`Cavidad ${st.cavity + 1} vacía: acomoda un consumible desde el Genoma.`, 1.6); }
+    if (!st.items[k] && !(st.timers[k] > 0)) this.audio.play('empty');
+    this.useItem(k);
   }
 
   useItem(kind) {
@@ -489,11 +509,10 @@ export class Game {
   #updatePlay(dt) {
     // Congelado del impacto: unos fotogramas quietos dan peso al golpe.
     if (this.hitStop > 0) { this.hitStop -= dt; return; }
+    // Cavidades: usar el consumible a mano sin abrir el Genoma.
+    this.#cavities(dt);
+    this.hud.choosing = this.choosingCavity;
     // Diálogo abierto: E (o Enter) lo pasa, y esa pulsación no hace nada más.
-    // Bolsillo: usar los consumibles sin abrir el Genoma. Teclado 1 / 2 / 3; mando R3
-    // (toque: usa el elegido · mantener: elige el siguiente que lleves).
-    this.#pocket(dt);
-    this.hud.padPocket = this.pad.active;
     // Explicación del HUD abierta (minitutorial): se acepta con E / Intro o Esc, como un diálogo.
     this.hud.keyLabel = this.pad.active || this.touch.active ? 'USAR' : 'E';
     if (!this.hud.dialogueActive && this.hud.tutOpen && this.input.hit('KeyE', 'Enter', 'Escape')) {

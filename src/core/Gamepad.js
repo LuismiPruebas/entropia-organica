@@ -27,7 +27,7 @@
 export const BUTTONS = {
   0: 'jump', 1: 'back', 2: 'light', 3: 'interact',
   4: 'dash', 5: 'fire', 6: 'grapple', 7: 'weapon',
-  8: 'map', 9: 'genome', 10: 'dash', 11: 'pocket', 12: 'up', 13: 'down', 14: 'left', 15: 'right',
+  8: 'map', 9: 'genome', 10: 'dash', 11: 'cavity', 12: 'up', 13: 'down', 14: 'left', 15: 'right',
 };
 
 // acción → tecla del juego (evento de teclado) o código propio de Input (Pad*/Mouse*)
@@ -36,7 +36,7 @@ const KEYS = {
   fire: { input: 'Mouse0' },
   grapple: { key: 'KeyQ' },
   dash: { input: 'PadDash' },
-  pocket: { input: 'PadPocket' }, // R3: toque usa el consumible elegido, mantener cambia
+  cavity: { input: 'PadCavity' }, // R3: toque usa la cavidad activa; mantenido, la cruceta elige
   back: { key: 'Escape' },
   light: { key: 'KeyF' },
   interact: { key: 'KeyE' },

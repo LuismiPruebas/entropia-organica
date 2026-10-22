@@ -21,7 +21,7 @@ const KEYS = {
   left: { key: 'ArrowLeft' }, right: { key: 'ArrowRight' }, up: { input: 'PadUp' }, down: { input: 'PadDown' },
   jump: { key: 'Space' }, fire: { input: 'Mouse0' }, dash: { input: 'PadDash' }, grapple: { key: 'KeyQ' },
   light: { key: 'KeyF' }, interact: { key: 'KeyE' }, genome: { key: 'KeyI' }, map: { key: 'KeyM' },
-  weapon: { key: 'KeyR' }, back: { key: 'Escape' },
+  weapon: { key: 'KeyR' }, back: { key: 'Escape' }, cavity: { input: 'PadCavity' },
 };
 const MENU_KEYS = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', jump: 'Enter', back: 'Escape' };
 const REPEAT_DELAY = 420, REPEAT = 160; // ms: la cruceta mantenida en los menús
@@ -76,6 +76,7 @@ const ICONS = {
   map: 'M-8,-5 L-3,-7 L3,-5 L8,-7 L8,5 L3,7 L-3,5 L-8,7 Z M-3,-7 L-3,5 M3,-5 L3,7',
   weapon: 'M-7,5 L5,-5 M-8,3 A2,2 0 1,1 -5,6 M4,-7 A2,2 0 1,1 7,-4',
   back: 'M-6,-6 L6,6 M6,-6 L-6,6',
+  cavity: 'M-7,-3 Q-8,7 0,7 Q8,7 7,-3 M-7,-3 Q0,-1 7,-3 M-3,-6 Q0,-9 3,-6',
   interact: 'M0,-7 L0,3 M-4,-1 L0,3 L4,-1 M-7,7 L7,7',
 };
 
@@ -174,6 +175,7 @@ export class Touch {
       interact: button(right, 'interact', 17, 'USAR'),
       light: button(top, 'light', 13),
       weapon: button(top, 'weapon', 13),
+      cavity: button(top, 'cavity', 13),
       genome: button(top, 'genome', 13),
       map: button(top, 'map', 13),
       back: button(top, 'back', 13),
@@ -394,13 +396,14 @@ export class Touch {
     else if (!menu && this.wasMenu) { this.wasMenu = false; this.held = new Set(); this.#sync(); }
     this.root.classList.toggle('title', !playing);
     // Los botones pequeños de arriba guardan su hueco aunque aún no los tengas (no se mueven).
-    const TOP = ['light', 'weapon', 'genome', 'map', 'back'];
+    const TOP = ['light', 'weapon', 'cavity', 'genome', 'map', 'back'];
     const show = (act, on) => { if (TOP.includes(act)) this.btn[act].style.visibility = on ? '' : 'hidden'; else this.btn[act].style.display = on ? '' : 'none'; };
     if (st) {
       show('dash', st.has?.('dash'));
       show('grapple', st.has?.('grapple'));
       show('map', st.has?.('map1'));
       show('weapon', (st.weapons?.length ?? 0) > 1);
+      show('cavity', !!st.cavities?.some(Boolean));
       const p = g.player;
       show('interact', !!(g.hud?.dialogueActive || (g.room && p && g.room.nodes?.some((n) => overlap(p, n)))));
     }
