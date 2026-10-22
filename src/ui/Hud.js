@@ -16,8 +16,8 @@ const HUD_TUTOR = [
     text: '<b>BIOMASA</b> · la carne rosa: <b>tu moneda</b> y lo que comen tus mutaciones. La sueltan las criaturas; en el útero la gastas en curarte y comprar.' },
   { id: 'o2', sac: 'o2', color: '#4ab8f0', test: (a, b) => b.o2 < a.o2,
     text: '<b>OXÍGENO</b> · la vejiga azul: <b>tu aliento</b>. Lo gastan el doble salto, la embestida y el salto de pared; se recupera solo si descansas un momento.' },
-  { id: 'lux', sac: 'lux', color: '#ffd23f', test: (a, b) => b.lux < a.lux,
-    text: '<b>LUZ</b> · la vejiga amarilla: <b>la energía de tu ojo</b>. Se gasta con el ojo encendido (F); las células lumínicas la recargan.' },
+  { id: 'lux', sac: 'lux', color: '#ffd23f', test: (a, b) => b.lux > a.lux + 0.5 || b.cells > a.cells,
+    text: '<b>LUZ</b> · la vejiga amarilla: <b>la energía de tu ojo</b>. Se gasta con el ojo encendido (F); las células lumínicas como esta la recargan, y las que sobran se guardan.' },
   { id: 'rej', sac: 'rej', color: '#c07bff', test: (a, b) => b.rej > a.rej,
     text: '<b>RECHAZO</b> · la vejiga violeta: <b>tu cuerpo lucha contra los injertos</b>. Alto, las mutaciones fallan; al 100 % te hace daño. Lo calman los supresores del útero.' },
   { id: 'dead', sac: 'dead', color: '#b0a0a8', test: (a, b) => b.dead > a.dead,
@@ -25,7 +25,7 @@ const HUD_TUTOR = [
   { id: 'inf', sac: 'int', color: '#9ad050', test: (a, b) => b.inf && !a.inf,
     text: '<b>INFECCIÓN</b> · tu sangre se vuelve verde: <b>te pudre poco a poco</b> y te da arcadas. La cura el útero (Sanar tejido).' },
 ];
-const TUTOR_TIME = 6;
+// La caja se queda hasta que el jugador la acepta (E / Intro, Esc o tocándola).
 
 export class Hud {
   constructor() {
@@ -96,6 +96,14 @@ export class Hud {
     this.msgTime = 0; this.msg.classList.remove('show');
   }
 
+  // Minitutorial: ¿hay una explicación abierta? Y cerrarla (acepta el jugador).
+  get tutOpen() { return !!this.tut; }
+  closeTut() {
+    if (!this.tut) return;
+    this.tut = null;
+    $('hud-tip').hidden = true;
+  }
+
   say(text, seconds = 2.5) {
     if (this.dlg || this.barkTime > 0) return;   // mientras habla alguien, los avisos no lo tapan
     this.msg.textContent = text;
@@ -155,21 +163,22 @@ export class Hud {
     const lux = '#' + eye.map((c) => Math.round(Math.min(1, c) * 255).toString(16).padStart(2, '0')).join('');
     const hp = st.integrity / 100, infected = st.infection > 0, bio = st.biomass / st.biomassMax;
     // Minitutorial: ¿ha cambiado algo por primera vez? A la cola; luego, de uno en uno.
-    const snap = { int: st.integrity, bio: st.biomass, o2: st.oxygen, lux: st.light, rej: st.rejection, dead: st.corrupted, inf: st.infection > 0 };
+    const snap = { int: st.integrity, bio: st.biomass, o2: st.oxygen, lux: st.light, cells: st.cells, rej: st.rejection, dead: st.corrupted, inf: st.infection > 0 };
     st.hudSeen ??= new Set();
     this.tutQueue ??= [];
     if (this.prevSnap) for (const tu of HUD_TUTOR) if (!st.hudSeen.has(tu.id) && tu.test(this.prevSnap, snap)) { st.hudSeen.add(tu.id); this.tutQueue.push(tu); }
     this.prevSnap = snap;
-    if (this.tut) { this.tut.t -= dt; if (this.tut.t <= 0) { this.tut = null; $('hud-tip').hidden = true; } }
+    if (this.tut) this.tut.age += dt;
     if (!this.tut && this.tutQueue.length && !this.dlg) {
-      this.tut = { ...this.tutQueue.shift(), t: TUTOR_TIME };
+      this.tut = { ...this.tutQueue.shift(), age: 0 };
       const tip = $('hud-tip');
-      tip.innerHTML = this.tut.text;
+      tip.innerHTML = `${this.tut.text}<span class="tip-ok">${this.keyLabel ?? 'E'} ✕</span>`;
+      tip.onclick = () => this.closeTut();
       tip.style.setProperty('--c', this.tut.color);
       tip.hidden = false;
     }
     // La vejiga señalada se hincha (entra rápido, late y vuelve a su tamaño al final).
-    const tk = this.tut ? Math.min(1, (TUTOR_TIME - this.tut.t) / 0.35, this.tut.t / 0.6) * (0.75 + 0.25 * Math.sin(t * 7)) : 0;
+    const tk = this.tut ? Math.min(1, this.tut.age / 0.35) * (0.75 + 0.25 * Math.sin(t * 7)) : 0;
     // Las demás se encogen un poco para dejarle sitio.
     const big = (it) => (this.tut?.sac === it.id ? { ...it, rMin: it.rMin * (1 + 1.2 * tk) + 4 * tk, rMax: it.rMax * (1 + 0.8 * tk), low: true }
       : this.tut ? { ...it, rMin: it.rMin * (1 - 0.3 * tk), rMax: it.rMax * (1 - 0.4 * tk) } : it);

@@ -463,6 +463,12 @@ export class Game {
     // Congelado del impacto: unos fotogramas quietos dan peso al golpe.
     if (this.hitStop > 0) { this.hitStop -= dt; return; }
     // Diálogo abierto: E (o Enter) lo pasa, y esa pulsación no hace nada más.
+    // Explicación del HUD abierta (minitutorial): se acepta con E / Intro o Esc, como un diálogo.
+    this.hud.keyLabel = this.pad.active || this.touch.active ? 'USAR' : 'E';
+    if (!this.hud.dialogueActive && this.hud.tutOpen && this.input.hit('KeyE', 'Enter', 'Escape')) {
+      this.hud.closeTut();
+      for (const k of ['KeyE', 'Enter', 'Escape']) this.input.pressed.delete(k);
+    }
     if (this.hud.dialogueActive && this.input.hit('KeyE', 'Enter')) {
       this.hud.advance();
       this.input.pressed.delete('KeyE');

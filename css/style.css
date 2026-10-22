@@ -72,6 +72,8 @@ body {
   animation: hud-tip-in .25s ease-out;
 }
 #hud-tip[hidden] { display: none; }
+#hud-tip { pointer-events: auto; cursor: pointer; padding-bottom: 6px; }
+#hud-tip .tip-ok { position: absolute; right: 4px; bottom: 0; font-size: 4.2px; color: var(--c, #7dff9a); animation: dlg-blink 1s steps(2) infinite; }
 #hud-tip b { color: var(--c, #7dff9a); font-weight: normal; }
 #hud-tip::before { content: ''; position: absolute; left: -5px; top: 4px; border: 2.5px solid transparent; border-right-color: var(--c, #7dff9a); }
 @keyframes hud-tip-in { from { transform: translateX(-6px); } }
