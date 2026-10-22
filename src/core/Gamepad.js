@@ -13,14 +13,15 @@
 //   X / A                 saltar (y soltarse del tendón) · aceptar en menús
 //   L2 / LT               tendón
 //   L1 / LB · L3          embestida
-//   R2 / RT               libre
+//   R2 / RT               cambiar de arma
+//   R3 (pulsar stick der.) cavidad: toque usa la activa; mantenido, la cruceta elige
 //   △ / Y                 usar el Nodo Seguro
 //   ○ / B                 salir de los menús
 //   □ / X                 ojo fotóforo
 //   Options / Menu        genoma · Create / View: mapa
 // En los menús: cruceta o stick para elegir, X / A para aceptar, ○ / B para salir.
 //
-// Aún no hay pantalla de configuración: el mapeo está en BUTTONS, listo para hacerse
+// La lista para el jugador está en ui/Controls.js. El mapeo está en BUTTONS, listo para hacerse
 // editable más adelante.
 
 // índice del botón (mapeo estándar) → acción

@@ -776,14 +776,58 @@ body {
   color: #8a6a6a;
 }
 
-#overlay .controls {
+/* Botón de controles de la portada y su panel. */
+#controls-btn {
   margin: 0 0 14px;
-  padding: 0;
-  list-style: none;
-  font-size: 5px;
-  line-height: 2;
-  color: #a89888;
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 5.5px;
+  color: #e8dcc8;
+  background: rgba(60, 10, 20, .6);
+  border: 1px solid #7a2a3a;
+  border-radius: 6px 3px 7px 3px / 3px 6px 3px 7px;
+  cursor: pointer;
 }
+#controls-btn:hover { color: #fff; border-color: #c0283a; box-shadow: 0 0 6px rgba(192, 40, 58, .5); }
+#controls-btn .dim { color: #8a6a6a; }
+body.touch #controls-btn .dim { display: none; }
+#controls-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .7);
+  cursor: default;
+  text-align: left;
+}
+#controls-panel[hidden] { display: none; }
+#controls-panel .cp-box {
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  max-height: 200px;
+  padding: 5px 8px;
+  background: radial-gradient(ellipse at 30% 20%, #2a0c14, #0e0408 75%);
+  border: 1px solid #7a2a3a;
+  border-radius: 10px 5px 12px 6px / 6px 10px 5px 12px;
+  box-shadow: 0 0 12px rgba(120, 20, 40, .5), inset 0 0 10px rgba(0, 0, 0, .8);
+}
+#controls-panel header { display: flex; justify-content: space-between; align-items: center; }
+#controls-panel h2 { margin: 0; font-size: 8px; font-weight: normal; color: #c0283a; text-shadow: 1px 1px 0 #000; letter-spacing: 1px; }
+#controls-panel .cp-close { font: inherit; font-size: 6px; color: #c88a98; background: none; border: none; cursor: pointer; }
+#controls-panel .cp-close:hover { color: #fff; }
+#controls-panel .cp-scroll { overflow-y: auto; min-height: 0; margin: 3px 0; scrollbar-width: thin; scrollbar-color: #7a2a3a transparent; }
+#controls-panel table { width: 100%; border-collapse: collapse; font-size: 4px; line-height: 1.5; color: #d8c8b8; }
+#controls-panel thead th { position: sticky; top: 0; background: #1a060c; font-size: 4px; font-weight: normal; color: #e07a98; text-align: left; padding: 1px 3px; }
+#controls-panel .cp-group th { padding: 3px 3px 0; font-size: 3.5px; font-weight: normal; color: #8a5a66; letter-spacing: .5px; text-align: left; border-bottom: 0.5px solid #4a1a26; }
+#controls-panel td { padding: 1px 3px; vertical-align: top; }
+#controls-panel td.cp-act { color: #e8dcc8; width: 34%; }
+#controls-panel tr:not(.cp-group):hover td { background: rgba(255, 255, 255, .03); }
+#controls-panel kbd { display: inline-block; min-width: 5px; padding: 0 1.5px; font: inherit; color: #fff; text-align: center; background: #3a121c; border: 0.5px solid #8a3a4a; border-radius: 1.5px; box-shadow: 0 0.5px 0 #000; }
+#controls-panel .cp-note { margin: 4px 3px 0; font-size: 3.5px; color: #8a6a6a; }
+#controls-panel footer { font-size: 3.5px; color: #8a6a6a; text-align: right; padding-right: 10px; }
 
 #overlay .blink {
   font-size: 6px;
@@ -913,9 +957,6 @@ body.touch { touch-action: none; overscroll-behavior: none; -webkit-user-select:
 /* En la portada todo se juega tocando la pantalla; en los menús, solo cruceta, aceptar y salir. */
 #touch.title .tleft, #touch.title .tright, #touch.title .ttop { display: none; }
 #touch.menu [data-act="fire"], #touch.menu [data-act="dash"], #touch.menu [data-act="grapple"], #touch.menu [data-act="interact"], #touch.menu [data-act="light"], #touch.menu [data-act="weapon"] { display: none !important; }
-#overlay .touch-help { display: none; }
-body.touch #overlay .touch-help { display: block; }
-body.touch #overlay .controls:not(.touch-help) { display: none; }
 /* Aviso de girar el móvil: temporal, arriba, sin bloquear el juego (Touch.js). */
 #rotate { position: fixed; left: 50%; top: max(12px, env(safe-area-inset-top)); transform: translateX(-50%); width: min(92vw, 520px); box-sizing: border-box; z-index: 100; padding: 10px 14px; border-radius: 6px; background: rgba(10, 6, 8, 0.88); box-shadow: 0 0 0 1px #4a1020, 0 4px 18px rgba(0, 0, 0, 0.6); color: #e8dcc0; font: 11px 'Press Start 2P', monospace; text-align: center; line-height: 1.5; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
 #rotate p { margin: 0 0 6px; }

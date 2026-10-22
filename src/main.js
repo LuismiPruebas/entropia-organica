@@ -1,6 +1,7 @@
 import { Game } from './Game.js';
 import { VIEW_W, VIEW_H } from './core/Visual.js';
 import { LEVELS, START } from './data/levels.js';
+import { ControlsPanel } from './ui/Controls.js';
 
 // Pruebas desde el editor de niveles (editor.html): con ?editor se cargan las salas
 // editadas (aún sin guardar) que el editor dejó en localStorage.
@@ -61,10 +62,15 @@ function advance() {
   }
 }
 overlay.addEventListener('click', advance);
+// Panel de controles desde la portada: botón, E o △ / Y del mando.
+const controls = new ControlsPanel(overlay);
+const controlsBtn = document.getElementById('controls-btn');
+controlsBtn.addEventListener('click', (e) => { e.stopPropagation(); controls.show(); });
+addEventListener('keydown', (e) => { if (e.code === 'KeyE' && phase !== 'play' && !overlay.hidden && !controls.open) controls.show(); });
 // En pantallas táctiles, la portada lo dice con sus palabras.
 if (matchMedia?.('(hover: none) and (pointer: coarse)').matches) callToAction.textContent = 'TOCA PARA DESPERTAR';
 addEventListener('keydown', (e) => {
-  if ((e.code === 'Enter' || e.code === 'Space') && phase !== 'play' && !overlay.hidden) advance();
+  if ((e.code === 'Enter' || e.code === 'Space') && phase !== 'play' && !overlay.hidden && !controls.open) advance();
 });
 
 // Atajos de desarrollo: ?play  ·  ?room=C&spawn=20,12&mut=tendon,quitina&aim=1,0
