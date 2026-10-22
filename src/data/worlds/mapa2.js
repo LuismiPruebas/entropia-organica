@@ -251,7 +251,7 @@ export const LEVELS = {
       '##################...#################',
     ],
     enemies: [
-      { type: 'gangliomadre', x: 24, y: 8, noDna: true },
+      { type: 'gangliomadre', x: 24, y: 8 },
     ],
     faces: [
       { x: -21, y: 37, front: false },
