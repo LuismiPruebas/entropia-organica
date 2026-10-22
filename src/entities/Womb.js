@@ -4,12 +4,27 @@ import { spriteMesh, placeMesh, setMap, canvasTexture } from '../core/Sprites.js
 // cordones umbilicales, lleno de una gelatina rosa pálida y una silueta encogida dentro.
 // Late con un ritmo doble (lub-dub): se dilata, se contrae y su luz pulsa.
 
-const W = 32, H = 42;
+const W = 48, H = 48;
+const CX = 24, CY = H - 19; // centro del saco (los pies del lienzo tocan el suelo)
 const BEAT = 1.15; // segundos por latido
 
 function rngFrom(seed) {
   let a = seed >>> 0;
   return () => ((a = (a * 1664525 + 1013904223) >>> 0) / 4294967296);
+}
+
+// Venas de colores: sangre, morado, azul venoso y un verde bilioso, como la carne vieja.
+const VEINS = [
+  ['#a02436', '#e05a6a'], ['#6a2a8a', '#b070d0'], ['#2e4690', '#6a8ae0'], ['#5e6a26', '#a0b44a'], ['#b03a4c', '#f08090'],
+];
+
+// Contorno del saco: no es un óvalo, tiene lóbulos y es más ancho abajo (como una pera
+// blanda). Devuelve cuánto se aleja (x, y) del borde: < 1 dentro.
+function sackDist(x, y, rx, ry) {
+  const ang = Math.atan2(y, x);
+  const lobes = 1 + 0.1 * Math.sin(3 * ang + 1) + 0.07 * Math.sin(5 * ang + 2.3) + 0.05 * Math.sin(8 * ang + 0.7);
+  const pear = y > 0 ? 1.1 : 0.94;
+  return Math.hypot(x / (rx * pear), y / ry) / lobes;
 }
 
 // Pinta un fotograma con el saco escalado `s` (pixel art nítido en cada tamaño).
@@ -23,54 +38,77 @@ function paintWomb(s, torn = false) {
   gl.fillStyle = '#000';
   gl.fillRect(0, 0, W, H);
   const px = (ctx, x, y, c, w = 1, h = 1) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
-  const r = rngFrom(7);
+  const r = rngFrom(7); // misma semilla en cada fotograma: las ramas no bailan
 
-  const cx = 16, cy = 23, rx = 10 * s, ry = 13 * s;
+  const cx = CX, cy = CY, rx = 10 * s, ry = 13 * s;
   const top = cy - ry;
 
-  // Cordones umbilicales que lo cuelgan del techo.
-  for (const [x0, bend] of [[11, -3], [21, 3]]) {
-    for (let y = 0; y < top + 1; y++) {
-      const x = x0 + Math.sin((y / Math.max(1, top)) * Math.PI) * bend;
-      px(g, x, y, y % 4 === 0 ? '#c05a6a' : '#7a2434', 2, 1);
+  // Ramificación: una vena o un cordón que avanza serpenteando y se bifurca; cada rama
+  // más fina. clip(x, y) decide si se pinta ese punto (p. ej. solo sobre la membrana).
+  const branch = (x, y, ang, len, w, pal, depth, clip = () => true, stop = () => false) => {
+    for (let i = 0; i < len; i++) {
+      x += Math.cos(ang); y += Math.sin(ang);
+      ang += (r() - 0.5) * 0.45;
+      if (x < 0 || x >= W || y < 0 || y >= H || stop(x, y)) return;
+      if (clip(x, y)) {
+        px(g, x, y, pal[0], w, w);
+        if (w > 1) px(g, x, y, pal[1]); // brillo húmedo del cordón
+        // Un leve brillo propio: las venas se ven aunque la sala esté a oscuras.
+        gl.globalAlpha = w > 1 ? 0.3 : 0.22; px(gl, x, y, pal[1], w, w); gl.globalAlpha = 1;
+      }
+      if (depth > 0 && i > 2 && r() < 0.16) {
+        branch(x, y, ang + (r() < 0.5 ? -1 : 1) * (0.5 + r() * 0.5), len * (0.45 + r() * 0.25), Math.max(1, w - 1), r() < 0.35 ? VEINS[Math.floor(r() * VEINS.length)] : pal, depth - 1, clip, stop);
+      }
     }
+  };
+  const inSack = (x, y) => sackDist(x - cx, y - cy, rx, ry) < 1;
+
+  // Cordones que lo cuelgan del techo: suben retorciéndose y se abren en raíces.
+  for (const [dx, lean] of [[-4, -0.35], [0, 0.05], [4, 0.4]]) {
+    branch(cx + dx, top + 2, -Math.PI / 2 + lean, 40, 2, VEINS[dx < 0 ? 0 : dx > 0 ? 4 : 1], 2);
+  }
+  // Zarcillos laterales que se agarran a la carne de alrededor.
+  for (const [side, h] of [[-1, -0.2], [1, 0.1], [-1, 0.45], [1, 0.55]]) {
+    const x0 = cx + side * rx * 0.95, y0 = cy + ry * h;
+    branch(x0, y0, side < 0 ? Math.PI + 0.3 - h * 0.5 : -0.3 + h * 0.5, 13, 1, VEINS[Math.floor(r() * VEINS.length)], 2, () => true, inSack);
+  }
+  // Raíces al suelo: bajan del saco y se extienden por el suelo.
+  for (const [dx, lean] of [[-3, 0.5], [0, 0], [3, -0.5]]) {
+    branch(cx + dx, cy + ry * 0.9, Math.PI / 2 + lean, 12, 2, VEINS[0], 2);
+  }
+  // Base carnosa (un montículo irregular).
+  for (let y = 0; y < 4; y++) {
+    const w = 10 + y * 4 + (y % 2) * 2;
+    px(g, cx - w / 2 + (y === 1 ? 1 : 0), H - 4 + y, y === 0 ? '#b04a58' : y === 1 ? '#8a2a3a' : '#5a1424', w, 1);
   }
 
-  // Raíz carnosa que lo ancla al suelo.
-  for (let y = 0; y < 5; y++) {
-    const w = 8 + y * 3;
-    px(g, cx - w / 2, H - 5 + y, y === 0 ? '#a8424e' : '#6a1a28', w, 1);
-  }
-
-  // Saco: membrana exterior, gelatina rosa y venas.
-  for (let y = -ry; y <= ry; y++) {
-    for (let x = -rx; x <= rx; x++) {
-      const d = Math.hypot(x / rx, y / ry);
+  // Saco: membrana de bordes vivos, gelatina rosa pálida dentro.
+  for (let y = -ry - 3; y <= ry + 3; y++) {
+    for (let x = -rx - 3; x <= rx + 3; x++) {
+      const d = sackDist(x, y, rx, ry);
       if (d > 1) continue;
       const X = cx + x, Y = cy + y;
       // La boca desgarrada: abajo, un hueco de bordes irregulares.
       const mouth = torn && y > ry * 0.45 && Math.abs(x) < rx * (0.28 + 0.12 * Math.sin(x * 2.3 + y));
       if (mouth) continue;
-      if (d > 0.88) px(g, X, Y, '#b8505e');
-      else if (d > 0.78) px(g, X, Y, '#7a2434');
+      if (d > 0.9) px(g, X, Y, (x * 7 + y * 3) % 5 === 0 ? '#d06a78' : '#b8505e');
+      else if (d > 0.8) px(g, X, Y, '#7a2434');
       else if (torn && y < ry * 0.35) px(g, X, Y, (x * 3 + y) % 7 === 0 ? '#4a1420' : '#2a0810'); // vaciado
       else if (torn) px(g, X, Y, (x + y) % 4 === 0 ? '#c48a92' : '#a87078'); // el poso de gelatina
       else {
         px(g, X, Y, (x + y) % 5 === 0 ? '#f0c4c8' : '#e2aab2');
-        // El líquido brilla más en el centro.
+        // La gelatina brilla más en el centro.
         const k = (1 - d) * 0.55;
         gl.fillStyle = `rgba(255,190,200,${k.toFixed(2)})`;
         gl.fillRect(Math.round(X), Math.round(Y), 1, 1);
       }
     }
   }
-  // Venas sobre la membrana.
-  for (let v = 0; v < 4; v++) {
-    let a = r() * Math.PI * 2;
-    for (let i = 0; i < 7; i++) {
-      px(g, cx + Math.cos(a) * rx * 0.86, cy + Math.sin(a) * ry * 0.86, '#5a0f1c');
-      a += 0.12;
-    }
+  // Venas sobre la membrana: ramas de varios colores que la recorren desde el borde.
+  const onSkin = (x, y) => { const d = sackDist(x - cx, y - cy, rx, ry); return d > 0.45 && d < 0.95; };
+  for (let v = 0; v < 7; v++) {
+    const ang = r() * Math.PI * 2, x0 = cx + Math.cos(ang) * rx * 0.92, y0 = cy + Math.sin(ang) * ry * 0.92;
+    branch(x0, y0, ang + Math.PI + (r() - 0.5) * 0.8, 9, 1, VEINS[v % VEINS.length], 2, onSkin);
   }
 
   if (torn) {
@@ -129,7 +167,7 @@ export class Womb {
 
   // El parto: el saco se contrae a golpes, revienta por abajo y te suelta.
   birth() { this.birthAt = this.game.time; }
-  get mouth() { return { x: this.cx, y: this.baseY + 23 + 13 * 0.84 * 0.5 }; }
+  get mouth() { return { x: this.cx, y: this.baseY + CY + 13 * 0.84 * 0.5 }; }
 
   #birthUpdate() {
     const g = this.game, t = g.time - this.birthAt;
