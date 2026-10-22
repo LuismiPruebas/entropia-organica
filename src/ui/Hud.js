@@ -26,11 +26,11 @@ const HUD_TUTOR = [
   { id: 'scrap', slot: 'scrap', color: '#e0d4b8', test: (a, b) => b.scrap > a.scrap,
     text: '<b>HUESO</b> · se cuenta, no tiene límite: <b>la munición del Cañón de Astillas</b> y la moneda de algunos úteros. La sueltan los nódulos óseos.' },
   { id: 'it:plasma', slot: 'plasma', color: '#ff5a6a', test: (a, b) => b.plasma > a.plasma,
-    text: '<b>COÁGULO DE PLASMA</b> · guardado en tu <b>bolsillo</b> (los iconos bajo el hueso). Úsalo cuando quieras desde el Genoma: +30 de integridad al momento.' },
+    text: '<b>COÁGULO DE PLASMA</b> · guardado en tu <b>bolsillo</b> (los iconos bajo el hueso). Úsalo cuando quieras con <b>1</b> (mando: <b>R3</b>): +30 de integridad al momento.' },
   { id: 'it:shield', slot: 'shield', color: '#4ff0ff', test: (a, b) => b.shield > a.shield,
-    text: '<b>PERLA DE NÁCAR</b> · guardada en tu <b>bolsillo</b>. Úsala desde el Genoma: 10 s en los que nada te hiere.' },
+    text: '<b>PERLA DE NÁCAR</b> · guardada en tu <b>bolsillo</b>. Úsala con <b>2</b> (mando: mantén <b>R3</b> para elegirla y tócalo): 10 s en los que nada te hiere.' },
   { id: 'it:regen', slot: 'regen', color: '#7dff9a', test: (a, b) => b.regen > a.regen,
-    text: '<b>CÉLULA MADRE</b> · guardada en tu <b>bolsillo</b>. Úsala desde el Genoma: regeneras integridad durante 10 s.' },
+    text: '<b>CÉLULA MADRE</b> · guardada en tu <b>bolsillo</b>. Úsala con <b>3</b> (mando: mantén <b>R3</b> para elegirla y tócalo): regeneras integridad durante 10 s.' },
   { id: 'inf', sac: 'int', color: '#9ad050', test: (a, b) => b.inf && !a.inf,
     text: '<b>INFECCIÓN</b> · tu sangre se vuelve verde: <b>te pudre poco a poco</b> y te da arcadas. La cura el útero (Sanar tejido).' },
 ];
@@ -243,6 +243,10 @@ export class Hud {
       if (on) { const left = st.timers[k] / (ITEMS[k].time || 1); g.fillStyle = K; g.fillRect(bx, by + 7, 6, 2); g.fillStyle = c; g.fillRect(bx, by + 7, Math.ceil(6 * left), 1); }
       drawNumber(g, bx + 8, by + 1, n, n ? '#e8dcc8' : '#6a6050');
       mark(k, bx, by, 8 + String(n).length * 4, 7, c);
+      // Cómo se usa: con teclado, su tecla (1 / 2 / 3) debajo; con mando, un marco en el
+      // elegido (R3 lo usa, mantener R3 cambia).
+      if (this.padPocket) { if (st.pocketSel === k) { g.strokeStyle = c; g.lineWidth = 1; g.strokeRect(bx - 1.5, by - 1.5, 9 + String(n).length * 4, 10); } }
+      else drawNumber(g, bx + 1, by + 9, { plasma: 1, shield: 2, regen: 3 }[k], '#8a7a6a');
       bx += 8 + String(n).length * 4 + 3;
     }
     if ((st.timers.immune ?? 0) > 0) {

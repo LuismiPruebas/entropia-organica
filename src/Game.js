@@ -70,6 +70,9 @@ const PHOTO_LINGER = 2.5;  // segundos que sigue abierta sin luz
 
 // Orquesta los módulos: Entrada -> Lógica/Físicas -> Render, y las reglas
 // que cruzan sistemas (daño por contacto, salidas de sala, revelado...).
+// Consumibles del bolsillo, en el orden del HUD y de las teclas 1 / 2 / 3.
+const POCKET_ORDER = ['plasma', 'shield', 'regen'];
+
 export class Game {
   constructor(canvas) {
     this.visual = new Visual(canvas);
@@ -347,9 +350,33 @@ export class Game {
     this.hud.dialogue(lines, { key, ...opts });
   }
 
-  // Dónde se usan los consumibles: en el Genoma, con su tecla según con qué juegas.
-  itemKey() {
-    return `desde el Genoma ${this.pad.active ? '(Options)' : this.touch.active ? '(botón del ADN)' : '[I]'}`;
+  // Cómo se usan los consumibles del bolsillo, según con qué juegas.
+  itemKey(kind) {
+    const n = { plasma: 1, shield: 2, regen: 3 }[kind];
+    return this.pad.active ? 'con R3 (mantenlo para elegir cuál)' : this.touch.active ? 'desde el Genoma (botón del ADN)' : n ? `con la tecla ${n}` : 'con las teclas 1 · 2 · 3';
+  }
+
+  #pocket(dt) {
+    const st = this.state, input = this.input;
+    const DIG = { Digit1: 'plasma', Digit2: 'shield', Digit3: 'regen' };
+    for (const [code, kind] of Object.entries(DIG)) if (input.hit(code)) this.useItem(kind);
+    const owned = POCKET_ORDER.filter((k) => (st.items[k] ?? 0) > 0);
+    if (!owned.includes(st.pocketSel)) st.pocketSel = owned[0] ?? null;
+    if (input.down('PadPocket')) {
+      this.pocketHold = (this.pocketHold ?? 0) + dt;
+      if (this.pocketHold >= 0.4 && !this.pocketCycled && owned.length) {
+        st.pocketSel = owned[(owned.indexOf(st.pocketSel) + 1) % owned.length];
+        this.pocketCycled = true;
+        this.audio.play('click');
+        this.say(`Bolsillo: ${ITEMS[st.pocketSel].name} (×${st.items[st.pocketSel]}).`, 1.2);
+      }
+    } else {
+      if (this.pocketHold > 0 && !this.pocketCycled) {
+        if (st.pocketSel) this.useItem(st.pocketSel);
+        else this.say('Tu bolsillo está vacío.', 1.2);
+      }
+      this.pocketHold = 0; this.pocketCycled = false;
+    }
   }
 
   useItem(kind) {
@@ -463,6 +490,10 @@ export class Game {
     // Congelado del impacto: unos fotogramas quietos dan peso al golpe.
     if (this.hitStop > 0) { this.hitStop -= dt; return; }
     // Diálogo abierto: E (o Enter) lo pasa, y esa pulsación no hace nada más.
+    // Bolsillo: usar los consumibles sin abrir el Genoma. Teclado 1 / 2 / 3; mando R3
+    // (toque: usa el elegido · mantener: elige el siguiente que lleves).
+    this.#pocket(dt);
+    this.hud.padPocket = this.pad.active;
     // Explicación del HUD abierta (minitutorial): se acepta con E / Intro o Esc, como un diálogo.
     this.hud.keyLabel = this.pad.active || this.touch.active ? 'USAR' : 'E';
     if (!this.hud.dialogueActive && this.hud.tutOpen && this.input.hit('KeyE', 'Enter', 'Escape')) {

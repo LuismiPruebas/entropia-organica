@@ -97,7 +97,7 @@ export const FACES = {
     opens: 'Abro las membranas de mis vasos. Deja que mi corriente te lleve.',
     hints: [
       'Mis válvulas y ventrículos se abren y se cierran: aprende su ritmo y no te atraparán.',
-      'Una Célula Madre regenera tu tejido un rato; una Perla de Nácar te hace intocable. Úsalas desde el Genoma.',
+      'Una Célula Madre regenera tu tejido un rato; una Perla de Nácar te hace intocable. Úsalas desde tu bolsillo cuando quieras.',
       'El Corazón solo se abre a un cuerpo completo: al menos un injerto de cada órgano.',
     ],
   },
