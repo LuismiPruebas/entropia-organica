@@ -194,6 +194,9 @@ export class Game {
   loadRoom(id, spawn) {
     this.audio.stopBossMusic(0.8);
     this.hud.endDialogue();
+    // Un parto a medias no sigue en otra sala (p. ej. al saltar a una sala de prueba).
+    this.birth = null;
+    if (this.player) this.player.unborn = false;
     if (this.room) this.factory.disposeRoom(this.room);
     for (const p of this.projectiles) p.dispose();
     this.projectiles = [];
