@@ -303,6 +303,34 @@ export class Player {
     this.lastSafe = { x: this.x, y: this.y };
   }
 
+  // Grumos de sangre espesa y plasma pegados al cuerpo (al nacer). Se pintan encima del
+  // cuerpo y solo sobre él (source-atop); al limpiarse van quedando menos.
+  #drawGore() {
+    if (!this.gore) {
+      this.gore = [];
+      for (let i = 0; i < 46; i++) {
+        const k = Math.random();
+        this.gore.push({
+          x: 15 + Math.random() * 18, y: 10 + Math.random() * 33, r: k < 0.25 ? 2 : 1,
+          c: k < 0.15 ? '#8a8484' : k < 0.5 ? '#4a0610' : '#7a0c1a', drip: Math.random() < 0.3 ? 1 + Math.floor(Math.random() * 3) : 0,
+        });
+      }
+    }
+    const g = this.body.g, n = Math.ceil(this.gore.length * Math.min(1, this.bloodied / 3));
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    for (let i = 0; i < n; i++) {
+      const b = this.gore[i], x = Math.round(b.x), y = Math.round(b.y);
+      g.fillStyle = b.c;
+      g.fillRect(x - (b.r - 1), y, b.r * 2 - 1, b.r);              // grumo
+      if (b.r > 1) g.fillRect(x, y - 1, 1, b.r + 2);
+      if (b.drip) g.fillRect(x, y + b.r, 1, b.drip);                // hilo que escurre
+      if (b.c !== '#8a8484') { g.fillStyle = '#d0384a'; g.fillRect(x - (b.r - 1), y, 1, 1); } // brillo húmedo
+    }
+    g.restore();
+    if (this.bloodied <= 0) this.gore = null;
+  }
+
   // Infectado, cada pocos segundos le dan arcadas: se encorva y vomita, y mientras dura
   // no responde a los controles (te deja expuesto). Fuera de eso, el paso normal.
   update(dt) {
@@ -1216,6 +1244,7 @@ export class Player {
       weapon: st.weaponId, recoil: this.recoil ?? 0, armRaise: this.#armRaise(dt),
       punchN: this.punchN ?? 1, bladeLv: st.lineLevel('dermis'),
     });
+    if (this.bloodied > 0) this.#drawGore();
     this.bodyTex.needsUpdate = true;
     this.bodyGlowTex.needsUpdate = true;
     setMap(this.mesh, this.bodyTex);
@@ -1267,11 +1296,9 @@ export class Player {
     } else this.lastLock = null;
     const blink = this.invuln > 0 && Math.floor(this.invuln * 20) % 2 === 0;
     this.mesh.visible = this.selfMesh.visible = !blink && !this.unborn;
-    // Recién nacido: manchado de sangre; se va limpiando en unos segundos (y gotea).
+    // Recién nacido: cubierto de grumos y sangre espesa (#drawGore); se va limpiando en unos segundos y gotea.
     const bl = Math.max(0, this.bloodied ?? 0);
     this.bloodied = bl - dt;
-    const stain = Math.min(1, bl / 2) * 0.55;
-    this.mesh.material.color.setRGB(1, 1 - stain, 1 - stain * 0.9);
     if (bl > 0 && Math.random() < dt * 10 * Math.min(1, bl / 2)) this.game.particles.emit(this.x + Math.random() * this.w, this.y + 4 + Math.random() * (this.h - 4), { vy: 8, life: 0.7, gravity: 420, color: [0.55, 0.06, 0.12], stain: 'rgba(110,10,20,0.7)' });
     this.glowMesh.visible = !this.unborn;
     this.#itemFx(dt);

@@ -540,7 +540,7 @@ export class Game {
         p.unborn = false;
         p.y = m.y - p.h * 0.5;
         p.vx = p.facing * 25; p.vy = 40;
-        p.bloodied = 6; // sale manchado de sangre
+        p.bloodied = 6; p.gore = null; // sale cubierto de grumos y sangre espesa
       }
     } else if (Math.random() < 0.3 && b.t < BIRTH.end + 2) {
       // Empapado: gotea sangre y plasma un rato.
