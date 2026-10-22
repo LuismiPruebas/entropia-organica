@@ -1267,6 +1267,12 @@ export class Player {
     } else this.lastLock = null;
     const blink = this.invuln > 0 && Math.floor(this.invuln * 20) % 2 === 0;
     this.mesh.visible = this.selfMesh.visible = !blink && !this.unborn;
+    // Recién nacido: manchado de sangre; se va limpiando en unos segundos (y gotea).
+    const bl = Math.max(0, this.bloodied ?? 0);
+    this.bloodied = bl - dt;
+    const stain = Math.min(1, bl / 2) * 0.55;
+    this.mesh.material.color.setRGB(1, 1 - stain, 1 - stain * 0.9);
+    if (bl > 0 && Math.random() < dt * 10 * Math.min(1, bl / 2)) this.game.particles.emit(this.x + Math.random() * this.w, this.y + 4 + Math.random() * (this.h - 4), { vy: 8, life: 0.7, gravity: 420, color: [0.55, 0.06, 0.12], stain: 'rgba(110,10,20,0.7)' });
     this.glowMesh.visible = !this.unborn;
     this.#itemFx(dt);
     this.#dashFx(dt, x, y);

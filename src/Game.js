@@ -540,10 +540,11 @@ export class Game {
         p.unborn = false;
         p.y = m.y - p.h * 0.5;
         p.vx = p.facing * 25; p.vy = 40;
+        p.bloodied = 6; // sale manchado de sangre
       }
     } else if (Math.random() < 0.3 && b.t < BIRTH.end + 2) {
       // Empapado: gotea sangre y plasma un rato.
-      this.particles.emit(p.cx + (Math.random() - 0.5) * 8, p.y + 6 + Math.random() * 16, { vy: 6, life: 0.8, gravity: 400, color: Math.random() < 0.5 ? [0.6, 0.12, 0.18] : [0.62, 0.6, 0.6], stain: 'rgba(120,60,65,0.5)' });
+      this.particles.emit(p.cx + (Math.random() - 0.5) * 8, p.y + 6 + Math.random() * 16, { vy: 6, life: 0.8, gravity: 400, color: Math.random() < 0.75 ? [0.6, 0.08, 0.14] : [0.62, 0.6, 0.6], stain: 'rgba(120,20,30,0.6)' });
     }
     if (b.t >= BIRTH.end) {
       if (b.say) this.say(b.say, 4);

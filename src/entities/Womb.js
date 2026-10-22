@@ -225,8 +225,8 @@ export class Womb {
     this.ruptured = true;
     g.audio.play('birth', this);
     g.shake = Math.max(g.shake ?? 0, 5);
-    for (let i = 0; i < 170; i++) {
-      const blood = Math.random() < 0.5; // mitad sangre, mitad plasma gris
+    for (let i = 0; i < 260; i++) {
+      const blood = Math.random() < 0.7; // sobre todo sangre, con plasma gris
       g.particles.emit(m.x + (Math.random() - 0.5) * 8, m.y, {
         vx: (Math.random() - 0.5) * 220, vy: -30 + Math.random() * 160, life: 0.8 + Math.random() * 0.8, gravity: 520,
         color: blood ? [0.62, 0.1, 0.16] : Math.random() < 0.5 ? [0.62, 0.6, 0.6] : [0.78, 0.74, 0.74],
@@ -234,7 +234,9 @@ export class Womb {
       });
     }
     for (let i = 0; i < 40; i++) g.glowParticles.emit(m.x + (Math.random() - 0.5) * 10, m.y, { vx: (Math.random() - 0.5) * 90, vy: 10 + Math.random() * 60, life: 0.6, color: Math.random() < 0.5 ? [0.9, 0.25, 0.3] : [0.8, 0.78, 0.78] });
-    g.flash(m.x, m.y, 110, [1, 0.55, 0.6], 0.35);
+    g.flash(m.x, m.y, 110, [1, 0.35, 0.4], 0.35);
+    // Goterones: unas gotas gordas que caen pesadas y dejan charco.
+    for (let i = 0; i < 30; i++) g.particles.emit(m.x + (Math.random() - 0.5) * 6, m.y, { vx: (Math.random() - 0.5) * 50, vy: 30 + Math.random() * 40, life: 1.2, gravity: 600, color: [0.5, 0.05, 0.1], stain: 'rgba(110,10,20,0.85)' });
   }
 
   update() {
