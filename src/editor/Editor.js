@@ -948,8 +948,12 @@ cv.addEventListener('mousedown', (e) => {
   }
   snapshot();
   // La goma (o el clic derecho con cualquier herramienta de pintar) deja aire.
-  let c = S.tile === 'G' ? (S.tool === 'erase' || erase ? '-G' : 'G')
-    : S.tool === 'erase' ? (erase ? S.tile : '.') : erase ? (S.tile === '.' ? '#' : '.') : S.tile;
+  // La goma borra siempre (tengas la casilla que tengas elegida): con clic izquierdo deja
+  // aire; con el derecho pinta la casilla elegida. Con el velo elegido, el pincel lo pone
+  // y el clic derecho lo quita.
+  let c = S.tool === 'erase' ? (erase && S.tile !== 'G' ? S.tile : '.')
+    : S.tile === 'G' ? (erase ? '-G' : 'G')
+    : erase ? (S.tile === '.' ? '#' : '.') : S.tile;
   // Borrar va por capas: primero el velo (si el trazo empieza sobre él), luego lo de debajo.
   if ((S.tool === 'erase' || erase) && c === '.' && hasVeil(room(), x, y)) c = '-G';
   if (S.tool === 'fill') { floodFill(x, y, c); touch(); return; }
