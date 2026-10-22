@@ -24,6 +24,13 @@ import { BIOMES } from './data/biomes.js';
 import { LEVELS } from './data/levels.js';
 import { ITEMS, INFECTION } from './state/State.js';
 import { BINDINGS, keyName } from './core/Bindings.js';
+import { BIRTH } from './entities/Womb.js';
+
+// Entrada vacía (nada pulsado) para cuando el jugador no manda: el parto.
+const NO_INPUT = (real) => ({
+  down: () => false, hit: () => false, up: () => false, released: new Set(), pressed: new Set(), keys: new Set(),
+  mouse: real.mouse, padAim: { x: 0, y: 0, active: false }, endStep: () => {},
+});
 import { linkArrival } from './entities/Link.js';
 
 const CONE_HALF = Math.PI / 6;
@@ -178,7 +185,9 @@ export class Game {
     this.state.checkpoint = { room: START.room, spawn: START.spawn };
     this.loadRoom(START.room, START.spawn);
     this.mode = 'play';
-    this.say('Despiertas en la carne. Solo ves lo que ilumina tu ojo.', 4);
+    // Si se empieza junto a un útero, se nace de él.
+    if (this.#startBirth(START.spawn)) this.birth.say = 'Naces de la carne. Solo ves lo que ilumina tu ojo.';
+    else this.say('Despiertas en la carne. Solo ves lo que ilumina tu ojo.', 4);
   }
 
   // ---------- Salas ----------
@@ -505,7 +514,52 @@ export class Game {
     this.input.endStep();
   }
 
+  // Parto: si hay un útero junto al punto de salida (a pocas casillas), el cuerpo sale de
+  // él. Devuelve true si empieza.
+  #startBirth([tx, ty]) {
+    const w = this.room.wombs?.find((w) => Math.abs(w.node.cx - tx) <= 3 && Math.abs(w.node.cy - ty) <= 3);
+    if (!w) return false;
+    this.birth = { womb: w, t: 0 };
+    w.birth();
+    this.player.unborn = true;
+    return true;
+  }
+
+  // Avanza el parto: el cuerpo espera dentro del saco hasta la rotura y entonces cae por
+  // la boca desgarrada, empapado; al terminar se devuelve el control.
+  #birthStep(dt) {
+    const b = this.birth, p = this.player, w = b.womb;
+    b.t += dt;
+    if (p.unborn) {
+      const m = w.mouth;
+      p.x = m.x - p.w / 2; p.y = m.y - p.h; p.vx = p.vy = 0;
+      if (b.t >= BIRTH.rupture) {
+        p.unborn = false;
+        p.y = m.y - p.h * 0.5;
+        p.vx = p.facing * 25; p.vy = 40;
+      }
+    } else if (Math.random() < 0.3 && b.t < BIRTH.end + 2) {
+      // Empapado: gotea líquido amniótico un rato.
+      this.particles.emit(p.cx + (Math.random() - 0.5) * 8, p.y + 6 + Math.random() * 16, { vy: 6, life: 0.8, gravity: 400, color: [0.3, 0.75, 0.5], stain: 'rgba(60,150,100,0.5)' });
+    }
+    if (b.t >= BIRTH.end) {
+      if (b.say) this.say(b.say, 4);
+      this.birth = null;
+    }
+  }
+
   #updatePlay(dt) {
+    // Naciendo: el mundo sigue pero no hay controles (ni menús, ni consumibles).
+    if (this.birth) {
+      this.#birthStep(dt);
+      const real = this.input;
+      this.input = NO_INPUT(real);
+      try { return this.#playStep(dt); } finally { this.input = real; }
+    }
+    return this.#playStep(dt);
+  }
+
+  #playStep(dt) {
     // Congelado del impacto: unos fotogramas quietos dan peso al golpe.
     if (this.hitStop > 0) { this.hitStop -= dt; return; }
     // Cavidades: usar el consumible a mano sin abrir el Genoma.
@@ -573,7 +627,7 @@ export class Game {
       this.hud.setPrompt(`${key} ATRAVESAR`);
       if (input.hit('KeyE')) return this.#travel(link.def.to, link.def.toLink, link.def.spawn, link.visible);
     }
-    const node = this.room.nodes.find((n) => overlap(p, n));
+    const node = !this.birth && this.room.nodes.find((n) => overlap(p, n));
     if (node) {
       const cp = st.checkpoint;
       if (cp.room !== this.room.id || cp.spawn[0] !== node.cx) {
@@ -970,6 +1024,7 @@ export class Game {
       this.player.invuln = 1.5;
       this.fade = 0;
       this.mode = 'play';
+      this.#startBirth(cp.spawn); // renaces del útero donde guardaste
     }
   }
 

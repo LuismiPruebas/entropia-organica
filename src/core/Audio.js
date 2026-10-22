@@ -76,6 +76,12 @@ const SOUNDS = {
   },
   tear: (a, o) => { a.noise(o, { dur: 0.3, vol: 0.4, type: 'bandpass', f0: 250, f1: 2200, q: 3 }); a.noise(o, { dur: 0.2, vol: 0.22, type: 'bandpass', f0: 700, f1: 200, q: 7, delay: 0.12 }); a.tone(o, { type: 'sawtooth', f0: 80, f1: 50, dur: 0.2, vol: 0.1 }); },
   whip: (a, o) => a.noise(o, { dur: 0.12, vol: 0.2, type: 'bandpass', f0: 3000, f1: 800, q: 4 }),
+  birth: (a, o) => {
+    a.noise(o, { dur: 0.12, vol: 0.3, type: 'bandpass', f0: 900, f1: 300, q: 2 });
+    a.noise(o, { dur: 0.9, vol: 0.22, type: 'lowpass', f0: 1400, f1: 180, q: 1, delay: 0.05 });
+    a.tone(o, { type: 'sine', f0: 95, f1: 38, dur: 0.5, vol: 0.22 });
+    [0.25, 0.42, 0.6, 0.85].forEach((d) => a.noise(o, { dur: 0.07, vol: 0.12, type: 'bandpass', f0: 500, f1: 150, q: 6, delay: d }));
+  },
   womb: (a, o) => { a.tone(o, { type: 'sine', f0: 58, f1: 36, dur: 0.2, vol: 0.16 }); a.tone(o, { type: 'sine', f0: 52, f1: 34, dur: 0.16, vol: 0.1, delay: 0.22 }); },
   reveal: (a, o) => [0, 0.08, 0.16, 0.3].forEach((d, i) => a.tone(o, { type: 'sine', f0: [880, 1175, 1568, 2093][i], f1: [880, 1175, 1568, 2093][i], dur: 0.5, vol: 0.06, delay: d })),
   genome: (a, o) => { a.noise(o, { dur: 0.35, vol: 0.18, type: 'bandpass', f0: 300, f1: 900, q: 3 }); a.tone(o, { type: 'sine', f0: 90, f1: 55, dur: 0.3, vol: 0.2 }); },

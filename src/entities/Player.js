@@ -1,4 +1,5 @@
 import * as THREE from '../../vendor/three.module.min.js'; // ruta directa: Safari de iOS < 16.4 no entiende import maps
+import { BIRTH } from './Womb.js';
 import { MUTATIONS } from '../data/mutations.js';
 import { spriteMesh, placeMesh, setMap, canvasTexture } from '../core/Sprites.js';
 import { PlayerBody, BODY_W, BODY_H, CROUCH_DROP } from './PlayerBody.js';
@@ -61,6 +62,10 @@ const RETCH_TIME = 1.15;
 const RETCH_INPUT = (real) => ({
   down: () => false, hit: () => false, up: () => false, released: new Set(), pressed: new Set(), keys: new Set(),
   mouse: real.mouse, padAim: { x: 0, y: 0, active: false },
+});
+const BIRTH_INPUT = (real, curl) => ({
+  ...RETCH_INPUT(real),
+  down: (...c) => curl && c.some((k) => k === 'PadDown' || k === 'ArrowDown' || k === 'KeyS'),
 });
 const MELEE_INFECTION = 0.25; // probabilidad de infectarte al tocar el tejido
 
@@ -301,6 +306,14 @@ export class Player {
   // Infectado, cada pocos segundos le dan arcadas: se encorva y vomita, y mientras dura
   // no responde a los controles (te deja expuesto). Fuera de eso, el paso normal.
   update(dt) {
+    // Naciendo: dentro del saco no hay cuerpo que mover; al salir cae encogido (como si
+    // se pulsara abajo) y no responde hasta ponerse en pie.
+    const b = this.game.birth;
+    if (b) {
+      const g = this.game, real = g.input;
+      g.input = BIRTH_INPUT(real, !this.unborn && b.t < BIRTH.stand);
+      try { return this.#step(dt); } finally { g.input = real; }
+    }
     this.#retchTick(dt);
     if (!(this.retch > 0)) return this.#step(dt);
     const g = this.game, real = g.input;
@@ -1253,7 +1266,8 @@ export class Player {
       this.lockMesh.material.opacity = 0.55 + 0.3 * Math.sin(this.anim * 8);
     } else this.lastLock = null;
     const blink = this.invuln > 0 && Math.floor(this.invuln * 20) % 2 === 0;
-    this.mesh.visible = this.selfMesh.visible = !blink;
+    this.mesh.visible = this.selfMesh.visible = !blink && !this.unborn;
+    this.glowMesh.visible = !this.unborn;
     this.#itemFx(dt);
     this.#dashFx(dt, x, y);
 
@@ -1268,7 +1282,7 @@ export class Player {
     // Centro exacto del píxel del ojo (reflejado si mira a la izquierda).
     const { x: eyeX, y: eyeY } = this.#bodyToWorld(this.body.eye);
     this.eyeFlare.position.set(eyeX, -eyeY, 0);
-    this.eyeFlare.visible = !blink;
+    this.eyeFlare.visible = !blink && !this.unborn;
 
     // Tendón: el propio tentáculo se estira desde su raíz hasta el objetivo, con su
     // punta (garras o ventosa) clavada allí. Al lanzarlo sale disparado en unos fotogramas.
