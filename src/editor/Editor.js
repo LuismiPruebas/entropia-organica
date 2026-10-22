@@ -162,6 +162,32 @@ function shiftRoom(dx, dy) {
   }
   if (S.start.room === S.id) S.start.spawn = [S.start.spawn[0] + dx, S.start.spawn[1] + dy];
 }
+// Mete dentro de la sala r un elemento que se haya quedado fuera (total o parcialmente):
+// lo pega al borde más cercano. Devuelve true si lo ha movido.
+function clampInside(r, kind, o) {
+  const W = r.grid[0].length, H = r.grid.length;
+  if (kind === 'pods' || Array.isArray(o)) {
+    const nx = Math.max(0, Math.min(W - 1, o[0])), ny = Math.max(0, Math.min(H - 1, o[1]));
+    if (nx === o[0] && ny === o[1]) return false;
+    o[0] = nx; o[1] = ny; return true;
+  }
+  const K = KINDS[kind];
+  if (!K?.box || !K.move) return false;
+  const [bx, by, bw, bh] = K.box(o, r);
+  const nx = Math.max(0, Math.min(W - Math.min(bw, W), bx)), ny = Math.max(0, Math.min(H - Math.min(bh, H), by));
+  if (nx === bx && ny === by) return false;
+  if (kind === 'enemies') K.move(o, o.x + nx - bx, o.y + ny - by, r); else K.move(o, nx, ny, r);
+  return true;
+}
+// Todo lo de la sala que esté fuera, dentro. Devuelve cuántos ha movido.
+function clampRoom(r) {
+  let n = 0;
+  for (const kind of Object.keys(KINDS)) if (kind !== 'exits') for (const o of (kind === 'pods' ? r.pods?.at : r[kind]) ?? []) if (clampInside(r, kind, o)) n++;
+  const W = r.grid[0].length, H = r.grid.length, inside = ([x, y]) => x >= 0 && y >= 0 && x < W && y < H;
+  if (r.veil) { r.veil = r.veil.filter(inside); if (!r.veil.length) delete r.veil; }
+  if (r.hidden) { r.hidden = r.hidden.filter(inside); if (!r.hidden.length) delete r.hidden; }
+  return n;
+}
 function resize(side, n) {
   snapshot();
   const r = room(), w = W();
@@ -176,6 +202,8 @@ function resize(side, n) {
   if (side === 'top') { r.map[1] = q(r.map[1] - n / CELL[1]); S.pan.y -= n * S.zoom; }
   if (side === 'left') { r.map[0] = q(r.map[0] - n / CELL[0]); S.pan.x -= n * S.zoom; }
   r.map[2] = q(W() / CELL[0]); r.map[3] = q(H() / CELL[1]);
+  // Al recortar, lo que se quedaría fuera se recoloca dentro (pegado al borde).
+  if (n < 0) { const moved = clampRoom(r); if (moved) $('msg').textContent = `Recortada: ${moved} elemento${moved > 1 ? 's' : ''} que quedaba${moved > 1 ? 'n' : ''} fuera se ha${moved > 1 ? 'n' : ''} metido dentro, pegado${moved > 1 ? 's' : ''} al borde.`; }
   CTX_CACHE.delete(S.id);
   touch();
   renderRoomPanel(); drawMap();
@@ -2082,7 +2110,7 @@ function computeReach() {
 }
 function validate() {
   const out = [];
-  const add = (room, msg) => out.push([room, msg]);
+  const add = (room, msg, fix) => out.push([room, msg, fix]);
   for (const [id, r] of Object.entries(S.rooms)) {
     const w = r.grid[0].length;
     r.grid.forEach((row, y) => { if (row.length !== w) add(id, `fila ${y} mide ${row.length} (se esperaba ${w})`); });
@@ -2100,19 +2128,36 @@ function validate() {
     for (const p of r.pads ?? []) if (!gates.has(p.opens)) add(id, `ganglio que abre una compuerta inexistente (${p.opens})`);
     if (r.pods && !gates.has(r.pods.opens)) add(id, `sacos en orden que abren una compuerta inexistente (${r.pods.opens})`);
     for (const v of [...(r.valves ?? []), ...(r.floats ?? [])]) if (!r.fluids?.[v.pool]) add(id, `válvula o balsa ligada a la cubeta ${v.pool}, que no existe`);
+    // Elementos fuera de la sala (p. ej. tras recortarla): pulsando el aviso se meten dentro.
+    const Wd = r.grid[0].length, Hd = r.grid.length;
+    for (const kind of Object.keys(KINDS)) {
+      if (kind === 'exits' || kind === 'links' || kind === 'pods') continue;
+      for (const o of r[kind] ?? []) {
+        const [bx, by, bw, bh] = KINDS[kind].box(o, r);
+        if (bx + bw <= 0 || by + bh <= 0 || bx >= Wd || by >= Hd) add(id, `${KINDS[kind].label} fuera de la sala en [${bx},${by}]: pulsa para meterlo dentro`, () => clampInside(r, kind, o));
+      }
+    }
   }
   for (const [id, r] of Object.entries(S.rooms)) {
     for (const l of r.links ?? []) {
       if (!l.to && !arrivals(id, l)) add(id, `el punto ${l.id} no lleva a ningún sitio (sin destino): elige su destino en Conexiones o bórralo`);
-      if (!spotUsable(r, l)) add(id, `el punto ${l.id} está fuera de la sala o tapado por muro en [${l.x},${l.y}]: muévelo o bórralo`);
+      const outside = l.x < 0 || l.y < 0 || l.x + (l.w ?? 1) > r.grid[0].length || l.y + (l.h ?? 2) > r.grid.length;
+      if (outside) add(id, `el punto ${l.id} está fuera de la sala en [${l.x},${l.y}]: pulsa para meterlo dentro (luego muévelo o bórralo)`, () => clampInside(r, 'links', l));
+      else if (!spotUsable(r, l)) add(id, `el punto ${l.id} está tapado por muro en [${l.x},${l.y}]: muévelo o bórralo`);
       if (l.to && !S.rooms[l.to]) add(id, `el punto ${l.id} lleva a una sala que no existe (${l.to})`);
       else if (l.to && l.toLink && !(S.rooms[l.to].links ?? []).some((k) => k.id === l.toLink)) add(id, `el punto ${l.id} lleva a ${l.to}·${l.toLink}, que no existe`);
     }
     for (const ex of r.exits ?? []) if (ex.toLink && !(S.rooms[ex.to]?.links ?? []).some((k) => k.id === ex.toLink)) add(id, `la salida ${ex.side} llega a ${ex.to}·${ex.toLink}, que no existe`);
   }
   if (!S.rooms[S.start.room]) add('INICIO', 'la sala de inicio no existe');
-  $('problems').innerHTML = out.length ? out.map(([rid, m]) => `<button class="pb" data-id="${rid}">${rid}: ${m}</button>`).join('') : '<p class="ok">Sin problemas.</p>';
-  for (const b of document.querySelectorAll('#problems .pb')) b.onclick = () => S.rooms[b.dataset.id] && openRoom(b.dataset.id);
+  $('problems').innerHTML = out.length ? out.map(([rid, m], i) => `<button class="pb" data-id="${rid}" data-i="${i}">${rid}: ${m}</button>`).join('') : '<p class="ok">Sin problemas.</p>';
+  for (const b of document.querySelectorAll('#problems .pb')) b.onclick = () => {
+    const [rid, , fix] = out[Number(b.dataset.i)];
+    if (!S.rooms[rid]) return;
+    if (rid !== S.id) openRoom(rid);
+    // Arreglo directo (meter dentro lo que está fuera): se aplica y se vuelve a validar.
+    if (fix) { snapshot(); if (fix()) { S.dirty.add(rid); CTX_CACHE.delete(rid); touch(); draw(); } validate(); }
+  };
   return out.length;
 }
 

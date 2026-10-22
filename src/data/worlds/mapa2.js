@@ -262,7 +262,6 @@ export const LEVELS = {
       { x: 19, y: 11, type: 'medula', flip: false, front: false, invert: false },
     ],
     links: [
-      { id: 'p1', x: 66, y: 21, w: 1, h: 6, to: 'A3', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p2', x: 18, y: 0, w: 1, h: 2, to: 'A10', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 19, y: 0, w: 1, h: 2, to: 'A10', toLink: 'p3', trigger: 'touch', look: 'hidden' },
       { id: 'p4', x: 20, y: 0, w: 1, h: 2, to: 'A10', toLink: 'p4', trigger: 'touch', look: 'hidden' },
