@@ -253,7 +253,7 @@ export const LEVELS = {
       { type: 'gangliomadre', x: 24, y: 8 },
     ],
     faces: [
-      { x: -21, y: 37, front: false },
+      { x: 18, y: 26, front: false },
     ],
     decor: [
       { x: 27, y: 26, type: 'medula', flip: false, front: false, invert: false },
