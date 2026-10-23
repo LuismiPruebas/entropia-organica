@@ -150,19 +150,13 @@ export class Game {
       this.audio.play('empty');
       this.say('Sin aliento: deja de forzar el cuerpo y el O2 volverá.', 1.8);
     });
-    st.on('fragment', ({ kind, count, need }) => {
-      const fr = FRAGMENTS[kind], line = LINES[fr.line];
-      this.say(`Fragmento de ADN ${fr.name} ${count}/${need} · hace crecer tu ${line.name.toLowerCase()}`, 2.2);
-    });
+    st.on('fragment', ({ kind, count, need }) => this.pop(`${count}/${need}`, FRAGMENTS[kind].color, 'fragment'));
     st.on('sequence', (id) => {
       this.audio.play('dna');
-      this.say(`Secuencia completa: ${MUTATIONS[id].name} (${dnaTag(id)}). Asimílala en el útero de un Nodo Seguro.`, 4);
+      this.pop(dnaTag(id).toUpperCase(), '#ffd25a', 'dna', true);
     });
-    st.on('cellUsed', (left) => {
-      this.audio.play('flicker');
-      this.say(`Tu ojo devora una célula lumínica y vuelve a brillar. ${left ? `Quedan ${left} en reserva.` : 'No te quedan más.'}`, 2.5);
-    });
-    st.on('sequenceSpare',() => this.say('Secuencia redundante: esa línea ya está completa. El tejido sobrante amplía tu reserva de biomasa (+5).', 3));
+    st.on('cellUsed', () => { this.audio.play('flicker'); this.pop('LUZ', '#ffd23f', 'battery'); });
+    st.on('sequenceSpare', () => this.pop('+5 MÁX', '#e07a98', 'fragment'));
     st.on('mutated', (id) => {
       const m = MUTATIONS[id];
       this.say(m.unlockHint ? `Tu cuerpo cede: ${m.name}. ${m.unlockHint}` : `Tu cuerpo cede. ${m.name} asimilado. [I] para ver cómo usarlo.`, 6);
@@ -355,6 +349,12 @@ export class Game {
   flash(x, y, r, color, dur) { this.flashes.push({ x, y, r, color, t: dur, dur }); }
 
   say(text, seconds) { this.hud.say(text, seconds); }
+  // Marca visual sobre el personaje: icono (sprite) y una cifra corta que suben y se van.
+  pop(text, color, sprite, big = false) {
+    const p = this.player, cam = this.visual.cam;
+    if (!p) return;
+    this.hud.pop(text, color, sprite, p.cx - cam.x, p.y - cam.y - 4, big);
+  }
 
   // Diálogo de lore: se queda hasta que el jugador pasa (Saltar, E o Intro).
   dialogue(lines, opts = {}) {

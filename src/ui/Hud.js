@@ -1,4 +1,5 @@
 import { OXYGEN_BASE, ITEMS } from '../state/State.js';
+import { getSprite } from '../core/Sprites.js';
 const K = '#140c10';
 import { Placenta, drawNumber, drawBoneIcon, drawCellIcon, drawItemIcon } from './Bladders.js';
 
@@ -114,6 +115,30 @@ export class Hud {
     if (!this.tut) return;
     this.tut = null;
     $('hud-tip').hidden = true;
+  }
+
+  // Marca visual (ver Game.pop): se apilan si coinciden; cada una vive ~1,4 s.
+  pop(text, color, sprite, sx, sy, big) {
+    const stage = document.getElementById('stage');
+    const el = document.createElement('div');
+    el.className = big ? 'pop big' : 'pop';
+    el.style.setProperty('--c', color);
+    this.popN = (this.popN ?? 0) + 1;
+    el.style.left = `${Math.round(sx)}px`;
+    el.style.top = `${Math.round(sy - ((this.popN - 1) % 3) * 8)}px`;
+    if (sprite) {
+      try {
+        const img = getSprite(sprite, 'a').tex.image, c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        c.getContext('2d').drawImage(img, 0, 0);
+        el.append(c);
+      } catch { /* sin icono */ }
+    }
+    const t = document.createElement('span');
+    t.textContent = text;
+    el.append(t);
+    stage.append(el);
+    setTimeout(() => { el.remove(); this.popN = Math.max(0, this.popN - 1); }, 1400);
   }
 
   say(text, seconds = 2.5) {

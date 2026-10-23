@@ -107,6 +107,29 @@ body {
   33% { border-radius: 5px 11px 4px 12px / 11px 4px 10px 6px; }
   66% { border-radius: 12px 5px 10px 4px / 4px 10px 6px 11px; }
 }
+/* Marca visual al coger algo: icono + cifra corta que saltan, suben y se desvanecen. */
+.pop {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 5px;
+  color: var(--c, #fff);
+  text-shadow: 1px 1px 0 #000, 0 0 3px #000;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: pop-up 1.4s ease-out forwards;
+}
+.pop canvas { image-rendering: pixelated; filter: drop-shadow(1px 1px 0 #000); }
+.pop.big { font-size: 6.5px; }
+@keyframes pop-up {
+  0% { opacity: 0; transform: translate(-50%, -60%) scale(0.5); }
+  12% { opacity: 1; transform: translate(-50%, -110%) scale(1.2); }
+  25% { transform: translate(-50%, -115%) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -300%); }
+}
 #message, #dialogue, #bark {
   position: absolute;
   box-sizing: border-box;

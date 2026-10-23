@@ -398,8 +398,15 @@ export class Player {
     // El ratón toma la mira solo si se mueve de verdad (3 px desde donde estaba), no por
     // un temblor de la mano o del sensor.
     if (!this.lastMouse) this.lastMouse = { x: ms.x, y: ms.y };
-    if (Math.hypot(ms.x - this.lastMouse.x, ms.y - this.lastMouse.y) >= 3) { this.aimMode = 'mouse'; this.mouseIdle = 0; this.lastMouse = { x: ms.x, y: ms.y }; }
+    // Jugando con mando, un ratón que tiembla sobre la mesa no debe robar la mira: hace
+    // falta un movimiento claro.
+    const mouseStep = this.game.pad?.active ? 16 : 3;
+    if (Math.hypot(ms.x - this.lastMouse.x, ms.y - this.lastMouse.y) >= mouseStep) { this.aimMode = 'mouse'; this.mouseIdle = 0; this.lastMouse = { x: ms.x, y: ms.y }; }
+    else if (this.game.pad?.active) this.lastMouse = { x: ms.x, y: ms.y };
     if (input.hit('KeyD', 'ArrowRight', 'KeyA', 'ArrowLeft')) this.aimMode = 'keys';
+    // Si caminas y el ratón lleva un momento quieto, manda la dirección del movimiento
+    // (antes se quedaba mirando al cursor aunque anduvieras hacia el otro lado).
+    if (this.aimMode === 'mouse' && dir && this.mouseIdle > 0.5) this.aimMode = 'keys';
     // Stick derecho del mando: mira analógica en 360°. Al soltarlo, mira al frente.
     const pad = input.padAim;
     if (pad?.active) this.aimMode = 'pad';

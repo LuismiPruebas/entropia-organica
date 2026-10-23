@@ -21,26 +21,26 @@ export const PICKUPS = {
     sprite: 'battery',
     sound: 'pickup',
     apply: (st, p) => { p.stored = st.gainCell(); },
-    text: (p, st) => p.stored ? `Célula lumínica: tu ojo vuelve a brillar y guardas una (${st.cells} en reserva)` : 'Célula lumínica: tu ojo la devora y vuelve a brillar',
+    pop: (p) => [p.stored ? '+1' : 'LUZ', '#ffd23f'],
   },
   // Consumibles raros: se guardan y se usan cuando quieras.
   shield: {
     sprite: 'pearl', sound: 'dna',
     apply: (st) => st.gainItem('shield'),
-    text: (p, st) => `Perla de Nácar (${st.items.shield}): úsala ${p.game.itemKey('shield')} y nada te herirá durante ${ITEMS.shield.time} s.`,
+    pop: () => ['+1', '#4ff0ff'],
   },
   regen: {
     sprite: 'stemcell', sound: 'dna',
     apply: (st) => st.gainItem('regen'),
-    text: (p, st) => `Célula Madre (${st.items.regen}): úsala ${p.game.itemKey('regen')} y tu tejido se regenerará durante ${ITEMS.regen.time} s.`,
+    pop: () => ['+1', '#7dff9a'],
   },
-  scrap: { sprite: 'scrap', apply: (st) => { st.scrap += SCRAP_PER_PIECE; }, sound: 'pickup', text: `Esquirlas de hueso: +${SCRAP_PER_PIECE}` },
-  oxygen: { sprite: 'oxygen', apply: (st) => { st.oxygen = Math.min(st.oxygenMax, st.oxygen + 40); }, sound: 'pickup', text: 'Filtro de oxígeno: +40 O2' },
+  scrap: { sprite: 'scrap', apply: (st) => { st.scrap += SCRAP_PER_PIECE; }, sound: 'pickup', pop: () => [`+${SCRAP_PER_PIECE}`, '#e0d4b8'] },
+  oxygen: { sprite: 'oxygen', apply: (st) => { st.oxygen = Math.min(st.oxygenMax, st.oxygen + 40); }, sound: 'pickup', pop: () => ['+40', '#4ab8f0'] },
   cyst: {
     sprite: 'cyst',
     sound: 'dna',
     apply: (st) => { st.biomassBase += 20; st.biomass = st.biomassMax; },
-    text: 'Quiste de reserva: +20 biomasa máxima.',
+    pop: () => ['+20 MÁX', '#e07a98'],
   },
   fragment: {
     sprite: 'fragment',
@@ -51,9 +51,7 @@ export const PICKUPS = {
     sprite: 'thymus',
     sound: 'dna',
     apply: (st, p) => { p.res = st.addThymus(); },
-    text: (p, st) => (p.res.immune
-      ? `Timo Necrótico ${THYMUS_TOTAL}/${THYMUS_TOTAL}: GEN MUTANTE TOTAL. Tu sistema inmune calla para siempre: el rechazo ya no existe.`
-      : `Timo Necrótico ${st.thymus}/${THYMUS_TOTAL}: tu sistema inmune olvida pelear un poco más${st.mutations.size ? ` (rechazo ${rate(p.res)})` : ''}. Con los ${THYMUS_TOTAL}, el gen mutante total.`),
+    pop: (p, st) => [p.res.immune ? 'INMUNE' : `${st.thymus}/${THYMUS_TOTAL}`, '#c07bff'],
   },
   // Coágulo de plasma: no cura al cogerlo; se guarda y se usa cuando quieras (Genoma),
   // como la Perla y la Célula Madre. Lo que cura al momento es otra cosa (Tejido sano).
@@ -61,19 +59,19 @@ export const PICKUPS = {
     sprite: 'plasma',
     sound: 'dna',
     apply: (st) => st.gainItem('plasma'),
-    text: (p, st) => `Coágulo de plasma (${st.items.plasma}): úsalo ${p.game.itemKey('plasma')} y recuperas ${PLASMA.heal} de integridad.`,
+    pop: () => ['+1', '#ff5a6a'],
   },
   tissue: {
     sprite: 'tissue',
     sound: 'dna',
     apply: (st) => { st.corrupted = Math.max(0, st.corrupted - 10); st.heal(10); st.infection = 0; st.timers.immune = TISSUE_IMMUNE; },
-    text: (p, st) => `Tejido sano: recuperas 10 de integridad corrupta, se va cualquier infección y durante ${TISSUE_IMMUNE} s nada te infecta.`,
+    pop: () => ['+10', '#9affb0'],
   },
   dna: {
     sprite: 'dna',
     sound: 'dna',
     apply: (st, p) => st.dna.add(p.mutation),
-    text: (p) => `ADN latente: ${MUTATIONS[p.mutation].name} (${dnaTag(p.mutation)}). Asimílalo en el útero de un Nodo Seguro.`,
+    pop: (p) => [dnaTag(p.mutation).toUpperCase(), '#ffd25a'],
   },
   heart: { sprite: 'heart', size: 2, apply: () => {}, sound: 'node' },
 };
@@ -143,8 +141,10 @@ export class Pickup {
     const g = this.game;
     this.def.apply(g.state, this);
     g.audio.play(this.def.sound, this);
-    const text = typeof this.def.text === 'function' ? this.def.text(this, g.state) : this.def.text;
-    if (text) g.say(text, 2.5);
+    // Información visual: el icono de lo cogido y una cifra corta que suben y se desvanecen
+    // sobre el personaje (el contexto, en las fichas del Genoma).
+    const pop = this.def.pop?.(this, g.state);
+    if (pop) g.pop(pop[0], pop[1], this.def.sprite);
     if (this.key) g.state.collected.add(this.key);
     this.alive = false;
     this.dispose();
