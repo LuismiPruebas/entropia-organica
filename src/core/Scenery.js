@@ -532,7 +532,112 @@ function nervioso4() {
   };
 }
 
-const BUILDERS = { nervioso, pulmonar, digestivo, corazon, oseo, circulatorio, 'nervioso:2': nervioso2, 'nervioso:3': nervioso3, 'nervioso:4': nervioso4 };
+// Cilios del pulmón en primer plano (pizarra oscura), compartido por sus variantes.
+function pulmFront(seed, tone = '#121a26', tip = '#3a4a60') {
+  const [front, f] = canvas(FRONT_W, FRONT_H), r = rng(seed);
+  for (let x = 0; x < FRONT_W; x += 2) {
+    const h = 6 + Math.floor(Math.abs(Math.sin(x * 0.07 + seed)) * 20 + r() * 8);
+    f.fillStyle = tone; f.fillRect(x, FRONT_H - h, 1, h);
+    f.fillStyle = tip; f.fillRect(x, FRONT_H - h, 1, 1);
+  }
+  return front;
+}
+// 2 · Espuma alveolar: racimos de sacos grandes; cada saco se hincha con la respiración y
+// su pared coral se enciende en una ola que recorre el plano.
+function pulmonar2() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const r = rng(81), sacs = [];
+  for (const [cx, cy, n] of [[40, 50, 8], [130, 120, 10], [215, 40, 7], [200, 160, 6], [70, 165, 6]]) {
+    // Tallo del racimo (un bronquiolo fino) que se pierde hacia fuera.
+    let x = cx, y = cy;
+    const a = r() * Math.PI * 2;
+    for (let i = 0; i < 30; i++) { dotW(g, x - 1, y - 1, '#7a2a40', 3, 3); dotW(g, x, y, '#d0607a'); x += Math.cos(a) * 1.2; y += Math.sin(a) * 1.2; }
+    for (let k = 0; k < n; k++) {
+      const ang = r() * Math.PI * 2, d = r() * 14, bx = cx + Math.cos(ang) * d, by = cy + Math.sin(ang) * d * 0.85, rad = 4.5 + r() * 4.5;
+      ball(g, bx, by, rad, '#56708e', '#cad6e8', '#202c40', '#d0687a');
+      sacs.push({ x: bx, y: by, r: rad });
+      // Brillo base: la pared coral se intuye aunque la sala esté a oscuras.
+      for (let a = 0; a < Math.PI * 2; a += 1 / rad) dotW(gl, bx + Math.cos(a) * rad, by + Math.sin(a) * rad, 'rgba(255,120,140,0.45)');
+      for (let y = -rad * 0.7; y <= rad * 0.7; y++) for (let x = -rad * 0.7; x <= rad * 0.7; x++) if (Math.hypot(x, y) < rad * 0.7) dotW(gl, bx + x, by + y, 'rgba(120,150,210,0.1)'); // aire dentro
+      dotW(gl, bx - rad * 0.4, by - rad * 0.4, 'rgba(200,220,255,0.4)', 2, 2);
+    }
+  }
+  return {
+    mid, midGlow: glow, front: pulmFront(83),
+    anim: { sacs: { list: sacs, period: 4.2, color: [255, 130, 145] }, motes: { n: 14, colors: ['rgba(200,215,255,0.55)', 'rgba(255,190,200,0.4)'], vx: 2, vy: -1.5, size: 1, wobble: 4 } },
+  };
+}
+// 3 · Red capilar: troncos de arteriola y vénula que se ramifican entre alvéolos; por
+// dentro corren glóbulos que llegan azules y salen rojos (se oxigenan al pasar).
+function pulmonar3() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const r = rng(91), paths = [];
+  const vessel = (x, y, a, len, thick, depth, trail) => {
+    const pts = [...trail];
+    for (let i = 0; i < len; i++) {
+      const t = pts.length / 120; // de azul (entra) a rojo (sale)
+      const col = t < 0.4 ? '#3a4a8a' : t < 0.7 ? '#6a3a74' : '#a8344a', hi = t < 0.4 ? '#7a90d8' : t < 0.7 ? '#b070b8' : '#f07080';
+      dotW(g, x - thick / 2, y - thick / 2, '#10141e', thick + 2, thick + 2);
+      dotW(g, x - thick / 2 + 1, y - thick / 2 + 1, col, thick, thick);
+      dotW(g, x - thick / 2 + 1, y - thick / 2 + 1, hi);
+      // Se intuye a oscuras: un leve brillo del color de la sangre que lleva.
+      dotW(gl, x - thick / 2 + 1, y - thick / 2 + 1, t < 0.4 ? 'rgba(90,120,255,0.22)' : t < 0.7 ? 'rgba(170,90,200,0.22)' : 'rgba(255,70,90,0.24)', thick, thick);
+      pts.push([x, y]);
+      x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.22;
+    }
+    if (depth > 0) for (const s of [-1, 1]) vessel(x, y, a + s * (0.5 + r() * 0.3), len * 0.65, Math.max(1, thick - 1), depth - 1, pts);
+    else {
+      paths.push(pts);
+      ball(g, x, y, 3 + r() * 2, '#56708e', '#cad6e8', '#202c40', '#d0687a'); // el alvéolo donde acaba
+    }
+  };
+  vessel(-6, 60, 0.15, 60, 4, 3, []);
+  vessel(-6, 150, -0.2, 55, 3, 3, []);
+  return {
+    mid, midGlow: glow, front: pulmFront(93, '#141626', '#3c3e5a'),
+    anim: { cells: { paths, n: 34, from: [90, 120, 255], to: [255, 60, 75], speed: [18, 34] } },
+  };
+}
+// 4 · Bronquiolo ciliado: secciones de bronquiolo (anillos de cartílago con la luz
+// honda) y lechos de cilios que ondean en olas; suben burbujas de moco.
+function pulmonar4() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const r = rng(101), beds = [];
+  for (const [cx, cy, rad] of [[60, 70, 20], [190, 130, 26], [150, 30, 12]]) {
+    for (let y = -rad - 4; y <= rad + 4; y++) for (let x = -rad - 4; x <= rad + 4; x++) {
+      const q = Math.hypot(x, y);
+      if (q > rad + 4) continue;
+      const lit = (-x - y) / (rad * 1.4);
+      if (q > rad) dotW(g, cx + x, cy + y, Math.round(Math.atan2(y, x) * 9) % 3 === 0 ? '#f0d8e0' : lit > 0.2 ? '#c8a8b8' : '#7a5a70');   // anillo de cartílago
+      else dotW(g, cx + x, cy + y, q > rad - 3 ? '#8a3a58' : lit > 0.3 ? '#3a2c40' : '#1c1422');                                       // mucosa y luz honda
+    }
+    // Lecho de cilios por el borde interior (miran hacia el centro).
+    const n = Math.round(rad * 3.2), bed = [];
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      bed.push({ x: cx + Math.cos(a) * (rad - 3), y: cy + Math.sin(a) * (rad - 3), a: a + Math.PI, len: 4 + (k % 3) });
+    }
+    beds.push(bed);
+  }
+  // Una pared de mucosa ondulada con su propio lecho de cilios, de lado a lado.
+  const wall = [];
+  for (let x = 0; x < MID_W; x += 1) {
+    if (x > 92 && x < 150) continue; // la pared se corta: no hace una franja continua
+    const y = 176 + Math.sin(x * 0.05) * 7 + Math.sin(x * 0.13) * 3;
+    for (let k = 0; k < MID_H - y; k++) dot(g, x, y + k, k < 2 ? '#c87890' : k < 5 ? '#8a3a58' : '#4a2034');
+    if (x % 3 === 0) wall.push({ x, y: y - 1, a: -Math.PI / 2, len: 5 + (x % 2) });
+  }
+  beds.push(wall);
+  return {
+    mid, midGlow: glow, front: pulmFront(103, '#1e1622', '#4a3a52'),
+    anim: { cilia: { beds, color: 'rgba(230,200,255,0.75)' }, motes: { n: 12, colors: ['rgba(240,220,250,0.42)', 'rgba(220,200,240,0.34)'], vx: 0, vy: -7, size: 3, shape: 'bubble', wobble: 7 } },
+  };
+}
+
+const BUILDERS = { 'pulmonar:2': pulmonar2, 'pulmonar:3': pulmonar3, 'pulmonar:4': pulmonar4, nervioso, pulmonar, digestivo, corazon, oseo, circulatorio, 'nervioso:2': nervioso2, 'nervioso:3': nervioso3, 'nervioso:4': nervioso4 };
 
 // Ritmo de las paredes vivas de cada bioma (0..1).
 const RHYTHMS = {
@@ -573,13 +678,14 @@ export class Scenery {
     // Capa luminosa viva (impulsos, peristalsis, motas): se repinta cada fotograma
     // sobre una base fija.
     let dyn = null;
-    if (b.anim.neural || b.anim.flow || b.anim.motes) {
+    if (b.anim.neural || b.anim.flow || b.anim.motes || b.anim.sacs || b.anim.cells || b.anim.cilia) {
       const [cv, ctx] = canvas(MID_W, MID_H);
       const mo = b.anim.motes;
       dyn = {
         base: b.midGlow, cv, ctx, last: 0,
         neural: b.anim.neural ? { paths: b.anim.neural.paths, sparks: [], flashes: [], calm: b.anim.neural.calm } : null,
         flow: b.anim.flow ?? null,
+        cells: b.anim.cells ? { ...b.anim.cells, list: [] } : null,
         motes: mo ? Array.from({ length: mo.n }, (_, i) => ({ x: Math.random() * MID_W, y: Math.random() * MID_H, ph: Math.random() * 6, c: mo.colors[i % mo.colors.length], k: 0.6 + Math.random() * 0.8 })) : null,
       };
       b.midGlow = cv;
@@ -647,6 +753,47 @@ export class Scenery {
           g.fillStyle = `rgba(${cr},${cg},${cb},${a})`;
           g.fillRect(Math.round(p[0]) - sz, Math.round(p[1]) - sz, sz * 2, sz * 2);
         }
+      }
+    }
+    const W = (x, n) => ((Math.round(x) % n) + n) % n;
+    // Alvéolos que respiran: la pared de cada saco se enciende y se ensancha en una ola
+    // que cruza el plano (cada saco llega a su punto un poco después que el anterior).
+    if (s.anim.sacs) {
+      const sc = s.anim.sacs, [cr, cg, cb] = sc.color;
+      for (const p of sc.list) {
+        const k = Math.max(0, Math.sin((t / sc.period) * Math.PI * 2 - p.x * 0.025 - p.y * 0.01));
+        if (k < 0.05) continue;
+        const rad = p.r * (1 + 0.16 * k);
+        g.fillStyle = `rgba(${cr},${cg},${cb},${(0.2 + 0.65 * k).toFixed(2)})`;
+        for (let a = 0; a < Math.PI * 2; a += 1 / rad) g.fillRect(W(p.x + Math.cos(a) * rad, MID_W), W(p.y + Math.sin(a) * rad, MID_H), 1, 1);
+      }
+    }
+    // Glóbulos por los capilares: entran azules y salen rojos.
+    const c = d.cells;
+    if (c) {
+      while (c.list.length < c.n) c.list.push({ path: c.paths[Math.floor(Math.random() * c.paths.length)], pos: 0, speed: c.speed[0] + Math.random() * (c.speed[1] - c.speed[0]) });
+      for (const b of c.list) {
+        b.pos += b.speed * dt;
+        const p = b.path[Math.floor(b.pos)];
+        if (!p) { b.dead = true; continue; }
+        const k = b.pos / b.path.length, col = c.from.map((v, i) => Math.round(v + (c.to[i] - v) * k));
+        g.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},0.9)`;
+        g.fillRect(W(p[0], MID_W), W(p[1], MID_H), 2, 1);
+        g.fillRect(W(p[0] + 0.5, MID_W), W(p[1] - 1, MID_H), 1, 3);
+      }
+      c.list = c.list.filter((b) => !b.dead);
+    }
+    // Cilios: cada uno se inclina con un retraso respecto al vecino (ola metacrónica).
+    if (s.anim.cilia) {
+      g.fillStyle = s.anim.cilia.color;
+      for (const bed of s.anim.cilia.beds) {
+        bed.forEach((ci, i) => {
+          const sway = Math.sin(t * 5 - i * 0.45) * 0.6, a = ci.a + sway;
+          for (let k = 1; k <= ci.len; k++) {
+            const bend = a + sway * 0.4 * (k / ci.len); // la punta se dobla más
+            g.fillRect(W(ci.x + Math.cos(bend) * k, MID_W), W(ci.y + Math.sin(bend) * k, MID_H), 1, 1);
+          }
+        });
       }
     }
     // Motas a la deriva: esporas, burbujas de bilis, glóbulos rojos.

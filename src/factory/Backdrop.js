@@ -393,9 +393,65 @@ BACKDROPS['nervioso:4'] = () => {
   return sf.canvas();
 };
 
+// Cavidad Pulmonar 2 · Espuma alveolar: el parénquima visto de cerca, una esponja de
+// huecos (alvéolos) de paredes finas iluminadas, con capilares coral por las paredes.
+BACKDROPS['pulmonar:2'] = () => {
+  const sf = surface();
+  tissue(sf, { lo: '#121a26', mid: '#1e2a3c', hi: '#2e3e56' }, 51, 3);
+  const wall = hexRgb('#6a7e9a'), wallHi = hexRgb('#a8b8d0'), coral = hexRgb('#b85a68'), hole = hexRgb('#0c121c'), inner = hexRgb('#4a5e7a');
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const [d1, d2, id, cx, cy] = cells(x, y, 14, 52);
+    const cs = S / 14, edge = (d2 - d1) / cs;
+    if (edge < 0.13) {
+      // Pared: más clara por arriba a la izquierda, con vetas coral en el centro.
+      const lit = clamp01(0.5 - ((x - cx) * 0.6 + (y - cy) * 0.7) / cs);
+      sf.blend(x, y, edge < 0.035 ? coral : lit > 0.55 ? wallHi : wall, 0.85);
+      continue;
+    }
+    // Hueco cóncavo: hondo en el centro; la luz entra y aclara su borde de abajo a la derecha.
+    const r = clamp01(d1 / (cs * 0.6)), inLit = ((x - cx) * 0.6 + (y - cy) * 0.7) / (cs * 0.45);
+    sf.blend(x, y, hole, (1 - r) * 0.75 * (0.8 + id * 0.2));
+    if (inLit > 0.45 && r > 0.55) sf.blend(x, y, inner, (inLit - 0.45) * 0.9);
+  }
+  vessels(sf, 14, 53, '#c85a68', '#f08890', { len: 90, thick: 1, branch: 0.05 });
+  return sf.canvas();
+};
+// Cavidad Pulmonar 3 · Red capilar: tejido pizarra con lóbulos blandos, enmallado de
+// arteriolas rojas y vénulas azules (la sangre que llega y la que se va oxigenada).
+BACKDROPS['pulmonar:3'] = () => {
+  const sf = surface();
+  const P = { lo: '#181a28', mid: '#282c40', hi: '#3c4058', membrane: '#161826', cell: '#383e56', shine: '#7a86a8', nucleus: '#262a3c' };
+  tissue(sf, P, 61, 3);
+  lobules(sf, 7, 62, P, { strength: 0.5, membrane: 0.1, nucleus: false });
+  vessels(sf, 12, 63, '#3a4a86', '#7088d0', { len: 170, thick: 2, branch: 0.05 });
+  vessels(sf, 16, 64, '#a8384a', '#e86a7a', { len: 190, thick: 2, branch: 0.06 });
+  vessels(sf, 20, 65, '#c05060', '#f09098', { len: 60, thick: 1, branch: 0.08 }); // capilares finos
+  return sf.canvas();
+};
+// Cavidad Pulmonar 4 · Bronquiolo ciliado: mucosa malva grisácea cuajada de espuma
+// (burbujas de aire atrapadas en el moco), con algún vaso pálido.
+BACKDROPS['pulmonar:4'] = () => {
+  const sf = surface();
+  tissue(sf, { lo: '#241c2a', mid: '#362c3e', hi: '#4c4056' }, 71, 4);
+  const r = rng(72), rim = hexRgb('#8a7c96'), hi = hexRgb('#e0d4e6'), deep = hexRgb('#1c1622');
+  for (let n = 0; n < 140; n++) {
+    const x0 = r() * S, y0 = r() * S, rad = 2 + r() * (r() < 0.15 ? 9 : 4);
+    for (let y = -rad - 1; y <= rad + 1; y++) for (let x = -rad - 1; x <= rad + 1; x++) {
+      const q = Math.hypot(x, y) / rad;
+      if (q > 1.05) continue;
+      if (q > 0.8) sf.blend(x0 + x, y0 + y, rim, 0.7);              // película de la burbuja
+      else sf.blend(x0 + x, y0 + y, deep, 0.35 * (1 - q));           // dentro, más hondo
+      if (q > 0.45 && q < 0.75 && x < -rad * 0.3 && y < -rad * 0.3) sf.blend(x0 + x, y0 + y, hi, 0.75); // reflejo
+    }
+  }
+  vessels(sf, 6, 73, '#a05a70', '#d890a8', { len: 120, thick: 1, branch: 0.04 });
+  return sf.canvas();
+};
+
 // Fondos que ofrece cada bioma (para el editor). El primero es el de siempre.
 export const BACKDROP_VARIANTS = {
   nervioso: ['Bosque neuronal', 'Córtex', 'Circunvoluciones', 'Ventrículo'],
+  pulmonar: ['Árbol bronquial', 'Espuma alveolar', 'Red capilar', 'Bronquiolo ciliado'],
 };
 export const backdropKey = (biome, variant) => (variant > 1 && BACKDROPS[`${biome}:${variant}`] ? `${biome}:${variant}` : biome);
 
