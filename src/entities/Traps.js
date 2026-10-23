@@ -216,6 +216,7 @@ export class Wind {
     this.period = def.period ?? 5;
     this.t = def.phase ?? 0;
     this.k = 0; // intensidad con signo (lateral) o 0..1 (vertical)
+    this.power = 1; // 0..1: cuánto sopla ahora (los bufadores la encienden y apagan)
     this.prevSign = 0;
     this.spr = canvasSprite(game, this.rect.w, this.rect.h, 1);
     this.spr.place(this.rect.x, this.rect.y);
@@ -249,16 +250,16 @@ export class Wind {
   update(dt) {
     const g = this.game, p = g.player, r = this.rect;
     this.t += dt;
-    this.k = this.#strength();
+    this.k = this.#strength() * this.power;
     // Al cambiar de sentido, una ráfaga que se oye.
     const sign = Math.abs(this.k) > 0.5 ? Math.sign(this.k) : 0;
     if (this.dir === 'swap' && sign && sign !== this.prevSign) g.audio.play('gust', { x: r.x + r.w / 2, y: r.y + r.h / 2 });
     if (sign) this.prevSign = sign;
     // Empuje sobre el jugador (Player lo consume en su próximo paso).
-    if (overlap(p, r) && !p.rope) {
+    if (overlap(p, r) && !p.rope && this.power > 0.05) {
       if (this.dir === 'up') {
         const depth = Math.min(1, Math.max(0, (p.y + p.h - r.y) / LIFT_FADE));
-        p.lift = Math.max(p.lift ?? 0, this.force * depth);
+        p.lift = Math.max(p.lift ?? 0, this.force * depth * this.power);
         p.riseMax = RISE_MAX;
       } else {
         p.windX = (p.windX ?? 0) + this.force * this.k;
@@ -285,7 +286,7 @@ export class Wind {
     this.acc = 0;
     const { gl } = this.spr;
     gl.clearRect(0, 0, r.w, r.h);
-    const calm = vert ? 1 : Math.min(1, Math.abs(flow) * 1.4);
+    const calm = vert ? this.power : Math.min(1, Math.abs(flow) * 1.4);
     for (const s of this.streaks) {
       // Se desvanece en los bordes de la corriente: no se ve el rectángulo.
       const ex = Math.min(s.x, r.w - s.x) / 24, ey = Math.min(s.y, r.h - s.y) / 24;

@@ -1532,6 +1532,7 @@ function renderInspector() {
     }
     else if (kind === 'decor' && k === 'type') html += field('estructura', { v: DECOR[v]?.name ?? v, options: Object.values(DECOR).map((d) => d.name) }, (nv) => { o.type = Object.keys(DECOR).find((key) => DECOR[key].name === nv) ?? o.type; }, 'select');
     else if (kind === 'exits' && k === 'to') html += field('lleva a', { v, options: Object.keys(S.rooms) }, (nv) => { o.to = nv; }, 'select');
+    else if (kind === 'bellows' && k === 'dir') html += field('sopla hacia', { v, options: ['right', 'left', 'up'] }, (nv) => { o.dir = nv; }, 'select');
     else if (kind === 'exits' && k === 'side') html += field('lado', { v, options: ['left', 'right', 'top', 'bottom'] }, (nv) => { o.side = nv; }, 'select');
     else html += field(k, v, (nv) => { o[k] = nv; });
   }

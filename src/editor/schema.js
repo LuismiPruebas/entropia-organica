@@ -177,6 +177,13 @@ export const KINDS = {
     label: 'Rostro del Anfitrión (lore)', color: '#ffd27a',
     make: (x, y) => ({ x, y, front: false }), box: (o) => [o.x - 8, o.y - 14, 18, 15], move: (o, x, y) => { o.x = x + 8; o.y = y + 14; }, text: (o) => `rostro del anfitrión${o.boss ? ' → ' + o.boss : ''}${o.front ? ' (delante)' : ''}`,
   },
+  // Bufador (entities/Bellows.js): estructura de 4x4 que inspira y sopla una corriente de
+  // `reach` casillas hacia dir (right, left, up). (x, y): su casilla de arriba a la izquierda.
+  bellows: {
+    label: 'Bufador (sopla aire)', color: '#a0d8ff',
+    make: (x, y) => ({ x, y, dir: 'right', reach: 10, period: 4.5 }), box: (o) => [o.x, o.y, 4, 4], move: (o, x, y) => { o.x = x; o.y = y; },
+    text: (o) => `bufador → ${o.dir ?? 'right'} ${o.reach ?? 10}`,
+  },
   winds: {
     label: 'Corriente de aire', color: '#90f0e0',
     make: (x, y) => ({ x, y, w: 4, h: 6, dir: 'up' }), box: (o) => [o.x, o.y, o.w, o.h], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => `aire ${o.dir}`,
@@ -227,4 +234,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'bellows', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
