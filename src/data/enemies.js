@@ -387,7 +387,7 @@ export const ENEMIES = {
   quimera: {
     frag: 'balistico', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Quimera del Quilo',
-    biome: 'digestivo',
+    biome: 'circulatorio',
     creature: 'quimera',
     gore: { blood: '#8a0a1a', flesh: ['#6a4a2a', '#d89a80', '#8a2a3c', '#e8dcc8'] },
     voice: ['chimBark', 'growl', 'headScream'],
