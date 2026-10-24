@@ -3,7 +3,7 @@
 // defender... pero mientras el jefe de la zona sigue vivo, lo que habla por esa boca es
 // el parásito que lo invade y le suplanta la identidad: te critica, te amenaza y te
 // invita a irte. Cuando el jefe cae, el rostro se libera: cambia, se magnifica, te lo
-// agradece, abre las membranas selladas de su bioma (casillas 'Z') y te da pistas.
+// agradece, y te da pistas. (Las membranas que cierran la zona son del jefe: casillas 'K'.)
 //
 // Por bioma:
 //   boss     jefe que lo libera (sin jefe, el rostro está libre desde el principio)

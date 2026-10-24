@@ -697,16 +697,16 @@ export class Game {
     }
     this.room.pickups = this.room.pickups.filter((pk) => pk.alive);
 
-    // Membrana del Rostro: al rozarla cerrada, un aviso de qué la abre.
+    // Membrana del jefe: al rozarla cerrada, un aviso de qué la abre.
     if (this.time - (this.lastFaceSealSay ?? -9) > 5) {
       const w = this.world, x0 = Math.floor((p.x - 2) / TILE), x1 = Math.floor((p.x + p.w + 2) / TILE);
       const y0 = Math.floor((p.y - 2) / TILE), y1 = Math.floor((p.y + p.h + 2) / TILE);
       let hit = false;
-      for (let y = y0; y <= y1 && !hit; y++) for (let x = x0; x <= x1; x++) if (w.get(x, y) === 'Z') { hit = true; break; }
+      for (let y = y0; y <= y1 && !hit; y++) for (let x = x0; x <= x1; x++) if (w.get(x, y) === 'K') { hit = true; break; }
       if (hit) {
         this.lastFaceSealSay = this.time;
         this.audio.play('thump', p);
-        this.say('Una membrana con un núcleo dormido. No cede a la fuerza: algo en este cuerpo tiene que querer abrirla.', 3.5);
+        this.say('Sellada por el jefe de esta zona.', 2.5);
       }
     }
     // Sala liberada: la luz vuelve despacio.

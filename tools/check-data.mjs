@@ -11,7 +11,7 @@ if (process.argv[2]) process.env.LINFA_WORLD = process.argv[2];
 const { LEVELS, START, WORLD_ID } = await import('../src/data/levels.js');
 console.log('Mundo: ' + WORLD_ID);
 
-const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm', 'Z']);
+const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm', 'K']);
 let errors = 0;
 const fail = (msg) => { errors++; console.error('  ✗', msg); };
 
@@ -69,7 +69,7 @@ for (const [id, lv] of Object.entries(LEVELS)) {
       edge = [...row].map((c, x) => (x >= from && x <= to ? c : '#'));
     }
     // Un esfínter sellado (Y) o una membrana agrietada (X) cuentan como hueco: se abren.
-    if (!edge.some((c) => !SOLID.has(c) || c === 'Y' || c === 'f' || c === 'X' || c === 'Z')) fail(`la salida ${ex.side} no tiene hueco en el borde`);
+    if (!edge.some((c) => !SOLID.has(c) || c === 'Y' || c === 'f' || c === 'X' || c === 'K')) fail(`la salida ${ex.side} no tiene hueco en el borde`);
     // Por una salida lateral pasa el cuerpo entero: hueco de al menos 2 tiles de alto.
     if (ex.side === 'left' || ex.side === 'right') {
       let run = 0, best = 0;

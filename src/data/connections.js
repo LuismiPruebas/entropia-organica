@@ -17,7 +17,7 @@ export function roomConnections(lv) {
 // Un hueco del suelo (punto en la fila de abajo sin "aparece en"): no se puede aparecer
 // dentro, porque caerías por él y volverías a la sala de abajo. Se aparece de pie en el
 // suelo firme más cercano al borde del agujero.
-const FLOOR = new Set(['#', 'X', 'Y', 'Z', 'K', 'f', 'm', 'D', '/', 'k', 'a', 'A', 'E', 'e']);
+const FLOOR = new Set(['#', 'X', 'Y', 'K', 'f', 'm', 'D', '/', 'k', 'a', 'A', 'E', 'e']);
 const AIRY = (c) => c !== undefined && !FLOOR.has(c) && c !== '~' && c !== '^' && c !== 'v';
 function besideFloorHole(lv, l) {
   const g = lv.grid, H = g.length, W = g[0].length, w = l.w ?? 1;

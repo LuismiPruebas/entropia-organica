@@ -16,7 +16,6 @@ export const TILES = [
   { c: 'N', name: 'Nodo Seguro (útero)', color: '#3aff8a' },
   { c: 'X', name: 'Membrana agrietada (Embestida)', color: '#b04a6a' },
   { c: 'Y', name: 'Esfínter sellado (Tendón)', color: '#e07a9a' },
-  { c: 'Z', name: 'Membrana del Rostro (se abre al liberarlo)', color: '#9a6ad0' },
   { c: 'K', name: 'Membrana del jefe (se abre al vencer al jefe de la zona)', color: '#d0603a' },
   { c: 'f', name: 'Membrana fotosensible (Ojo I)', color: '#c8a0c0' },
   { c: 'm', name: 'Mucosa resbaladiza', color: '#6a8a30' },
@@ -54,7 +53,7 @@ export const TILES = [
   ...Object.entries(DNA_CHARS).map(([c, id]) => ({ c, name: `ADN: ${MUTATIONS[id].name}`, color: MUTATIONS[id].color ?? '#ffffff', item: true })),
 ];
 export const TILE_BY_CHAR = Object.fromEntries(TILES.map((t) => [t.c, t]));
-export const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm', 'Z', 'K']);
+export const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm', 'K']);
 
 export const ENEMY_TYPES = Object.keys(ENEMIES);
 export { ENEMIES };

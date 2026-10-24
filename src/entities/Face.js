@@ -8,7 +8,7 @@ import { paintShrineBase, drawShrine, SW, SH, HEAD } from './ShrineArt.js';
 // el jefe de su bioma vive, habla el parásito que lo suplanta (piel enferma, venas
 // negras, tumor, ojos rojos abiertos); cuando cae, al acercarte se libera: se aclara,
 // cierra los ojos en paz, su sangre corre dorada, te lo agradece, abre las membranas
-// 'Z' de su bioma (flag face:<bioma>) y desde entonces te da pistas.
+// (flag face:<bioma>) y desde entonces te da pistas.
 //
 // En la sala: faces: [{ x, y, boss?, front? }]. (x, y) es la casilla del centro de la
 // base del altar (18 x 15 casillas, hacia arriba). De fondo por defecto: las paredes de
@@ -77,7 +77,6 @@ export class Face {
     this.state = 'free';
     this.k = 1;
     this.game.state.flags.add(this.flag);
-    this.#openMembranes();
   }
 
   update(dt) {
@@ -138,27 +137,6 @@ export class Face {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, r = 20 + Math.random() * 18;
       g.glowParticles.emit(this.cx + Math.cos(a) * r, this.cy + Math.sin(a) * r, { vx: Math.cos(a) * 20, vy: Math.sin(a) * 20 - 15, life: 0.8, color: [1, 0.82, 0.5] });
-    }
-  }
-
-  // Abre las membranas 'Z' de esta sala que dependen de este rostro (las de las demás
-  // salas ya salen abiertas al entrar: EntityFactory).
-  #openMembranes() {
-    const g = this.game, room = this.room, w = room.world;
-    if ((room.def.faceSeal ?? room.def.biome) !== this.biome) return;
-    let any = false;
-    for (let y = 0; y < w.h; y++) for (let x = 0; x < w.w; x++) {
-      if (w.get(x, y) !== 'Z') continue;
-      w.set(x, y, '.');
-      any = true;
-      for (let i = 0; i < 5; i++) {
-        g.particles.emit(x * TILE + Math.random() * 16, y * TILE + Math.random() * 16, { vx: (Math.random() - 0.5) * 90, vy: -Math.random() * 70, life: 1, gravity: 300, color: [0.55, 0.3, 0.6] });
-        g.glowParticles.emit(x * TILE + Math.random() * 16, y * TILE + Math.random() * 16, { vx: (Math.random() - 0.5) * 30, vy: -20, life: 0.9, color: [0.8, 0.6, 1] });
-      }
-    }
-    if (any) {
-      g.audio.play('tear', this.center);
-      g.factory.refresh(room);
     }
   }
 

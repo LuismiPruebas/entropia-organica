@@ -705,7 +705,7 @@ function draw() {
         g.moveTo(x * z, y * z); g.lineTo(x * z + z, y * z);
         g.lineTo(x * z + z, y * z + (rr / 16) * z); g.lineTo(x * z, y * z + (l / 16) * z); g.closePath(); g.fill();
       }
-      if (t?.item || ['o', 'N', 'X', 'Y', 'Z', 'K', 'f', 'z', '^'].includes(c)) {
+      if (t?.item || ['o', 'N', 'X', 'Y', 'K', 'f', 'z', '^'].includes(c)) {
         g.fillStyle = t?.color ?? '#fff';
         if (t?.item) { g.beginPath(); g.arc(x * z + z / 2, y * z + z / 2, z * 0.32, 0, Math.PI * 2); g.fill(); }
         if (z >= 12) { g.fillStyle = t?.item ? '#000' : '#fff'; g.font = `${Math.floor(z * 0.6)}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(c, x * z + z / 2, y * z + z / 2 + 1); }
@@ -885,7 +885,7 @@ function hitTest(x, y) {
   }
   return null;
 }
-const TILE_OBJ_SPECIAL = new Set(['o', 'N', 'X', 'Y', 'Z', 'K', 'f', '^']);
+const TILE_OBJ_SPECIAL = new Set(['o', 'N', 'X', 'Y', 'K', 'f', '^']);
 const isTileObj = (c) => !!TILE_BY_CHAR[c]?.item || TILE_OBJ_SPECIAL.has(c);
 const selected = () => {
   if (!S.sel) return null;
@@ -1639,7 +1639,7 @@ function newLinkId(r) { const used = new Set((r.links ?? []).map((l) => l.id)); 
 // ¿Cabe aquí un punto? Dentro de la sala y sin muro (ni rampa) en ninguna de sus casillas.
 // Casillas que no son paso pero se abren en el juego: un punto de conexión puede ir en ellas
 // (membrana agrietada, esfínter, fotosensible, membrana del Rostro); la roca, no.
-const OPENABLE = new Set(['X', 'Y', 'f', 'Z', 'K']);
+const OPENABLE = new Set(['X', 'Y', 'f', 'K']);
 const passOrOpen = (c) => !SOLID.has(c) || OPENABLE.has(c);
 function spotOk(r, x, y, w = PW, h = PH) {
   if (x < 0 || y < 0 || x + w > r.grid[0].length || y + h > r.grid.length) return false;
@@ -1963,11 +1963,6 @@ function renderRoomPanel() {
       if (k === tradeDef) delete o.sells.trade; else o.sells.trade = k;
     }), 'select');
   }
-  // Membranas del Rostro (Z): qué rostro las abre (por defecto, el de su bioma).
-  if (r.grid.some((row) => row.includes('Z'))) {
-    html += `<h4>Membranas del Rostro (Z)</h4>`;
-    html += field('se abren al liberar el rostro de', { v: r.faceSeal ?? r.biome, options: Object.keys(BIOMES) }, (v) => { if (v === r.biome) delete r.faceSeal; else r.faceSeal = v; }, 'select');
-  }
   html += connectionsHtml(r);
   html += `<div class="row"><button id="setstart">Inicio del juego aquí (punto de prueba)</button></div>`;
   box.innerHTML = html;
@@ -2138,7 +2133,7 @@ function openRoom(id, keep = null) {
 // ---------------------------------------------------------------- alcance y validación
 function computeReach() {
   if (!S.reachStart) { $('msg').textContent = 'Mayús+clic en un suelo para marcar desde dónde comprobar el alcance.'; return; }
-  const open = S.reachOpen ? ['X', 'f', 'Y', 'Z', 'K', 'z', 'D'] : [];
+  const open = S.reachOpen ? ['X', 'f', 'Y', 'K', 'z', 'D'] : [];
   const res = reach(S.id, S.reachStart, { grid: room().grid, doubleJump: S.reachDouble, open });
   S.reach = res;
   $('msg').textContent = `Alcance desde ${S.reachStart}: ${res.standing.size} apoyos · salidas: ${[...res.exits].join(', ') || 'ninguna'}${S.reachDouble ? ' (con doble salto)' : ''}`;

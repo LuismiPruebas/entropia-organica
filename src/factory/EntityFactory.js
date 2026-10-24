@@ -77,6 +77,7 @@ export class EntityFactory {
     for (let cy = 0; cy < world.h; cy++) {
       for (let cx = 0; cx < world.w; cx++) {
         if (world.get(cx, cy) === 'z') world.set(cx, cy, 'f');  // antigua pared falsa
+        if (world.get(cx, cy) === 'Z') world.set(cx, cy, 'K');  // antigua membrana del Rostro
         const c = world.get(cx, cy);
         const center = { x: cx * TILE + TILE / 2, y: cy * TILE + TILE / 2 };
         const key = `${id}:${cx},${cy}`;
@@ -85,8 +86,6 @@ export class EntityFactory {
           world.set(cx, cy, '.');
         } else if ((c === 'X' || c === 'Y') && g.state.broken.has(key)) {
           world.set(cx, cy, '.');
-        } else if (c === 'Z' && g.state.flags.has(`face:${def.faceSeal ?? def.biome}`)) {
-          world.set(cx, cy, '.');                          // su Rostro ya se liberó
         } else if (c === 'K' && zoneBossDown(g.state, def)) {
           world.set(cx, cy, '.');                          // el jefe de la zona ya cayó
         } else if (c === 'o') {
@@ -255,10 +254,10 @@ export class EntityFactory {
     const seen = new Set();
     for (let cy = 0; cy < room.world.h; cy++) for (let cx = 0; cx < room.world.w; cx++) {
       const kind = room.world.get(cx, cy);
-      if ((kind !== 'X' && kind !== 'Y' && kind !== 'Z' && kind !== 'K') || seen.has(`${cx},${cy}`)) continue;
+      if ((kind !== 'X' && kind !== 'Y' && kind !== 'K') || seen.has(`${cx},${cy}`)) continue;
       const cells = room.world.floodFill(cx, cy);
       cells.forEach(([x, y]) => seen.add(`${x},${y}`));
-      const p = paintMembraneGroup(cells, kind === 'Y' ? 'seal' : kind === 'Z' ? 'face' : kind === 'K' ? 'boss' : 'crack');
+      const p = paintMembraneGroup(cells, kind === 'Y' ? 'seal' : kind === 'K' ? 'boss' : 'crack');
       const frames = p.frames.map((f) => ({ tex: canvasTexture(f.color), glowTex: canvasTexture(f.glow) }));
       const mk = (map, additive) => {
         const mesh = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), new THREE.MeshBasicMaterial({
