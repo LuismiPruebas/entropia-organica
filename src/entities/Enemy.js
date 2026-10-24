@@ -2014,6 +2014,7 @@ export const BEHAVIORS = {
     e.exposed = e.state === 'land' || e.state === 'scalded';
     e.biteCool = (e.biteCool ?? 1) - dt;
     e.weakT = Math.max(0, (e.weakT ?? 0) - dt);
+    e.bloody = Math.max(0, (e.bloody ?? 0) - dt);
     e.scaldCool = Math.max(0, (e.scaldCool ?? 0) - dt);
     // Debilitado: la piel humea y gotea (aviso de que ahora sí le duele).
     if (e.weakT > 0 && Math.random() < 0.5) g.glowParticles.emit(e.x + Math.random() * e.w, e.y + Math.random() * 10, { vx: (Math.random() - 0.5) * 20, vy: -30 - Math.random() * 30, life: 0.7, color: [0.75, 1, 0.55] });
@@ -2041,7 +2042,7 @@ export const BEHAVIORS = {
       if ((e.hits ?? 0) >= 2 && ['sit', 'land'].includes(e.state) && Math.abs(dx) < 80 && Math.abs(p.cy - e.cy) < 40) {
         e.hits = 0;
         e.dir = Math.sign(dx) || e.dir;
-        e.state = 'biteWind'; e.timer = 0.16; e.vx = 0; e.biteK = 0;
+        e.state = 'biteWind'; e.timer = e.biteWT = 0.3; e.vx = 0; e.biteK = 0;
         g.audio.play('eelGurgle', e);
       }
     }
@@ -2056,7 +2057,7 @@ export const BEHAVIORS = {
       const minions = g.room.enemies.filter((m) => m.minion && m.alive).length;
       // Pegado a ti: el bocado (la cabeza sale disparada con las fauces abiertas).
       if (Math.abs(dx) < 62 && Math.abs(p.cy - e.cy) < 34 && e.biteCool <= 0 && e.onGround) {
-        e.state = 'biteWind'; e.timer = enraged ? 0.22 : 0.32; e.vx = 0; e.biteK = 0;
+        e.state = 'biteWind'; e.timer = e.biteWT = enraged ? 0.4 : 0.55; e.vx = 0; e.biteK = 0;
         g.audio.play('eelGurgle', e);
       } else if (e.broodCool <= 0 && minions < (enraged ? 4 : 2)) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; e.popPending = toadPickEggs(e, enraged ? 3 : 2, g); g.audio.play(d.sounds.summon, e); }
       else if (e.timer <= 0 && e.onGround) { e.state = 'crouch'; e.timer = enraged ? 0.35 : 0.6; e.vx = 0; g.audio.play('eelGurgle', e); }
@@ -2090,19 +2091,35 @@ export const BEHAVIORS = {
         }
       }
     } else if (e.state === 'biteWind') {
+      // Anticipación: recoge la cabeza, se le hincha el cuello y abre las fauces despacio.
       e.vx = 0;
-      if (e.timer <= 0) { e.state = 'bite'; e.timer = 0.5; e.hitDone = false; g.audio.play('spit', e); g.audio.play('melee', e); }
+      e.dir = Math.sign(dx) || e.dir;
+      e.biteWK = 1 - Math.max(0, e.timer) / (e.biteWT ?? 0.5);
+      if (e.timer <= 0) { e.state = 'bite'; e.timer = 0.7; e.hitDone = false; e.snapped = false; g.audio.play('stalkerLunge', e); }
     } else if (e.state === 'bite') {
       e.vx = 0;
-      // La cabeza sale en un golpe seco, aguanta un instante y se recoge despacio.
-      const k = 1 - e.timer / 0.5;
-      e.biteK = k < 0.25 ? k / 0.25 : k < 0.5 ? 1 : 1 - (k - 0.5) / 0.5;
-      if (!e.hitDone && e.biteK > 0.6) {
-        const reach = 16 + 24 * e.biteK;
-        const box = { x: e.dir > 0 ? e.x + e.w : e.x - reach, y: e.y - 10, w: reach, h: e.h + 10 };
-        if (overlap(p, box)) { e.hitDone = true; g.hurtPlayer(d.biteDamage ?? 16, e.cx, d.name); g.shake = Math.max(g.shake, 4); }
+      // Embestida (0-0,16 s): el cuello se estira de golpe con las fauces abiertas.
+      // Cepo (0,16 s): se cierran de golpe; aprietan temblando y el cuello se recoge despacio.
+      const k = 0.7 - Math.max(0, e.timer);
+      e.biteK = k < 0.16 ? Math.pow(k / 0.16, 0.6) : k < 0.34 ? 1 : Math.max(0, 1 - (k - 0.34) / 0.36);
+      e.snapK = k < 0.16 ? 0 : Math.min(1, (k - 0.16) / 0.04);           // 0 abierta → 1 cerrada
+      if (!e.snapped && k >= 0.16) {
+        e.snapped = true;
+        g.audio.play('crunch', e);
+        g.audio.play('melee', e);
+        g.shake = Math.max(g.shake, 5);
+        const reach = 18 + 30 * e.biteK;
+        const box = { x: e.dir > 0 ? e.x + e.w - 6 : e.x - reach + 6, y: e.y - 12, w: reach, h: e.h + 12 };
+        if (overlap(p, box)) {
+          e.hitDone = true;
+          g.hurtPlayer(d.biteDamage ?? 16, e.cx, d.name);
+          g.shake = Math.max(g.shake, 9);
+          e.bloody = 3;
+          const bx = e.dir > 0 ? e.x + e.w + 26 : e.x - 26, by = e.y + 6;
+          for (let i = 0; i < 18; i++) g.particles.emit(bx, by, { vx: e.dir * (20 + Math.random() * 110) + (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 120, life: 0.7, gravity: 600, color: [0.6, 0.03, 0.08], stain: '#6a0a14' });
+        }
       }
-      if (e.timer <= 0) { e.state = 'sit'; e.biteK = 0; e.timer = enraged ? 0.6 : 1.1; e.biteCool = enraged ? 1.8 : 2.8; }
+      if (e.timer <= 0) { e.state = 'sit'; e.biteK = 0; e.snapK = 0; e.timer = enraged ? 0.6 : 1.1; e.biteCool = enraged ? 1.8 : 2.8; }
     } else if (e.state === 'land') {
       e.vx = 0;
       if (e.timer <= 0) { e.state = 'sit'; e.timer = enraged ? 0.9 : 1.7; }

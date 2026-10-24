@@ -83,7 +83,7 @@ function fang(g, bx, by, dx, dy, len) {
 
 // La cabeza entera: mandíbulas, interior de la boca, dientes, lengua, babas y ojo.
 // open 0..1 (0 = cerrada enseñando los colmillos; 1 = abierta en cepo, casi 90° por lado).
-function head(g, gl, x0, y0, open, t, look, blink) {
+function head(g, gl, x0, y0, open, t, look, blink, blood = 0) {
   const base = 0.08, a = 0.05 + open * 0.72, L = 36 + open * 4;
   hide(g, x0 - 4, y0 - 2, 12, 11, 31);                         // carrillo y nuca: tapan la bisagra
   // Interior: de la garganta (negra) a los labios, con anillos en el gaznate y encías.
@@ -132,14 +132,24 @@ function head(g, gl, x0, y0, open, t, look, blink) {
     for (let i = 1; i < n; i++) {
       if ((i + Math.round(k * 10)) % 5 === 4) continue;                       // hilo roto
       const s = i / n, sag = Math.sin(s * Math.PI) * (2 + k * 2) + Math.sin(t * 2 + k * 9) * 0.6;
-      px(g, ax + (bx - ax) * s + sag, ay + (by - ay) * s, C.drool);
+      px(g, ax + (bx - ax) * s + sag, ay + (by - ay) * s, blood > 0 && (i + Math.round(k * 7)) % 3 ? '#9a1020' : C.drool);
     }
   }
   // Baba ácida que gotea del labio de abajo.
   const drip = (t * 5) % 8;
   const lx = x0 + lo.cs * (L - 6), ly = y0 + lo.sn * (L - 6) + 6;
-  seg(g, lx, ly, lx, ly + drip, C.drool, 1);
-  px(g, lx, ly + drip, C.acid); px(gl, lx, ly + drip, C.acid);
+  seg(g, lx, ly, lx, ly + drip, blood > 0 ? '#7a0a14' : C.drool, 1);
+  px(g, lx, ly + drip, blood > 0 ? '#c01a24' : C.acid); if (!blood) px(gl, lx, ly + drip, C.acid);
+  // Sangre en los labios y goteando de los colmillos tras morderte.
+  if (blood > 0) {
+    for (let u = 10; u < L - 2; u += 5) {
+      const ux = x0 + up.cs * u - up.nx * 1, uy = y0 + up.sn * u - up.ny * 1;
+      px(g, ux, uy, '#9a1020', 2, 2);
+      const dl = ((t * 7 + u) % 9) * Math.min(1, blood);
+      seg(g, ux, uy + 2, ux, uy + 2 + dl, '#7a0a14', 1);
+      px(g, ux, uy + 3 + dl, '#c01a24');
+    }
+  }
   // Ollar en la punta del hocico.
   px(g, x0 + up.cs * (L - 4) + up.nx * 5, y0 + up.sn * (L - 4) + up.ny * 5, K, 2, 1);
   // Ojo amarillo de rendija bajo una ceja ósea, en lo alto del cráneo.
@@ -258,8 +268,10 @@ export const TOAD = {
     const cp = ((t + seed) % 3.6) / 3.6;
     const croak = st === 'sit' && cp < 0.28 ? Math.sin((cp / 0.28) * Math.PI) : 0;
     const blink = ((t * 0.27 + seed) % 1) < 0.035;
-    const windup = st === 'biteWind' ? 1 : 0;
+    const windup = st === 'biteWind' ? Math.min(1, e.biteWK ?? 1) : 0;
     const bite = st === 'bite' ? (e.biteK ?? 0) : 0;
+    const snap = st === 'bite' ? (e.snapK ?? 0) : 0;
+    const wind = windup * windup;                                       // se carga despacio y al final del todo
 
     const bx = W / 2 - 8 + shake;
     const bodyY = GROUND - 24 + crouch * 5 + squash * 6 - (air ? 6 : 0) - (air ? 0 : swell);
@@ -340,10 +352,25 @@ export const TOAD = {
     frontLeg(false);
 
     // ---- Cabeza. Bocado: se echa atrás (biteWind) y sale disparada sobre el cuello.
-    const hx = bx + 22 - windup * 5 + bite * 16, hy = bodyY - 7 + crouch * 2 + squash * 2 - bite * 2;
+    const tremble = windup ? Math.round(Math.sin(t * 70) * wind * 1.5) : snap > 0 && bite > 0.9 ? Math.round(Math.sin(t * 90)) : 0;
+    const hx = bx + 22 - wind * 9 + bite * 28 + tremble, hy = bodyY - 7 + crouch * 2 + squash * 2 + wind * 3 - bite * 3;
+    if (wind > 0.05) {
+      // Anticipación: el cuello se encoge y se hincha como un muelle, con pliegues.
+      const nr = 10 + wind * 5;
+      blob(g, hx - 6, hy + 4, nr + 1, nr * 0.75 + 1, K);
+      blob(g, hx - 6, hy + 4, nr, nr * 0.75, C.skin, C.skinD, C.skinL);
+      for (let i = -2; i <= 2; i++) seg(g, hx - 6 + i * 3, hy - 2, hx - 7 + i * 3, hy + 9, C.skinD, 1);
+    }
     if (bite > 0.05) {
-      limb(g, bx + 16, bodyY - 2, hx - 4, hy, 14, C.skin, C.skinL);             // cuello tenso
-      for (let i = 1; i < 4; i++) { const k = i / 4; px(g, bx + 16 + (hx - 20 - bx) * k, bodyY - 8 + (hy - bodyY + 2) * k, C.skinD, 1, 9); }
+      // Embestida: el cuello estirado y tenso, con los tendones marcados y venas.
+      limb(g, bx + 14, bodyY - 2, hx - 4, hy, 13 - bite * 3, C.skin, C.skinL);
+      const n = 6;
+      for (let i = 1; i < n; i++) {
+        const k = i / n, x = bx + 14 + (hx - 4 - bx - 14) * k, y = bodyY - 2 + (hy - bodyY + 2) * k;
+        px(g, x, y - 5 + bite, C.skinD, 2, 1);                                   // tendón de arriba
+        px(g, x, y + 4 - bite, C.skinD, 2, 1);                                   // de abajo
+        if (i % 2) px(g, x, y, '#7a3040');                                       // vena
+      }
     }
     // Saco de la garganta: se infla al croar y al criar.
     const sacR = 3 + swell + croak * 6 + (st === 'brood' ? 3 : 0);
@@ -352,12 +379,15 @@ export const TOAD = {
     px(g, hx + 4, hy + 8, '#c8c0b4');
     // Apertura: siempre enseña los colmillos; jadea, croa, ruge al saltar y en el
     // bocado se abre de par en par.
-    const want = bite ? 0.35 + bite * 0.65 : windup ? 0.12 + (Math.sin(t * 50) > 0 ? 0.04 : 0)
+    // Bocado: abiertas de par en par al embestir y de golpe cerradas (cepo) al morder.
+    const want = st === 'bite' ? (snap > 0 ? 0 : 1) : windup ? 0.15 + wind * 0.85 + (Math.sin(t * 50) > 0 ? 0.03 : 0)
       : air ? 0.55 : st === 'brood' ? 0.35 : crouch ? 0.15 + swell * 0.1 : squash ? 0.25 + swell * 0.2 : croak * 0.3;
-    e.jaw = (e.jaw ?? 0) + (want - (e.jaw ?? 0)) * (bite ? 0.7 : 0.3);
+    e.jaw = st === 'bite' ? want : (e.jaw ?? 0) + (want - (e.jaw ?? 0)) * (windup ? 0.5 : 0.3); // el cepo no se suaviza
     const p = game.player;
     const look = Math.atan2(p.cy - e.cy, (p.cx - e.cx) * (e.dir < 0 ? -1 : 1));
-    head(g, gl, hx, hy, Math.max(0, e.jaw), t, look, blink || squash);
+    head(g, gl, hx, hy, Math.max(0, e.jaw), t, look, (blink || squash) && !windup, e.bloody ?? 0);
+    // El chasquido del cepo: unas rayas de impacto delante de las fauces.
+    if (snap > 0 && bite > 0.85) for (let i = -1; i <= 1; i++) { px(g, hx + 40, hy + i * 5 - 1, C.toothL, 4, 1); px(gl, hx + 40, hy + i * 5 - 1, '#fff4d0', 4, 1); }
     // Aturdido: estrellitas de bilis sobre la cabeza.
     if (squash) for (let i = 0; i < 3; i++) {
       const s = t * 6 + i * 2.1;
