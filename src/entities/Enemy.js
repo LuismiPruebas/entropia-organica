@@ -270,15 +270,54 @@ export const BEHAVIORS = {
       fall(e, g, dt);
       if (e.timer <= 0) {
         e.state = 'pounce';
+        e.bit = false;
         e.vx = clamp((s.p.cx - e.cx) * 1.7, -d.leapSpeed, d.leapSpeed);
         e.vy = -d.leapV;
         e.dir = Math.sign(e.vx) || e.dir;
         g.audio.play(d.sounds?.lunge ?? 'screech', e);
       }
+    } else if (e.state === 'latch') {
+      // Aferrada a tu cuerpo: chupa biomasa y un poco de vida hasta que se suelta (al
+      // acabar, si le pegas o si embistes).
+      const p = g.player, L = d.latch;
+      e.latchT -= dt;
+      e.dir = e.side;
+      e.x = p.cx - e.w / 2 + e.side * -5;
+      e.y = p.y + 4 + Math.sin(e.t * 20) * 1;
+      e.vx = e.vy = 0;
+      e.shakeX = Math.random() < 0.5 ? -1 : 1;
+      const st = g.state;
+      st.biomass = Math.max(0, st.biomass - L.biomass * dt);
+      if (!g.state.dev.god) st.damage(L.life * dt, d.name);
+      if (Math.random() < 0.25) g.particles.emit(p.cx, p.cy, { vx: (e.cx - p.cx) * 2 + (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 30, life: 0.4, gravity: 300, color: [0.6, 0.05, 0.1] });
+      if (Math.random() < dt * 2.5) g.audio.play('splat', e);
+      if (e.latchT <= 0 || e.shaken || p.dash > 0) {
+        e.shaken = false;
+        e.contactDamage = undefined;
+        e.latchCool = g.time + 4; // no vuelve a agarrarse enseguida
+        e.state = 'pounce';
+        e.bit = true;
+        e.vx = e.side * 130; e.vy = -170;
+        g.audio.play(d.sounds?.lunge ?? 'screech', e);
+      }
+      return;
     } else if (e.state === 'pounce') {
       e.vy = Math.min(380, e.vy + GRAVITY * dt);
       g.world.move(e, dt);
       if (e.hitWall) e.vx = 0;
+      // Al alcanzarte: mordisco que infecta o, a veces, se te agarra.
+      if (d.bite && !e.bit && overlap(e, g.player)) {
+        e.bit = true;
+        if (d.latch && (e.latchCool ?? 0) <= g.time && Math.random() < d.latch.chance && g.player.dash <= 0) {
+          e.state = 'latch';
+          e.latchT = d.latch.time;
+          e.side = Math.sign(e.cx - g.player.cx) || 1;
+          e.contactDamage = 0;
+          g.hurtPlayer(d.bite, e.cx, d.name, 'infection');
+          return;
+        }
+        g.hurtPlayer(d.bite, e.cx, d.name, 'infection');
+      }
       if (e.onGround && e.vy >= 0) {
         e.state = 'recover';
         e.timer = d.recover;
@@ -1149,6 +1188,15 @@ export const BEHAVIORS = {
       const loose = 1 - (e.cohesion ?? d.cohesion ?? 1) / (d.cohesion ?? 1);
       if (loose > 0 && Math.random() < loose * dt * 8) {
         g.particles.emit(e.x + Math.random() * e.w, e.y + Math.random() * e.h * 0.7, { vx: (Math.random() - 0.5) * 30, vy: 10, life: 0.8, gravity: 400, color: [0.45, 0.65, 0.18], stain: [0.35, 0.5, 0.12] });
+      }
+      // Le has pegado: se gira y, si te tiene cerca, te suelta el puñetazo enseguida.
+      if (e.provoked && e.state === 'walk') {
+        e.provoked = false;
+        e.dir = Math.sign(p.cx - e.cx) || e.dir;
+        if (Math.abs(p.cx - e.cx) < d.punchRange + 14 && Math.abs(p.cy - e.cy) < 40 && e.onGround) {
+          e.state = 'punchWind'; e.timer = d.counterWindup ?? 0.22; g.audio.play('charge', e);
+          return;
+        }
       }
       e.aiming = s.sees && s.dist > d.punchRange;
       e.aimA = s.sees ? Math.max(-1.2, Math.min(1.2, Math.atan2(s.dy + 8, Math.abs(s.dx)))) : 0.5;
@@ -2289,7 +2337,7 @@ export class Enemy {
   // Empujón de un golpe: la criatura sale despedida y queda un instante sin control.
   // Los jefes y lo que está anclado (ojos de techo, fauces, sacos, anguilas) no se mueven.
   knockback(dir, force) {
-    if (this.def.boss || this.def.noStagger || ['ceilingEye', 'pod', 'spore', 'leaper'].includes(this.def.behavior) || this.hard) return;
+    if (this.def.boss || (this.def.noStagger && !(this.gen > 0)) || ['ceilingEye', 'pod', 'spore', 'leaper'].includes(this.def.behavior) || this.hard) return;
     this.knock = 0.38;
     this.kvx = dir * force * (this.def.knockResist ?? 1);   // knockResist: fracción del empujón
     this.kvy = ['darter', 'pollinator', 'mothSpin'].includes(this.def.behavior) ? -30 : -110;
@@ -2390,6 +2438,8 @@ export class Enemy {
     n *= this.def.weakTo?.[kind] ?? 1;
     this.hp -= n;
     if (this.def.behavior === 'bossMoth' && n > 0) this.struck = { x: at?.x ?? this.game.player.cx, y: at?.y ?? this.game.player.cy };
+    if (this.def.behavior === 'golem' && n > 0 && !(this.gen > 0)) this.provoked = true;
+    if (this.state === 'latch' && n > 0) this.shaken = true;
     if (this.def.behavior === 'glutton' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.4; }
     // El enjambre pierde células al ser herido: cada una sigue viva por su cuenta.
     if (this.def.sheds && this.hp > 0 && (this.gen ?? 0) === 0) {

@@ -213,7 +213,8 @@ export const ENEMIES = {
     behavior: 'golem',
     hp: 40, w: 24, h: 42,
     speed: 8, chaseSpeed: 19, pulpSpeed: 62, sight: 200, darkMult: 1.8, // la luz no la frena
-    punchRange: 42, punchWindup: 0.5, punchDamage: 13, punchCool: 1.8,
+    punchRange: 42, punchWindup: 0.5, punchDamage: 13, punchCool: 1.8, counterWindup: 0.22,
+    noStagger: true, // los golpes no lo paran: se revuelve con el puño
     // A distancia se arranca una bola de células y te la arroja; la regenera despacio
     // y el grumo, si sobrevive, vuelve a fundirse con él.
     throwRange: 190, throwWindup: 0.7, throwDamage: 9, throwCool: 3.2, regrowTime: 4.5, rejoinAfter: 4,
@@ -448,10 +449,14 @@ export const ENEMIES = {
     speed: 30, chaseSpeed: 75, sight: 220,
     pounceRange: 90, windup: 0.4, leapSpeed: 190, leapV: 240, recover: 0.6, pounceCool: 1.2,
     contactDamage: 7,
+    // Su salto muerde (más daño e infecta); a veces se te agarra y te drena biomasa y un
+    // poco de vida durante unos segundos.
+    bite: 11,
+    latch: { chance: 0.4, time: 3, biomass: 3, life: 1.2 },
     drop: { biomass: 3 },
     fragmentChance: 0,
     sounds: { reveal: 'headScream', windup: 'headScream', lunge: 'stalkerLunge', die: 'eyeDie' },
-    habits: 'Corre sobre seis dedos larguísimos. Se agazapa, grita y se abalanza.',
+    habits: 'Corre sobre seis dedos larguísimos. Se agazapa, grita y se abalanza: su mordisco infecta. A veces se te queda agarrada al cuerpo y te chupa biomasa y algo de vida durante unos segundos; se suelta si le pegas o si embistes.',
     lore: 'La cabeza de uno de los hombres de la Quimera. Cuando el cuerpo la suelta, no muere: le crecen patas y se va por su cuenta.',
   },
   coro: {
