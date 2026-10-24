@@ -673,7 +673,7 @@ function bulge(g, x, y, dir, r, m) {
 // alternan para que parezca respirar. Devuelve { frames: [{color, glow}], x, y, w, h }.
 export function paintMembraneGroup(cells, kind = 'crack') {
   if (kind === 'seal') return paintSealGroup(cells);
-  if (kind === 'boss') return paintSealGroup(cells, BOSS_SEAL);
+  if (kind === 'boss') return paintBossGroup(cells);
   const xs = cells.map(([x]) => x), ys = cells.map(([, y]) => y);
   const minX = Math.min(...xs), minY = Math.min(...ys);
   const w = (Math.max(...xs) - minX + 1) * TILE, h = (Math.max(...ys) - minY + 1) * TILE;
@@ -729,8 +729,69 @@ export function paintMembraneGroup(cells, kind = 'crack') {
 // anclaje) que indica dónde clavar el Tendón para desgarrarlo.
 // Colores del esfínter sellado (Y).
 const SEAL = { hi: '#b0404e', mid: '#8a2a38', lo: '#5a1420', edge: '#4a0e18', fleck: '#d06a78', ring: '#e88a9a', glow: [255, 110, 150], spoke: '#2a0610', core: '#140408' };
-// Membrana del jefe (K): carne oscura cruzada de vetas de brasa, con un núcleo que late.
-const BOSS_SEAL = { hi: '#9a3a2a', mid: '#6a2018', lo: '#3a0e0a', edge: '#260806', fleck: '#e07040', ring: '#ffa060', glow: [255, 120, 60], spoke: '#1a0604', core: '#0c0302', nucleus: true };
+// Membrana del jefe (K): una reja de costillas de hueso hundidas en carne oscura, cruzada
+// por venas de brasa que laten; en el centro, un corazón encendido. Las costillas van en
+// el lado corto del grupo (un muro alto lleva costillas horizontales; uno ancho, verticales).
+function paintBossGroup(cells) {
+  const xs = cells.map(([x]) => x), ys = cells.map(([, y]) => y);
+  const minX = Math.min(...xs), minY = Math.min(...ys);
+  const w = (Math.max(...xs) - minX + 1) * TILE, h = (Math.max(...ys) - minY + 1) * TILE;
+  const set = new Set(cells.map(([x, y]) => `${x},${y}`));
+  const tall = h >= w, cxp = w / 2 - 0.5, cyp = h / 2 - 0.5;
+  const frames = [0, 1].map((frame) => {
+    const color = document.createElement('canvas'), glow = document.createElement('canvas');
+    color.width = glow.width = w;
+    color.height = glow.height = h;
+    const g = color.getContext('2d'), gl = glow.getContext('2d');
+    gl.fillStyle = '#000';
+    gl.fillRect(0, 0, w, h);
+    const r = rng(minX * 31 + minY * 17);
+    const beat = frame ? 1 : 0.55;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const tx = minX + Math.floor(x / TILE), ty = minY + Math.floor(y / TILE);
+      if (!set.has(`${tx},${ty}`)) continue;
+      const lx = x % TILE, ly = y % TILE;
+      const freeL = !set.has(`${tx - 1},${ty}`) && lx < 1, freeR = !set.has(`${tx + 1},${ty}`) && lx > 14;
+      const freeT = !set.has(`${tx},${ty - 1}`) && ly < 1, freeB = !set.has(`${tx},${ty + 1}`) && ly > 14;
+      // Carne oscura con grano.
+      const n = (Math.sin(x * 1.7 + y * 0.9) + Math.sin(x * 0.6 - y * 1.3)) * 0.25;
+      px(g, x, y, n > 0.2 ? '#4a1410' : n > -0.2 ? '#36100c' : '#260a08');
+      if (freeL || freeR || freeT || freeB) { px(g, x, y, '#140404'); continue; }
+      // Costillas: bandas de hueso cada 6 px a lo largo del lado largo, con luz arriba.
+      const along = tall ? y : x, across = tall ? x : y, len = tall ? w : h;
+      const k = along % 6;
+      if (k < 3) {
+        // la costilla se curva un poco (más hundida en los extremos)
+        const bow = Math.abs(across - len / 2) / (len / 2);
+        if (bow < 0.92) px(g, x, y, k === 0 ? '#efe2c6' : k === 1 ? '#c8b494' : '#7a6650');
+      }
+    }
+    // Venas de brasa que serpentean entre las costillas y laten.
+    for (let v = 0; v < Math.max(2, Math.round((w * h) / 400)); v++) {
+      let x = r() * w, y = r() * h, a = r() * Math.PI * 2;
+      for (let i = 0; i < 40; i++) {
+        const tx = minX + Math.floor(x / TILE), ty = minY + Math.floor(y / TILE);
+        if (set.has(`${tx},${ty}`) && x >= 1 && y >= 1 && x < w - 1 && y < h - 1) {
+          px(g, Math.round(x), Math.round(y), '#ff7a3a');
+          gl.fillStyle = `rgba(255,110,40,${(0.35 + 0.4 * beat).toFixed(2)})`;
+          gl.fillRect(Math.round(x), Math.round(y), 1, 1);
+        }
+        x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.7;
+      }
+    }
+    // Corazón de brasa en el centro: late (más grande y brillante en un fotograma).
+    const hr = Math.max(2.5, Math.min(w, h) * 0.2) * (frame ? 1.15 : 1);
+    for (let y = -Math.ceil(hr); y <= Math.ceil(hr); y++) for (let x = -Math.ceil(hr); x <= Math.ceil(hr); x++) {
+      const d = Math.hypot(x, y * 1.15) / hr;
+      if (d > 1) continue;
+      const X = Math.round(cxp + x), Y = Math.round(cyp + y);
+      px(g, X, Y, d > 0.8 ? '#1a0604' : d > 0.5 ? '#c03a1a' : d > 0.25 ? '#ff8a3a' : '#ffe0a0');
+      if (d < 0.8) { gl.fillStyle = `rgba(255,${d < 0.3 ? 210 : 120},60,${(0.9 * beat).toFixed(2)})`; gl.fillRect(X, Y, 1, 1); }
+    }
+    return { color, glow };
+  });
+  return { frames, x: minX * TILE, y: minY * TILE, w, h };
+}
 function paintSealGroup(cells, P = SEAL) {
   const xs = cells.map(([x]) => x), ys = cells.map(([, y]) => y);
   const minX = Math.min(...xs), minY = Math.min(...ys);

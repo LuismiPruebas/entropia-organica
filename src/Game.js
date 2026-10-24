@@ -697,18 +697,6 @@ export class Game {
     }
     this.room.pickups = this.room.pickups.filter((pk) => pk.alive);
 
-    // Membrana del jefe: al rozarla cerrada, un aviso de qué la abre.
-    if (this.time - (this.lastFaceSealSay ?? -9) > 5) {
-      const w = this.world, x0 = Math.floor((p.x - 2) / TILE), x1 = Math.floor((p.x + p.w + 2) / TILE);
-      const y0 = Math.floor((p.y - 2) / TILE), y1 = Math.floor((p.y + p.h + 2) / TILE);
-      let hit = false;
-      for (let y = y0; y <= y1 && !hit; y++) for (let x = x0; x <= x1; x++) if (w.get(x, y) === 'K') { hit = true; break; }
-      if (hit) {
-        this.lastFaceSealSay = this.time;
-        this.audio.play('thump', p);
-        this.say('Sellada por el jefe de esta zona.', 2.5);
-      }
-    }
     // Sala liberada: la luz vuelve despacio.
     if (this.room.cleansed && this.room.cleanse < 1) this.room.cleanse = Math.min(1, this.room.cleanse + dt / 4);
     // Eventos de texto de la sala (editor: "Evento de texto"): al entrar en su zona.
