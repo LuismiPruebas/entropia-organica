@@ -1240,12 +1240,21 @@ export const BEHAVIORS = {
     // Hacia dónde estás (sin girarse por un par de píxeles cuando lo tienes encima).
     const toward = Math.abs(p.cx - e.cx) < 6 ? e.dir : Math.sign(p.cx - e.cx);
     const close = Math.abs(dx) < d.smashRange + 6 && Math.abs(s.dy) < 40;
+    e.hitT = (e.hitT ?? 0) - dt;
+    if (e.hitT <= 0) e.hits = 0;
     const ground = (x) => {
       g.shake = Math.max(g.shake, 6);
       g.audio.play('thump', e);
       for (let i = 0; i < 14; i++) g.particles.emit(x + (Math.random() - 0.5) * 30, e.y + e.h - 2, { vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 120, life: 0.7, gravity: 600, color: Math.random() < 0.5 ? [0.75, 0.6, 0.3] : [0.8, 0.4, 0.5] });
     };
     const smash = (windup, counter = false) => { e.dir = toward; e.counter = counter; set('raise', windup); e.cool = d.smashCool; g.audio.play(d.sounds?.reveal ?? 'growl', e); };
+    // Dos golpes tuyos seguidos: deja lo que esté haciendo (salvo si ya está golpeando o en
+    // el aire), se gira y te devuelve el mazazo.
+    if ((e.hits ?? 0) >= 2 && ['walk', 'recover', 'land'].includes(e.st) && Math.abs(s.dy) < 48) {
+      e.hits = 0;
+      e.provoked = false;
+      smash(d.counterWindup, true);
+    }
     if (e.st === 'raise') {
       // Mientras alza los brazos se gira hacia ti: el mazazo siempre cae de frente.
       e.vx = 0;
@@ -1293,6 +1302,7 @@ export const BEHAVIORS = {
     } else if (e.st === 'land' || e.st === 'recover') {
       e.vx *= 0.8;
       e.dir = toward;
+      if (e.provoked) e.timer = Math.min(e.timer, 0.15); // golpeado, se recompone antes
       if (e.timer <= 0) set('walk', 0);
     } else {
       if (s.sees || e.provoked) e.dir = toward;
@@ -1318,7 +1328,7 @@ export const BEHAVIORS = {
         e.vx = e.dir * speed;
       }
     }
-    e.provoked = false;
+    if (e.st === 'walk') e.provoked = false;
     e.vy = Math.min(380, e.vy + GRAVITY * dt);
     g.world.move(e, dt);
     if (e.hitWall && e.st === 'walk' && !s.sees) e.dir = -e.hitWall;
@@ -2279,7 +2289,7 @@ export class Enemy {
   // Empujón de un golpe: la criatura sale despedida y queda un instante sin control.
   // Los jefes y lo que está anclado (ojos de techo, fauces, sacos, anguilas) no se mueven.
   knockback(dir, force) {
-    if (this.def.boss || ['ceilingEye', 'pod', 'spore', 'leaper'].includes(this.def.behavior) || this.hard) return;
+    if (this.def.boss || this.def.noStagger || ['ceilingEye', 'pod', 'spore', 'leaper'].includes(this.def.behavior) || this.hard) return;
     this.knock = 0.38;
     this.kvx = dir * force * (this.def.knockResist ?? 1);   // knockResist: fracción del empujón
     this.kvy = ['darter', 'pollinator', 'mothSpin'].includes(this.def.behavior) ? -30 : -110;
@@ -2380,7 +2390,7 @@ export class Enemy {
     n *= this.def.weakTo?.[kind] ?? 1;
     this.hp -= n;
     if (this.def.behavior === 'bossMoth' && n > 0) this.struck = { x: at?.x ?? this.game.player.cx, y: at?.y ?? this.game.player.cy };
-    if (this.def.behavior === 'glutton' && n > 0) this.provoked = true;
+    if (this.def.behavior === 'glutton' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.4; }
     // El enjambre pierde células al ser herido: cada una sigue viva por su cuenta.
     if (this.def.sheds && this.hp > 0 && (this.gen ?? 0) === 0) {
       const lost = Math.ceil(before / this.def.cellHp) - Math.ceil(this.hp / this.def.cellHp);
