@@ -45,6 +45,8 @@ for (const [id, lv] of Object.entries(LEVELS)) {
   if (lv.pods && !gateIds.has(lv.pods.opens)) fail(`los sacos en orden abren una compuerta inexistente ${lv.pods.opens}`);
   for (const v of [...(lv.valves ?? []), ...(lv.floats ?? [])]) if (!lv.fluids?.[v.pool]) fail(`válvula/balsa ligada a la cubeta ${v.pool}, que no existe`);
   for (const v of lv.valves ?? []) if (!lv.fluids?.[v.pool]?.manual) fail(`la cubeta ${v.pool} de una válvula debe ser manual`);
+  for (const v of lv.valves ?? []) if (v.action === 'swap' && !lv.fluids?.[v.pool2]?.manual) fail(`válvula de trasvase: la cubeta pool2 (${v.pool2}) no existe o no es manual`);
+  for (const v of [...(lv.spouts ?? []), ...(lv.sinks ?? [])]) if (v.pool !== undefined && !lv.fluids?.[v.pool]) fail(`surtidor/sumidero ligado a la cubeta ${v.pool}, que no existe`);
   for (const m of lv.movers ?? []) if (!Array.isArray(m.path) || !m.path.length) fail();
   for (const m of lv.movers ?? []) if (!Array.isArray(m.path) || !m.path.length) fail(`plataforma móvil en [${m.x},${m.y}] sin ruta (path)`);
   for (const g of lv.gates ?? []) for (let i = 0; i < g.h; i++) if (cell(id, g.x, g.y + i) !== '.') fail(`compuerta ${g.id}: la celda [${g.x},${g.y + i}] debe ser aire en la cuadrícula`);

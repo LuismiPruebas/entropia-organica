@@ -109,8 +109,8 @@ export const KINDS = {
     make: (x, y, room) => { room.pods ??= { opens: 'g1', at: [], order: [] }; room.pods.at.push([x, y]); room.pods.order = room.pods.at.map((_, i) => i); return null; },
   },
   valves: {
-    label: 'Pústula-válvula', color: '#c8c040',
-    make: (x, y) => ({ x, y, dir: 'left', pool: 0, action: 'fill', time: 8 }), box: (o) => [o.x, o.y, 1, 1], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => o.action,
+    label: 'Válvula-esfínter (fill · drain · toggle · swap)', color: '#c8c040',
+    make: (x, y) => ({ x, y, dir: 'left', pool: 0, action: 'toggle' }), box: (o) => [o.x, o.y, 1, 1], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => o.action,
   },
   floats: {
     label: 'Balsa de grasa (en una cubeta)', color: '#d8c080',
@@ -127,6 +127,14 @@ export const KINDS = {
     make: (x, y) => ({ x: [x, x + 5], top: y, bottom: y + 3, manual: true, start: 0 }),
     box: (o) => { const [a, b] = rangeX(o); return [a, o.top, b - a + 1, o.bottom - o.top + 1]; },
     move: (o, x, y) => { const [a, b] = rangeX(o); const h = o.bottom - o.top; o.x = [x, x + (b - a)]; o.top = y; o.bottom = y + h; }, text: (o) => (o.manual ? 'cubeta manual' : 'cubeta'),
+  },
+  spouts: {
+    label: 'Surtidor (catarata de ácido)', color: '#7ad83a',
+    make: (x, y) => ({ x, y, dir: 'down', pool: 0 }), box: (o) => [o.x, o.y, 1, 1], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => (o.always ? 'catarata' : `surtidor →${o.pool}`),
+  },
+  sinks: {
+    label: 'Sumidero (traga al vaciar)', color: '#c86478',
+    make: (x, y) => ({ x, y, dir: 'up', pool: 0 }), box: (o) => [o.x, o.y, 1, 1], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => `sumidero →${o.pool}`,
   },
   mouths: {
     label: 'Boca que escupe', color: '#ff9060',
@@ -234,4 +242,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'mouths', 'drips', 'traps', 'winds', 'bellows', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'spouts', 'sinks', 'mouths', 'drips', 'traps', 'winds', 'bellows', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];

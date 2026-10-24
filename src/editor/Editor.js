@@ -2161,6 +2161,8 @@ function validate() {
     for (const p of r.pads ?? []) if (!gates.has(p.opens)) add(id, `ganglio que abre una compuerta inexistente (${p.opens})`);
     if (r.pods && !gates.has(r.pods.opens)) add(id, `sacos en orden que abren una compuerta inexistente (${r.pods.opens})`);
     for (const v of [...(r.valves ?? []), ...(r.floats ?? [])]) if (!r.fluids?.[v.pool]) add(id, `válvula o balsa ligada a la cubeta ${v.pool}, que no existe`);
+    for (const v of [...(r.spouts ?? []), ...(r.sinks ?? [])]) if (v.pool !== undefined && !r.fluids?.[v.pool]) add(id, `surtidor o sumidero ligado a la cubeta ${v.pool}, que no existe`);
+    for (const v of r.valves ?? []) if (v.action === 'swap' && !r.fluids?.[v.pool2]) add(id, `válvula de trasvase sin segunda cubeta (pool2)`);
     // Elementos fuera de la sala (p. ej. tras recortarla): pulsando el aviso se meten dentro.
     const Wd = r.grid[0].length, Hd = r.grid.length;
     for (const kind of Object.keys(KINDS)) {

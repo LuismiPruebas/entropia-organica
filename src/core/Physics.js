@@ -245,11 +245,12 @@ export class TileWorld {
       if (ny < oldY) b.hitCeiling = true; else b.onGround = true;
       b.vy = 0;
     }
-    // Plataformas: solo frenan cayendo (o quieto) desde encima; si suben, te llevan.
+    // Plataformas: solo frenan cayendo (o quieto) desde encima; si suben, te llevan. Un
+    // escalón de pocos píxeles se sube andando (de la orilla a una balsa que flota).
     for (const pl of this.platforms) {
       if (b.vy < 0 || b.x + b.w <= pl.x || b.x >= pl.x + pl.w) continue;
       const prevTop = pl.y - (pl.dy ?? 0);
-      if (prevBottom <= prevTop + 3 && b.y + b.h >= pl.y - 0.5) {
+      if (prevBottom <= prevTop + 6 && b.y + b.h >= pl.y - 0.5) {
         const ny = pl.y - b.h;
         if (!this.rectSolid(b.x, ny, b.w, b.h)) {
           b.y = ny; b.vy = 0; b.onGround = true;

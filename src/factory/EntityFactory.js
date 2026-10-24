@@ -10,6 +10,7 @@ import { Enemy } from '../entities/Enemy.js';
 import { Pickup } from '../entities/Pickup.js';
 import { Womb } from '../entities/Womb.js';
 import { FluidPool, Mouth, Drip } from '../entities/Hazards.js';
+import { Spout, Sink } from '../entities/Sluice.js';
 import { Lamp } from '../entities/Lamp.js';
 import { Hook } from '../entities/Hook.js';
 import { roomConnections } from '../data/connections.js';
@@ -165,7 +166,7 @@ export class EntityFactory {
     // y balsas. room.targets: lo que se puede reventar a tiros o a golpes.
     room.targets = [];
     room.gates = {};
-    for (const d of def.gates ?? []) room.gates[d.id] = new Gate(g, room, d);
+    for (const d of def.gates ?? []) room.gates[d.id] = new Gate(g, room, d, pools[d.pool]);
     // Decoración (y los muros eléctricos de las neuronas enfrentadas).
     const decors = (def.decor ?? []).map((d, i) => new Decor(g, room, d, i));
     room.hazards = [
@@ -184,7 +185,10 @@ export class EntityFactory {
       ...Object.values(room.gates),
       ...(def.pads ?? []).map((d) => new Pad(g, room, d)),
       ...(def.pods ? [new PodChain(g, room, def.pods)] : []),
-      ...(def.valves ?? []).map((d) => new Valve(g, room, d, pools[d.pool])),
+      ...(def.valves ?? []).map((d) => new Valve(g, room, d, pools[d.pool], pools[d.pool2])),
+      // Surtidores (cataratas de ácido) y sumideros que muestran cómo se llenan y vacían.
+      ...(def.spouts ?? []).map((d) => new Spout(g, room, d, pools[d.pool])),
+      ...(def.sinks ?? []).map((d) => new Sink(g, room, d, pools[d.pool])),
       ...(def.floats ?? []).map((d) => new Float(g, room, d, pools[d.pool])),
       ...(def.movers ?? []).map((d) => new Mover(g, room, d)),
       ...buildFangs(g, world), // colmillos animados de púas y abismos

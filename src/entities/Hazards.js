@@ -5,12 +5,16 @@ import { canvasTexture } from '../core/Sprites.js';
 // Peligros de fluidos (sobre todo del Sistema Digestivo), definidos por sala en
 // data/levels.js:
 //   fluids: [{ x: [col0, col1], top, bottom, period, phase }]   cubeta que se llena y vacía
-//           (con manual: true la controla otro, p. ej. un jefe, mediante .target 0..1)
+//           (con manual: true la controla otro, p. ej. un jefe o una válvula, mediante
+//           .target 0..1; `rate` = casillas por segundo a las que sube o baja)
 //   mouths: [{ x, y, dir, period, duration, phase }]             boca que escupe un chorro
 //   drips:  [{ x, y, period, phase }]                            gotera de ácido
 // Todos dañan como el ácido (la Quitina I protege).
 
 const ACID_DPS = 16;
+// Franja de superficie de las cubetas y su paleta (de lo hondo al brillo; grumos al final).
+const SURF_H = 9;
+const SC = ['#1e4a10', '#2e6a14', '#3f8f2a', '#4aa822', '#7ad83a', '#c8f080', '#8a9a2a', '#d0c868'].map((h) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; });
 
 function plane(w, h, color, { additive = false, opacity = 1, order = 2 } = {}) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({
@@ -48,7 +52,16 @@ export class FluidPool {
     this.level = def.start ?? 0;
     this.target = def.start ?? 0;
     this.body = plane(this.w, 1, '#3f8f2a', { opacity: 0.78 });
-    this.surface = plane(this.w, 1, '#9be06a', { order: 3 });
+    // Superficie: una franja pintada a mano (ácido espeso, con grumos que flotan y
+    // burbujas que revientan), no una línea.
+    this.sfCv = document.createElement('canvas');
+    this.sfCv.width = this.w; this.sfCv.height = SURF_H;
+    this.sfG = this.sfCv.getContext('2d');
+    this.sfTex = canvasTexture(this.sfCv);
+    this.surface = new THREE.Mesh(new THREE.PlaneGeometry(this.w, SURF_H), new THREE.MeshBasicMaterial({ map: this.sfTex, transparent: true, depthTest: false, depthWrite: false }));
+    this.surface.renderOrder = 3;
+    this.frame = 0;
+    this.trend = 0; // +1 subiendo, -1 bajando, 0 quieta
     this.glow = plane(this.w, 1, '#5aff4a', { additive: true, opacity: 0.6, order: 3 });
     this.haze = plane(this.w, 1, '#2a8a20', { additive: true, opacity: 0.12 });
     game.visual.world.add(this.body, this.surface);
@@ -70,16 +83,18 @@ export class FluidPool {
   update(dt) {
     const g = this.game, t = g.time;
     const prev = this.level;
-    if (this.def.manual) this.level += Math.sign(this.target - this.level) * Math.min(Math.abs(this.target - this.level), dt * 0.45);
+    const speed = this.def.rate ? (this.def.rate * TILE) / this.full : 0.45;
+    if (this.def.manual) this.level += Math.sign(this.target - this.level) * Math.min(Math.abs(this.target - this.level), dt * speed);
     else this.level = this.levelAt(t);
+    this.trend = this.level > prev + 1e-5 ? 1 : this.level < prev - 1e-5 ? -1 : 0;
     const h = Math.max(0.001, this.level * this.full), sy = this.surfaceY;
     this.body.scale.y = h;
     this.body.position.set(this.x0 + this.w / 2, -(sy + h / 2), 0);
     this.haze.scale.y = h;
     this.haze.position.copy(this.body.position);
-    const wave = Math.round(Math.sin(t * 4) * 0.6);
-    this.surface.position.set(this.x0 + this.w / 2, -(sy + 0.5 + wave), 0);
-    this.glow.position.copy(this.surface.position);
+    this.surface.position.set(this.x0 + this.w / 2, -(sy + SURF_H / 2 - 3), 0);
+    this.glow.position.set(this.x0 + this.w / 2, -(sy + 0.5), 0);
+    if (this.level > 0.01 && (this.frame++ & 1) === 0) this.#paintSurface(t);
     const visible = this.level > 0.01;
     this.body.visible = this.surface.visible = this.glow.visible = this.haze.visible = visible;
 
@@ -94,7 +109,36 @@ export class FluidPool {
     if (visible && overlapsRect(p, this.x0, sy + 2, this.w, this.yBottom - sy)) acidHurt(g, dt);
   }
 
-  dispose() { for (const m of [this.body, this.surface, this.glow, this.haze]) m.removeFromParent(); }
+  // Franja de la superficie: ondas lentas, grumos que flotan a la deriva (más deprisa si
+  // sube o baja), burbujas que se hinchan y revientan y un borde húmedo que brilla.
+  #paintSurface(t) {
+    const w = this.w, g = this.sfG, im = g.createImageData(w, SURF_H), d = im.data;
+    const set = (x, y, c) => { if (y < 0 || y >= SURF_H) return; const i = (y * w + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; };
+    const drift = t * (this.trend ? 14 : 4);
+    for (let x = 0; x < w; x++) {
+      const crest = 3 + Math.sin(x * 0.11 + t * 1.6) * 1.1 + Math.sin(x * 0.37 - t * 2.3) * 0.5;
+      // Grumo flotante: un bulto que asoma por encima de la superficie.
+      const lx = x + drift, P = 23, ph = ((lx % P) + P) % P, sz = 5 + Math.floor(Math.abs(Math.sin(Math.floor(lx / P) * 12.9)) * 5);
+      const lump = ph < sz ? Math.sin((ph / sz) * Math.PI) * 2.4 : 0;
+      const top = Math.round(crest - lump);
+      for (let y = top; y < SURF_H; y++) {
+        const k = y - top;
+        let c = k === 0 ? SC[5] : k === 1 ? SC[4] : k < 4 ? SC[3] : SC[2];
+        if (lump > 0.5 && k < 4) c = k === 0 ? SC[7] : SC[6];          // grumo amarillento
+        set(x, y, c);
+      }
+    }
+    // Burbujas que se hinchan y revientan.
+    for (let i = 0; i < Math.ceil(w / 40); i++) {
+      const life = ((t * 0.7 + i * 0.37) % 1), bx = Math.floor((Math.sin(i * 91.7 + Math.floor(t * 0.7 + i * 0.37) * 7.3) * 0.5 + 0.5) * (w - 6)) + 3;
+      const r = life < 0.85 ? Math.round(life * 2.5) : 0;
+      for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) if (x * x + y * y <= r * r + 0.5) set(bx + x, 2 + y, x * x + y * y >= (r - 1) * (r - 1) ? SC[5] : SC[1]);
+    }
+    g.putImageData(im, 0, 0);
+    this.sfTex.needsUpdate = true;
+  }
+
+  dispose() { for (const m of [this.body, this.surface, this.glow, this.haze]) m.removeFromParent(); this.sfTex.dispose(); }
 }
 
 // ---------------------------------------------------------------------------

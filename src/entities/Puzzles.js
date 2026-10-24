@@ -6,15 +6,19 @@ import { ENEMIES } from '../data/enemies.js';
 
 // Mecanismos vivos de las salas: puzles sencillos hechos de carne. En data/levels.js:
 //
-//   gates:  [{ id, x, y, h }]                        compuerta-esfínter vertical de h tiles
+//   gates:  [{ id, x, y, h, pool }]                  compuerta-esfínter vertical de h tiles (con
+//                                                    `pool`: esclusa, cerrada mientras esa cubeta
+//                                                    tiene fluido)
 //   pads:   [{ x, y, hold, opens, time }]            ganglio reflejo en el suelo: quédate encima
 //                                                    `hold` s y abre la compuerta `opens` durante
 //                                                    `time` s (sin time, para siempre)
 //   pods:   { opens, at: [[x, y], ...], order }      sacos vitelinos que hay que reventar en orden
 //                                                    (`order`: índices de `at`); laten en ese orden
-//   valves: [{ x, y, dir, pool, action, time }]      pústula-esfínter en la pared: al dispararle
-//                                                    llena (`fill`, durante `time` s) o vacía para
-//                                                    siempre (`drain`) la cubeta `pool` de `fluids`
+//   valves: [{ x, y, dir, pool, action, time, pool2 }] válvula-esfínter en la roca: al dispararle
+//                                                    llena (`fill`, durante `time` s), vacía para
+//                                                    siempre (`drain`), alterna lleno/vacío
+//                                                    (`toggle`) o pasa el fluido de `pool` a
+//                                                    `pool2` y viceversa (`swap`)
 //   floats: [{ x: [c0, c1], pool }]                  balsa de grasa que flota en esa cubeta
 //   movers: [{ x, y, w, path, speed, pause }]       plataforma móvil que recorre una ruta
 //
@@ -49,10 +53,14 @@ export function canvasSprite(game, w, h, order = 2) {
 // Compuerta-esfínter: un telón de músculo anillado que cierra un paso. Al abrirse se
 // recoge hacia arriba; abierta a tiempo, parpadea en rojo antes de volver a cerrarse.
 export class Gate {
-  constructor(game, room, def) {
+  constructor(game, room, def, pool) {
     this.game = game;
     this.room = room;
     this.def = def;
+    // Compuerta de esclusa (`pool`): cerrada mientras esa cubeta tiene fluido o se está
+    // llenando; se abre cuando queda seca. Así se entra a un tanque por abajo sin que el
+    // ácido se salga.
+    this.pool = pool;
     this.key = `gate:${room.id}:${def.id}`;
     this.cells = Array.from({ length: def.h }, (_, i) => [def.x, def.y + i]);
     // Con `until: 'jefe'` es un sello de frontera: abierto para siempre cuando ese jefe cae.
@@ -66,7 +74,12 @@ export class Gate {
     this.t = Math.random() * 3;
   }
 
-  get open() { return this.forever || this.timer > 0; }
+  get open() {
+    // when: 'full' → al revés: solo se abre con la cubeta llena (una puerta a su balsa arriba).
+    if (this.pool && this.def.when === 'full') return this.pool.level > 0.97 && this.pool.target > 0.5;
+    if (this.pool) return this.pool.level < 0.02 && this.pool.target < 0.5;
+    return this.forever || this.timer > 0;
+  }
 
   // Abre durante `seconds` (o para siempre si no se indica).
   openFor(seconds) {
@@ -321,53 +334,81 @@ export class PodChain {
 }
 
 // ---------------------------------------------------------------------------
-// Pústula-esfínter: un absceso en la pared que, al reventarlo, dilata su esfínter y
-// mueve el fluido de una cubeta (la llena un rato o la vacía para siempre).
+// Válvula-esfínter: un esfínter de carne incrustado en la roca, visto de frente. Se le
+// dispara (o se golpea) para accionarlo:
+//   action 'fill'   lo abre y llena la cubeta `pool` durante `time` s (luego se cierra)
+//   action 'drain'  lo abre para siempre y vacía la cubeta (se recuerda)
+//   action 'toggle' cada golpe la llena o la vacía (y así se queda)
+//   action 'swap'   pasa el fluido de una cubeta a otra: llena `pool` y vacía `pool2`, o al revés
+// Cerrado: los pliegues se juntan en una estrella apretada y en el centro late un punto
+// ámbar (pide un golpe). Abierto: se dilata, los labios se dan la vuelta, se ve la
+// garganta y el ácido verde que corre por ella.
+const VS = 26;
+const vrgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const VC = {
+  out: vrgb('#1a0810'), root: vrgb('#3a1220'), rootHi: vrgb('#5a2034'), dark: vrgb('#4a1626'), mid: vrgb('#7a2a40'), lit: vrgb('#a8445a'), hi: vrgb('#d47a88'),
+  crease: vrgb('#2a0a16'), lipC: vrgb('#5a1a2c'), lipO: vrgb('#f0a0aa'), throat: vrgb('#12040a'),
+  amber: vrgb('#ffb040'), amberD: vrgb('#a85a10'), acid: vrgb('#6ad83a'), acidHi: vrgb('#c8f080'), acidD: vrgb('#2e7414'), vein: vrgb('#2a0816'),
+};
 export class Valve {
-  constructor(game, room, def, pool) {
+  constructor(game, room, def, pool, pool2) {
     this.game = game;
     this.room = room;
     this.def = def;
     this.pool = pool;
+    this.pool2 = pool2;
     this.key = `valve:${room.id}:${def.x},${def.y}`;
     this.cx = def.x * TILE + 8;
     this.cy = def.y * TILE + 8;
-    this.w = 14; this.h = 14;
-    this.x = this.cx - 7; this.y = this.cy - 7;
-    this.done = game.state.flags.has(this.key);
+    this.w = 16; this.h = 16;
+    this.x = this.cx - 8; this.y = this.cy - 8;
+    this.done = def.action === 'drain' && game.state.flags.has(this.key);
     this.alive = !this.done;
     this.timer = 0;
     this.cool = 0;
+    this.squish = 0;
+    this.k = 0; // apertura dibujada (0..1)
     this.t = Math.random() * 3;
+    this.frame = 0;
     if (this.done && pool) { pool.target = 0; pool.level = 0; }
-    this.spr = canvasSprite(game, 16, 16, 2);
-    this.spr.place(this.cx - 8, this.cy - 8);
+    this.spr = canvasSprite(game, VS, VS, 2);
+    this.spr.place(this.cx - VS / 2, this.cy - VS / 2);
     this.spr.mesh.rotation.z = this.spr.glow.rotation.z = { down: 0, up: Math.PI, left: -Math.PI / 2, right: Math.PI / 2 }[def.dir ?? 'down'];
     room.targets.push(this);
+  }
+
+  // Abierta = está haciendo lo suyo (llenando, ya vaciada, o en su posición de "lleno").
+  get open() {
+    const act = this.def.action ?? 'fill';
+    if (act === 'drain') return this.done;
+    if (act === 'toggle' || act === 'swap') return (this.pool?.target ?? 0) >= 0.5;
+    return this.timer > 0;
   }
 
   get flowing() { return this.timer > 0 || (this.def.action === 'drain' && this.pool && this.pool.level > 0.01 && this.done); }
 
   hit() {
-    const g = this.game;
+    const g = this.game, act = this.def.action ?? 'fill';
     if (!this.alive || this.cool > 0) return true;
     this.cool = 0.6;
+    this.squish = 1;
     g.audio.play('splat', this);
     g.audio.play('acid', this);
     for (let i = 0; i < 12; i++) g.particles.emit(this.cx, this.cy, { vx: (Math.random() - 0.5) * 120, vy: (Math.random() - 0.5) * 120, life: 0.5, gravity: 300, color: [0.75, 0.85, 0.25] });
-    if (this.def.action === 'drain') {
+    if (act === 'drain') {
       this.done = true;
       this.alive = false;
       g.state.flags.add(this.key);
       if (this.pool) this.pool.target = 0;
-      g.say('El esfínter se dilata y evacúa el ácido.', 3);
+    } else if (act === 'toggle') {
+      if (this.pool) this.pool.target = this.pool.target >= 0.5 ? 0 : 1;
+    } else if (act === 'swap') {
+      const fillA = (this.pool?.target ?? 0) < 0.5;
+      if (this.pool) this.pool.target = fillA ? 1 : 0;
+      if (this.pool2) this.pool2.target = fillA ? 0 : 1;
     } else {
       this.timer = this.def.time ?? 8;
       if (this.pool) this.pool.target = 1;
-      if (!g.state.seenValve) {
-        g.state.seenValve = true;
-        g.say('La pústula revienta y el fluido entra a borbotones... no durará.', 3);
-      }
     }
     return true;
   }
@@ -376,6 +417,7 @@ export class Valve {
     const g = this.game;
     this.t += dt;
     this.cool = Math.max(0, this.cool - dt);
+    this.squish = Math.max(0, this.squish - dt * 3);
     if (this.timer > 0) {
       this.timer -= dt;
       if (this.timer <= 0 && this.pool) {
@@ -383,36 +425,59 @@ export class Valve {
         g.audio.play('glandFlood', this);
       }
     }
-    // Chorro: hacia la cubeta al llenar, hacia el esfínter al vaciar.
-    if (this.flowing && this.pool && Math.random() < 0.8) {
-      const tx = Math.max(this.pool.x0, Math.min(this.pool.x0 + this.pool.w, this.cx)), ty = this.pool.surfaceY;
-      const into = this.def.action !== 'drain';
-      const [sx, sy, ex, ey] = into ? [this.cx, this.cy, tx, ty] : [tx, ty, this.cx, this.cy];
-      g.glowParticles.emit(sx + (Math.random() - 0.5) * 4, sy, { vx: (ex - sx) * 1.5, vy: (ey - sy) * 1.5, life: 0.5, color: [0.4, 1, 0.3] });
-    }
-    this.#draw();
+    this.k += ((this.open ? 1 : 0) - this.k) * Math.min(1, dt * 5);
+    // Un llenado a tiempo avisa al final: el esfínter tiembla y empieza a cerrarse.
+    if ((this.frame++ & 1) === 0) this.#draw();
   }
 
   #draw() {
-    const { g, gl } = this.spr;
-    g.clearRect(0, 0, 16, 16);
-    gl.clearRect(0, 0, 16, 16);
-    const open = this.flowing || this.done;
-    const beat = Math.sin(this.t * 3) > 0.7 ? 1 : 0;
-    // Pliegues de carne alrededor del esfínter (pegado a la pared por arriba).
-    blob(g, 8, 8, 7, 6, '#7a2a3a', K);
-    for (let a = 0; a < 8; a++) {
-      const ang = (a / 8) * Math.PI * 2;
-      seg(g, 8 + Math.cos(ang) * 2, 8 + Math.sin(ang) * 2, 8 + Math.cos(ang) * 6, 8 + Math.sin(ang) * 5, '#5a1a28');
+    const { g, gl } = this.spr, t = this.t;
+    const ending = this.timer > 0 && this.timer < 2 ? Math.sin(t * 30) * 0.12 : 0;
+    const k = Math.max(0, Math.min(1, this.k + ending));
+    const beat = Math.max(0, Math.sin(t * 3.2));
+    const sq = 1 + this.squish * 0.18;
+    const c = VS / 2 - 0.5, cy = c + 1;
+    const im = g.createImageData(VS, VS), d = im.data;
+    for (let y = 0; y < VS; y++) for (let x = 0; x < VS; x++) {
+      let col = null;
+      // Raíces: la carne que lo ancla a la roca (por arriba; el sprite se gira según dir).
+      if (y < 7) {
+        const sway = Math.sin(x * 0.9 + 1.3) * 1.5;
+        const root = Math.abs(((x + 2) % 6) - 3 + sway * 0.3) < 1.6 && y < 6 - Math.abs(x - c) * 0.2;
+        if (root) col = (x + y) % 5 === 0 ? VC.rootHi : VC.root;
+      }
+      const u = (x - c) / (11.5 * sq), v = (y - cy) / (10.5 / sq), r = Math.hypot(u, v);
+      if (r <= 1) {
+        const a = Math.atan2(v, u);
+        const hole = 0.07 + k * 0.5, lip = hole + 0.13 + k * 0.05;
+        const lit = -u * 0.35 - v * 0.55;
+        if (r > 0.9) col = VC.out;
+        else if (r < hole) {
+          // Garganta: oscura; abierta, el ácido corre por ella en ondas.
+          if (k < 0.2) col = VC.throat;
+          else { const w = Math.sin(r * 22 - t * 10 + a); col = w > 0.6 ? VC.acidHi : w > -0.1 ? VC.acid : r < hole * 0.45 ? VC.acidD : VC.throat; }
+        } else if (r < lip) {
+          col = k > 0.4 ? (lit > 0 ? VC.lipO : VC.hi) : VC.lipC;          // labios: evertidos y pálidos al abrirse
+        } else {
+          // Pliegues radiales que se retuercen hacia el centro (más cerrado, más prietos).
+          const fold = Math.cos(a * 8 + (1 - r) * (3 - k * 2.4));
+          if (fold < -0.6) col = VC.crease;
+          else if (fold > 0.55) col = lit > 0.05 ? VC.hi : VC.lit;
+          else col = lit > 0.25 ? VC.lit : lit > -0.25 ? VC.mid : VC.dark;
+          // Venas oscuras en el anillo exterior.
+          if (r > 0.72 && Math.abs(Math.sin(a * 3 + 0.7)) < 0.08) col = VC.vein;
+        }
+        // Cerrado: el punto ámbar que late en el centro.
+        if (k < 0.3 && r < 0.12 + beat * 0.05) col = beat > 0.5 ? VC.amber : VC.amberD;
+      }
+      if (!col) continue;
+      const i = (y * VS + x) * 4;
+      d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255;
     }
-    if (open) {
-      blob(g, 8, 8, 3.5, 3, '#140408', '#c86070');
-      if (this.flowing) blob(gl, 8, 8, 3, 3, '#5aff4a');
-    } else {
-      // Absceso: una pústula amarilla tensa que late.
-      blob(g, 8, 9, 4 + beat * 0.5, 3.5 + beat * 0.5, '#c8c040', '#6a6a18', '#f8f0a0');
-      blob(gl, 8, 9, 3, 2, beat ? '#6a7a10' : '#3a4a08');
-    }
+    g.putImageData(im, 0, 0);
+    gl.clearRect(0, 0, VS, VS);
+    if (k > 0.25) { gl.fillStyle = `rgba(90,255,74,${0.5 * k})`; gl.beginPath(); gl.arc(c + 0.5, cy + 0.5, 1 + k * 5, 0, Math.PI * 2); gl.fill(); }
+    else { gl.fillStyle = `rgba(255,170,60,${0.25 + beat * 0.55})`; gl.fillRect(Math.round(c) - 1, Math.round(cy) - 1, 3, 3); }
     this.spr.commit();
   }
 
