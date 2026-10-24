@@ -1237,13 +1237,18 @@ export const BEHAVIORS = {
     e.timer = (e.timer ?? 0) - dt;
     const set = (st, time) => { e.st = st; e.timer = time; e.stT = time; };
     e.stK = e.stT ? Math.max(0, Math.min(1, 1 - e.timer / e.stT)) : 0;
+    const toward = Math.sign(p.cx - e.cx) || e.dir;
+    const close = Math.abs(dx) < d.smashRange + 6 && Math.abs(s.dy) < 40;
     const ground = (x) => {
       g.shake = Math.max(g.shake, 6);
       g.audio.play('thump', e);
       for (let i = 0; i < 14; i++) g.particles.emit(x + (Math.random() - 0.5) * 30, e.y + e.h - 2, { vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 120, life: 0.7, gravity: 600, color: Math.random() < 0.5 ? [0.75, 0.6, 0.3] : [0.8, 0.4, 0.5] });
     };
+    const smash = (windup) => { e.dir = toward; set('raise', windup); e.cool = d.smashCool; g.audio.play(d.sounds?.reveal ?? 'growl', e); };
     if (e.st === 'raise') {
+      // Mientras alza los brazos se gira hacia ti: el mazazo siempre cae de frente.
       e.vx = 0;
+      e.dir = toward;
       if (e.timer <= 0) { set('smash', 0.18); e.hitDone = false; }
     } else if (e.st === 'smash') {
       e.vx = 0;
@@ -1254,34 +1259,44 @@ export const BEHAVIORS = {
         ground(e.cx + e.dir * 26);
         g.audio.play('crunch', e);
       }
-      if (e.timer <= 0) set('recover', 0.7);
+      if (e.timer <= 0) set('recover', 0.5);
     } else if (e.st === 'squat') {
       e.vx = 0;
+      e.dir = toward;
       if (e.timer <= 0) {
         set('hop', 1.5);
         e.vy = -d.hopPower;
-        e.vx = e.dir * Math.min(d.hopSpeed, Math.abs(dx) * 1.3 + 30);
+        // Salto hacia ti, o hacia atrás si te tenía encima (sin dejar de mirarte).
+        e.vx = e.back ? -e.dir * d.backHop : e.dir * Math.min(d.hopSpeed, Math.abs(dx) * 1.3 + 30);
         e.airborne = false;
         g.audio.play(d.sounds?.attack ?? 'growl', e);
       }
     } else if (e.st === 'hop') {
+      e.dir = toward;
       if (!e.onGround) e.airborne = true;
       if (e.airborne && e.onGround) {
-        set('land', 0.45);
+        set('land', 0.4);
         e.vx = 0;
+        e.back = false;
         ground(e.cx);
         // La onda del golpe al caer: hiere si estás pegado a él en el suelo.
         if (Math.abs(p.cx - e.cx) < d.landRange && Math.abs(p.y + p.h - (e.y + e.h)) < 10) g.hurtPlayer(d.landDamage, e.cx, d.name);
       } else if (e.timer <= 0) set('land', 0.3);
     } else if (e.st === 'land' || e.st === 'recover') {
       e.vx *= 0.8;
+      e.dir = toward;
       if (e.timer <= 0) set('walk', 0);
     } else {
-      if (s.sees) e.dir = Math.sign(dx) || e.dir;
-      if (s.sees && Math.abs(dx) < d.smashRange && Math.abs(s.dy) < 40 && e.cool <= 0) {
-        set('raise', d.smashWindup);
-        e.cool = d.smashCool;
-        g.audio.play(d.sounds?.reveal ?? 'growl', e);
+      if (s.sees || e.provoked) e.dir = toward;
+      if (e.provoked) {
+        // Le has pegado: se revuelve. Pegado a ti, mazazo rápido; si no, salta hacia ti
+        // (y a veces, si estás encima, se aparta de un salto hacia atrás).
+        e.provoked = false;
+        if (close && Math.random() < 0.3 && e.onGround) { e.back = true; set('squat', 0.25); e.hopCool = d.hopCool * 0.5; }
+        else if (close) smash(d.counterWindup);
+        else if (Math.abs(dx) < d.hopRange[1] && e.onGround) { set('squat', 0.3); e.hopCool = d.hopCool; }
+      } else if ((s.sees || close) && close && e.cool <= 0) {
+        smash(d.smashWindup);
       } else if (s.sees && Math.abs(dx) > d.hopRange[0] && Math.abs(dx) < d.hopRange[1] && e.hopCool <= 0 && e.onGround) {
         set('squat', d.squatTime);
         e.hopCool = d.hopCool;
@@ -1291,12 +1306,14 @@ export const BEHAVIORS = {
         speed = speedMods(e, g, speed);
         const footX = e.dir > 0 ? e.x + e.w + 1 : e.x - 1;
         if (ledgeAhead(g, e, footX) && e.onGround) { if (s.sees) speed = 0; else e.dir *= -1; }
+        if (close) speed = 0; // pegado a ti no te empuja: espera el mazazo
         e.vx = e.dir * speed;
       }
     }
+    e.provoked = false;
     e.vy = Math.min(380, e.vy + GRAVITY * dt);
     g.world.move(e, dt);
-    if (e.hitWall && e.st === 'walk') e.dir = -e.hitWall;
+    if (e.hitWall && e.st === 'walk' && !s.sees) e.dir = -e.hitWall;
   },
 
   shambler(e, dt, g) {
@@ -2355,6 +2372,7 @@ export class Enemy {
     n *= this.def.weakTo?.[kind] ?? 1;
     this.hp -= n;
     if (this.def.behavior === 'bossMoth' && n > 0) this.struck = { x: at?.x ?? this.game.player.cx, y: at?.y ?? this.game.player.cy };
+    if (this.def.behavior === 'glutton' && n > 0) this.provoked = true;
     // El enjambre pierde células al ser herido: cada una sigue viva por su cuenta.
     if (this.def.sheds && this.hp > 0 && (this.gen ?? 0) === 0) {
       const lost = Math.ceil(before / this.def.cellHp) - Math.ceil(this.hp / this.def.cellHp);
