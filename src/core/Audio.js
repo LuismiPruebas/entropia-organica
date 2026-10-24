@@ -772,6 +772,7 @@ export class AudioSys {
 
   // La pista del bioma se alterna con el ambiente generado: tras un rato de ambiente
   // suena la pista entera (el ambiente se agacha) y al acabar vuelve el ambiente solo.
+  // Con loop: true no se alterna: suena seguida, una vez tras otra.
   #biomeMusic(music) {
     if (this.biomeMusicDef === music) return;
     this.biomeMusicDef = music;
@@ -782,16 +783,16 @@ export class AudioSys {
     if (!music) return;
     const [lo, hi] = music.gap ?? [60, 120];
     const next = (first) => {
-      const wait = first ? (music.first ?? 15) : lo + Math.random() * (hi - lo);
+      const wait = first ? (music.first ?? 15) : music.loop ? 0 : lo + Math.random() * (hi - lo);
       this.biomeMusicTimer = setTimeout(() => {
         if (this.biomeMusicDef !== music) return;
         this.#duck(music.duck ?? 0.35, 6);
         const track = this.#track(music.src, this.zoneBus, {
-          vol: music.vol ?? 0.6, fadeIn: 6,
+          vol: music.vol ?? 0.6, fadeIn: music.loop && !first ? 0.2 : 6, // en bucle, sin bache al repetir
           onend: () => {
             if (this.biomeTrack !== track) return;
             this.biomeTrack = null;
-            this.#duck(1, 6);
+            if (!music.loop) this.#duck(1, 6);
             next(false);
           },
         });
