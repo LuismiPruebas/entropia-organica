@@ -162,7 +162,7 @@ export const VOICES = {
     for (let i = 0; i < 6; i++) { const f = rnd(140, 260); a.voice(o, { f0: f, f1: f * 2, dur: 0.07, vol: 0.25, wave: 'sine', vibDepth: 0, formants: [[f * 1.6, 1.5, 1]], attack: 0.01, delay: Math.random() * 0.5 }); }
     air(a, o, { f0: 2800, f1: 2200, q: 2, dur: 0.3, vol: 0.2, delay: 0.45 });
   },
-  // Sanguijuela: chasquido viscoso y un chillido corto y agudo (es pequeñita).
+  // Renacuajo de Charca (antes sanguijuela): chasquido viscoso y un chillido corto y agudo (es pequeñita).
   leechHurt: (a, o) => {
     air(a, o, { f0: 700, f1: 1800, q: 3, dur: 0.06, vol: 0.3, attack: 0.005 });
     a.voice(o, { pitch: [[0, 1100], [1, 1500]], dur: 0.09, vol: 0.3, breath: 0.4, wave: 'triangle', formants: [[1600, 4, 1]], attack: 0.008, delay: 0.04 });

@@ -250,7 +250,7 @@ export const ENEMIES = {
   acorazado: {
     frag: 'dermal', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Ciervo Acorazado',
-    biome: 'digestivo',
+    biome: 'oseo',
     creature: 'ciervo',
     gore: { blood: '#5a0a14', flesh: ['#3e3650', '#262230', '#8a3040', '#c09a62'] },
     voice: ['stagHuff', 'stagBellow', 'stagHuff'],
@@ -270,7 +270,7 @@ export const ENEMIES = {
   vestigio: {
     frag: 'balistico', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Vestigio',
-    biome: 'digestivo',
+    biome: 'oseo',
     creature: 'vestigio',
     gore: { blood: '#8a0a14', flesh: ['#9a7a6a', '#6a5048', '#8a6a5a', '#e8dcc8'] },
     voice: ['vestigioBreath', 'moan', 'vestigioBreath'],
@@ -478,7 +478,7 @@ export const ENEMIES = {
     lore: 'Los otros sujetos del injerto, fundidos en una sola bestia en el fondo del intestino: la espalda del que los vigilaba hace de lomo y las cabezas de los demás le cuelgan delante, cada una de algo distinto. Cantan juntas, pero ninguna en la misma nota.',
   },
   // SAPO PARTERO: jefe de la charca de ácido (Colon Sigmoide). Lleva a sus crías en
-  // la espalda, en celdas de carne; cuando revientan, brotan sanguijuelas.
+  // la espalda, en celdas de carne; cuando revientan, brotan renacuajos.
   sapo: {
     frag: 'dermal', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Sapo Partero',
@@ -502,26 +502,27 @@ export const ENEMIES = {
     },
     sounds: { reveal: 'toadCroak', attack: 'spit', summon: 'choirRetch', hurt: 'toadHurt', die: 'toadDie' },
     auraPeriod: 3,
-    habits: 'Se agazapa, tiembla y salta con las patas traseras para toparte: apártate cuando se encoja. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes. Al caer queda aturdido con la panza al aire, y ahí es cuando más le duele. De vez en cuando le revientan las celdas de la espalda y brotan sanguijuelas. La charca se inunda a ratos: súbete a las repisas.',
+    habits: 'Se agazapa, tiembla y salta con las patas traseras para toparte: apártate cuando se encoja. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes. Al caer queda aturdido con la panza al aire, y ahí es cuando más le duele. De vez en cuando le revientan las celdas de la espalda y brotan renacuajos que escupen ácido. La charca se inunda a ratos: súbete a las repisas.',
     lore: 'Un sapo que el intestino dejó crecer demasiado. Carga a sus crías en la espalda, hundidas en celdas de su propia piel, y las suelta cuando tiene hambre. Salta como si el suelo le quemara... y aquí el suelo quema.',
   },
   larva: {
     lucifugo: true, // huye del haz del Ojo Pineal
     frag: 'dermal', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
-    name: 'Sanguijuela de Charca',
+    name: 'Renacuajo de Charca',
     biome: 'digestivo',
     creature: 'larva',
-    gore: { blood: '#4a8a1a', flesh: ['#4a7a2a', '#2a4a18', '#9be06a'] },
-    voice: ['eelGurgle'],
-    behavior: 'stalker',
-    hp: 10, w: 16, h: 10,
-    speed: 36, chaseSpeed: 80, sight: 260,
-    pounceRange: 70, windup: 0.35, leapSpeed: 170, leapV: 200, recover: 0.6, pounceCool: 1.3,
+    gore: { blood: '#4a8a1a', flesh: ['#5a7a2a', '#2a4a18', '#c8d870'] },
+    voice: ['eelGurgle', 'bubble'],
+    behavior: 'puffer',
+    hp: 14, w: 18, h: 12,
+    sight: 260, hopSpeed: 95, hopV: 190,
+    // Se hincha y escupe un chorro de ácido a presión (una ráfaga de gotas rápidas).
+    spitRange: 170, inflateTime: 0.55, spitTime: 0.45, spitSpeed: 330, spitDamage: 5, recover: 0.5, spitCool: 1.4,
     contactDamage: 6,
     drop: { biomass: 2 },
     fragmentChance: 0,
     sounds: { reveal: 'eelGurgle', windup: 'eelGurgle', lunge: 'spit', die: 'eelDie', hurt: 'leechHurt' },
-    habits: 'Repta ondulando y se abalanza con las fauces abiertas.',
-    lore: 'Crías del Sapo Partero: crecen hundidas en las celdas de su espalda y, cuando revientan, se descuelgan a buscar algo caliente que chupar.',
+    habits: 'Avanza a saltos de rana. Cuando te tiene a tiro se hincha (la papada le brilla y tiembla) y escupe un chorro de ácido a presión; luego se deshincha y vuelve a la carga enseguida.',
+    lore: 'Crías del Sapo Partero: crecen hundidas en las celdas de su espalda y, cuando revientan, saltan al mundo con la panza llena del mismo ácido que las gestó.',
   },
 };

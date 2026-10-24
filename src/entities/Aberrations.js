@@ -410,26 +410,49 @@ export const ABERRATIONS = {
     },
   },
 
-  // ANGUILA VOMITADA: una cría de intestino que el Coro escupe. Repta por el suelo
-  // ondulando y se abalanza con las fauces abiertas.
+  // RENACUAJO DE CHARCA: cría anfibia del Sapo Partero. Rechoncha, con cabeza de rana,
+  // ojos saltones, la cola corta de renacuajo y las patas de atrás plegadas. Se hincha
+  // (la papada se le vuelve un globo pálido que brilla) y escupe ácido con la boca abierta.
   larva: {
-    size: () => [30, 14],
-    origin: (e) => [e.cx - 15, e.y + e.h - 14],
+    size: () => [34, 24],
+    origin: (e) => [e.cx - 17, e.y + e.h - 24],
     draw(g, gl, e, t) {
-      const moving = Math.abs(e.vx) > 2;
-      const ph = e.t * (moving ? 14 : 3);
-      const air = e.state === 'pounce';
-      let x = 4, y = 10;
-      for (let i = 0; i < 7; i++) {
-        const nx = 4 + i * 3.4, ny = 10 + Math.sin(ph - i * 0.9) * (air ? 1 : 2);
-        limb(g, x, y, nx, ny, 4 - i * 0.3, i % 2 ? '#4a7a2a' : '#5a8a34');
-        x = nx; y = ny;
+      const st = e.state ?? 'prowl', pf = e.puff ?? 0, air = !e.onGround;
+      const G = 23, cx = 15, sw = 1 + pf * 0.55;                       // suelo, centro y cuánto se hincha
+      const by = G - 6 - (air ? 2 : 0) - pf * 2;
+      // Cola corta de renacuajo que ondula detrás.
+      for (let i = 0; i < 6; i++) {
+        const tx = cx - 8 - i * 1.6, ty = by + 1 + Math.sin(t * 9 - i * 0.8) * (1 + i * 0.25);
+        px(g, tx, ty, i < 2 ? '#4a6a22' : '#5e7e2a', 2, Math.max(1, 3 - i * 0.4));
       }
-      const open = e.state === 'crouch' || air ? 3 : 1;
-      part(g, x + 2, y, 3, 2.5, '#6a9a3a', '#2a4a18');
-      px(g, x + 3, y - 1 + open * 0.3, '#2a0610', 3, open);
-      px(g, x + 3, y - 1, '#e8f0c0', 1, 1);
-      px(gl, x + 1, y - 2, '#9be06a');
+      // Patas traseras: plegadas en el suelo, estiradas al saltar.
+      for (const s2 of [0, 1]) {
+        const hx = cx - 5 + s2 * 2, hy = by + 3;
+        if (air) limb(g, hx, hy, hx - 7, G - 1 + s2, 2, '#5a7a2a', '#8aa848');
+        else { limb(g, hx, hy, hx - 4, hy + 2, 3, '#5a7a2a', '#8aa848'); limb(g, hx - 4, hy + 2, hx + 1, G - 1, 2, '#4a6a22'); }
+        px(g, hx + (air ? -9 : 0), G - 1, '#3a5218', 3, 1);
+      }
+      // Cuerpo rechoncho: verde oliva con manchas, panza pálida.
+      part(g, cx, by, 7 * sw, 5 * sw, '#6a8a32', '#3e5a1c', '#a8c460');
+      for (const [mx, my] of [[-3, -2], [2, -3], [-1, 1], [4, 0]]) px(g, cx + mx * sw, by + my * sw, '#3e5a1c', 2, 1);
+      // Papada / saco que se hincha (pálido, brilla al cargarse).
+      const sr = 2 + pf * 5;
+      part(g, cx + 5, by + 2 + pf, sr, sr * 0.8, pf > 0.3 ? '#e8f0a0' : '#c8d870', '#8aa040');
+      if (pf > 0.2) { const k = Math.round(pf * 3); px(gl, cx + 5 - k, by + 2, '#7ac030', k * 2, k); }
+      // Cabeza de rana delante, con la boca ancha.
+      const hx = cx + 7, hy = by - 2 - pf;
+      part(g, hx, hy, 5, 3.5, '#7a9a3a', '#3e5a1c', '#b8d070');
+      const open = st === 'spit' ? 3 : st === 'inflate' ? 1 : 0;
+      px(g, hx - 1, hy + 1, '#2a1008', 7, 1 + open);                    // boca
+      if (open > 1) { px(g, hx + 3, hy + 2, '#c8f090', 3, open - 1); px(gl, hx + 3, hy + 2, '#8aff60', 3, open - 1); }
+      // Ojos saltones encima, con pupila horizontal.
+      for (const ox of [-2, 2]) {
+        part(g, hx + ox, hy - 4, 1.8, 1.8, '#d8e060', '#3e5a1c');
+        px(g, hx + ox - 1, hy - 4, '#1a0a04', 2, 1);
+      }
+      px(gl, hx + 2, hy - 5, '#9be06a');
+      // Chorro saliendo de la boca mientras escupe.
+      if (st === 'spit') for (let i = 0; i < 4; i++) px(g, hx + 6 + i * 2, hy + 2 + Math.sin(t * 40 + i) * 0.6, i % 2 ? '#c8f090' : '#6ac040', 2, 2);
     },
   },
 };

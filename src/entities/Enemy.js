@@ -161,6 +161,69 @@ function tick(e, dt) {
 export const BEHAVIORS = {
   // Reptante: acecha agazapado y, a distancia de salto, se detiene, se encoge
   // temblando y se abalanza. Al caer queda un instante aturdido: tu ventana.
+  // Renacuajo de Charca: avanza a saltos de rana; con el jugador a tiro se hincha (aviso)
+  // y escupe una ráfaga de gotas de ácido a presión; se deshincha y repite pronto.
+  // e.state: prowl · inflate · spit · recover; e.puff (0..1) cuánto está hinchado.
+  puffer(e, dt, g) {
+    const d = e.def, s = senses(e, g, 60), p = s.p;
+    e.state ??= 'prowl';
+    tick(e, dt);
+    e.shakeX = 0;
+    e.puff ??= 0;
+    const mouth = () => ({ x: e.cx + e.dir * (e.w / 2 + 1), y: e.y + e.h * 0.45 });
+    if (e.state === 'prowl') {
+      e.puff = Math.max(0, e.puff - dt * 3);
+      if (s.sees) e.dir = Math.sign(s.dx) || e.dir;
+      if (s.sees && s.dist < d.spitRange && s.dist > 22 && e.cool <= 0 && e.onGround) {
+        e.state = 'inflate';
+        e.timer = d.inflateTime;
+        e.vx = 0;
+        g.audio.play(d.sounds?.windup ?? 'bubble', e);
+      } else if (e.onGround) {
+        // Saltos de rana: hacia ti si te ve; si no, de paseo (y se da la vuelta ante un borde).
+        e.vx *= 0.7;
+        e.hopT = (e.hopT ?? Math.random() * 0.5) - dt;
+        if (e.hopT <= 0) {
+          e.hopT = s.sees ? 0.45 + Math.random() * 0.2 : 1 + Math.random() * 0.6;
+          if (!s.sees && ledgeAhead(g, e, e.dir > 0 ? e.x + e.w + 1 : e.x - 1)) e.dir *= -1;
+          e.vx = e.dir * d.hopSpeed * (s.sees ? 1 : 0.5);
+          e.vy = -d.hopV * (s.sees ? 1 : 0.7);
+        }
+      }
+      fall(e, g, dt);
+    } else if (e.state === 'inflate') {
+      e.vx = 0;
+      e.puff = Math.min(1, e.puff + dt / d.inflateTime);
+      e.shakeX = Math.random() < 0.5 ? -1 : 1;
+      if (s.sees) e.dir = Math.sign(s.dx) || e.dir;
+      fall(e, g, dt);
+      if (e.timer <= 0) {
+        e.state = 'spit';
+        e.timer = d.spitTime;
+        const m = mouth();
+        e.aimA = Math.atan2(p.cy - m.y, p.cx - m.x);
+        e.spitAcc = 0;
+        g.audio.play(d.sounds?.lunge ?? 'spit', e);
+      }
+    } else if (e.state === 'spit') {
+      e.vx = -e.dir * 18; // el retroceso del chorro
+      fall(e, g, dt);
+      e.puff = Math.max(0, e.puff - dt / d.spitTime);
+      e.spitAcc += dt;
+      while (e.spitAcc >= 0.045) {
+        e.spitAcc -= 0.045;
+        const m = mouth(), a = e.aimA + (Math.random() - 0.5) * 0.1, v = d.spitSpeed * (0.9 + Math.random() * 0.2);
+        g.spawnProjectile({ x: m.x - 2, y: m.y - 2, w: 5, h: 4, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1.2, damage: d.spitDamage, kind: 'acidStream', owner: 'enemy', color: '#9be06a', glow: [0.4, 1, 0.3] });
+      }
+      if (e.timer <= 0) { e.state = 'recover'; e.timer = d.recover; }
+    } else {
+      e.vx = 0;
+      e.puff = Math.max(0, e.puff - dt * 2);
+      fall(e, g, dt);
+      if (e.timer <= 0) { e.state = 'prowl'; e.cool = d.spitCool; }
+    }
+  },
+
   stalker(e, dt, g) {
     const d = e.def, s = senses(e, g, 40);
     e.state ??= 'prowl';
@@ -1746,7 +1809,7 @@ export const BEHAVIORS = {
   //   crouch  se agazapa y tiembla: va a saltar (¡apártate!)
   //   leap    salta con las patas traseras hacia donde estás; su topetazo duele
   //   land    cae, salpica ácido y queda aturdido con la panza al aire (más daño)
-  //   brood   le revientan las celdas de la espalda y brotan sanguijuelas
+  //   brood   le revientan las celdas de la espalda y brotan renacuajos
   //   bite    pegado a ti: echa la cabeza atrás y la dispara con las fauces abiertas
   // Enfurecido (media vida) se agazapa menos, salta más a menudo y cría más.
   bossToad(e, dt, g) {
