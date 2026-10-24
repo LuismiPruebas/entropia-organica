@@ -171,6 +171,26 @@ function collapseColony(e, g) {
   e.dispose();
 }
 
+// Sapo Partero: elige n huevos enteros de la joroba (sin reventar o ya regenerados).
+function toadPickEggs(e, n, g) {
+  const now = g.time, popped = e.popped ?? {};
+  const free = [];
+  for (let i = 0; i < 17; i++) if (popped[i] === undefined || now - popped[i] > 15.5) free.push(i);
+  for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
+  return free.slice(0, n);
+}
+// Los revienta: cáscara y mucosa salpican desde la joroba.
+function toadPopEggs(e, g, list) {
+  e.popped ??= {};
+  for (const i of list) e.popped[i] = g.time;
+  if (!list.length) return;
+  g.audio.play('splat', e);
+  g.audio.play('crunch', e);
+  for (let k = 0; k < list.length * 8; k++) {
+    g.particles.emit(e.cx - e.dir * 4 + (Math.random() - 0.5) * 34, e.y + 2 + Math.random() * 8, { vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 140, life: 0.7, gravity: 520, color: Math.random() < 0.5 ? [0.94, 0.9, 0.82] : [0.72, 0.8, 0.45], stain: '#6a7a3a' });
+  }
+}
+
 export const BEHAVIORS = {
   // Reptante: acecha agazapado y, a distancia de salto, se detiene, se encoge
   // temblando y se abalanza. Al caer queda un instante aturdido: tu ventana.
@@ -2000,6 +2020,8 @@ export const BEHAVIORS = {
     // Una catarata de bilis le cae encima: se escalda (le revientan las celdas de la espalda).
     if (e.scaldCool <= 0 && e.state !== 'scalded' && g.room.hazards.some((h) => h.hits?.(e))) {
       e.state = 'scalded'; e.timer = d.scaldStun ?? 2.6; e.vx = 0; e.biteK = 0;
+      toadPopEggs(e, g, toadPickEggs(e, 5, g));                        // el ácido revienta sus huevos
+      e.popPending = [];
       e.weakT = d.weakTime ?? 8;
       e.scaldCool = 3;
       e.broodCool = Math.max(e.broodCool, 9);
@@ -2008,6 +2030,20 @@ export const BEHAVIORS = {
       g.audio.play(d.sounds?.hurt ?? 'toadHurt', e);
       g.audio.play('sizzle', e);
       for (let i = 0; i < 26; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * e.w, e.y + 2, { vx: (Math.random() - 0.5) * 140, vy: -80 - Math.random() * 120, life: 0.8, gravity: 500, color: Math.random() < 0.5 ? [0.85, 0.8, 0.6] : [0.45, 0.6, 0.2], stain: '#4a6a1a' });
+    }
+    // Le pegas: no se queda quieto. Aturdido tras un salto, se recompone enseguida; a los
+    // dos golpes seguidos, si te tiene a tiro, te muerde sin esperar a su ritmo.
+    e.hitT = Math.max(0, (e.hitT ?? 0) - dt);
+    if (e.hitT <= 0) e.hits = 0;
+    if (e.provoked) {
+      e.provoked = false;
+      if (e.state === 'land') e.timer = Math.min(e.timer, 0.15);
+      if ((e.hits ?? 0) >= 2 && ['sit', 'land'].includes(e.state) && Math.abs(dx) < 80 && Math.abs(p.cy - e.cy) < 40) {
+        e.hits = 0;
+        e.dir = Math.sign(dx) || e.dir;
+        e.state = 'biteWind'; e.timer = 0.16; e.vx = 0; e.biteK = 0;
+        g.audio.play('eelGurgle', e);
+      }
     }
     if (e.state === 'scalded') {
       // Se retuerce panza arriba, humeando: es el momento de pegarle.
@@ -2022,7 +2058,7 @@ export const BEHAVIORS = {
       if (Math.abs(dx) < 62 && Math.abs(p.cy - e.cy) < 34 && e.biteCool <= 0 && e.onGround) {
         e.state = 'biteWind'; e.timer = enraged ? 0.22 : 0.32; e.vx = 0; e.biteK = 0;
         g.audio.play('eelGurgle', e);
-      } else if (e.broodCool <= 0 && minions < (enraged ? 4 : 2)) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; g.audio.play(d.sounds.summon, e); }
+      } else if (e.broodCool <= 0 && minions < (enraged ? 4 : 2)) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; e.popPending = toadPickEggs(e, enraged ? 3 : 2, g); g.audio.play(d.sounds.summon, e); }
       else if (e.timer <= 0 && e.onGround) { e.state = 'crouch'; e.timer = enraged ? 0.35 : 0.6; e.vx = 0; g.audio.play('eelGurgle', e); }
     } else if (e.state === 'crouch') {
       e.vx = 0;
@@ -2073,7 +2109,9 @@ export const BEHAVIORS = {
     } else if (e.state === 'brood') {
       e.vx = 0;
       if (e.timer <= 0) {
-        // Revientan las celdas: las crías saltan de la espalda.
+        // Revientan las celdas: los huevos estallan y las crías saltan de la espalda.
+        toadPopEggs(e, g, e.popPending ?? []);
+        e.popPending = [];
         for (let i = 0; i < (enraged ? 3 : 2); i++) {
           g.spawnMinion('larva', e.cx + (i - 1) * 10, e.y - 6);
           const m = g.room.enemies[g.room.enemies.length - 1];
@@ -2559,6 +2597,7 @@ export class Enemy {
     if (this.def.behavior === 'bossMoth' && n > 0) this.struck = { x: at?.x ?? this.game.player.cx, y: at?.y ?? this.game.player.cy };
     if (this.def.behavior === 'golem' && n > 0 && !(this.gen > 0)) this.provoked = true;
     if (this.state === 'latch' && n > 0) this.shaken = true;
+    if (this.def.behavior === 'bossToad' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.2; }
     if (this.def.behavior === 'glutton' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.4; }
     // El enjambre pierde células al ser herido: cada una sigue viva por su cuenta.
     if (this.def.sheds && this.hp > 0 && (this.gen ?? 0) === 0) {

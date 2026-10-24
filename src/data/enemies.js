@@ -509,6 +509,7 @@ export const ENEMIES = {
     music: 'coro',
     exposedBonus: 1.6, // al caer de un salto (o escaldado) queda con la panza al aire
     armor: 0.25,       // piel curtida y cubierta de crías: casi no le duele... hasta que lo escaldas
+    meleeResist: 0.5,  // y a golpes, aún menos
     weakTime: 8,       // segundos debilitado tras escaldarlo con una vejiga de bilis
     scaldStun: 2.6,    // segundos que se retuerce panza arriba
     hp: 320, w: 64, h: 42,
@@ -525,7 +526,7 @@ export const ENEMIES = {
     },
     sounds: { reveal: 'toadCroak', attack: 'spit', summon: 'choirRetch', hurt: 'toadHurt', die: 'toadDie' },
     auraPeriod: 3,
-    habits: 'Avanza a saltitos hacia ti. Se agazapa y tiembla (aviso) y salta con las patas traseras para toparte; al caer salpica ácido a los lados y se queda un momento aturdido con la panza al aire. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes. Cada poco le revientan las celdas de la espalda y brotan renacuajos que escupen ácido (más cuando está herido). Su piel curtida casi no siente los golpes: atráelo bajo una de las vejigas de bilis del techo y reviéntala disparando a su válvula. Escaldado, se retuerce, pierde sus crías y durante unos segundos queda debilitado.',
+    habits: 'Avanza a saltitos hacia ti. Se agazapa y tiembla (aviso) y salta con las patas traseras para toparte; al caer salpica ácido a los lados y se queda un momento aturdido con la panza al aire. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes; y si le encadenas golpes, se revuelve y te muerde enseguida. Cada poco le revientan las celdas de la espalda y brotan renacuajos que escupen ácido (más cuando está herido). Su piel curtida casi no siente los golpes: atráelo bajo una de las vejigas de bilis del techo y reviéntala disparando a su válvula. Escaldado, se retuerce, pierde sus crías y durante unos segundos queda debilitado.',
     lore: 'Un sapo que el intestino dejó crecer demasiado. Carga a sus crías en la espalda, hundidas en celdas de su propia piel, y las suelta cuando tiene hambre. Salta como si el suelo le quemara... y aquí el suelo quema.',
   },
   larva: {

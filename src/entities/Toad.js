@@ -167,7 +167,48 @@ const EGGS = [
   [-30, -9, 6, 1], [-18, -10, 6, 2], [-6, -11, 7, 1], [6, -10, 6, 0], [16, -7, 5, 2],
   [-34, -1, 6, 0], [-23, -1, 6, 1], [-11, -2, 6, 0], [1, -1, 6, 1], [11, 0, 5, 0],
 ];
+// Huevo que revienta (age: segundos desde el estallido): primero se abre en esquirlas de
+// cáscara y un chorro de mucosa; después queda el agujero, con el gusano que asoma un
+// momento; al cabo de un rato el huevo vuelve a crecer (regrow 0..1).
+function burstEgg(g, gl, cx, cy, r, i, t, age) {
+  if (age < 0.4) {
+    const k = age / 0.4;
+    // Esquirlas que salen despedidas hacia fuera y caen.
+    for (let s = 0; s < 9; s++) {
+      const a = (s / 9) * Math.PI * 2 + i, d = r * (0.6 + k * 4);
+      const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.8 + k * k * 10;
+      px(g, x - 1, y - 1, K, 3, 3);
+      px(g, x, y, s % 3 ? C.eggL : C.egg, 2, s % 2 ? 1 : 2);
+    }
+    // Mucosa y líquido del huevo que salpican.
+    for (let s = 0; s < 6; s++) {
+      const a = -Math.PI / 2 + (s - 2.5) * 0.5, d = r * (0.4 + k * 3);
+      const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d + k * k * 14;
+      px(g, x - 1, y - 1, K, 4, 4); px(g, x, y, s % 2 ? C.mucusL : C.mucus, 3, 3);
+    }
+    if (k < 0.5) { blob(g, cx, cy, r * (1 + k), r * (1 + k), C.eggL); px(gl, cx - 1, cy - 1, '#fff0d0', 3, 3); }
+  }
+  // El agujero que queda (y el gusano asomando el primer segundo).
+  const hole = Math.min(1, age / 0.25);
+  const hr = r * 0.55 * hole;
+  if (hr > 0.5) {
+    blob(g, cx, cy, hr + 1.5, hr * 0.9 + 1.5, C.holeRim);
+    blob(g, cx, cy, hr, hr * 0.9, C.hole);
+  }
+  if (age > 0.25 && age < 1.6) {
+    const out = Math.sin(Math.min(1, (age - 0.25) / 1.35) * Math.PI);
+    let x = cx, y = cy, ang = -Math.PI / 2 + Math.sin(t * 9 + i) * 0.5;
+    for (let s = 0; s < Math.round(3 + out * 6); s++) {
+      ang += Math.sin(t * 12 + s + i) * 0.35;
+      x += Math.cos(ang) * 1.5; y += Math.sin(ang) * 1.5;
+      blob(g, x, y, 2.2, 2.2, K); blob(g, x, y, 1.5, 1.5, s % 2 ? C.worm : C.wormD);
+    }
+  }
+}
+
+const REGROW = 14; // segundos hasta que un huevo reventado vuelve a crecer
 function egg(g, cx, cy, r, kind, i, t, stir) {
+  if (r < 0.5) return;
   const ry = r * 1.1;
   blob(g, cx, cy, r + 1, ry + 1, K);
   for (let y = -Math.ceil(ry); y <= Math.ceil(ry); y++) for (let x = -Math.ceil(r); x <= Math.ceil(r); x++) {
@@ -269,9 +310,22 @@ export const TOAD = {
     const stir = Math.min(1, ready * 0.6 + brood);
     const hbx = bx - 4, hby = bodyY - ry + 8 + squash * 2;
     blob(g, hbx - 10, hby - 4, 26, 10, C.motD);                                 // la carne que los sujeta
+    const now = game?.time ?? t, popped = e.popped ?? {}, pending = e.popPending ?? [];
     EGGS.forEach(([dx, dy, r, kind], i) => {
-      const pulse = brood ? Math.sin(t * 14 + i) * 0.6 * brood + brood * 0.8 : 0;
-      egg(g, hbx + dx, hby + dy, r + pulse, kind, i, t, stir);
+      const x = hbx + dx, y = hby + dy;
+      if (popped[i] !== undefined) {
+        const age = now - popped[i];
+        const regrow = age > REGROW ? Math.min(1, (age - REGROW) / 1.5) : 0;
+        if (regrow > 0) egg(g, x, y, r * regrow, 0, i, t, 0);                // vuelve a crecer
+        else burstEgg(g, gl, x, y, r, i, t, age);
+        return;
+      }
+      // Los que van a reventar se hinchan, tiemblan y se agrietan.
+      const doom = pending.includes(i) ? brood : 0;
+      const pulse = doom ? 0.6 + doom * 2.2 + Math.sin(t * 30 + i) * doom : brood ? brood * 0.4 : 0;
+      egg(g, x + (doom ? Math.sin(t * 40 + i) * doom : 0), y, r + pulse, kind, i, t, stir);
+      if (doom > 0.4) for (let s = 0; s < 3; s++) seg(g, x - 2 + s * 2, y - r * 0.6, x - 1 + s * 2 + (s - 1), y + r * 0.2, C.speck, 1); // grietas
+      if (doom > 0.6) px(gl, x - 1, y - 1, '#ffe8b0', 2, 2);
     });
     for (const [dx, base] of [[-30, 5], [-19, 7], [-7, 4], [4, 6], [13, 3]]) {   // mucosa que chorrea
       const len = base + Math.round(Math.sin(t * 1.3 + dx) * 2);
