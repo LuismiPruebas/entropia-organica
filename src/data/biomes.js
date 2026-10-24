@@ -60,7 +60,10 @@ export const BIOMES = {
     // Ámbar, mostaza y oliva, con la bilis verde-amarilla como acento.
     ambient: [0.21, 0.17, 0.12],
     // Tripa viva: un retumbo grave y húmedo, peristalsis que gorgotea y fluidos.
-    sound: { drone: 41.2, wave: 'triangle', filter: 220, q: 1.5, lfo: 0.12, level: 0.04, bed: { freq: 140, q: 1, level: 0.04 }, layer: ['peristalsis', 'fluids'] },
+    sound: { drone: 41.2, wave: 'triangle', filter: 220, q: 1.5, lfo: 0.12, level: 0.04, bed: { freq: 140, q: 1, level: 0.04 }, layer: ['peristalsis', 'fluids'],
+      // 'Digestión sucia' de fondo: entera, comprimida y amortiguada (paso bajo: se oye como
+      // a través de la carne). Se alterna con el ambiente: suena cada 20-45 s.
+      music: { src: 'assets/music/digestion-sucia-fondo.mp3', vol: 0.6, first: 8, gap: [20, 45], duck: 0.55 } },
     mapColor: '#d09a4a',
     fragments: ['dermal', 'balistico', 'ocular'],
   },
