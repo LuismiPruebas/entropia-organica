@@ -1237,14 +1237,15 @@ export const BEHAVIORS = {
     e.timer = (e.timer ?? 0) - dt;
     const set = (st, time) => { e.st = st; e.timer = time; e.stT = time; };
     e.stK = e.stT ? Math.max(0, Math.min(1, 1 - e.timer / e.stT)) : 0;
-    const toward = Math.sign(p.cx - e.cx) || e.dir;
+    // Hacia dónde estás (sin girarse por un par de píxeles cuando lo tienes encima).
+    const toward = Math.abs(p.cx - e.cx) < 6 ? e.dir : Math.sign(p.cx - e.cx);
     const close = Math.abs(dx) < d.smashRange + 6 && Math.abs(s.dy) < 40;
     const ground = (x) => {
       g.shake = Math.max(g.shake, 6);
       g.audio.play('thump', e);
       for (let i = 0; i < 14; i++) g.particles.emit(x + (Math.random() - 0.5) * 30, e.y + e.h - 2, { vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 120, life: 0.7, gravity: 600, color: Math.random() < 0.5 ? [0.75, 0.6, 0.3] : [0.8, 0.4, 0.5] });
     };
-    const smash = (windup) => { e.dir = toward; set('raise', windup); e.cool = d.smashCool; g.audio.play(d.sounds?.reveal ?? 'growl', e); };
+    const smash = (windup, counter = false) => { e.dir = toward; e.counter = counter; set('raise', windup); e.cool = d.smashCool; g.audio.play(d.sounds?.reveal ?? 'growl', e); };
     if (e.st === 'raise') {
       // Mientras alza los brazos se gira hacia ti: el mazazo siempre cae de frente.
       e.vx = 0;
@@ -1254,8 +1255,15 @@ export const BEHAVIORS = {
       e.vx = 0;
       if (!e.hitDone && e.timer <= 0.09) {
         e.hitDone = true;
-        const box = { x: e.dir > 0 ? e.x + e.w - 8 : e.x - d.smashRange + 8, y: e.y + e.h * 0.25, w: d.smashRange, h: e.h * 0.75 + 4 };
-        if (overlap(p, box)) g.hurtPlayer(d.smashDamage, e.cx, d.name);
+        // Cubre también su propio cuerpo: alcanza aunque lo tengas encima.
+        const reach = d.smashRange + e.w / 2;
+        const box = { x: e.dir > 0 ? e.cx - 10 : e.cx + 10 - reach, y: e.y + e.h * 0.25, w: reach, h: e.h * 0.75 + 4 };
+        if (overlap(p, box)) {
+          // El contraataque es más contundente: más daño y te lanza lejos.
+          g.hurtPlayer(e.counter ? d.counterDamage : d.smashDamage, e.cx - e.dir * 20, d.name);
+          if (e.counter) { p.vx = e.dir * 260; p.vy = -200; }
+        }
+        g.shake = Math.max(g.shake, e.counter ? 10 : 6);
         ground(e.cx + e.dir * 26);
         g.audio.play('crunch', e);
       }
@@ -1293,7 +1301,7 @@ export const BEHAVIORS = {
         // (y a veces, si estás encima, se aparta de un salto hacia atrás).
         e.provoked = false;
         if (close && Math.random() < 0.3 && e.onGround) { e.back = true; set('squat', 0.25); e.hopCool = d.hopCool * 0.5; }
-        else if (close) smash(d.counterWindup);
+        else if (close) smash(d.counterWindup, true);
         else if (Math.abs(dx) < d.hopRange[1] && e.onGround) { set('squat', 0.3); e.hopCool = d.hopCool; }
       } else if ((s.sees || close) && close && e.cool <= 0) {
         smash(d.smashWindup);

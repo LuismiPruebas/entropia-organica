@@ -242,12 +242,12 @@ export const ENEMIES = {
     hp: 110, w: 30, h: 46,
     meleeResist: 0.7, knockResist: 0.15, // duro: los golpes casi no lo mueven
     speed: 14, chaseSpeed: 26, sight: 220,
-    smashRange: 46, smashWindup: 0.5, smashDamage: 20, smashCool: 1.2, counterWindup: 0.28,
+    smashRange: 46, smashWindup: 0.5, smashDamage: 20, smashCool: 1.2, counterWindup: 0.28, counterDamage: 26,
     hopRange: [70, 170], hopCool: 3, squatTime: 0.4, hopPower: 270, hopSpeed: 170, backHop: 120, landRange: 42, landDamage: 12,
     contactDamage: 8,
     drop: { biomass: 16 },
     sounds: { reveal: 'growl', attack: 'growl' },
-    habits: 'Avanza pesado, a empujones. Pegado a ti alza los dos brazos y descarga un mazazo contra el suelo de delante. A media distancia se agacha en una sentadilla y salta hacia ti: al caer hace temblar el suelo y hiere a quien esté pegado a él. Si le pegas se revuelve: se gira y te devuelve un mazazo rápido, o se aparta de un salto hacia atrás y cae haciendo temblar el suelo. Los golpes casi no lo mueven y el cuerpo a cuerpo le hace algo menos de daño.',
+    habits: 'Avanza pesado, a empujones. Pegado a ti alza los dos brazos y descarga un mazazo contra el suelo de delante. A media distancia se agacha en una sentadilla y salta hacia ti: al caer hace temblar el suelo y hiere a quien esté pegado a él. Si le pegas se revuelve: se gira y te devuelve un mazazo rápido y brutal que te lanza lejos, o se aparta de un salto hacia atrás y cae haciendo temblar el suelo. Los golpes casi no lo mueven y el cuerpo a cuerpo le hace algo menos de daño.',
     lore: 'Lo que el estómago no pudo deshacer se apelmaza y se levanta: huesos, carne, pan, la tarta de un cumpleaños que nadie celebró. Una calavera le corona y por la barriga abierta sigue tragando.',
   },
   acorazado: {
