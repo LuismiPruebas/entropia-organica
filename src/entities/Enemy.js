@@ -158,6 +158,19 @@ function tick(e, dt) {
 }
 
 // IA por comportamiento. Cada función recibe la entidad, dt y el juego.
+// La Colonia Bacilar sin cohesión: el coloso se desmorona en un charco de células y de
+// él solo queda un grumo que sigue saltando hacia ti. Cuenta como vencido (no reaparece).
+function collapseColony(e, g) {
+  e.alive = false;
+  if (e.key) g.state.slain.add(e.key);
+  g.audio.play('colonyDie', e);
+  g.gore.burst(e.cx, e.cy, e.w, e.h, e.def.gore, 0.5);
+  for (let i = 0; i < 24; i++) g.particles.emit(e.x + Math.random() * e.w, e.y + Math.random() * e.h, { vx: (Math.random() - 0.5) * 90, vy: -20 - Math.random() * 80, life: 0.7, gravity: 500, color: [0.45, 0.65, 0.18], stain: [0.35, 0.5, 0.12] });
+  const lump = g.spawnOffspring('colonia', e.cx, e.y + e.h - 8, { ...ENEMY_FORMS.colonia[1], gen: 1 });
+  if (lump) { lump.state = 'recover'; lump.timer = 0.6; lump.dir = e.dir; }
+  e.dispose();
+}
+
 export const BEHAVIORS = {
   // Reptante: acecha agazapado y, a distancia de salto, se detiene, se encoge
   // temblando y se abalanza. Al caer queda un instante aturdido: tu ventana.
@@ -1105,6 +1118,9 @@ export const BEHAVIORS = {
             lump.vx = (tx - hx) / T;
             lump.vy = Math.max(-430, (ty - hy - 0.5 * GRAVITY * T * T) / T);
             e.missing++; e.regrow = 0;
+            // Pierde cohesión: cada bola es un trozo de sí mismo que ya no vuelve solo.
+            e.cohesion = (e.cohesion ?? d.cohesion ?? 99) - 1;
+            e.hp = Math.max(1, e.hp - (d.throwCost ?? 0));
             g.audio.play('colonyHurt', e);
           }
           e.state = 'throw'; e.timer = 0.3; e.cool = d.throwCool;
@@ -1113,8 +1129,16 @@ export const BEHAVIORS = {
       }
       if (e.state === 'throw') {
         e.vx = 0; fall(e, g, dt);
-        if (e.timer <= 0) e.state = 'walk';
+        if (e.timer <= 0) {
+          e.state = 'walk';
+          if ((e.cohesion ?? 1) <= 0) { collapseColony(e, g); return; }
+        }
         return;
+      }
+      // Cuanta menos cohesión, más células se le desprenden al andar.
+      const loose = 1 - (e.cohesion ?? d.cohesion ?? 1) / (d.cohesion ?? 1);
+      if (loose > 0 && Math.random() < loose * dt * 8) {
+        g.particles.emit(e.x + Math.random() * e.w, e.y + Math.random() * e.h * 0.7, { vx: (Math.random() - 0.5) * 30, vy: 10, life: 0.8, gravity: 400, color: [0.45, 0.65, 0.18], stain: [0.35, 0.5, 0.12] });
       }
       e.aiming = s.sees && s.dist > d.punchRange;
       e.aimA = s.sees ? Math.max(-1.2, Math.min(1.2, Math.atan2(s.dy + 8, Math.abs(s.dx)))) : 0.5;
@@ -1155,6 +1179,10 @@ export const BEHAVIORS = {
         if (overlap(e, home)) {
           e.alive = false; e.dispose();
           home.missing = Math.max(0, (home.missing ?? 0) - 1); home.regrow = 0;
+          if (home.def.cohesion) {
+            home.cohesion = Math.min(home.def.cohesion, (home.cohesion ?? home.def.cohesion) + 1);
+            home.hp = Math.min(home.def.hp, home.hp + (home.def.throwCost ?? 0));
+          }
           for (let i = 0; i < 8; i++) g.particles.emit(e.cx, e.cy, { vx: (Math.random() - 0.5) * 60, vy: -30 - Math.random() * 40, life: 0.4, gravity: 300, color: [0.55, 0.75, 0.22] });
           g.audio.play('bubble', home);
           return;

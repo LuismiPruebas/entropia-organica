@@ -218,9 +218,13 @@ export const ENEMIES = {
     // A distancia se arranca una bola de células y te la arroja; la regenera despacio
     // y el grumo, si sobrevive, vuelve a fundirse con él.
     throwRange: 190, throwWindup: 0.7, throwDamage: 9, throwCool: 3.2, regrowTime: 4.5, rejoinAfter: 4,
+    // Cada bola que arroja le resta cohesión (y vida): se encoge, se hunde y se le abren
+    // huecos. Si un grumo vuelve a fundirse con él, la recupera; sin cohesión se desmorona
+    // y queda reducido a un grumo más.
+    cohesion: 5, throwCost: 6,
     sheds: 'colonia', cellHp: 20, shedGen: 1, // cada 20 de daño suelta un grumo
     contactDamage: 7,
-    habits: 'Imita lo que tiene cerca: camina como tú, te apunta con el brazo y salta cuando saltas. Pegado a ti, lanza un puñetazo que se estira. A distancia se arranca una bola de células de la espalda y te la arroja en parábola: el grumo te persigue a saltos y al rato vuelve a fundirse con él, que mientras tanto se regenera hasta recobrar su forma. Cada herida le arranca un grumo; al morir se deshace en grumos que saltan, y cada grumo en pulpa pequeña que corretea.',
+    habits: 'Imita lo que tiene cerca: camina como tú, te apunta con el brazo y salta cuando saltas. Pegado a ti, lanza un puñetazo que se estira. A distancia se arranca una bola de células de la espalda y te la arroja en parábola: el grumo te persigue a saltos y al rato vuelve a fundirse con él. Cada bola le cuesta cohesión: se encoge, se hunde y se agujerea, y si lanza demasiadas se desmorona y queda en un grumo más. Mata los grumos antes de que vuelvan y se deshará solo. Cada herida le arranca un grumo; al morir se deshace en grumos que saltan, y cada grumo en pulpa pequeña que corretea.',
     drop: { biomass: 6 },
     sounds: { reveal: 'colonyAlert', die: 'colonyDie', hurt: 'colonyHurt' },
     lore: 'Bacilos que se apiñan hasta formar un cuerpo, y el único cuerpo que conocen es el que tienen delante. Copian tu forma y la exageran: un gigante encorvado, con la cabeza hundida entre los hombros y la luz de tu ojo en la cara. Cuanto más los golpeas, menos se parecen a ti: al final solo queda pulpa que sigue queriendo alcanzarte.',

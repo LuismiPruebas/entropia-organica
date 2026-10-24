@@ -162,7 +162,10 @@ function drawGolem(g, gl, e, t, game) {
     const lean = -wind * 3 + hit * 4 + (moving ? 1 : 0);
     const breath = Math.sin(t * 1.6) * 0.6;
     const jig = moving ? Math.sin(ph * 2 - 0.8) * 1.2 : 0; // la barriga rebota con retraso
-    const hipX = 30 + lean * 0.4, hipY = 40 - bob + (air ? -2 : 0);
+    // Cohesión perdida al arrojar bolas (0 entero … 1 a punto de desmoronarse).
+    const deg = e.def?.cohesion ? 1 - Math.max(0, e.cohesion ?? e.def.cohesion) / e.def.cohesion : 0;
+    const sk = deg * 9, sc = 1 - deg * 0.3;
+    const hipX = 30 + lean * 0.4, hipY = 40 - bob + (air ? -2 : 0) + deg * 4;
     // Bolas arrojadas (Enemy.js -> golem): la joroba primero, luego la barriga. Se
     // regeneran despacio; mientras se arranca una, encoge y se queda en la mano.
     const miss = e.missing ?? 0, rg = e.regrow ?? 0;
@@ -190,8 +193,8 @@ function drawGolem(g, gl, e, t, game) {
     drawLeg(legs[0]);
 
     // Brazo de atrás (se pierde con la primera herida grave).
-    const shY = 23 - bob + breath * 0.3;
-    if (frac > 0.66) {
+    const shY = 23 - bob + breath * 0.3 + sk;
+    if (frac > 0.66 && deg < 0.5) {
       const sx = 26 + lean, sw = moving ? -step * 3 : 0;
       const [ex, ey] = [sx + 1 + sw * 0.5, shY + 10];
       capsule(g, sx, shY, ex, ey, 4.5, 3.5, 21, 3, 0.15);
@@ -205,25 +208,27 @@ function drawGolem(g, gl, e, t, game) {
 
     // Joroba, torso y barriga. Con heridas se le abren huecos.
     const holes = [];
-    if (frac < 0.8) holes.push([28 + lean, 27 - bob, 2 + (1 - frac) * 2.5]);
-    if (frac < 0.5) holes.push([40 + lean, 37 - bob + jig * 0.5, 2 + (1 - frac) * 2.5]);
+    if (frac < 0.8 || deg > 0.2) holes.push([28 + lean, 27 - bob + sk, 2 + Math.max(1 - frac, deg) * 2.5]);
+    if (frac < 0.5 || deg > 0.5) holes.push([40 + lean, 37 - bob + jig * 0.5 + sk * 0.8, 2 + Math.max(1 - frac, deg) * 2.5]);
     // joroba (si falta, un cráter de carne viva que vuelve a crecer)
-    mass(g, 25 + lean * 0.8, 22 - bob + breath * 0.3 + (1 - hs) * 6, 11 * hs, (11 + breath * 0.4) * hs, 31, 3.8, 0, humpK < 0.6 ? [[25 + lean * 0.8, 22 - bob + (1 - hs) * 6, 3 * hs]] : null);
-    mass(g, 31 + lean, 30 - bob, 12, 11.5, 32, 3.8, 0, holes.length ? [holes[0]] : null); // torso
-    mass(g, 38 + lean * 1.1 - (1 - bs) * 4, 37 - bob + jig * 0.5 - (1 - bs) * 3, (12.5 + breath * 0.3) * bs, (11 + jig * 0.4) * bs, 33, 4.4, 0, holes.length > 1 ? [holes[1]] : bellyK < 0.6 ? [[36 + lean, 36 - bob, 2.5]] : null); // barriga
+    mass(g, 25 + lean * 0.8, 22 - bob + breath * 0.3 + (1 - hs) * 6 + sk, 11 * hs * sc, (11 + breath * 0.4) * hs * sc, 31, 3.8, deg * 0.15, humpK < 0.6 ? [[25 + lean * 0.8, 22 - bob + (1 - hs) * 6 + sk, 3 * hs]] : null);
+    mass(g, 31 + lean, 30 - bob + sk * 0.9, 12 * sc, 11.5 * sc, 32, 3.8, deg * 0.15, holes.length ? [holes[0]] : null); // torso
+    mass(g, 38 + lean * 1.1 - (1 - bs) * 4, 37 - bob + jig * 0.5 - (1 - bs) * 3 + sk * 0.8, (12.5 + breath * 0.3) * bs * sc, (11 + jig * 0.4) * bs * (sc + deg * 0.15), 33, 4.4, deg * 0.15, holes.length > 1 ? [holes[1]] : bellyK < 0.6 ? [[36 + lean, 36 - bob + sk * 0.8, 2.5]] : null); // barriga
     // pili de la espalda
-    for (let i = 0; i < Math.round(9 * humpK); i++) {
+    for (let i = 0; i < Math.round(9 * humpK * (1 - deg)); i++) {
       const a = -Math.PI * 0.95 + i * 0.22;
-      const bx = 25 + lean * 0.8 + Math.cos(a) * 10.5 * hs, by = 22 - bob + (1 - hs) * 6 + Math.sin(a) * 10.5 * hs;
+      const bx = 25 + lean * 0.8 + Math.cos(a) * 10.5 * hs * sc, by = 22 - bob + (1 - hs) * 6 + sk + Math.sin(a) * 10.5 * hs * sc;
       pilus(g, gl, bx, by, a - 0.2, 4 + (i % 3), t, i);
     }
     // limo que gotea de la barriga
-    for (let i = 0; i < 4; i++) drip(g, gl, 30 + lean + i * 4, 44 - bob + jig * 0.5, t, i, 7);
+    // (más limo y más largo cuanto menos cohesión: se está deshaciendo)
+    const nd = 4 + Math.round(deg * 6);
+    for (let i = 0; i < nd; i++) drip(g, gl, 22 + lean + i * (24 / nd) + 4, 44 - bob + jig * 0.5 + sk * 0.5, t, i, 7 + deg * 6);
 
     drawLeg(legs[1]);
 
     // Cabeza: hundida entre los hombros, adelantada, con frente de hueso y un ojo.
-    const hx = 39 + lean * 1.2, hy = 18 - bob + (frac < 0.33 ? 2 : 0);
+    const hx = 39 + lean * 1.2, hy = 18 - bob + (frac < 0.33 ? 2 : 0) + sk;
     mass(g, hx - 4, hy + 3, 6, 5, 40, 3); // cuello: la cabeza se hunde entre los hombros
     mass(g, hx, hy, 5.5, 5 * (frac < 0.33 ? 0.8 : 1), 41, 2.6);
     mass(g, hx + 1, hy - 2.5, 4.5, 1.8, 42, 2, -0.1); // frente
