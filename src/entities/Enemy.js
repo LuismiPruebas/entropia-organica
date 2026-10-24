@@ -913,6 +913,15 @@ export const BEHAVIORS = {
         g.shake = Math.max(g.shake, 5);
         g.audio.play('crunch', e);
         for (let i = 0; i < 10; i++) g.particles.emit(tipX, tipY, { vx: (Math.random() - 0.5) * 120, vy: -Math.random() * 100, life: 0.6, gravity: 500, color: [0.45, 0.4, 0.42] });
+        // Clavada en el suelo: de ese punto brota un Saco Esporífero (como mucho tres a la vez).
+        const intoFloor = Math.sin(e.diveA) > 0.4 && (g.world.solidAtPx(tipX, tipY) || tipY > A.floor);
+        if (intoFloor && g.room.enemies.filter((m) => m.minion && m.alive && m.type === 'espora').length < 3) {
+          const floorY = Math.min(A.floor, Math.floor(tipY / TILE) * TILE);
+          const sp = g.spawnMinion('espora', tipX, floorY);
+          sp.y = floorY - sp.h;             // con la base en el suelo
+          g.audio.play('bubble', e);
+          for (let i = 0; i < 14; i++) g.glowParticles.emit(tipX, floorY - 2, { vx: (Math.random() - 0.5) * 80, vy: -30 - Math.random() * 70, life: 0.7, color: [0.75, 0.6, 0.85] });
+        }
       }
       // Si te ensarta: daño e infección.
       // Si te ensarta (en cualquier punto del asta): daño e infección.

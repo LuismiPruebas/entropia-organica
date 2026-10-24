@@ -268,6 +268,7 @@ export class Game {
     e.minion = true;
     e.seenOnce = true;
     this.room.enemies.push(e);
+    return e;
   }
 
   // Cría de una división (colonia partida, célula desprendida). Tope por sala para
