@@ -1145,6 +1145,13 @@ export const LEVELS = {
       '##...###########################',
     ],
     backdrop: 4,
+    winds: [
+      { x: 2, y: 0, w: 3, h: 14, dir: 'up' },
+    ],
+    links: [
+      { id: 'p1', x: 2, y: 12, w: 3, h: 2, to: 'P6', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [3, 12] },
+      { id: 'p2', x: 2, y: 0, w: 3, h: 2, to: 'P10', toLink: 'p1', trigger: 'touch', look: 'hidden' },
+    ],
   },
 
   P10: {
@@ -1190,5 +1197,11 @@ export const LEVELS = {
       { x: 5, y: 23, dir: 'right', reach: 10, period: 4.5 },
     ],
     backdrop: 4,
+    winds: [
+      { x: 18, y: 24, w: 3, h: 4, dir: 'up' },
+    ],
+    links: [
+      { id: 'p1', x: 18, y: 26, w: 3, h: 2, to: 'P9', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [19, 26] },
+    ],
   },
 };
