@@ -362,12 +362,12 @@ export class Genome {
     }
     if (f?.startsWith('item:')) {
       const k = f.slice(5), it = ITEMS[k], have = st.items[k], left = st.timers[k];
-      const fx = k === 'shield' ? `Nada te hiere durante ${it.time} s: ni golpes, ni ácido, ni infección.` : k === 'plasma' ? `Recuperas ${it.heal} de integridad al momento.` : `Regeneras ${REGEN_RATE} de integridad por segundo durante ${it.time} s.`;
+      const fx = k === 'shield' ? `Nada te hiere durante ${it.time} s: ni golpes, ni ácido, ni infección.` : k === 'plasma' ? `Recuperas ${it.heal} de integridad al momento.` : k === 'suppress' ? 'Baja 35 el rechazo y durante un minuto no sube.' : `Regeneras ${REGEN_RATE} de integridad por segundo durante ${it.time} s.`;
       this.info.innerHTML = `
-        <b class="i-name" style="color:${k === 'shield' ? '#4ff0ff' : k === 'plasma' ? '#ff5a6a' : '#7dff9a'}">${caps(it.name)} <span class="i-amount">x${have}</span></b>
+        <b class="i-name" style="color:${k === 'shield' ? '#4ff0ff' : k === 'plasma' ? '#ff5a6a' : k === 'suppress' ? '#c07bff' : '#7dff9a'}">${caps(it.name)} <span class="i-amount">x${have}</span></b>
         <p class="i-fx">▶ ${fx}</p>
         <p class="i-dim">${st.cavities.includes(k) ? `En la cavidad ${st.cavities.indexOf(k) + 1}.` : 'Sin cavidad: no la puedes usar en juego.'} Intro / clic: ${st.cavities[st.cavity] === k ? `sacarla de la cavidad ${st.cavity + 1}` : `acomodarla en la cavidad ${st.cavity + 1} (la marcada)`}.</p>
-        <p class="i-dim">${left > 0 ? `Activa: le quedan ${Math.ceil(left)} s.` : have ? '' : k === 'plasma' ? 'No llevas ninguno. Se encuentran por el organismo, y el útero los cuaja con tu biomasa.' : 'No llevas ninguna. Muy rara en las criaturas; un jefe siempre suelta una. El útero la cría por biomasa.'}</p>`;
+        <p class="i-dim">${left > 0 ? `Activa: le quedan ${Math.ceil(left)} s.` : have ? '' : k === 'suppress' ? 'No llevas ninguno. Se encuentran por el organismo, y el útero los cría.' : k === 'plasma' ? 'No llevas ninguno. Se encuentran por el organismo, y el útero los cuaja con tu biomasa.' : 'No llevas ninguna. Muy rara en las criaturas; un jefe siempre suelta una. El útero la cría por biomasa.'}</p>`;
       return;
     }
     if (f?.startsWith('mem:')) {

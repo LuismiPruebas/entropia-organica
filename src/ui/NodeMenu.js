@@ -55,6 +55,7 @@ const CATS = {
   shield: { c: '#4ff0ff', info: 'Se guarda; se aloja en una cavidad y la usas cuando quieras.' },
   regen: { c: '#7dff9a', info: 'Se guarda; se aloja en una cavidad y la usas cuando quieras.' },
   plasma: { c: '#ff5a6a', info: 'Te lo llevas: se aloja en una cavidad: úsalo cuando quieras y recuperas integridad al momento.' },
+  suppress: { c: '#c07bff', info: 'Te lo llevas: se aloja en una cavidad. Tómalo cuando el rechazo apriete.' },
   travel: { c: '#d0a8ff', info: 'El nervio del organismo te lleva a otro útero que ya conoces.' },
 };
 const HINT = 'Señala una opción para saber qué hace.';
@@ -236,11 +237,11 @@ export class NodeMenu {
       node.suppressor && {
         tab: 'cuidar',
         icon: ['suppressor'],
-        label: 'Supresor de rechazo',
-        effect: `<span class="c-rej">-${SUPPRESS_CUT} rechazo y no sube en ${SUPPRESS_TIME / 60} min</span> <span class="dim">(ahora ${Math.floor(st.rejection)} %)</span>`,
-        cost: `${price(node.suppressor)}${why(st.rejection <= 0 && 'sin rechazo', !st.canPay(node.suppressor) && 'no te alcanza')}`,
-        enabled: st.canPay(node.suppressor) && st.rejection > 0,
-        run: () => { if (st.craftSuppressor(node.suppressor)) { g.audio.play('womb'); g.say(`El supresor adormece tus injertos: el rechazo no subirá en un minuto.`, 3); } },
+        label: `Supresor de rechazo ×${st.items.suppress}`,
+        effect: `<span class="c-rej">-${SUPPRESS_CUT} rechazo y no sube en ${SUPPRESS_TIME / 60} min</span> <span class="dim">(te lo llevas: tómalo ${g.itemKey('suppress')} · ahora ${Math.floor(st.rejection)} %)</span>`,
+        cost: `${price(node.suppressor)}${why(!st.canPay(node.suppressor) && 'no te alcanza')}`,
+        enabled: st.canPay(node.suppressor),
+        run: () => { if (st.buySuppressor(node.suppressor)) { g.audio.play('womb'); g.say(`El útero cría un supresor. Tómalo ${g.itemKey('suppress')}.`, 2.5); } },
       },
       node.extender && !st.immuneRejection && {
         tab: 'cuidar',
@@ -261,7 +262,7 @@ export class NodeMenu {
         run: () => { if (st.tradeAtNode(node.trade)) g.audio.play('womb'); },
       },
       // Consumibles raros: el útero los cría, pero cuestan mucha carne.
-      ...Object.entries(ITEMS).filter(([kind]) => node[kind] !== false).map(([kind, it]) => ({
+      ...Object.entries(ITEMS).filter(([kind]) => kind !== 'suppress' && node[kind] !== false).map(([kind, it]) => ({
         tab: 'tienda',
         icon: [kind],
         label: kind === 'plasma' ? `Cuajar coágulo ×${st.items[kind]}` : `${it.name} ×${st.items[kind]}`,

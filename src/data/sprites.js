@@ -447,6 +447,34 @@ export const SPRITES = {
     ] },
     glow: 'G',
   },
+  // Supresor: una ampolla de carne con el líquido violeta que adormece los injertos.
+  suppress: {
+    frames: { a: [
+      '...kk...',
+      '..kwwk..',
+      '..kqqk..',
+      '.kqwqqk.',
+      '.kqqqqk.',
+      '.kqqwqk.',
+      '..kqqk..',
+      '...kk...',
+    ] },
+    glow: 'q',
+  },
+  // Extensor de tolerancia: una vértebra de hueso con un núcleo violeta.
+  extender: {
+    frames: { a: [
+      '.k....k.',
+      'kwk..kwk',
+      '.kwwwwk.',
+      'kwwqqwwk',
+      'kwwqqwwk',
+      '.kwwwwk.',
+      'kwk..kwk',
+      '.k....k.',
+    ] },
+    glow: 'q',
+  },
   // Coágulo de plasma: una gota de sangre espesa con el corazón encendido.
   plasma: {
     frames: { a: [

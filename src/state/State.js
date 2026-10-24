@@ -42,6 +42,9 @@ export const ITEMS = {
   shield: { name: 'Perla de Nácar', time: 10, price: { bio: 130 } }, // invulnerable
   regen: { name: 'Célula Madre', time: 10, price: { bio: 130 } },   // regenera integridad
   plasma: { name: 'Coágulo de plasma', time: 0, price: { bio: 45 }, heal: PLASMA.heal }, // cura al momento
+  // Supresor de rechazo: se guarda en una cavidad y se usa cuando haga falta (lo cría el
+  // útero, a su precio, y se encuentra suelto por el organismo).
+  suppress: { name: 'Supresor', time: 0 },
 };
 // Infección: te pudre al menos 10 s (poco daño, pero arcadas que te dejan vendido; ver
 // Player). La anula la Dermis Nanocutánea; la curan el útero, el Tejido sano, la Célula
@@ -64,7 +67,7 @@ export const CAPACITY_PER_EXTENDER = 2;
 // así cada extensor se nota siempre (con 2 extensores, el rechazo sube casi la mitad).
 const PRESSURE = 1.5;
 // Extensores del útero: cada vez más caros (biomasa). Los Timos Necróticos dan uno.
-export const EXTENDER_PRICES = [30, 45, 65, 90, 120, 155, 195, 240, 290, 345, 405, 470, 540, 615];
+export const EXTENDER_PRICES = [20, 30, 45, 60, 80, 105, 135, 170, 210, 255, 305, 360, 420, 485];
 // Armas del cañón, en orden de su línea.
 export const WEAPONS = ['astillas', 'simbionte', 'escopeta'];
 // Desde la Dermis II (placas de quitina) el antebrazo es también un arma cuerpo a cuerpo:
@@ -117,7 +120,7 @@ export class GameState {
     this.weapon = null;          // arma del cañón elegida (WEAPONS); null = culata
     this.scrap = 12;
     this.cells = 0;              // células lumínicas en reserva: se gastan solas bajo CELL_AUTO_BELOW
-    this.items = { shield: 0, regen: 0, plasma: 0 }; // consumibles guardados (ITEMS)
+    this.items = { shield: 0, regen: 0, plasma: 0, suppress: 0 }; // consumibles guardados (ITEMS)
     // Cavidades: los huecos del cuerpo donde llevas a mano los consumibles. Solo lo que
     // está acomodado en una se puede usar en pleno juego (lo demás espera en el Genoma).
     this.cavities = Array(CAVITY_BASE).fill(null); // tipo de consumible de cada una (o null)
@@ -296,6 +299,16 @@ export class GameState {
 
   // Consumible: lo gasta y arranca su efecto. No se pisa con uno igual aún activo.
   useItem(kind) {
+    // El supresor se puede tomar aunque dure otro (vuelve a bajar el rechazo); sin
+    // rechazo no hace falta: se guarda.
+    if (kind === 'suppress') {
+      if (this.dead || !this.items.suppress || this.rejection <= 0) return false;
+      this.items.suppress--;
+      if (!this.items.suppress) { const i = this.cavities.indexOf('suppress'); if (i >= 0) this.cavities[i] = null; }
+      this.rejection = Math.max(0, this.rejection - SUPPRESS_CUT);
+      this.timers.suppress = SUPPRESS_TIME;
+      return true;
+    }
     if (this.dead || !this.items[kind] || this.timers[kind] > 0) return false;
     if (kind === 'plasma' && this.integrity >= this.maxIntegrity) return false; // no hace falta: se guarda
     this.items[kind]--;
@@ -501,10 +514,10 @@ export class GameState {
     return true;
   }
 
-  craftSuppressor(price) {
-    if (this.rejection <= 0 || !this.pay(price)) return false;
-    this.rejection = Math.max(0, this.rejection - SUPPRESS_CUT);
-    this.timers.suppress = SUPPRESS_TIME;
+  // El útero cría un supresor: te lo llevas (se aloja en una cavidad) y lo tomas cuando quieras.
+  buySuppressor(price) {
+    if (!this.pay(price)) return false;
+    this.gainItem('suppress');
     return true;
   }
 

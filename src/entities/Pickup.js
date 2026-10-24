@@ -61,6 +61,20 @@ export const PICKUPS = {
     apply: (st) => st.gainItem('plasma'),
     pop: () => ['+1', '#ff5a6a'],
   },
+  // Supresor: se guarda en una cavidad, como los demás consumibles.
+  suppress: {
+    sprite: 'suppress',
+    sound: 'dna',
+    apply: (st) => st.gainItem('suppress'),
+    pop: () => ['+1', '#c07bff'],
+  },
+  // Extensor de tolerancia: se injerta al momento (+carga genética, para siempre).
+  extender: {
+    sprite: 'extender',
+    sound: 'dna',
+    apply: (st) => st.gainExtender(),
+    pop: () => ['+2 CARGA', '#c07bff'],
+  },
   tissue: {
     sprite: 'tissue',
     sound: 'dna',

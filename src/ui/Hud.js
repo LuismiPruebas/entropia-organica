@@ -24,7 +24,7 @@ const HUD_TUTOR = [
   { id: 'lux', sac: 'lux', color: '#ffd23f', test: (a, b) => b.lux > a.lux + 0.5 || b.cells > a.cells,
     text: '<b>LUZ</b> · la vejiga amarilla: <b>la energía de tu ojo</b>. Se gasta con el ojo encendido (F); las células lumínicas como esta la recargan, y las que sobran se guardan.' },
   { id: 'rej', sac: 'rej', color: '#c07bff', test: (a, b) => b.rej > a.rej,
-    text: '<b>RECHAZO</b> · la vejiga violeta: <b>tu cuerpo lucha contra los injertos</b>. Al 100 % el cuerpo se hincha y, si no lo calmas en 20 segundos, revientas. Lo calman los supresores del útero.' },
+    text: '<b>RECHAZO</b> · la vejiga violeta: <b>tu cuerpo lucha contra los injertos</b>. Al 100 % el cuerpo se hincha y, si no lo calmas en 20 segundos, revientas. Lo calman los supresores (el útero los cría y se encuentran sueltos; se llevan en una cavidad).' },
   { id: 'dead', sac: 'dead', color: '#b0a0a8', test: (a, b) => b.dead > a.dead,
     text: '<b>CORRUPCIÓN</b> · el bulto oscuro: <b>tejido muerto</b> que te roba vida máxima. Lo cura el Tejido sano.' },
   { id: 'scrap', slot: 'scrap', color: '#e0d4b8', test: (a, b) => b.scrap > a.scrap,
@@ -35,6 +35,8 @@ const HUD_TUTOR = [
     text: () => `<b>PERLA DE NÁCAR</b> · se aloja en una <b>cavidad</b>. ${cavHow()}: 10 s en los que nada te hiere.` },
   { id: 'it:regen', slot: 'regen', color: '#7dff9a', test: (a, b) => b.regen > a.regen,
     text: () => `<b>CÉLULA MADRE</b> · se aloja en una <b>cavidad</b>. ${cavHow()}: regeneras integridad durante 10 s.` },
+  { id: 'it:suppress', slot: 'suppress', color: '#c07bff', test: (a, b) => b.suppress > a.suppress,
+    text: () => `<b>SUPRESOR</b> · se aloja en una <b>cavidad</b>. ${cavHow()}: -35 de rechazo y no sube en un minuto.` },
   { id: 'inf', sac: 'int', color: '#9ad050', test: (a, b) => b.inf && !a.inf,
     text: '<b>INFECCIÓN</b> · tu sangre se vuelve verde: <b>te pudre poco a poco</b> y te da arcadas. La cura el útero (Sanar tejido).' },
 ];
@@ -200,10 +202,10 @@ export class Hud {
     const lux = '#' + eye.map((c) => Math.round(Math.min(1, c) * 255).toString(16).padStart(2, '0')).join('');
     const hp = st.integrity / 100, infected = st.infection > 0, bio = st.biomass / st.biomassMax;
     // Minitutorial: ¿ha cambiado algo por primera vez? A la cola; luego, de uno en uno.
-    const snap = { int: st.integrity, bio: st.biomass, o2: st.oxygen, lux: st.light, cells: st.cells, scrap: st.scrap, rej: st.rejection, dead: st.corrupted, inf: st.infection > 0, plasma: st.items.plasma ?? 0, shield: st.items.shield ?? 0, regen: st.items.regen ?? 0 };
+    const snap = { int: st.integrity, bio: st.biomass, o2: st.oxygen, lux: st.light, cells: st.cells, scrap: st.scrap, rej: st.rejection, dead: st.corrupted, inf: st.infection > 0, plasma: st.items.plasma ?? 0, shield: st.items.shield ?? 0, regen: st.items.regen ?? 0, suppress: st.items.suppress ?? 0 };
     // Aviso de cada cambio en los contadores: el icono parpadea un momento al subir.
     this.flashT ??= {};
-    if (this.prevSnap) for (const k of ['scrap', 'cells', 'plasma', 'shield', 'regen']) if (snap[k] > this.prevSnap[k]) this.flashT[k] = 0.9;
+    if (this.prevSnap) for (const k of ['scrap', 'cells', 'plasma', 'shield', 'regen', 'suppress']) if (snap[k] > this.prevSnap[k]) this.flashT[k] = 0.9;
     for (const k in this.flashT) this.flashT[k] = Math.max(0, this.flashT[k] - dt);
     st.hudSeen ??= new Set();
     this.tutQueue ??= [];
@@ -262,7 +264,7 @@ export class Hud {
     // ---- Cavidades: los huecos de carne con el consumible que llevas a mano en cada una
     // (icono y cuántos quedan). La activa tiene el borde vivo; debajo, la barra del efecto
     // que esté durando. Luego, los efectos activos que no van en cavidad.
-    const COLOR = { plasma: '#ff5a6a', shield: '#4ff0ff', regen: '#7dff9a' };
+    const COLOR = { plasma: '#ff5a6a', shield: '#4ff0ff', regen: '#7dff9a', suppress: '#c07bff' };
     let bx = 64;
     const by = 25;
     st.cavities.forEach((k, i) => {

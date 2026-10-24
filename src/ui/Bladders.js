@@ -156,6 +156,7 @@ const ITEM_ICON = {
   shield: { rows: ['.KKKK.', 'KWWLCK', 'KWLLCK', 'KLLLCK', 'KCLCCK', '.KKKK.'], C: { K, W: '#ffffff', L: '#c8f4f8', C: '#4ff0ff' } },
   regen: { rows: ['.KKKK.', 'KGWWGK', 'KWWWWK', 'KWWWWK', 'KGWWGK', '.KKKK.'], C: { K, G: '#3ac060', W: '#e8ffe8' } },
   plasma: { rows: ['..KK..', '.KRRK.', 'KRLRRK', 'KRRHRK', 'KRHHRK', '.KKKK.'], C: { K, R: '#a01828', L: '#ffb0b8', H: '#ff4a5a' } },
+  suppress: { rows: ['..KK..', '.KWWK.', '.KVVK.', 'KVWVVK', 'KVVVVK', '.KKKK.'], C: { K, W: '#f0e0ff', V: '#c07bff' } },
   immune: { rows: ['.KKKK.', 'KPPPPK', 'KPWWPK', 'KPWWPK', 'KPPPPK', '.KKKK.'], C: { K, P: '#ff9aa8', W: '#9affb0' } }, // Tejido sano: inmunidad
 };
 export function drawItemIcon(g, kind, x, y, t, active) {

@@ -11,7 +11,7 @@ export const DEV_TOOLS = true;
 
 const ITEMS = [
   ['biomass', 'Biomasa +8'], ['scrap', 'Hueso +3'], ['battery', 'Célula lumínica'],
-  ['oxygen', 'Filtro O2'], ['cyst', 'Quiste'], ['tissue', 'Tejido sano'], ['plasma', 'Coágulo de plasma'], ['thymus', 'Timo Necrótico'],
+  ['oxygen', 'Filtro O2'], ['cyst', 'Quiste'], ['tissue', 'Tejido sano'], ['plasma', 'Coágulo de plasma'], ['suppress', 'Supresor'], ['extender', 'Extensor de tolerancia'], ['thymus', 'Timo Necrótico'],
   ['shield', 'Perla de Nácar'], ['regen', 'Célula Madre'],
 ];
 

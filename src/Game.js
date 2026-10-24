@@ -426,6 +426,15 @@ export class Game {
 
   useItem(kind) {
     const st = this.state, it = ITEMS[kind];
+    if (kind === 'suppress') {
+      if (st.items.suppress > 0 && st.rejection <= 0) return this.say('Sin rechazo: guardas el supresor.', 1.5);
+      if (!st.useItem('suppress')) return this.say('No llevas ningún supresor.', 1.2);
+      const p = this.player;
+      this.audio.play('womb');
+      this.flash(p.cx, p.cy, 80, [0.75, 0.45, 1], 0.25);
+      for (let i = 0; i < 12; i++) this.glowParticles.emit(p.cx + (Math.random() - 0.5) * 10, p.cy, { vx: (Math.random() - 0.5) * 50, vy: -20 - Math.random() * 40, life: 0.6, color: [0.75, 0.45, 1] });
+      return;
+    }
     if (st.timers[kind] > 0) return this.say(`${it.name}: aún te dura.`, 1.2);
     if (kind === 'plasma' && st.items.plasma > 0 && st.integrity >= st.maxIntegrity) return this.say('Tu integridad está al máximo: guardas el coágulo.', 1.5);
     if (!st.useItem(kind)) return this.say(`No llevas ningún ${it.name}.`.replace('ningún Perla', 'ninguna Perla').replace('ningún Célula', 'ninguna Célula'), 1.2);
