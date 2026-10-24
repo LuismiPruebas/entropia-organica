@@ -1045,6 +1045,9 @@ export const LEVELS = {
       { id: 'p3', x: 2, y: 0, w: 3, h: 2, to: 'P9', toLink: 'p1', trigger: 'touch', look: 'hidden' },
     ],
     backdrop: 3,
+    winds: [
+      { x: 2, y: 0, w: 3, h: 5, dir: 'up' },
+    ],
   },
 
   P8: {
@@ -1177,7 +1180,10 @@ export const LEVELS = {
     ],
     nodules: [[29, 24, 'luz']],
     links: [
-      { id: 'p1', x: 2, y: 40, w: 3, h: 2, to: 'P6', toLink: 'p3', trigger: 'touch', look: 'hidden' },
+      { id: 'p1', x: 2, y: 40, w: 3, h: 2, to: 'P6', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [3, 39] },
+    ],
+    winds: [
+      { x: 2, y: 25, w: 3, h: 17, dir: 'up' },
     ],
   },
 };
