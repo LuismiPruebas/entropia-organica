@@ -34,7 +34,9 @@ export function roomBlock(id, room) {
 
 // Sustituye (o añade, o quita) bloques de sala en el texto de levels.js.
 export function patchLevels(text, changed, removed = [], start = null) {
-  let s = text;
+  // Saltos de línea de Windows (git con autocrlf los pone al sacar el archivo): sin
+  // normalizarlos no se encuentra el bloque de la sala y se añadía otra copia al final.
+  let s = text.replace(/\r\n/g, '\n');
   for (const id of removed) {
     const a = s.indexOf(`\n  ${ident(id)}: {\n`);
     if (a < 0) continue;
