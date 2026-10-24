@@ -22,7 +22,7 @@ function chosen() {
     if (saved && WORLDS[saved]) return saved;
   } catch { /* sin navegador o sin almacenamiento */ }
   const env = globalThis.process?.env?.LINFA_WORLD;
-  return env && WORLDS[env] ? env : 'original';
+  return env && WORLDS[env] ? env : 'mapa2';
 }
 
 export const WORLD_ID = chosen();
