@@ -657,12 +657,14 @@ export class AudioSys {
     if (this.ctx) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
+    // iPhone: que el audio del juego suene aunque el móvil esté en modo silencio (Safari 17+).
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* sin soporte */ }
     this.ctx = new AC();
-    // Safari (iPhone) crea el audio en pausa y lo vuelve a pausar al cambiar de app:
-    // cualquier toque o tecla lo despierta.
-    const wake = () => { if (this.ctx.state !== 'running') this.ctx.resume?.(); };
+    // Safari crea el audio en pausa y lo vuelve a pausar al cambiar de app: cualquier
+    // gesto lo despierta (Safari no da por buenos todos: por eso van varios).
+    const wake = () => this.unlock();
     wake();
-    for (const ev of ['touchend', 'pointerdown', 'keydown']) addEventListener(ev, wake, { passive: true });
+    for (const ev of ['click', 'touchend', 'touchstart', 'pointerdown', 'mousedown', 'keydown']) addEventListener(ev, wake, { passive: true });
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.55;
     this.master.connect(this.ctx.destination);
@@ -696,6 +698,15 @@ export class AudioSys {
     wet.gain.value = 0.6;
     conv.connect(wet).connect(this.master);
     return conv;
+  }
+
+  // Despierta el audio (llamar desde un gesto del jugador): reanuda el contexto y arranca
+  // la música de la portada si se quedó en pausa porque el navegador no la dejó sonar.
+  unlock() {
+    if (!this.ctx) return;
+    if (this.ctx.state !== 'running') this.ctx.resume?.().catch(() => {});
+    const el = this.music?.el;
+    if (el && el.paused) el.play().catch(() => {});
   }
 
   // ---------- Música de la pantalla de inicio ----------
@@ -752,8 +763,13 @@ export class AudioSys {
     // Si el navegador aún no deja sonar (nadie ha tocado la página), se reintenta con la
     // primera tecla, clic o toque.
     el.play().catch(() => {
-      const retry = () => { if (!stopped) el.play().catch(() => {}); for (const ev of ['pointerdown', 'keydown', 'touchend']) removeEventListener(ev, retry); };
-      for (const ev of ['pointerdown', 'keydown', 'touchend']) addEventListener(ev, retry);
+      const evs = ['click', 'touchend', 'touchstart', 'pointerdown', 'mousedown', 'keydown'];
+      const retry = () => {
+        if (stopped) return;
+        if (c.state !== 'running') c.resume?.().catch(() => {});
+        el.play().then(() => { for (const ev of evs) removeEventListener(ev, retry); }).catch(() => {});
+      };
+      for (const ev of evs) addEventListener(ev, retry);
     });
     let stopped = false;
     return {

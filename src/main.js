@@ -59,6 +59,7 @@ function advance() {
     if (!document.fullscreenElement) toggleFullscreen();
     game.audio.init();
     game.audio.startTitleMusic();
+    game.audio.unlock(); // Safari: arrancar el audio dentro del propio clic
     callToAction.textContent = document.body.classList.contains('touch') ? 'TOCA PARA DESCENDER' : 'HAZ CLIC PARA DESCENDER';
   } else if (phase === 'title') {
     phase = 'play';
