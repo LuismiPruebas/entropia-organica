@@ -132,12 +132,12 @@ export class Game {
     st.on('rejectionTier', (tier) => {
       this.audio.play('fail');
       this.player?.rejectSpasm();
-      this.say([
-        '',
-        'Tus injertos se inflaman (70 %). Un Supresor del útero lo calma.',
-        'Tu cuerpo rechaza la carne ajena: la presión sube.',
-        'CRISIS DE RECHAZO: tu cuerpo se hincha. Si no lo calmas en 20 segundos, reventarás.',
-      ][tier], 4);
+      // Un solo aviso en toda la partida; lo demás se entiende viéndolo (el velo, el
+      // cuerpo que se hincha).
+      if (!this.state.seenRejectionWarn) {
+        this.state.seenRejectionWarn = true;
+        this.say('Tus injertos se inflaman: tu cuerpo rechaza la carne ajena. Un Supresor del útero lo calma.', 4);
+      }
     });
     st.on('outOfBreath', () => {
       if (this.time - (this.lastBreathWarn ?? -9) < 1.2) return;
