@@ -207,7 +207,7 @@ export const ENEMIES = {
     lucifugo: true, // huye del haz del Ojo Pineal
     frag: 'ocular', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Colonia Bacilar',
-    biome: 'pulmonar',
+    biome: 'digestivo',
     creature: 'colonia',
     gore: { blood: '#8a9a3a', flesh: ['#7a9a50', '#9ab868', '#c8e890'] },
     voice: ['colonySquirm', 'colonySquirm', 'bubble'],
@@ -387,7 +387,7 @@ export const ENEMIES = {
   quimera: {
     frag: 'balistico', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Quimera del Quilo',
-    biome: 'pulmonar',
+    biome: 'digestivo',
     creature: 'quimera',
     gore: { blood: '#8a0a1a', flesh: ['#6a4a2a', '#d89a80', '#8a2a3c', '#e8dcc8'] },
     voice: ['chimBark', 'growl', 'headScream'],

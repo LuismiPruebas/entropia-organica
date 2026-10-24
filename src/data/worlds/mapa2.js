@@ -768,7 +768,7 @@ export const LEVELS = {
       '##################################...###########################',
     ],
     enemies: [
-      { type: 'colonia', x: 30, y: 38 },
+      { type: 'zancudo', x: 30, y: 38 },
       { type: 'polinizador', x: 40, y: 8 },
       { type: 'polinizador', x: 22, y: 16 },
       { type: 'zancudo', x: 47, y: 27 },
@@ -918,7 +918,7 @@ export const LEVELS = {
     enemies: [
       { type: 'zancudo', x: 36, y: 8 },
       { type: 'zancudo', x: 48, y: 11 },
-      { type: 'colonia', x: 22, y: 17 },
+      { type: 'polinizador', x: 22, y: 14 },
       { type: 'espora', x: 15, y: 9 },
       { type: 'hierofante', x: 55, y: 20 },
       { type: 'espora', x: 28, y: 2, invert: true },
