@@ -340,6 +340,7 @@ export const ENEMIES = {
     voice: ['hiss', 'bubble'],
     behavior: 'bossMoth',
     boss: true,
+    music: 'matriarca', // «Red de Niebla»
     light: { color: [0.34, 0.14, 0.3], r: 150 },
     hp: 130, w: 30, h: 30,
     contactDamage: 8,

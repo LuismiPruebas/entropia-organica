@@ -675,9 +675,9 @@ export class Game {
     }
     this.room.enemies = this.room.enemies.filter((e) => e.alive);
     this.hud.setBoss(boss, st.lineLevel('cerebro') >= 1 || st.lineLevel('ojo') >= 1);
-    // Los jefes aberración traen su música: arranca al empezar la pelea y se apaga
-    // al morir el jefe o al salir de la sala.
-    const theme = boss?.def.music;
+    // Los jefes traen su música: arranca al entrar en su sala (con el jefe vivo) y se
+    // apaga al morir el jefe o al salir de la sala.
+    const theme = (boss ?? this.room.enemies.find((e) => e.alive && e.def.boss && e.def.music))?.def.music;
     if (theme && this.audio.bossTheme !== theme) { this.audio.stopBossMusic(0.4); this.audio.startBossMusic(theme); }
     else if (!theme && this.audio.bossMusic) this.audio.stopBossMusic(2.5);
 
