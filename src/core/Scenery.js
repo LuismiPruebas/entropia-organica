@@ -665,14 +665,72 @@ function digestivo2() {
     anim: { motes: { n: 10, colors: ['rgba(210,200,120,0.28)', 'rgba(230,210,140,0.2)'], vx: 3, vy: -2, size: 1, wobble: 4 } },
   };
 }
-// Digestivo 3 · Pliegues gástricos: casi vacío (los pliegues ya están en el fondo);
-// solo unas burbujas de jugo gástrico que suben muy despacio.
+// Vesícula biliar: un saco en forma de pera colgando de su conducto, translúcido, con
+// la bilis verde dentro (más clara arriba, poso oscuro abajo) y venas por la pared.
+// (cx, cy): centro del saco; s: escala.
+function gallbladder(g, gl, cx, cy, s, r) {
+  // Conducto cístico que sube serpenteando y se pierde.
+  for (let i = 0; i < 90; i++) {
+    const t = i / 90, x = cx + Math.sin(t * 5) * 6 * s, y = cy - 32 * s - i * 1.1;
+    const hw = 3 - Math.min(1, i / 30);
+    for (let k = -hw; k <= hw; k++) dotW(g, x + k, y, k < -hw + 1 ? '#4a4416' : k > hw - 1.5 ? '#1c1a08' : '#34320f');
+    if (i % 7 === 0) dotW(g, x - 3, y, '#444016', 7, 1); // anillos del conducto
+  }
+  // El saco: pera (ancha abajo), con la pared más oscura y la bilis dentro.
+  const rx = 26 * s, ry = 34 * s;
+  for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
+    const u = (y + ry) / (2 * ry);                  // 0 arriba, 1 abajo
+    // Forma de pera: cuello estrecho que se funde con el conducto y fondo redondo.
+    const w = rx * (0.16 + 0.84 * Math.sin(u * Math.PI * 0.6)) * (u > 0.6 ? Math.sqrt(Math.max(0, 1 - ((u - 0.6) / 0.42) ** 2)) : 1);
+    const d = Math.abs(x) / Math.max(1, w);
+    if (d > 1) continue;
+    const lit = (-x / rx) * 0.5 - (y / ry) * 0.3;
+    let c;
+    if (d > 0.88) c = '#141206';                                    // contorno
+    else if (d > 0.74) c = lit > 0.1 ? '#4e5a1e' : '#2e3410';         // pared
+    else c = u < 0.35 ? (lit > 0 ? '#5a7022' : '#46581a') : u < 0.8 ? '#3a4c14' : '#26320c'; // bilis y poso
+    dotW(g, cx + x, cy + y, c);
+    if (d < 0.7 && u > 0.2 && u < 0.85) dotW(gl, cx + x, cy + y, `rgba(150,200,40,${(0.07 + 0.06 * (1 - d)).toFixed(3)})`);
+  }
+  // Brillo húmedo en la pared y venas que la recorren.
+  for (let i = 0; i < 8; i++) dotW(g, cx - rx * 0.45 + i * 0.6, cy - ry * 0.1 + i, '#7a8a3a');
+  for (let v = 0; v < 4; v++) {
+    let x = cx + (r() - 0.5) * rx, y = cy - ry * 0.4 + r() * ry, a = r() * Math.PI * 2;
+    for (let i = 0; i < 18; i++) { dotW(g, x, y, '#4a2a14'); x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.6; }
+  }
+}
+// Lóbulo de hígado: una masa grande, lisa y oscura (granate y pardo), con el borde
+// redondeado partido en lóbulos, venas hepáticas ramificadas y brillo húmedo arriba.
+function liverLobe(g, cx, cy, s, r) {
+  const lobes = [[0, 0, 46, 26], [-36, 10, 26, 20], [34, 12, 24, 18], [-8, 18, 34, 16]];
+  const inLobe = (x, y) => lobes.some(([lx, ly, rx, ry]) => ((x - lx * s) / (rx * s)) ** 2 + ((y - ly * s) / (ry * s)) ** 2 <= 1);
+  for (let y = -40 * s; y <= 40 * s; y++) for (let x = -66 * s; x <= 66 * s; x++) {
+    if (!inLobe(x, y)) continue;
+    const edge = !inLobe(x - 2, y) || !inLobe(x + 2, y) || !inLobe(x, y - 2) || !inLobe(x, y + 2);
+    const lit = (-x / (66 * s)) * 0.4 - (y / (40 * s)) * 0.6;
+    dotW(g, cx + x, cy + y, edge ? '#140806' : lit > 0.3 ? '#5a2620' : lit > -0.1 ? '#46201a' : '#341612');
+  }
+  // Venas hepáticas que salen del hilio y se ramifican.
+  const vein = (x, y, a, len, w) => {
+    for (let i = 0; i < len; i++) {
+      if (inLobe(x - cx, y - cy)) dotW(g, x, y, '#24100c', w, w);
+      x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.3;
+      if (w > 1 && r() < 0.06) vein(x, y, a + (r() < 0.5 ? -0.8 : 0.8), len * 0.5, w - 1);
+    }
+  };
+  for (let k = 0; k < 4; k++) vein(cx - 4 * s, cy + 14 * s, -Math.PI / 2 + (k - 1.5) * 0.7, 40 * s, 2);
+  // Brillo húmedo arriba.
+  for (let i = 0; i < 26; i++) dotW(g, cx - 28 * s + i, cy - 22 * s + Math.abs(i - 13) * 0.25, '#7a3a30');
+}
+// Digestivo 3 · Pliegues gástricos: al fondo, colgando, una vesícula biliar enorme
+// (apagada) que late despacio; burbujas de jugo gástrico que suben.
 function digestivo3() {
-  const [mid] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  gallbladder(g, gl, 150, 112, 1.25, rng(121));
   return {
     mid, midGlow: glow, front: digFront(123),
-    anim: { motes: { n: 9, colors: ['rgba(200,210,90,0.26)', 'rgba(220,220,120,0.2)'], vx: 0, vy: -5, size: 2, shape: 'bubble', wobble: 3 } },
+    anim: { pulseGlow: 0.25, motes: { n: 9, colors: ['rgba(200,210,90,0.26)', 'rgba(220,220,120,0.2)'], vx: 0, vy: -5, size: 2, shape: 'bubble', wobble: 3 } },
   };
 }
 // Digestivo 4 · Quimo: grumos grandes de comida a medio digerir flotando (siluetas
@@ -681,7 +739,9 @@ function digestivo4() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
   const r = rng(131);
-  for (const [x, y, rad] of [[46, 50, 14], [170, 120, 18], [220, 40, 10], [100, 160, 11]]) {
+  // Un lóbulo de hígado enorme que asoma por arriba.
+  liverLobe(g, 128, 40, 1.15, rng(132));
+  for (const [x, y, rad] of [[46, 120, 14], [210, 150, 16], [100, 170, 11]]) {
     ball(g, x, y, rad, '#2a220e', '#3c3216', '#18120a');
     for (let k = 0; k < 4; k++) ball(g, x + (r() - 0.5) * rad, y + (r() - 0.5) * rad, 2 + r() * 2, '#34280f', '#42361a', '#1a1408'); // grumos
     const a = r() * Math.PI;
