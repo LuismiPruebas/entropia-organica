@@ -2162,7 +2162,8 @@ export const BEHAVIORS = {
         for (let i = 0; i < (enraged ? 3 : 2); i++) {
           g.spawnMinion('larva', e.cx + (i - 1) * 10, e.y - 6);
           const m = g.room.enemies[g.room.enemies.length - 1];
-          m.vy = -160; m.vx = (i - 1) * 60;
+          // Salen disparadas de la espalda: hacia arriba y abiertas, algo hacia ti.
+          m.vy = -250 - Math.random() * 60; m.vx = (i - 1) * 110 + Math.sign(p.cx - e.cx) * 40;
         }
         for (let i = 0; i < 12; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * 30, e.y + 4, { vx: (Math.random() - 0.5) * 100, vy: -60 - Math.random() * 80, life: 0.6, gravity: 400, color: [0.45, 0.6, 0.2] });
         e.broodCool = enraged ? 6 : 9;
