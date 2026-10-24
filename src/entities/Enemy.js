@@ -210,10 +210,12 @@ export const BEHAVIORS = {
       fall(e, g, dt);
       e.puff = Math.max(0, e.puff - dt / d.spitTime);
       e.spitAcc += dt;
-      while (e.spitAcc >= 0.045) {
-        e.spitAcc -= 0.045;
-        const m = mouth(), a = e.aimA + (Math.random() - 0.5) * 0.1, v = d.spitSpeed * (0.9 + Math.random() * 0.2);
-        g.spawnProjectile({ x: m.x - 2, y: m.y - 2, w: 5, h: 4, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1.2, damage: d.spitDamage, kind: 'acidStream', owner: 'enemy', color: '#9be06a', glow: [0.4, 1, 0.3] });
+      // Vómito espeso: goterones gruesos y de tamaño variable, a borbotones (no un rayo).
+      while (e.spitAcc >= 0.06) {
+        e.spitAcc -= 0.06;
+        const m = mouth(), a = e.aimA - 0.12 + (Math.random() - 0.5) * 0.22, v = d.spitSpeed * (0.75 + Math.random() * 0.35);
+        const sz = 5 + Math.floor(Math.random() * 3);
+        g.spawnProjectile({ x: m.x - sz / 2, y: m.y - sz / 2, w: sz, h: sz - 1, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1.4, damage: d.spitDamage, kind: 'acidSpew', owner: 'enemy', color: '#9be06a', glow: [0.4, 1, 0.3] });
       }
       if (e.timer <= 0) { e.state = 'recover'; e.timer = d.recover; }
     } else {

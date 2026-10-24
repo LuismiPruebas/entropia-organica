@@ -463,7 +463,17 @@ export const ABERRATIONS = {
       // Dientes finos en la boca.
       for (let i = 0; i < 6; i += 2) px(g, hx + i, hy + 1, '#d8d0b0', 1, 1);
       // Chorro saliendo de la boca mientras escupe.
-      if (st === 'spit') for (let i = 0; i < 4; i++) px(g, hx + 6 + i * 2, hy + 2 + Math.sin(t * 40 + i) * 0.6, i % 2 ? '#c8f090' : '#6ac040', 2, 2);
+      // Chorro espeso que le sale de la boca: grueso, ondulante, con grumos y babas.
+      if (st === 'spit') {
+        for (let i = 0; i < 6; i++) {
+          const w = 3 + Math.round(Math.sin(t * 25 + i * 1.3) * 0.8), yy = hy + 1 + Math.sin(t * 18 + i * 0.9) * 1 + i * 0.25;
+          px(g, hx + 5 + i * 2, yy - 1, '#2e5a12', 2, w + 1);
+          px(g, hx + 5 + i * 2, yy, i % 2 ? '#8ac040' : '#6aa02c', 2, w - 1);
+          if (i % 2 === 0) px(g, hx + 5 + i * 2, yy, '#d8f498');
+        }
+        px(g, hx + 6, hy + 5, '#5a9024', 1, 2); px(g, hx + 9, hy + 6, '#5a9024', 1, 3); // babas que cuelgan
+        px(gl, hx + 5, hy + 1, '#5ac028', 10, 2);
+      }
     },
   },
 };

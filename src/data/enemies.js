@@ -517,7 +517,7 @@ export const ENEMIES = {
     hp: 14, w: 18, h: 12,
     sight: 260, hopSpeed: 95, hopV: 190,
     // Se hincha y escupe un chorro de ácido a presión (una ráfaga de gotas rápidas).
-    spitRange: 170, inflateTime: 0.55, spitTime: 0.45, spitSpeed: 330, spitDamage: 5, recover: 0.5, spitCool: 1.4,
+    spitRange: 150, inflateTime: 0.55, spitTime: 0.5, spitSpeed: 250, spitDamage: 5, recover: 0.5, spitCool: 1.4,
     contactDamage: 6,
     drop: { biomass: 2 },
     fragmentChance: 0,

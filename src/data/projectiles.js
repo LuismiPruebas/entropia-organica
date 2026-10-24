@@ -176,6 +176,20 @@ export const PROJECTILES = {
     impact(game, p) { drips(game, p, 2, [0.35, 0.8, 0.2], null, 40); },
   },
 
+  // Renacuajo de Charca: vómito de ácido espeso. Goterones viscosos de tamaño variable
+  // (sale a presión, pero pesa: cae en arco) que se estiran con la velocidad y gotean.
+  acidSpew: {
+    size: [9, 7], frames: 2, fps: 10, orient: 'velocity',
+    physics: { gravity: 520 },
+    paint(g, gl, f) {
+      ellipse(g, 4.5, 3.5, 4.2 - f * 0.4, 2.9 + f * 0.3, (d, x) => (d > 0.6 ? '#3a6a16' : d > 0.25 ? (x > 0 ? '#7ab836' : '#5a9024') : '#c8ec80'));
+      px(g, 2, 2, '#eaffc0'); px(g, 0, 3, '#3a6a16', 2, 2);   // brillo y la cola que se estira
+      ellipse(gl, 4.5, 3.5, 3, 2, 'rgba(120,230,60,0.45)');
+    },
+    trail(game, p, dt) { if (every(p, dt, 0.05)) drips(game, p, 1, [0.35, 0.75, 0.18], 'rgba(90,150,30,0.6)', 15); },
+    impact(game, p) { drips(game, p, 6, [0.4, 0.85, 0.22], 'rgba(90,150,30,0.7)', 60); game.audio.play('sizzle', p); },
+  },
+
   // Coro: notas de su canto. Anillos que ondulan a los lados de su trayectoria.
   note: {
     size: [8, 8], frames: 2, fps: 8, orient: 'none', tinted: true,
