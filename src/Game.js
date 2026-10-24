@@ -462,7 +462,8 @@ export class Game {
   // 'status' aplica un estado alterado (p. ej. la infección de los escupitajos).
   // iframes: segundos de invulnerabilidad tras el golpe (por defecto, los de la criatura
   // que lo da, def.iframes en data/enemies.js, o INVULN_TIME).
-  hurtPlayer(n, fromX, cause, status, iframes) {
+  // push: fuerza del empujón (por defecto, uno pequeño); los golpes fuertes te lanzan.
+  hurtPlayer(n, fromX, cause, status, iframes, push) {
     const p = this.player, st = this.state;
     if (p.invuln > 0 || st.dead) return;
     // Con la Perla de Nácar los golpes resbalan: ni daño ni empujón.
@@ -478,8 +479,11 @@ export class Game {
     if (status === 'infection' && st.applyStatus('infection', INFECTION.time)) this.say('Infección: la herida se pudre y te revuelve por dentro. Te dará arcadas.', 2.5);
     p.invuln = iframes ?? ENEMY_BY_NAME[cause]?.iframes ?? INVULN_TIME;
     p.rope = null;
-    p.vy = -160;
-    if (fromX != null) p.vx = Math.sign(p.cx - fromX || 1) * 130;
+    p.vy = push ? -220 : -160;
+    if (fromX != null) {
+      p.vx = Math.sign(p.cx - fromX || 1) * (push ?? 130);
+      p.wallLock = Math.max(p.wallLock ?? 0, push ? 0.3 : 0.12); // que tus controles no lo anulen al momento
+    }
     this.audio.play('hurt');
     // Tu sangre también mancha.
     this.gore.hit(p.cx, p.cy, fromX != null ? Math.sign(p.cx - fromX || 1) : -p.facing, { blood: '#8a0a14' }, 0.8);

@@ -1160,7 +1160,8 @@ export class Player {
   #meleeTier() { return MELEE_TIERS[Math.min(3, this.game.state.lineLevel('dermis'))]; }
   #meleeBox() {
     const reach = this.#meleeTier().reach;
-    return { x: this.facing > 0 ? this.x + this.w : this.x - reach, y: this.y + 2, w: reach, h: this.h - 4 };
+    // (empieza un poco dentro de tu cuerpo: si estás solapado con algo grande, también le das)
+    return { x: this.facing > 0 ? this.x + this.w - 8 : this.x - reach, y: this.y + 2, w: reach + 8, h: this.h - 4 };
   }
 
   // ¿Hay una criatura (o un blanco) al alcance del puño?
@@ -1184,7 +1185,7 @@ export class Player {
     this.swooshK = T.swoosh * (last && T.combo === 3 ? 1.25 : 1);
     const dmgMul = last && T.combo === 3 ? 1.5 : 1;
     // Con la cuchilla, cada tajo te lanza hacia delante (el último, más).
-    if (st.weaponId === BLADE.id && T.combo >= 3) {
+    if (st.weaponId === BLADE.id && T.combo >= 3 && !this.#foeInReach()) {
       this.vx = this.facing * (last ? 110 : 70);              // un paso corto, controlable
       this.wallLock = Math.max(this.wallLock ?? 0, 0.06);
     }

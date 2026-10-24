@@ -2118,7 +2118,7 @@ export const BEHAVIORS = {
         const box = { x: e.dir > 0 ? e.x + e.w - 6 : e.x - reach + 6, y: e.y - 12, w: reach, h: e.h + 12 };
         if (overlap(p, box)) {
           e.hitDone = true;
-          g.hurtPlayer(d.biteDamage ?? 16, e.cx, d.name, undefined, d.biteIframes);
+          g.hurtPlayer(d.biteDamage ?? 16, e.cx, d.name, undefined, d.biteIframes, d.bitePush ?? 260);
           g.shake = Math.max(g.shake, 9);
           e.bloody = 3;
           const bx = e.dir > 0 ? e.x + e.w + 26 : e.x - 26, by = e.y + 6;
@@ -2146,7 +2146,7 @@ export const BEHAVIORS = {
       // Embestida a ras de suelo con las fauces abiertas: te arrolla y, si acaba cerca, muerde.
       e.vx = e.dir * Math.min(290, Math.abs(e.vx) + 1400 * dt);
       if (Math.random() < 0.7) g.particles.emit(e.cx - e.dir * 20, e.y + e.h - 2, { vx: -e.dir * (40 + Math.random() * 60), vy: -20 - Math.random() * 50, life: 0.5, gravity: 400, color: [0.55, 0.5, 0.4] });
-      if (!e.rushHit && overlap(p, e)) { e.rushHit = true; g.hurtPlayer(d.rushDamage ?? 14, e.cx, d.name); g.shake = Math.max(g.shake, 6); }
+      if (!e.rushHit && overlap(p, e)) { e.rushHit = true; g.hurtPlayer(d.rushDamage ?? 14, e.cx - e.dir * 30, d.name, undefined, undefined, d.rushPush ?? 300); g.shake = Math.max(g.shake, 6); }
       const close = Math.abs(dx) < 70 && Math.sign(dx) === e.dir;
       if (e.timer <= 0 || e.hitWall || (close && e.timer < 0.55)) {
         if (Math.abs(dx) < 90 && Math.abs(p.cy - e.cy) < 40) { e.state = 'biteWind'; e.timer = e.biteWT = 0.18; e.biteK = 0; e.vx *= 0.3; }
