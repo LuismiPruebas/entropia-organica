@@ -32,6 +32,11 @@ const NO_INPUT = (real) => ({
   mouse: real.mouse, padAim: { x: 0, y: 0, active: false }, endStep: () => {},
 });
 import { linkArrival } from './entities/Link.js';
+import { ENEMIES } from './data/enemies.js';
+
+// Invulnerabilidad tras un golpe (segundos); cada criatura puede graduarla (def.iframes).
+const INVULN_TIME = 0.9;
+const ENEMY_BY_NAME = Object.fromEntries(Object.values(ENEMIES).map((d) => [d.name, d]));
 
 const CONE_HALF = Math.PI / 6;
 // Alcance del haz del ojo: corto sin mutar; la línea del Ojo lo alarga (mod lightRange).
@@ -455,7 +460,9 @@ export class Game {
 
   // Daño de enemigos y peligros. La Piel (Quitina II/III) reduce el de los enemigos;
   // 'status' aplica un estado alterado (p. ej. la infección de los escupitajos).
-  hurtPlayer(n, fromX, cause, status) {
+  // iframes: segundos de invulnerabilidad tras el golpe (por defecto, los de la criatura
+  // que lo da, def.iframes en data/enemies.js, o INVULN_TIME).
+  hurtPlayer(n, fromX, cause, status, iframes) {
     const p = this.player, st = this.state;
     if (p.invuln > 0 || st.dead) return;
     // Con la Perla de Nácar los golpes resbalan: ni daño ni empujón.
@@ -469,7 +476,7 @@ export class Game {
     const fromEnemy = cause !== 'espinas';
     st.damage(fromEnemy ? n * st.mod('damageTaken') : n, cause);
     if (status === 'infection' && st.applyStatus('infection', INFECTION.time)) this.say('Infección: la herida se pudre y te revuelve por dentro. Te dará arcadas.', 2.5);
-    p.invuln = 0.9;
+    p.invuln = iframes ?? ENEMY_BY_NAME[cause]?.iframes ?? INVULN_TIME;
     p.rope = null;
     p.vy = -160;
     if (fromX != null) p.vx = Math.sign(p.cx - fromX || 1) * 130;

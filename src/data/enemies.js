@@ -518,6 +518,7 @@ export const ENEMIES = {
     leapDamage: 18,   // el topetazo del salto
     biteDamage: 16,   // el bocado a quemarropa (la cabeza sale disparada)
     rushDamage: 14,   // la embestida a ras de suelo
+    biteIframes: 0.5, // tras su mordisco, menos invulnerabilidad (la normal: 0,9 s; ver iframes)
     drop: { dna: 'tendon', biomass: 25, fragments: 2, items: ['thymus'] },
     reward: {
       revealBiome: 'digestivo',

@@ -2118,7 +2118,7 @@ export const BEHAVIORS = {
         const box = { x: e.dir > 0 ? e.x + e.w - 6 : e.x - reach + 6, y: e.y - 12, w: reach, h: e.h + 12 };
         if (overlap(p, box)) {
           e.hitDone = true;
-          g.hurtPlayer(d.biteDamage ?? 16, e.cx, d.name);
+          g.hurtPlayer(d.biteDamage ?? 16, e.cx, d.name, undefined, d.biteIframes);
           g.shake = Math.max(g.shake, 9);
           e.bloody = 3;
           const bx = e.dir > 0 ? e.x + e.w + 26 : e.x - 26, by = e.y + 6;
