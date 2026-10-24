@@ -2066,9 +2066,12 @@ const mapCell = (e) => {
   const t = S.mapXform; if (!t) return null;
   const rc = mv.getBoundingClientRect();
   const sx = mv.width / rc.width, sy = mv.height / rc.height;
-  return [Math.floor(((e.clientX - rc.left) * sx - t.ox) / t.k + t.minX), Math.floor(((e.clientY - rc.top) * sy - t.oy) / t.k + t.minY)];
+  const fx = ((e.clientX - rc.left) * sx - t.ox) / t.k + t.minX, fy = ((e.clientY - rc.top) * sy - t.oy) / t.k + t.minY;
+  // [celda x, celda y, punto exacto x, punto exacto y] (las salas pueden estar en posiciones no enteras).
+  return [Math.floor(fx), Math.floor(fy), fx, fy];
 };
-const roomAtCell = ([mx, my]) => Object.entries(S.rooms).find(([, r]) => r.map && mx >= r.map[0] && my >= r.map[1] && mx < r.map[0] + r.map[2] && my < r.map[1] + r.map[3]);
+// Sala bajo el punto pinchado: el exacto si lo hay (una sala en x = 1.001 no ocupa la celda 1 entera).
+const roomAtCell = ([mx, my, fx = mx + 0.5, fy = my + 0.5]) => Object.entries(S.rooms).find(([, r]) => r.map && fx >= r.map[0] && fy >= r.map[1] && fx < r.map[0] + r.map[2] && fy < r.map[1] + r.map[3]);
 // Arrastrar una sala en el mapa del mundo la cambia de sitio (por celdas).
 mv.onmousedown = (e) => {
   const c = mapCell(e); if (!c) return;
