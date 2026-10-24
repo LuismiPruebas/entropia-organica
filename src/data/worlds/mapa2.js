@@ -935,6 +935,7 @@ export const LEVELS = {
     enemies: [
       { type: 'anguila', x: 6, y: 23 },
       { type: 'anguila', x: 12, y: 23 },
+      { type: 'larva', x: 9, y: 24 },
       { type: 'gloton', x: 38, y: 25 },
       { type: 'colonia', x: 53, y: 25 },
       { type: 'larva', x: 31, y: 18 },
@@ -1586,6 +1587,7 @@ export const LEVELS = {
       { type: 'anguila', x: 11, y: 30 },
       { type: 'anguila', x: 17, y: 22 },
       { type: 'anguila', x: 21, y: 32 },
+      { type: 'larva', x: 13, y: 33 },
       { type: 'larva', x: 5, y: 29 },
       { type: 'larva', x: 2, y: 33 },
       { type: 'cabeza', x: 14, y: 39 },
@@ -1687,6 +1689,7 @@ export const LEVELS = {
     enemies: [
       { type: 'anguila', x: 20, y: 40 },
       { type: 'anguila', x: 23, y: 30 },
+      { type: 'larva', x: 22, y: 44 },
       { type: 'gloton', x: 12, y: 14 },
       { type: 'larva', x: 28, y: 20 },
       { type: 'larva', x: 14, y: 14 },

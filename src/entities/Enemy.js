@@ -183,16 +183,26 @@ export const BEHAVIORS = {
     tick(e, dt);
     e.shakeX = 0;
     e.puff ??= 0;
+    // En el ácido (cubetas o '~') no se quema: flota con los ojos fuera y nada hacia ti.
+    const surf = g.fluidSurfaceAt(e);
+    e.swimming = surf != null && e.y + e.h * 0.4 > surf;
+    const move = () => {
+      if (!e.swimming || e.vy < -150) return fall(e, g, dt); // (el salto de rana lo saca)
+      const want = surf - e.h * 0.55 + Math.sin(e.t * 3) * 1.2;
+      e.vy = clamp((want - e.y) * 5, -140, 140);
+      g.world.move(e, dt);
+    };
+    const footing = e.onGround || e.swimming;
     const mouth = () => ({ x: e.cx + e.dir * (e.w / 2 + 1), y: e.y + e.h * 0.45 });
     if (e.state === 'prowl') {
       e.puff = Math.max(0, e.puff - dt * 3);
       if (s.sees) e.dir = Math.sign(s.dx) || e.dir;
-      if (s.sees && s.dist < d.spitRange && s.dist > 22 && e.cool <= 0 && e.onGround) {
+      if (s.sees && s.dist < d.spitRange && s.dist > 22 && e.cool <= 0 && footing) {
         e.state = 'inflate';
         e.timer = d.inflateTime;
         e.vx = 0;
         g.audio.play(d.sounds?.windup ?? 'bubble', e);
-      } else if (e.onGround) {
+      } else if (footing) {
         // Saltos de rana: hacia ti si te ve; si no, de paseo (y se da la vuelta ante un borde).
         e.vx *= 0.7;
         e.hopT = (e.hopT ?? Math.random() * 0.5) - dt;
@@ -203,13 +213,13 @@ export const BEHAVIORS = {
           e.vy = -d.hopV * (s.sees ? 1 : 0.7);
         }
       }
-      fall(e, g, dt);
+      move();
     } else if (e.state === 'inflate') {
       e.vx = 0;
       e.puff = Math.min(1, e.puff + dt / d.inflateTime);
       e.shakeX = Math.random() < 0.5 ? -1 : 1;
       if (s.sees) e.dir = Math.sign(s.dx) || e.dir;
-      fall(e, g, dt);
+      move();
       if (e.timer <= 0) {
         e.state = 'spit';
         e.timer = d.spitTime;
@@ -220,7 +230,7 @@ export const BEHAVIORS = {
       }
     } else if (e.state === 'spit') {
       e.vx = -e.dir * 18; // el retroceso del chorro
-      fall(e, g, dt);
+      move();
       e.puff = Math.max(0, e.puff - dt / d.spitTime);
       e.spitAcc += dt;
       // Vómito espeso: goterones gruesos y de tamaño variable, a borbotones (no un rayo).
@@ -234,7 +244,7 @@ export const BEHAVIORS = {
     } else {
       e.vx = 0;
       e.puff = Math.max(0, e.puff - dt * 2);
-      fall(e, g, dt);
+      move();
       if (e.timer <= 0) { e.state = 'prowl'; e.cool = d.spitCool; }
     }
   },
@@ -1349,21 +1359,23 @@ export const BEHAVIORS = {
       const cx = e.home.x + e.w / 2;
       e.pool = g.room.hazards.find((h) => h.surfaceY !== undefined && cx >= h.x0 && cx <= h.x0 + h.w && e.home.y + e.h >= h.yTop && e.home.y <= h.yBottom) ?? null;
     }
-    if (e.pool && e.state !== 'air' && e.pool.surfaceY > e.home.y + e.h * 0.6) {
+    const dryOut = () => {
+      if (!g.state.seenEelDry) { g.state.seenEelDry = true; g.say('Sin fluido, la anguila se retuerce y muere.', 3); }
+      e.hp = 0;
+      e.die();
+    };
+    if (e.pool && (e.state === 'under' || e.state === 'peek') && e.pool.surfaceY > e.home.y + e.h * 0.6) {
       e.dryT = (e.dryT ?? 1.6) - dt;
       e.submerged = false;
       e.x = e.home.x + Math.sin(e.dryT * 30) * 1.5; // coletazos en el fondo seco
       e.y = e.home.y + e.h * 0.3;
-      if (e.dryT <= 0) {
-        if (!g.state.seenEelDry) { g.state.seenEelDry = true; g.say('Sin fluido, la anguila se retuerce en el fondo seco y muere.', 3); }
-        e.hp = 0;
-        e.die();
-      }
+      if (e.dryT <= 0) dryOut();
       return;
     }
     e.dryT = undefined;
     e.cool = (e.cool ?? 1 + Math.random() * 2) - dt;
     const near = Math.hypot(p.cx - e.cx, p.cy - e.cy) < d.range;
+    const homeCx = e.home.x + e.w / 2;
     if (e.state === 'under' || e.state === 'peek') {
       e.x = e.home.x;
       e.y = e.home.y - (e.state === 'peek' ? 5 : 0);
@@ -1380,21 +1392,68 @@ export const BEHAVIORS = {
         e.feinted = false;
         e.state = 'air';
         e.submerged = false;
-        e.vx = clamp((p.cx - e.cx) * 1.3, -150, 150);
+        e.vx = e.leapVx = clamp((p.cx - e.cx) * 1.3, -150, 150);
         e.vy = -340;
+        e.leftT = 0;
         g.audio.play('spit', e);
       }
-    } else {
-      e.vy += 760 * dt;
-      e.x += e.vx * dt;
-      e.y += e.vy * dt;
-      if (e.vy > 0 && e.y >= e.home.y) {
+      return;
+    }
+    // Vuelo (salto de ataque o de vuelta): ahora choca con el escenario.
+    const surf = g.fluidSurfaceAt(e);
+    // Fuera del ácido se va secando (cuenta todo el rato, aunque falle al volver); y si
+    // cae por un hueco fuera de la sala, se pierde.
+    e.outT = (e.outT ?? 0) + dt;
+    if (e.y > g.world.pixelH + 32) { e.alive = false; e.dispose(); return; }
+    if (e.state === 'air') {
+      e.leftT += dt;
+      e.vy = Math.min(380, e.vy + 760 * dt);
+      // Mantiene el impulso lateral aunque roce un borde al despegar.
+      if (e.leapVx !== undefined) e.vx = e.leapVx;
+      g.world.move(e, dt);
+      // De vuelta en el ácido (el suyo u otro): se sumerge ahí.
+      if (e.vy > 0 && surf != null && e.cy > surf && e.leftT > 0.15) {
         e.state = 'under';
+        e.outT = 0;
+        e.home = { x: e.x, y: surf + 6 };
+        e.pool = undefined;
         e.cool = 2 + Math.random() * 1.5;
         g.audio.play('acid', e);
-        for (let i = 0; i < 10; i++) g.glowParticles.emit(e.cx, e.home.y, { vx: (Math.random() - 0.5) * 60, vy: -Math.random() * 60, life: 0.5, color: [0.4, 1, 0.3] });
+        for (let i = 0; i < 10; i++) g.glowParticles.emit(e.cx, surf, { vx: (Math.random() - 0.5) * 60, vy: -Math.random() * 60, life: 0.5, color: [0.4, 1, 0.3] });
+        return;
+      }
+      if (e.onGround) { e.state = 'land'; e.landT = 0; e.cool = 0.3; e.leapVx = undefined; g.audio.play('splat', e); }
+      return;
+    }
+    // En tierra: repta a coletazos hacia ti; al rato busca su charca y salta a ella. Si
+    // tarda demasiado, se seca.
+    e.landT += dt;
+    if (e.outT > 9) { dryOut(); return; }
+    const back = e.outT > 3.5;
+    const dir = back ? Math.sign(homeCx - e.cx) || 1 : Math.sign(p.cx - e.cx) || 1;
+    e.dir = dir;
+    if (e.onGround) {
+      e.vx *= 0.8;
+      if (e.cool <= 0) {
+        if (back && Math.abs(homeCx - e.cx) < 70) {
+          // El salto de vuelta: en parábola hasta el centro de su charca.
+          const T = 0.7;
+          e.vx = e.leapVx = (homeCx - e.cx) / T;
+          e.vy = -Math.max(320, (e.y - e.home.y) / T + 0.5 * 760 * T); // por encima del borde
+          e.state = 'air';
+          e.leftT = 0;
+          g.audio.play('spit', e);
+          return;
+        }
+        e.vx = dir * (70 + Math.random() * 30);
+        e.vy = -150 - Math.random() * 60;
+        e.cool = 0.45 + Math.random() * 0.25;
+        if (Math.random() < 0.5) g.particles.emit(e.cx, e.y + e.h, { vx: -dir * 30, vy: -20, life: 0.5, gravity: 400, color: [0.35, 0.75, 0.15], stain: '#4a8a1a' });
       }
     }
+    e.vy = Math.min(380, e.vy + 760 * dt);
+    g.world.move(e, dt);
+    if (e.hitWall) e.vx = 0;
   },
 
   // Quimera del Quilo: se arrastra hacia ti y elige entre cuatro ataques, siempre

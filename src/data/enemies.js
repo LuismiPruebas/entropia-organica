@@ -204,7 +204,6 @@ export const ENEMIES = {
     lore: 'Plantas carnívoras que brotan del techo de los bronquios, colgadas de un tallo de nudos. Abren los pétalos dentados un instante antes de dejarse caer. Lo que atrapan, lo respiran.',
   },
   colonia: {
-    lucifugo: true, // huye del haz del Ojo Pineal
     frag: 'ocular', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Colonia Bacilar',
     biome: 'digestivo',
@@ -213,7 +212,7 @@ export const ENEMIES = {
     voice: ['colonySquirm', 'colonySquirm', 'bubble'],
     behavior: 'golem',
     hp: 40, w: 24, h: 42,
-    speed: 8, chaseSpeed: 19, pulpSpeed: 62, sight: 200, lightFear: 0.6, darkMult: 1.8,
+    speed: 8, chaseSpeed: 19, pulpSpeed: 62, sight: 200, darkMult: 1.8, // la luz no la frena
     punchRange: 42, punchWindup: 0.5, punchDamage: 13, punchCool: 1.8,
     // A distancia se arranca una bola de células y te la arroja; la regenera despacio
     // y el grumo, si sobrevive, vuelve a fundirse con él.
@@ -300,7 +299,7 @@ export const ENEMIES = {
     hp: 22, w: 14, h: 14,
     range: 130, feint: 0.4,
     contactDamage: 10,
-    habits: 'Bajo el ácido solo se ven sus burbujas. A veces asoma y se hunde: es un amago. El salto de verdad llega justo después.',
+    habits: 'Bajo el ácido solo se ven sus burbujas. A veces asoma y se hunde: es un amago. El salto de verdad llega justo después, y puede caer fuera de la charca: entonces repta hacia ti a coletazos y al rato vuelve de un salto al ácido. Si tarda en volver, se seca. Si vacías su cubeta, muere.',
     drop: { biomass: 6 },
     sounds: { reveal: 'spit', die: 'eelDie', hurt: 'eelHurt' },
     lore: 'Un intestino que se desprendió y aprendió a cazar. Vive bajo el ácido gástrico, donde solo delatan sus burbujas, y salta con las fauces abiertas sobre lo que se acerca a la orilla.',
@@ -526,7 +525,7 @@ export const ENEMIES = {
     drop: { biomass: 2 },
     fragmentChance: 0,
     sounds: { reveal: 'eelGurgle', windup: 'eelGurgle', lunge: 'spit', die: 'eelDie', hurt: 'leechHurt' },
-    habits: 'Avanza a saltos de rana. Cuando te tiene a tiro se hincha (la papada le brilla y tiembla) y escupe un chorro de ácido a presión; luego se deshincha y vuelve a la carga enseguida.',
+    habits: 'Avanza a saltos de rana. Cuando te tiene a tiro se hincha (la papada le brilla y tiembla) y escupe un chorro de ácido a presión; luego se deshincha y vuelve a la carga enseguida. Nada en el ácido sin quemarse y escupe desde la superficie; si vacías la cubeta, sigue en tierra. Huye de la luz del Ojo Pineal.',
     lore: 'Crías del Sapo Partero: crecen hundidas en las celdas de su espalda y, cuando revientan, saltan al mundo con la panza llena del mismo ácido que las gestó.',
   },
 };
