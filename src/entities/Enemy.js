@@ -2046,6 +2046,16 @@ export const BEHAVIORS = {
         g.audio.play('eelGurgle', e);
       }
     }
+    // Le disparas desde lejos: no se queda a recibir, salta hacia ti (a veces dos saltos).
+    if (e.shotAt) {
+      e.shotAt = false;
+      if (['sit', 'land'].includes(e.state) && e.onGround && Math.abs(dx) > 110) {
+        e.state = 'crouch'; e.timer = enraged ? 0.2 : 0.3; e.vx = 0;
+        e.chain = Math.abs(dx) > 260 || enraged ? 1 : 0;
+        e.farLeap = 1 + e.chain;                                         // saltos de acercamiento: largos y bajos
+        g.audio.play('eelGurgle', e);
+      }
+    }
     if (e.state === 'scalded') {
       // Se retuerce panza arriba, humeando: es el momento de pegarle.
       e.vx = 0;
@@ -2071,8 +2081,10 @@ export const BEHAVIORS = {
       if (e.timer <= 0) {
         e.state = 'leap';
         e.dir = Math.sign(dx) || e.dir;
-        e.vx = clamp(dx * 1.3, -230, 230);
-        e.vy = -360 - Math.min(120, Math.max(0, -(p.cy - e.cy)) * 0.8); // más alto si estás arriba
+        const far = (e.farLeap ?? 0) > 0 && Math.abs(dx) > 90;
+        if (e.farLeap > 0) e.farLeap--;
+        e.vx = far ? Math.sign(dx) * 340 : clamp(dx * 1.3, -230, 230);
+        e.vy = (far ? -290 : -360) - Math.min(120, Math.max(0, -(p.cy - e.cy)) * 0.8); // más alto si estás arriba
         e.hitDone = false;
         e.airT = 0;
         g.audio.play(d.sounds.attack, e);
@@ -2645,7 +2657,7 @@ export class Enemy {
     if (this.def.behavior === 'bossMoth' && n > 0) this.struck = { x: at?.x ?? this.game.player.cx, y: at?.y ?? this.game.player.cy };
     if (this.def.behavior === 'golem' && n > 0 && !(this.gen > 0)) this.provoked = true;
     if (this.state === 'latch' && n > 0) this.shaken = true;
-    if (this.def.behavior === 'bossToad' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.2; }
+    if (this.def.behavior === 'bossToad' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.2; if (kind !== 'melee' && kind !== 'dash') this.shotAt = true; }
     if (this.def.behavior === 'glutton' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.4; }
     // El enjambre pierde células al ser herido: cada una sigue viva por su cuenta.
     if (this.def.sheds && this.hp > 0 && (this.gen ?? 0) === 0) {
