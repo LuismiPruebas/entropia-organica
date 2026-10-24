@@ -178,7 +178,7 @@ export const KINDS = {
     make: (x, y) => ({ x, y, front: false }), box: (o) => [o.x - 8, o.y - 14, 18, 15], move: (o, x, y) => { o.x = x + 8; o.y = y + 14; }, text: (o) => `rostro del anfitrión${o.boss ? ' → ' + o.boss : ''}${o.front ? ' (delante)' : ''}`,
   },
   // Bufador (entities/Bellows.js): estructura de 4x4 que inspira y sopla una corriente de
-  // `reach` casillas hacia dir (right, left, up). (x, y): su casilla de arriba a la izquierda.
+  // `reach` casillas hacia dir (right, left, up, down). (x, y): su casilla de arriba a la izquierda.
   bellows: {
     label: 'Bufador (sopla aire)', color: '#a0d8ff',
     make: (x, y) => ({ x, y, dir: 'right', reach: 10, period: 4.5 }), box: (o) => [o.x, o.y, 4, 4], move: (o, x, y) => { o.x = x; o.y = y; },

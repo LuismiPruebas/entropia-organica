@@ -485,6 +485,33 @@ function decorPieceOf(o) {
     ],
   };
 }
+// Bufador: sopla hacia dir. Voltear: arriba ⇄ abajo · Espejo: derecha ⇄ izquierda ·
+// Girar: un cuarto de vuelta (derecha → abajo → izquierda → arriba).
+const BELLOWS_DIRS = ['right', 'down', 'left', 'up'];
+const BELLOWS_NAME = { right: 'sopla a la derecha', left: 'sopla a la izquierda', up: 'sopla hacia arriba', down: 'sopla hacia abajo' };
+function bellowsIcon(dir, size = 42) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d');
+  x.translate(size / 2, size / 2);
+  x.rotate({ right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 }[dir]);
+  // Saco anillado, cuello y boca, y la flecha del soplido.
+  x.fillStyle = '#b06474'; x.beginPath(); x.ellipse(-7, 0, 10, 12, 0, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = '#7a2c44'; x.lineWidth = 2; for (const k of [-12, -6, 0]) { x.beginPath(); x.moveTo(k, -9); x.lineTo(k, 9); x.stroke(); }
+  x.fillStyle = '#e07a8c'; x.beginPath(); x.moveTo(2, -4); x.lineTo(12, -7); x.lineTo(12, 7); x.lineTo(2, 4); x.fill();
+  x.strokeStyle = '#a0d8ff'; x.lineWidth = 2; x.beginPath(); x.moveTo(13, 0); x.lineTo(20, 0); x.moveTo(17, -3); x.lineTo(20, 0); x.lineTo(17, 3); x.stroke();
+  return `<img src="${c.toDataURL()}" width="${size}" height="${size}">`;
+}
+function bellowsPieceOf(o) {
+  const d = o.dir ?? 'right';
+  return {
+    icon: bellowsIcon(d), name: 'Bufador', sub: BELLOWS_NAME[d],
+    ops: [
+      { label: '⇅ Voltear', title: 'Que sople hacia arriba ⇄ hacia abajo', run: () => { o.dir = { up: 'down', down: 'up', right: 'down', left: 'up' }[d]; } },
+      { label: '⇆ Espejo', title: 'Que sople hacia el otro lado', run: () => { o.dir = { right: 'left', left: 'right', up: 'up', down: 'down' }[d]; } },
+      { label: '⟳ Girar', title: 'Un cuarto de vuelta: derecha → abajo → izquierda → arriba', run: () => { o.dir = BELLOWS_DIRS[(BELLOWS_DIRS.indexOf(d) + 1) % 4]; } },
+    ],
+  };
+}
 // La decoración que se va a colocar: el tipo del desplegable con la orientación elegida.
 const decorFromChoice = (dt = 'neurona') => ({ ...(S.decorChoice ??= { flip: false, invert: false }), type: dt });
 // La pieza que sale en lo alto de la paleta: la decoración (si estás colocando una) o la rampa.
@@ -1532,7 +1559,7 @@ function renderInspector() {
     }
     else if (kind === 'decor' && k === 'type') html += field('estructura', { v: DECOR[v]?.name ?? v, options: Object.values(DECOR).map((d) => d.name) }, (nv) => { o.type = Object.keys(DECOR).find((key) => DECOR[key].name === nv) ?? o.type; }, 'select');
     else if (kind === 'exits' && k === 'to') html += field('lleva a', { v, options: Object.keys(S.rooms) }, (nv) => { o.to = nv; }, 'select');
-    else if (kind === 'bellows' && k === 'dir') html += field('sopla hacia', { v, options: ['right', 'left', 'up'] }, (nv) => { o.dir = nv; }, 'select');
+    else if (kind === 'bellows' && k === 'dir') html += pieceCard(bellowsPieceOf(o), 'bl');
     else if (kind === 'exits' && k === 'side') html += field('lado', { v, options: ['left', 'right', 'top', 'bottom'] }, (nv) => { o.side = nv; }, 'select');
     else html += field(k, v, (nv) => { o[k] = nv; });
   }
@@ -1561,6 +1588,7 @@ function renderInspector() {
   if (kind === 'faces' && $('face-reset')) $('face-reset').onclick = () => { snapshot(); for (const k of ['taunts', 'thanks', 'opens', 'hints']) delete o[k]; touch(); renderInspector(); };
   $('del').onclick = deleteSelected;
   if (kind === 'decor') wirePiece(decorPieceOf(o), 'dc', snapshot, () => { touch(); renderInspector(); draw(); });
+  if (kind === 'bellows') wirePiece(bellowsPieceOf(o), 'bl', snapshot, () => { touch(); renderInspector(); draw(); });
   if (kind === 'enemies' && isRotatable(o.type)) wirePiece(enemyPieceOf(o), 'en', snapshot, () => { touch(); renderInspector(); draw(); });
   $('dup').onclick = () => {
     if (kind === 'pods') return;
@@ -2333,6 +2361,8 @@ addEventListener('keydown', (e) => {
   if (t) setTool(t[0]);
   if (e.code === 'Delete' || e.code === 'Backspace') deleteSelected();
   if (e.code === 'KeyT') {
+    const so = S.sel?.kind === 'bellows' ? selected() : null;
+    if (so) { snapshot(); bellowsPieceOf(so).ops[0].run(); touch(); renderInspector(); draw(); $('msg').textContent = `Bufador: ${BELLOWS_NAME[so.dir]} (T vuelve a voltear).`; return; }
     const pc = palettePiece(biomeColors(room()?.biome));
     if (pc) { pc.ops[0].run(); renderPalette(); draw(); $('msg').textContent = `${palettePiece(biomeColors(room()?.biome)).name}: volteada (T vuelve a voltear).`; return; }
   }

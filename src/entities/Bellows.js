@@ -6,7 +6,7 @@ import { Wind } from './Traps.js';
 // anillado y un cuello que acaba en un esfínter. Inspira despacio (el saco se hincha y la
 // boca se cierra) y sopla de golpe: la boca se abre y suelta una corriente de aire que
 // empuja (hacia un lado) o eleva (hacia arriba) durante el soplido; luego, calma.
-//   def: { x, y, dir: 'right' | 'left' | 'up', reach: casillas de alcance, period: s, phase }
+//   def: { x, y, dir: 'right' | 'left' | 'up' | 'down', reach: casillas de alcance, period: s, phase }
 // (x, y) es la casilla de arriba a la izquierda de la estructura.
 
 const SIZE = 4 * TILE;          // 64 px
@@ -28,7 +28,7 @@ function paintFrame(dir, inf, open) {
   const g = c.getContext('2d'), gl = gc.getContext('2d');
   const img = g.createImageData(SIZE, SIZE), gimg = gl.createImageData(SIZE, SIZE);
   // De coordenadas locales (u, v) a la casilla del lienzo según hacia dónde sopla.
-  const toXY = (u, v) => (dir === 'right' ? [u, v + 32] : dir === 'left' ? [63 - u, v + 32] : [v + 32, 63 - u]);
+  const toXY = (u, v) => (dir === 'right' ? [u, v + 32] : dir === 'left' ? [63 - u, v + 32] : dir === 'down' ? [v + 32, u] : [v + 32, 63 - u]);
   const put = (u, v, col, a = 255, glow = null) => {
     const [x, y] = toXY(Math.round(u), Math.round(v));
     if (x < 0 || y < 0 || x >= SIZE || y >= SIZE) return;
@@ -37,7 +37,7 @@ function paintFrame(dir, inf, open) {
     if (glow) { gimg.data[i] = glow[0]; gimg.data[i + 1] = glow[1]; gimg.data[i + 2] = glow[2]; gimg.data[i + 3] = glow[3]; }
   };
   // Luz de arriba a la izquierda en pantalla: se convierte a (u, v) según la orientación.
-  const lightUV = dir === 'right' ? [-0.7, -0.7] : dir === 'left' ? [0.7, -0.7] : [0.7, -0.7];
+  const lightUV = dir === 'right' ? [-0.7, -0.7] : dir === 'left' ? [0.7, -0.7] : dir === 'down' ? [-0.7, -0.7] : [0.7, -0.7];
   const shade = (nu, nv) => nu * lightUV[0] + nv * lightUV[1]; // >0 iluminado
 
   // Saco: elipse anillada que se hincha (centro en u=22).
@@ -106,19 +106,21 @@ export class Bellows {
   constructor(game, room, def) {
     this.game = game;
     this.def = def;
-    this.dir = ['left', 'up'].includes(def.dir) ? def.dir : 'right';
+    this.dir = ['left', 'up', 'down'].includes(def.dir) ? def.dir : 'right';
     this.period = def.period ?? 4.5;
     this.t = (def.phase ?? 0) * this.period;
     const reach = def.reach ?? 10, x = def.x, y = def.y;
     // La corriente sale de la boca.
     const zone = this.dir === 'right' ? { x: x + 4, y, w: reach, h: 4 }
       : this.dir === 'left' ? { x: x - reach, y, w: reach, h: 4 }
-        : { x, y: y - reach, w: 4, h: reach };
-    this.wind = new Wind(game, room, { ...zone, dir: this.dir, force: def.force ?? (this.dir === 'up' ? 1700 : 190) });
+        : this.dir === 'down' ? { x, y: y + 4, w: 4, h: reach }
+          : { x, y: y - reach, w: 4, h: reach };
+    this.wind = new Wind(game, room, { ...zone, dir: this.dir, force: def.force ?? (this.dir === 'up' ? 1700 : this.dir === 'down' ? 900 : 190) });
     this.wind.power = 0;
     this.spr = canvasSprite(game, SIZE, SIZE, 2);
     this.spr.place(x * TILE, y * TILE);
-    this.mouth = this.dir === 'right' ? { x: (x + 4) * TILE, y: (y + 2) * TILE } : this.dir === 'left' ? { x: x * TILE, y: (y + 2) * TILE } : { x: (x + 2) * TILE, y: y * TILE };
+    this.mouth = this.dir === 'right' ? { x: (x + 4) * TILE, y: (y + 2) * TILE } : this.dir === 'left' ? { x: x * TILE, y: (y + 2) * TILE }
+      : this.dir === 'down' ? { x: (x + 2) * TILE, y: (y + 4) * TILE } : { x: (x + 2) * TILE, y: y * TILE };
     this.frame = null;
     this.phase = 'inhale';
   }
@@ -147,7 +149,7 @@ export class Bellows {
     // Al soplar escupe vaho y motas por la boca.
     if (phase === 'blow' && power > 0.3 && Math.random() < 0.6) {
       const m = this.mouth, s = 120 + Math.random() * 80;
-      const [vx, vy] = this.dir === 'right' ? [s, (Math.random() - 0.5) * 30] : this.dir === 'left' ? [-s, (Math.random() - 0.5) * 30] : [(Math.random() - 0.5) * 30, -s];
+      const [vx, vy] = this.dir === 'right' ? [s, (Math.random() - 0.5) * 30] : this.dir === 'left' ? [-s, (Math.random() - 0.5) * 30] : [(Math.random() - 0.5) * 30, this.dir === 'down' ? s : -s];
       g.glowParticles.emit(m.x, m.y + (Math.random() - 0.5) * 10, { vx, vy, life: 0.5, color: [0.7, 0.9, 1] });
     }
     this.wind.power = power;

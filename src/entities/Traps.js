@@ -239,7 +239,7 @@ export class Wind {
   // Sentido del aire ahora: -1..1 lateral; 0..1 vertical.
   #strength() {
     const d = this.dir;
-    if (d === 'up') return 1;
+    if (d === 'up' || d === 'down') return 1;
     if (d === 'left') return -1;
     if (d === 'right') return 1;
     // 'swap': mesetas largas y un cambio suave (con un respiro de calma en medio).
@@ -261,6 +261,8 @@ export class Wind {
         const depth = Math.min(1, Math.max(0, (p.y + p.h - r.y) / LIFT_FADE));
         p.lift = Math.max(p.lift ?? 0, this.force * depth * this.power);
         p.riseMax = RISE_MAX;
+      } else if (this.dir === 'down') {
+        p.vy = Math.min(Math.max(p.vy, 0) + this.force * this.power * dt, 420); // te aplasta hacia abajo
       } else {
         p.windX = (p.windX ?? 0) + this.force * this.k;
       }
@@ -269,15 +271,15 @@ export class Wind {
   }
 
   #paint(dt) {
-    const r = this.rect, vert = this.dir === 'up';
+    const r = this.rect, vert = this.dir === 'up' || this.dir === 'down', sgn = this.dir === 'down' ? -1 : 1;
     const flow = vert ? 1 : this.k;
     for (const s of this.streaks) {
       const v = (vert ? 90 : 160) * s.sp;
-      if (vert) { s.y -= v * dt; s.x += Math.sin(this.t * 2 + s.ph) * 6 * dt; }
+      if (vert) { s.y -= v * sgn * dt; s.x += Math.sin(this.t * 2 + s.ph) * 6 * dt; }
       else { s.x += v * flow * dt; s.y += Math.sin(this.t * 3 + s.ph) * 4 * dt; }
       if (s.x < -12 || s.x > r.w + 12 || s.y < -12 || s.y > r.h + 12) {
         Object.assign(s, this.#spawn(false));
-        if (vert) s.y = r.h + R(0, 6);
+        if (vert) s.y = sgn > 0 ? r.h + R(0, 6) : -R(0, 6);
         else s.x = flow > 0 ? -R(0, 8) : r.w + R(0, 8);
       }
     }
