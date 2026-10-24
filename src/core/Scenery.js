@@ -665,72 +665,127 @@ function digestivo2() {
     anim: { motes: { n: 10, colors: ['rgba(210,200,120,0.28)', 'rgba(230,210,140,0.2)'], vx: 3, vy: -2, size: 1, wobble: 4 } },
   };
 }
-// Vesícula biliar: un saco en forma de pera colgando de su conducto, translúcido, con
-// la bilis verde dentro (más clara arriba, poso oscuro abajo) y venas por la pared.
-// (cx, cy): centro del saco; s: escala.
-function gallbladder(g, gl, cx, cy, s, r) {
-  // Conducto cístico que sube serpenteando y se pierde.
-  for (let i = 0; i < 90; i++) {
-    const t = i / 90, x = cx + Math.sin(t * 5) * 6 * s, y = cy - 32 * s - i * 1.1;
-    const hw = 3 - Math.min(1, i / 30);
-    for (let k = -hw; k <= hw; k++) dotW(g, x + k, y, k < -hw + 1 ? '#4a4416' : k > hw - 1.5 ? '#1c1a08' : '#34320f');
-    if (i % 7 === 0) dotW(g, x - 3, y, '#444016', 7, 1); // anillos del conducto
-  }
-  // El saco: pera (ancha abajo), con la pared más oscura y la bilis dentro.
-  const rx = 26 * s, ry = 34 * s;
-  for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
-    const u = (y + ry) / (2 * ry);                  // 0 arriba, 1 abajo
-    // Forma de pera: cuello estrecho que se funde con el conducto y fondo redondo.
-    const w = rx * (0.16 + 0.84 * Math.sin(u * Math.PI * 0.6)) * (u > 0.6 ? Math.sqrt(Math.max(0, 1 - ((u - 0.6) / 0.42) ** 2)) : 1);
-    const d = Math.abs(x) / Math.max(1, w);
-    if (d > 1) continue;
-    const lit = (-x / rx) * 0.5 - (y / ry) * 0.3;
-    let c;
-    if (d > 0.88) c = '#141206';                                    // contorno
-    else if (d > 0.74) c = lit > 0.1 ? '#4e5a1e' : '#2e3410';         // pared
-    else c = u < 0.35 ? (lit > 0 ? '#5a7022' : '#46581a') : u < 0.8 ? '#3a4c14' : '#26320c'; // bilis y poso
-    dotW(g, cx + x, cy + y, c);
-    if (d < 0.7 && u > 0.2 && u < 0.85) dotW(gl, cx + x, cy + y, `rgba(150,200,40,${(0.07 + 0.06 * (1 - d)).toFixed(3)})`);
-  }
-  // Brillo húmedo en la pared y venas que la recorren.
-  for (let i = 0; i < 8; i++) dotW(g, cx - rx * 0.45 + i * 0.6, cy - ry * 0.1 + i, '#7a8a3a');
-  for (let v = 0; v < 4; v++) {
-    let x = cx + (r() - 0.5) * rx, y = cy - ry * 0.4 + r() * ry, a = r() * Math.PI * 2;
-    for (let i = 0; i < 18; i++) { dotW(g, x, y, '#4a2a14'); x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.6; }
-  }
-}
-// Lóbulo de hígado: una masa grande, lisa y oscura (granate y pardo), con el borde
-// redondeado partido en lóbulos, venas hepáticas ramificadas y brillo húmedo arriba.
-function liverLobe(g, cx, cy, s, r) {
-  const lobes = [[0, 0, 46, 26], [-36, 10, 26, 20], [34, 12, 24, 18], [-8, 18, 34, 16]];
-  const inLobe = (x, y) => lobes.some(([lx, ly, rx, ry]) => ((x - lx * s) / (rx * s)) ** 2 + ((y - ly * s) / (ry * s)) ** 2 <= 1);
-  for (let y = -40 * s; y <= 40 * s; y++) for (let x = -66 * s; x <= 66 * s; x++) {
-    if (!inLobe(x, y)) continue;
-    const edge = !inLobe(x - 2, y) || !inLobe(x + 2, y) || !inLobe(x, y - 2) || !inLobe(x, y + 2);
-    const lit = (-x / (66 * s)) * 0.4 - (y / (40 * s)) * 0.6;
-    dotW(g, cx + x, cy + y, edge ? '#140806' : lit > 0.3 ? '#5a2620' : lit > -0.1 ? '#46201a' : '#341612');
-  }
-  // Venas hepáticas que salen del hilio y se ramifican.
-  const vein = (x, y, a, len, w) => {
-    for (let i = 0; i < len; i++) {
-      if (inLobe(x - cx, y - cy)) dotW(g, x, y, '#24100c', w, w);
-      x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * 0.3;
-      if (w > 1 && r() < 0.06) vein(x, y, a + (r() < 0.5 ? -0.8 : 0.8), len * 0.5, w - 1);
-    }
-  };
-  for (let k = 0; k < 4; k++) vein(cx - 4 * s, cy + 14 * s, -Math.PI / 2 + (k - 1.5) * 0.7, 40 * s, 2);
-  // Brillo húmedo arriba.
-  for (let i = 0; i < 26; i++) dotW(g, cx - 28 * s + i, cy - 22 * s + Math.abs(i - 13) * 0.25, '#7a3a30');
-}
-// Digestivo 3 · Pliegues gástricos: al fondo, colgando, una vesícula biliar enorme
-// (apagada) que late despacio; burbujas de jugo gástrico que suben.
-function digestivo3() {
-  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
-  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
-  gallbladder(g, gl, 150, 112, 1.25, rng(121));
+// ---- Vísceras palpitantes (Digestivo 3 y 4) -------------------------------------
+// Tuberías gruesas de intestino que cruzan el plano de lado a lado y vejigas enormes
+// colgadas de ellas por conductos. Se precalculan varios fotogramas (la onda de la
+// peristalsis recorre los tubos, las vejigas se hinchan y se vacían) y el plano medio
+// los va alternando. Se pinta en un búfer de píxeles (rápido) que envuelve en ambos ejes.
+const hex32 = (h) => { const n = parseInt(h.slice(1), 16); return (0xff000000 | ((n & 0xff) << 16) | (n & 0xff00) | (n >> 16)) >>> 0; };
+function pixbuf() {
+  const d = new Uint32Array(MID_W * MID_H);
   return {
-    mid, midGlow: glow, front: digFront(123),
-    anim: { pulseGlow: 0.25, motes: { n: 9, colors: ['rgba(200,210,90,0.26)', 'rgba(220,220,120,0.2)'], vx: 0, vy: -5, size: 2, shape: 'bubble', wobble: 3 } },
+    set: (x, y, c) => { d[wrap(Math.round(y), MID_H) * MID_W + wrap(Math.round(x), MID_W)] = c; },
+    canvas() {
+      const [cv, g] = canvas(MID_W, MID_H), im = g.createImageData(MID_W, MID_H);
+      new Uint32Array(im.data.buffer).set(d);
+      g.putImageData(im, 0, 0);
+      return cv;
+    },
+  };
+}
+// Paletas apagadas: carne de intestino (pardo rosado) y vejiga (verdosa, translúcida).
+const GUT = ['#120806', '#24120c', '#321a12', '#422418', '#52301e', '#643c26'].map(hex32);
+const SAC = { out: hex32('#100c04'), wall: [hex32('#22200c'), hex32('#2e2c12'), hex32('#3a3818')], fluid: [hex32('#2c3410'), hex32('#3a4416'), hex32('#4a561c')], shine: hex32('#6a7034'), vein: hex32('#3a1c10') };
+// Tubo de carne a lo largo de una lista de puntos. Rf(i, s) da el radio en el punto i
+// (s = largo recorrido). Pliegues anulares cada `fold` px y luz desde arriba.
+function gutTube(P, pts, Rf, fold = 0) {
+  let sl = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x, y] = pts[i], [x0, y0] = pts[Math.max(0, i - 1)], [x1, y1] = pts[Math.min(pts.length - 1, i + 1)];
+    if (i) sl += Math.hypot(x - x0, y - y0);
+    let nx = -(y1 - y0), ny = x1 - x0;
+    const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
+    if (ny < 0) { nx = -nx; ny = -ny; }                       // la normal mira hacia abajo
+    const Rr = Rf(i, sl), ring = fold ? 0.5 + 0.5 * Math.cos((sl / fold) * Math.PI * 2) : 1;
+    for (let k = -Rr; k <= Rr; k += 0.5) {
+      const q = k / Rr;
+      let c;
+      if (Math.abs(q) > 0.9) c = 0;
+      else if (fold && ring < 0.1 && Math.abs(q) < 0.8) c = 1;   // surco del pliegue
+      else {
+        const lit = Math.sqrt(1 - q * q) * 0.6 - q * 0.4 + (fold ? (ring - 0.5) * 0.25 : 0);
+        c = lit > 0.78 ? 5 : lit > 0.55 ? 4 : lit > 0.3 ? 3 : lit > 0.05 ? 2 : 1;
+      }
+      P.set(x + nx * k, y + ny * k, GUT[c]);
+    }
+  }
+}
+// Vejiga: saco enorme algo más ancho abajo, de borde irregular, con bilis turbia en la
+// mitad de abajo (su nivel se mece), pared con venas y un brillo húmedo. k = hinchazón.
+function bladder(P, cx, cy, rx, ry, k, veins, ph) {
+  const RX = rx * k, RY = ry * k, lvl = 0.05 + Math.sin(ph) * 0.06;
+  for (let y = -RY * 1.2; y <= RY * 1.2; y++) for (let x = -RX * 1.2; x <= RX * 1.2; x++) {
+    const u = x / RX, v = y / RY, a = Math.atan2(v, u);
+    const rr = (1 + 0.05 * Math.sin(3 * a + 1) + 0.03 * Math.sin(5 * a + 2)) * (1 + 0.1 * v);
+    const d = Math.hypot(u, v) / rr;
+    if (d > 1) continue;
+    const nz = Math.sqrt(1 - d * d), lit = nz * 0.45 - u * 0.25 - v * 0.3;
+    let c;
+    if (d > 0.95) c = SAC.out;
+    else if (v > lvl + Math.sin(u * 6 + ph * 2) * 0.03) c = SAC.fluid[lit > 0.3 ? 2 : lit > 0.05 ? 1 : 0];
+    else c = SAC.wall[lit > 0.35 ? 2 : lit > 0.1 ? 1 : 0];
+    if (d > 0.62 && d < 0.72 && a > -2.6 && a < -1.9) c = SAC.shine;   // brillo húmedo
+    P.set(cx + x, cy + y, c);
+  }
+  for (const vn of veins) for (const [u, v] of vn) P.set(cx + u * RX, cy + v * RY, SAC.vein);
+}
+// Venas de una vejiga en coordenadas del disco unidad (fijas en todos los fotogramas).
+function sacVeins(r, n) {
+  const out = [];
+  for (let j = 0; j < n; j++) {
+    const a0 = r() * Math.PI * 2, line = [];
+    let u = Math.cos(a0) * 0.9, v = Math.sin(a0) * 0.9, a = a0 + Math.PI + (r() - 0.5);
+    for (let i = 0; i < 40 && Math.hypot(u, v) < 0.92; i++) { line.push([u, v]); u += Math.cos(a) * 0.025; v += Math.sin(a) * 0.025; a += (r() - 0.5) * 0.5; }
+    out.push(line);
+  }
+  return out;
+}
+// Curva de Bézier cuadrática como lista de puntos (para los conductos).
+const bez = (p0, p1, p2, n = 80) => Array.from({ length: n + 1 }, (_, i) => { const t = i / n, m = 1 - t; return [m * m * p0[0] + 2 * m * t * p1[0] + t * t * p2[0], m * m * p0[1] + 2 * m * t * p1[1] + t * t * p2[1]]; });
+// Compone los fotogramas: `pipes` (tuberías que cruzan de lado a lado) y `sacs` (vejigas
+// con sus conductos a una tubería). La onda de peristalsis recorre cada tubería (un bulto
+// que ensancha la carne) y empuja: la vejiga se hincha cuando le llega.
+function viscera({ pipes, sacs, frames = 12, seed = 1 }) {
+  const r = rng(seed), W2 = (Math.PI * 2) / MID_W;
+  const pathOf = (p) => { const pts = []; for (let x = 0; x <= MID_W; x += 0.5) pts.push([x, p.y + Math.sin(x * W2 * (p.h ?? 1) + p.ph) * p.amp]); return pts; };
+  const pipePts = pipes.map(pathOf);
+  const veins = sacs.map(() => sacVeins(r, 7));
+  const out = [];
+  for (let f = 0; f < frames; f++) {
+    const P = pixbuf(), t = f / frames;
+    const bumpAt = (p, x) => { const c = wrap((p.dir ?? 1) * t * MID_W + p.ph * 40, MID_W), dx = Math.min(Math.abs(x - c), MID_W - Math.abs(x - c)); return Math.exp(-((dx / 22) ** 2)); };
+    // Conductos (detrás): de la vejiga a su tubería; se ensanchan un poco al hincharse.
+    for (const sc of sacs) for (const dc of sc.ducts) {
+      const p = pipes[dc.pipe], k = 1 + 0.06 * Math.sin((t + sc.ph) * Math.PI * 2);
+      const ex = sc.x + dc.dx, ey = p.y + Math.sin(ex * W2 * (p.h ?? 1) + p.ph) * p.amp;
+      const sy = sc.y + (ey < sc.y ? -1 : 1) * sc.ry * 0.85;
+      const pts = bez([sc.x + dc.dx * 0.2, sy], [sc.x + dc.dx * 0.9, (sy + ey) / 2], [ex, ey]);
+      gutTube(P, pts, (i) => dc.w * k * (1 + 0.35 * (1 - i / pts.length)), 12);
+    }
+    sacs.forEach((sc, j) => bladder(P, sc.x, sc.y, sc.rx, sc.ry, 1 + 0.06 * Math.sin((t + sc.ph) * Math.PI * 2), veins[j], (t + sc.ph) * Math.PI * 2));
+    // Tuberías (delante): grosor base, pliegues y el bulto que avanza.
+    pipes.forEach((p, j) => gutTube(P, pipePts[j], (i) => p.R * (1 + 0.4 * bumpAt(p, pipePts[j][i][0])), MID_W / 12));
+    out.push(P.canvas());
+  }
+  return out;
+}
+// Digestivo 3 · Pliegues gástricos: dos tuberías gruesas de intestino cruzan el fondo
+// (arriba y abajo) y entre ellas cuelgan dos vejigas enormes de bilis, unidas a ambas
+// por conductos. La peristalsis recorre los tubos y las vejigas se hinchan y vacían.
+function digestivo3() {
+  const [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const frames = viscera({
+    seed: 121,
+    pipes: [{ y: 26, amp: 8, ph: 0, R: 14, dir: 1 }, { y: 166, amp: 10, ph: 2, R: 16, dir: -1 }],
+    sacs: [
+      { x: 70, y: 96, rx: 42, ry: 38, ph: 0, ducts: [{ pipe: 0, dx: 16, w: 10 }, { pipe: 1, dx: -20, w: 8 }] },
+      { x: 190, y: 104, rx: 30, ry: 28, ph: 0.45, ducts: [{ pipe: 1, dx: 12, w: 8 }, { pipe: 0, dx: -10, w: 7 }] },
+    ],
+  });
+  return {
+    mid: frames[0], midFrames: frames, frameTime: 0.22, midGlow: glow, front: digFront(123),
+    anim: { motes: { n: 9, colors: ['rgba(200,210,90,0.26)', 'rgba(220,220,120,0.2)'], vx: 0, vy: -5, size: 2, shape: 'bubble', wobble: 3 } },
   };
 }
 // Digestivo 4 · Quimo: grumos grandes de comida a medio digerir flotando (siluetas
@@ -739,16 +794,22 @@ function digestivo4() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
   const r = rng(131);
-  // Un lóbulo de hígado enorme que asoma por arriba.
-  liverLobe(g, 128, 40, 1.15, rng(132));
-  for (const [x, y, rad] of [[46, 120, 14], [210, 150, 16], [100, 170, 11]]) {
+  // Una tubería de intestino arriba y, colgada de ella por un conducto grueso, una
+  // vejiga gigante; los grumos de quimo flotan alrededor.
+  const frames = viscera({
+    seed: 132,
+    pipes: [{ y: 22, amp: 12, ph: 1, R: 15, dir: 1, h: 2 }],
+    sacs: [{ x: 132, y: 112, rx: 56, ry: 46, ph: 0, ducts: [{ pipe: 0, dx: -14, w: 12 }] }],
+  });
+  for (const [x, y, rad] of [[30, 120, 13], [236, 150, 14], [40, 175, 9]]) {
     ball(g, x, y, rad, '#2a220e', '#3c3216', '#18120a');
     for (let k = 0; k < 4; k++) ball(g, x + (r() - 0.5) * rad, y + (r() - 0.5) * rad, 2 + r() * 2, '#34280f', '#42361a', '#1a1408'); // grumos
     const a = r() * Math.PI;
     for (let i = -6; i <= 6; i++) dot(g, x + Math.cos(a) * i, y + Math.sin(a) * i, '#4e4632');              // astilla de hueso
   }
+  for (const fr of frames) fr.getContext('2d').drawImage(mid, 0, 0);
   return {
-    mid, midGlow: glow, front: digFront(133),
+    mid: frames[0], midFrames: frames, frameTime: 0.22, midGlow: glow, front: digFront(133),
     anim: { motes: { n: 8, colors: ['rgba(200,190,110,0.24)'], vx: 1, vy: -3, size: 2, shape: 'bubble', wobble: 5 } },
   };
 }
@@ -818,7 +879,7 @@ export class Scenery {
     }
     const midTex = canvasTexture(b.mid), glowTex = canvasTexture(b.midGlow), frontTex = canvasTexture(b.front);
     const set = {
-      id, anim: b.anim, dyn,
+      id, anim: b.anim, dyn, frames: b.midFrames ?? null, frameTime: b.frameTime ?? 0.2, fi: 0,
       mid: layerMesh(midTex, vw, vh, { order: -6 }),
       midGlow: layerMesh(glowTex, vw, vh, { glow: true, order: -6 }),
       front: layerMesh(frontTex, this.viewW + FRONT_W, FRONT_H, { order: 8, opacity: 0.92 }),
@@ -991,6 +1052,11 @@ export class Scenery {
       m.material.map.offset.set((camX * P) / MID_W, (-camY * P) / MID_H);
     }
     if (s.dyn) this.#dynamic(s, t);
+    // Plano medio animado por fotogramas (vísceras que palpitan).
+    if (s.frames) {
+      const i = Math.floor(t / s.frameTime) % s.frames.length;
+      if (i !== s.fi) { s.fi = i; s.mid.material.map.image = s.frames[i]; s.mid.material.map.needsUpdate = true; }
+    }
     if (s.anim.pulseGlow) s.midGlow.material.opacity = 0.55 + 0.45 * Math.sin(t * s.anim.pulseGlow * Math.PI);
     if (s.anim.breathe) {
       const k = 1 + 0.035 * Math.sin((t / s.anim.breathe) * Math.PI * 2);
