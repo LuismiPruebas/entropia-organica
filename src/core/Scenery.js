@@ -586,7 +586,8 @@ function pulmonar3() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
   const r = rng(91), paths = [];
-  const BLUE = ['#3a4a8a', '#7a90d8', 'rgba(90,120,255,0.24)'], VIOLET = ['#6a3a74', '#b070b8', 'rgba(170,90,200,0.22)'], RED = ['#a8344a', '#f07080', 'rgba(255,70,90,0.26)'];
+  // Apagados: el fondo no debe competir con las paredes y plataformas de la sala.
+  const BLUE = ['#1c2236', '#262e48', 'rgba(90,120,255,0.05)'], VIOLET = ['#281e30', '#34283e', 'rgba(170,90,200,0.05)'], RED = ['#341822', '#44202c', 'rgba(255,70,90,0.06)'];
   const stroke = (pts, thick, pal) => {
     for (const [x, y] of pts) dotW(g, x - thick / 2 - 1, y - thick / 2 - 1, '#10141e', thick + 2, thick + 2);
     pts.forEach(([x, y], i) => {
@@ -605,21 +606,21 @@ function pulmonar3() {
     const pts = [];
     let x = x0, y = vein[x0][1];
     while (y < artery[Math.round(((x % MID_W) + MID_W) % MID_W)][1]) { pts.push([x, y]); y += 1; x += Math.sin(y * 0.09 + x0) * 0.8 + (r() - 0.5) * 0.4; }
-    stroke(pts, 3, grad);
+    stroke(pts, 2, grad);
     paths.push(pts);
     for (let k = 0; k < 3; k++) {
       const [ax, ay] = pts[Math.floor(pts.length * (0.25 + k * 0.25))], side = k % 2 ? 1 : -1, rad = 6 + r() * 3;
-      ball(g, ax + side * (rad + 2), ay, rad, '#56708e', '#cad6e8', '#202c40', '#d0687a');
-      for (let t = 0; t < Math.PI * 2; t += 1 / rad) dotW(gl, ax + side * (rad + 2) + Math.cos(t) * rad, ay + Math.sin(t) * rad, 'rgba(255,120,140,0.25)');
+      ball(g, ax + side * (rad + 2), ay, rad, '#3a4a62', '#6e7e98', '#1a2232', '#7a4250');
+      for (let t = 0; t < Math.PI * 2; t += 1 / rad) dotW(gl, ax + side * (rad + 2) + Math.cos(t) * rad, ay + Math.sin(t) * rad, 'rgba(255,120,140,0.08)');
     }
   }
-  stroke(vein, 6, BLUE);
-  stroke(artery, 6, RED);
+  stroke(vein, 4, BLUE);
+  stroke(artery, 4, RED);
   // Glóbulos también por los troncos (de lado a lado, sin cambiar de color).
   paths.push({ pts: vein, from: [90, 120, 255], to: [110, 140, 255] }, { pts: artery, from: [255, 60, 75], to: [255, 90, 100] });
   return {
     mid, midGlow: glow, front: pulmFront(93, '#141626', '#3c3e5a'),
-    anim: { cells: { paths, n: 40, from: [90, 120, 255], to: [255, 60, 75], speed: [18, 34] } },
+    anim: { cells: { paths, n: 40, from: [90, 120, 255], to: [255, 60, 75], speed: [18, 34], alpha: 0.45 } },
   };
 }
 // 4 · Bronquiolo ciliado: secciones de bronquiolo (anillos de cartílago) que se abren y se
@@ -787,7 +788,7 @@ export class Scenery {
         const p = pts[Math.floor(b.pos)];
         if (!p) { b.dead = true; continue; }
         const k = b.pos / pts.length, col = from.map((v, i) => Math.round(v + (to[i] - v) * k));
-        g.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},0.9)`;
+        g.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${c.alpha ?? 0.9})`;
         g.fillRect(W(p[0], MID_W), W(p[1], MID_H), 2, 1);
         g.fillRect(W(p[0] + 0.5, MID_W), W(p[1] - 1, MID_H), 1, 3);
       }
