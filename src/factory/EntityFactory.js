@@ -43,7 +43,7 @@ export function roomTier(id) {
   return Math.min(1, (depth[id] ?? TIER_DEPTH) / TIER_DEPTH);
 }
 
-const PICKUP_CHARS = { b: 'biomass', B: 'battery', S: 'scrap', O: 'oxygen', H: 'heart', Q: 'cyst', h: 'tissue', u: 'plasma', g: 'thymus', '*': 'fragment', i: 'fragment', c: 'fragment', d: 'fragment', x: 'fragment', P: 'shield', C: 'regen', U: 'suppress', T: 'extender' };
+const PICKUP_CHARS = { b: 'biomass', B: 'battery', S: 'scrap', O: 'oxygen', H: 'heart', Q: 'cyst', h: 'tissue', u: 'plasma', g: 'thymus', '*': 'fragment', i: 'fragment', c: 'fragment', d: 'fragment', x: 'fragment', P: 'shield', C: 'regen', U: 'suppress', T: 'extender', V: 'cavity' };
 // Fragmentos de tipo fijo (no dependen de la casilla, como el '*').
 const FRAG_CHARS = { i: 'ocular', c: 'neural', d: 'dermal', x: 'balistico' };
 

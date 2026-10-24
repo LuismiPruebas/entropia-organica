@@ -61,6 +61,13 @@ export const PICKUPS = {
     apply: (st) => st.gainItem('plasma'),
     pop: () => ['+1', '#ff5a6a'],
   },
+  // Divertículo: una bolsa de carne que se abre en el cuerpo: una cavidad más.
+  cavity: {
+    sprite: 'cavity',
+    sound: 'dna',
+    apply: (st, p) => { p.res = st.addCavity(); },
+    pop: (p, st) => (p.res ? [`${st.cavities.length} CAVIDADES`, '#e07a98'] : ['+25', '#e07a98']),
+  },
   // Supresor: se guarda en una cavidad, como los demás consumibles.
   suppress: {
     sprite: 'suppress',

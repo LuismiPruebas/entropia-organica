@@ -50,6 +50,7 @@ export const TILES = [
   { c: 'P', name: 'Perla de Nácar (invulnerable)', color: '#4ff0ff', item: true },
   { c: 'C', name: 'Célula Madre (regenera)', color: '#3ac060', item: true },
   { c: 'U', name: 'Supresor de rechazo (se guarda en una cavidad)', color: '#c07bff', item: true },
+  { c: 'V', name: 'Divertículo (una cavidad más, hasta 4)', color: '#e07a98', item: true },
   { c: 'T', name: 'Extensor de tolerancia (+2 carga genética)', color: '#a07bd0', item: true },
   { c: 'H', name: 'El Corazón (final)', color: '#ff2040', item: true },
   ...Object.entries(DNA_CHARS).map(([c, id]) => ({ c, name: `ADN: ${MUTATIONS[id].name}`, color: MUTATIONS[id].color ?? '#ffffff', item: true })),

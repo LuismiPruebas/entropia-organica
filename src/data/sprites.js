@@ -447,6 +447,20 @@ export const SPRITES = {
     ] },
     glow: 'G',
   },
+  // Divertículo: una bolsa de carne abierta, con la boca fruncida y el hueco oscuro.
+  cavity: {
+    frames: { a: [
+      '..kkkk..',
+      '.kRrrRk.',
+      'kRrkkrRk',
+      'kRkppkRk',
+      'kRkppkRk',
+      'kRrkkrRk',
+      '.kRBBRk.',
+      '..kkkk..',
+    ] },
+    glow: 'B',
+  },
   // Supresor: una ampolla de carne con el líquido violeta que adormece los injertos.
   suppress: {
     frames: { a: [

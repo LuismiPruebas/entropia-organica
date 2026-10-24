@@ -38,6 +38,8 @@ export const CELL_AUTO_BELOW = 50;
 export const PLASMA = { name: 'Coágulo de plasma', heal: 30 };
 // Cavidades con las que empiezas (más adelante se podrán ganar más).
 export const CAVITY_BASE = 2;
+// Divertículos (casilla V): cada uno abre una cavidad más, hasta CAVITY_MAX.
+export const CAVITY_MAX = 4;
 export const ITEMS = {
   shield: { name: 'Perla de Nácar', time: 10, price: { bio: 130 } }, // invulnerable
   regen: { name: 'Célula Madre', time: 10, price: { bio: 130 } },   // regenera integridad
@@ -276,6 +278,13 @@ export class GameState {
     const before = this.rejectionPerSecond * 60;
     this.extenders++;
     return { before, after: this.rejectionPerSecond * 60 };
+  }
+
+  // Divertículo: una cavidad más (hasta CAVITY_MAX). Con todas abiertas, se digiere: biomasa.
+  addCavity() {
+    if (this.cavities.length >= CAVITY_MAX) { this.addBiomass(25); return false; }
+    this.cavities.push(null);
+    return true;
   }
 
   // Coge un consumible: se guarda y, si aún no tiene cavidad, ocupa la primera libre.
