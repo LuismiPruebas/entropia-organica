@@ -345,6 +345,8 @@ export const ENEMIES = {
     hp: 130, w: 30, h: 30,
     contactDamage: 8,
     crawlSpeed: 150, diveSpeed: 420, stingDamage: 16, exposedBonus: 2,
+    meleeResist: 0.5, // los golpes cuerpo a cuerpo le hacen la mitad
+    weakTo: { spine: 0.5, splinter: 0.7 }, // aguanta las espinas del simbionte y algo las astillas
     drop: { biomass: 20, fragments: 1, dna: 'garras' },
     reward: {
       revealBiome: 'pulmonar',
