@@ -46,8 +46,8 @@ const MOTH_T = { crawl: 2.2, crawlRage: 1.5, takeoff: 0.3, hover: 1.0, hoverRage
 const ENEMY_FORMS = {
   colonia: [
     {},
-    { w: 10, h: 9, hp: 8, contactDamage: 5 },
-    { w: 6, h: 5, hp: 2, contactDamage: 2 },
+    { w: 10, h: 9, hp: 20, contactDamage: 5 },
+    { w: 6, h: 5, hp: 15, contactDamage: 2 },
   ],
 };
 // Botín de las crías de una división: [tipo, cantidad, peso].

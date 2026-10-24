@@ -211,7 +211,7 @@ export const ENEMIES = {
     gore: { blood: '#8a9a3a', flesh: ['#7a9a50', '#9ab868', '#c8e890'] },
     voice: ['colonySquirm', 'colonySquirm', 'bubble'],
     behavior: 'golem',
-    hp: 40, w: 24, h: 42,
+    hp: 60, w: 24, h: 42,
     speed: 8, chaseSpeed: 19, pulpSpeed: 62, sight: 200, darkMult: 1.8, // la luz no la frena
     punchRange: 42, punchWindup: 0.5, punchDamage: 13, punchCool: 1.8, counterWindup: 0.22,
     noStagger: true, // los golpes no lo paran: se revuelve con el puño
@@ -221,8 +221,8 @@ export const ENEMIES = {
     // Cada bola que arroja le resta cohesión (y vida): se encoge, se hunde y se le abren
     // huecos. Si un grumo vuelve a fundirse con él, la recupera; sin cohesión se desmorona
     // y queda reducido a un grumo más.
-    cohesion: 5, throwCost: 6,
-    sheds: 'colonia', cellHp: 20, shedGen: 1, // cada 20 de daño suelta un grumo
+    cohesion: 5, throwCost: 9,
+    sheds: 'colonia', cellHp: 25, shedGen: 1, // cada 25 de daño suelta un grumo
     contactDamage: 7,
     habits: 'Imita lo que tiene cerca: camina como tú, te apunta con el brazo y salta cuando saltas. Pegado a ti, lanza un puñetazo que se estira. A distancia se arranca una bola de células de la espalda y te la arroja en parábola: el grumo te persigue a saltos y al rato vuelve a fundirse con él. Cada bola le cuesta cohesión: se encoge, se hunde y se agujerea, y si lanza demasiadas se desmorona y queda en un grumo más. Mata los grumos antes de que vuelvan y se deshará solo. Cada herida le arranca un grumo; al morir se deshace en grumos que saltan, y cada grumo en pulpa pequeña que corretea.',
     drop: { biomass: 6 },
@@ -240,7 +240,7 @@ export const ENEMIES = {
     gore: { blood: '#8a7020', flesh: ['#8a4e2c', '#c09a4a', '#c86478', '#efe4cc'] },
     voice: ['growl', 'bubble', 'growl'],
     behavior: 'glutton',
-    hp: 110, w: 30, h: 46,
+    hp: 140, w: 30, h: 46,
     meleeResist: 0.7, knockResist: 0.15, noStagger: true, // duro: los golpes no lo paran
     speed: 14, chaseSpeed: 26, sight: 220,
     smashRange: 46, smashWindup: 0.5, smashDamage: 20, smashCool: 1.2, counterWindup: 0.28, counterDamage: 26,
@@ -297,7 +297,7 @@ export const ENEMIES = {
     gore: { blood: '#4a8a1a', flesh: ['#4a7a2a', '#2a4a18', '#9be06a'] },
     voice: ['eelGurgle'],
     behavior: 'leaper',
-    hp: 22, w: 14, h: 14,
+    hp: 32, w: 14, h: 14,
     range: 130, feint: 0.4,
     contactDamage: 10,
     habits: 'Bajo el ácido solo se ven sus burbujas. A veces asoma y se hunde: es un amago. El salto de verdad llega justo después, y puede caer fuera de la charca: entonces repta hacia ti a coletazos y al rato vuelve de un salto al ácido. Si tarda en volver, se seca. Si vacías su cubeta, muere.',
@@ -445,7 +445,7 @@ export const ENEMIES = {
     gore: { blood: '#8a0a1a', flesh: ['#d89a80', '#c08068', '#8a2a3c'] },
     voice: ['headScream'],
     behavior: 'stalker',
-    hp: 16, w: 16, h: 12,
+    hp: 30, w: 16, h: 12,
     speed: 30, chaseSpeed: 75, sight: 220,
     pounceRange: 90, windup: 0.4, leapSpeed: 190, leapV: 240, recover: 0.6, pounceCool: 1.2,
     contactDamage: 7,
@@ -522,7 +522,7 @@ export const ENEMIES = {
     gore: { blood: '#4a8a1a', flesh: ['#5a7a2a', '#2a4a18', '#c8d870'] },
     voice: ['eelGurgle', 'bubble'],
     behavior: 'puffer',
-    hp: 14, w: 18, h: 12,
+    hp: 32, w: 18, h: 12,
     sight: 260, hopSpeed: 95, hopV: 190,
     // Se hincha y escupe un chorro de ácido a presión (una ráfaga de gotas rápidas).
     spitRange: 150, inflateTime: 0.55, spitTime: 0.5, spitSpeed: 250, spitDamage: 5, recover: 0.5, spitCool: 1.4,
