@@ -694,11 +694,12 @@ export class Player {
     if (st.critical && ck > 0) {
       this.crisisPh = (this.crisisPh ?? 0) + dt * (1.4 + ck * 4.5);
       const throb = Math.pow(Math.max(0, Math.sin(this.crisisPh * Math.PI)), 2);
-      this.swell = 1 + ck * 0.22 + throb * (0.05 + ck * 0.12);
+      this.crisisBeat = (this.crisisPh % 1 + 1) % 1;
+      this.swell = 1 + ck * 0.06 + throb * (0.03 + ck * 0.05);
       const red = Math.max(0, (ck - 0.5) * 2) * (0.6 + 0.4 * throb);
       this.rejTint = [this.rejTint[0] + 0.9 * red, this.rejTint[1] * (1 - red), this.rejTint[2] * (1 - red)];
       if (Math.random() < dt * (2 + ck * 10)) g.particles.emit(this.x + Math.random() * this.w, this.y + 4 + Math.random() * (this.h - 6), { vx: (Math.random() - 0.5) * 30, vy: -10 - Math.random() * 20, life: 0.5, color: red > 0.2 ? [0.7, 0.05, 0.08] : [0.55, 0.15, 0.6] });
-    } else this.swell = 1;
+    } else { this.swell = 1; this.crisisBeat = 0; }
     const jolt = this.spasm > 0.4 ? (Math.random() < 0.5 ? -1 : 1) : 0;
     if (st.rejection >= 70) {
       // Pus violeta que gotea del cuerpo.
@@ -1267,6 +1268,7 @@ export class Player {
       onGround: this.onGround, clinging: !!this.clinging, rope, reach, charge: this.charge,
       weapon: st.weaponId, recoil: this.recoil ?? 0, armRaise: this.#armRaise(dt),
       punchN: this.punchN ?? 1, bladeLv: st.lineLevel('dermis'),
+      crisis: st.critical ? st.crisisK : 0, beat: this.crisisBeat ?? 0,
     });
     if (this.bloodied > 0) this.#drawGore();
     this.bodyTex.needsUpdate = true;

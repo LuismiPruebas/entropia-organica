@@ -339,6 +339,8 @@ export class PlayerBody {
     else if (wpn === 'astillas') part('astillas', (tg) => this.#gunArm(tg, ctx));
     else if (wpn === 'cuchilla') part('quitina2', (tg, gl2) => this.#bareArm(tg, ctx, gl2));
     else this.#bareArm(g, ctx, gl);
+    // Crisis de rechazo: la carne revienta en masas que laten (a lo Tetsuo).
+    if ((pose.crisis ?? 0) > 0) this.#crisis(g, gl, ctx, pose.crisis, pose.beat ?? 0);
     return this;
   }
 
@@ -757,6 +759,78 @@ export class PlayerBody {
     px(gl, mx + ca, my + sa, k > 0.9 ? '#ffd0f4' : C.plasma, 2, 2);
     if (k > 0) blob(gl, hand[0] + ca * 3, hand[1] + sa * 3, k * 2, k * 2, C.plasmaD);
     this.muzzle = { x: mx + ca * 2, y: my + sa * 2 };
+  }
+
+  // Crisis de rechazo (k 0..1 a lo largo de los 20 s; beat 0..1, el latido): masas de
+  // carne que brotan una tras otra de la espalda, el hombro, la cabeza, el brazo, la
+  // barriga y el muslo, ancladas al esqueleto (siguen cualquier animación). Cada masa es
+  // un racimo de bultos que crece, late con el corazón y se deforma; la piel se tensa, se
+  // marcan las venas y, los últimos 10 s, la carne se pone al rojo.
+  #crisis(g, gl, c, k, beat) {
+    const { sh, hip, head, t } = c;
+    const N = this.legs?.near;
+    const hand = this.hand ?? { x: sh[0] + 6, y: sh[1] + 7 };
+    const red = Math.max(0, (k - 0.5) * 2);
+    const col = (a, b) => mix(a, b, red);
+    const pal = {
+      out: '#1a0408',
+      dark: col('#5a1a34', '#5a0410'), mid: col('#a8486a', '#c41a24'), lite: col('#d88aa0', '#ff6a50'), shine: col('#f4c4cc', '#ffd0b0'),
+      vein: col('#3a0a2a', '#4a0008'),
+    };
+    // [x, y, tamaño máximo, cuándo empieza (k), hacia dónde crece (ángulo)]
+    const masses = [
+      [sh[0] - 4, sh[1] + 2, 5.2, 0, Math.PI],                                   // espalda
+      [hand.x - 2, hand.y + 1, 4.4, 0.1, 0.4],                                    // el brazo (Tetsuo)
+      [sh[0] + 4, sh[1] - 1, 3.4, 0.2, -0.9],                                     // hombro
+      [head[0] - 4, head[1] - 1, 3, 0.32, -2.4],                                  // cabeza
+      [hip[0] + 2, hip[1] - 3, 3.4, 0.42, 0.6],                                   // barriga
+      [N ? N.h[0] + (N.k[0] - N.h[0]) * 0.5 : hip[0], N ? N.h[1] + (N.k[1] - N.h[1]) * 0.5 : hip[1] + 5, 2.6, 0.52, 1.4], // muslo
+      [sh[0] - 2, sh[1] - 3, 2.8, 0.64, -1.9],                                    // nuca
+    ];
+    const blobs = [];
+    masses.forEach(([x0, y0, rmax, at, dir], i) => {
+      const u = Math.max(0, Math.min(1, (k - at) / (1 - at)));
+      const grow = u * u * (0.6 + 0.4 * u);                                        // lento al principio, enorme al final
+      if (grow <= 0) return;
+      // Late con el corazón (cada masa un poco a destiempo) y más fuerte al final.
+      const pulse = 1 + (0.12 + 0.2 * k) * Math.pow(Math.max(0, Math.sin((beat + i * 0.13) * Math.PI)), 2);
+      const R0 = rmax * (0.3 + 1.1 * grow) * pulse;
+      // El racimo: un bulto central desplazado hacia fuera y lóbulos que se retuercen.
+      const cx = x0 + Math.cos(dir) * R0 * 0.45, cy = y0 + Math.sin(dir) * R0 * 0.45;
+      blobs.push({ x: cx, y: cy, r: R0, i, main: true });
+      const lobes = 3 + (i % 3);
+      for (let j = 0; j < lobes; j++) {
+        const a = dir + (j / lobes - 0.5) * 2.4 + Math.sin(t * (1.3 + j * 0.4) + i * 2 + j) * 0.25;
+        const d = R0 * (0.55 + 0.25 * Math.sin(t * 0.9 + j + i));
+        const rr = R0 * (0.45 + 0.2 * ((i + j) % 3) / 2) * (1 + 0.15 * Math.sin(t * 3 + j * 1.7 + i));
+        blobs.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, r: rr, i });
+      }
+    });
+    if (!blobs.length) return;
+    // Cada lóbulo con su contorno (los grandes primero): se leen como bultos de carne
+    // apretados unos contra otros, no como una mancha. Sombra abajo, luz arriba.
+    blobs.sort((p, q) => q.r - p.r);
+    for (const b of blobs) {
+      blob(g, b.x, b.y, b.r + 1, b.r * 0.9 + 1, pal.out);
+      blob(g, b.x, b.y, b.r, b.r * 0.9, pal.dark);
+      blob(g, b.x - b.r * 0.15, b.y - b.r * 0.18, b.r * 0.78, b.r * 0.68, pal.mid);
+      blob(g, b.x - b.r * 0.38, b.y - b.r * 0.4, b.r * 0.34, b.r * 0.26, pal.lite);
+    }
+    // Venas que se marcan sobre la piel tensa (más gruesas al latir).
+    for (const b of blobs.filter((q) => q.main)) {
+      for (let v = 0; v < 3; v++) {
+        let a = v * 2.1 + b.i, x = b.x, y = b.y;
+        for (let s = 0; s < b.r * 0.9; s++) {
+          px(g, x, y, pal.vein);
+          if (beat > 0.6 && s % 2 === 0) px(g, x + 1, y, pal.vein);
+          x += Math.cos(a); y += Math.sin(a); a += Math.sin(s * 1.3 + v + b.i) * 0.5;
+        }
+      }
+      px(g, b.x - b.r * 0.4, b.y - b.r * 0.45, pal.shine);                     // brillo de la piel estirada
+      px(g, b.x - b.r * 0.25, b.y - b.r * 0.55, pal.shine);
+      // Al rojo, la carne arde por dentro.
+      if (red > 0) { gl.globalAlpha = red * (0.3 + 0.5 * beat); blob(gl, b.x, b.y, b.r * 0.6, b.r * 0.5, '#ff2a1a'); gl.globalAlpha = 1; }
+    }
   }
 
   // Masa tumoral: brota en el contorno del cuerpo, una más con cada mutación.
