@@ -646,7 +646,64 @@ function pulmonar4() {
   };
 }
 
-const BUILDERS = { 'pulmonar:2': pulmonar2, 'pulmonar:3': pulmonar3, 'pulmonar:4': pulmonar4, nervioso, pulmonar, digestivo, corazon, oseo, circulatorio, 'nervioso:2': nervioso2, 'nervioso:3': nervioso3, 'nervioso:4': nervioso4 };
+// Digestivo 2 · Vellosidades: unas pocas vellosidades grandes en silueta que se
+// mecen con la corriente del quimo (muy apagadas); motas de nutrientes que flotan.
+function digestivo2() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const r = rng(111);
+  for (const [x0, base, h] of [[30, MID_H, 70], [90, MID_H, 50], [150, MID_H, 84], [210, MID_H, 60]]) {
+    // Vellosidad: dedo grueso y blando de mucosa, con la punta redonda.
+    for (let y = 0; y < h; y++) {
+      const w = 7 - (y / h) * 1.5 + Math.sin(y * 0.2 + x0) * 0.6, cx = x0 + Math.sin(y * 0.05 + x0) * 3;
+      for (let x = -w; x <= w; x++) dot(g, cx + x, base - y, x < -w + 1.5 ? '#3e3412' : x > w - 2 ? '#1e1808' : '#2e260c');
+    }
+    ball(g, x0 + Math.sin(h * 0.05 + x0) * 3, base - h, 6, '#2e260c', '#4a3e16', '#1e1808');
+  }
+  return {
+    mid, midGlow: glow, front: digFront(113),
+    anim: { motes: { n: 10, colors: ['rgba(210,200,120,0.28)', 'rgba(230,210,140,0.2)'], vx: 3, vy: -2, size: 1, wobble: 4 } },
+  };
+}
+// Digestivo 3 · Pliegues gástricos: casi vacío (los pliegues ya están en el fondo);
+// solo unas burbujas de jugo gástrico que suben muy despacio.
+function digestivo3() {
+  const [mid] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  return {
+    mid, midGlow: glow, front: digFront(123),
+    anim: { motes: { n: 9, colors: ['rgba(200,210,90,0.26)', 'rgba(220,220,120,0.2)'], vx: 0, vy: -5, size: 2, shape: 'bubble', wobble: 3 } },
+  };
+}
+// Digestivo 4 · Quimo: grumos grandes de comida a medio digerir flotando (siluetas
+// oscuras de bordes blandos), con alguna astilla de hueso; burbujas lentas.
+function digestivo4() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const r = rng(131);
+  for (const [x, y, rad] of [[46, 50, 14], [170, 120, 18], [220, 40, 10], [100, 160, 11]]) {
+    ball(g, x, y, rad, '#2a220e', '#3c3216', '#18120a');
+    for (let k = 0; k < 4; k++) ball(g, x + (r() - 0.5) * rad, y + (r() - 0.5) * rad, 2 + r() * 2, '#34280f', '#42361a', '#1a1408'); // grumos
+    const a = r() * Math.PI;
+    for (let i = -6; i <= 6; i++) dot(g, x + Math.cos(a) * i, y + Math.sin(a) * i, '#4e4632');              // astilla de hueso
+  }
+  return {
+    mid, midGlow: glow, front: digFront(133),
+    anim: { motes: { n: 8, colors: ['rgba(200,190,110,0.24)'], vx: 1, vy: -3, size: 2, shape: 'bubble', wobble: 5 } },
+  };
+}
+// Primer plano del digestivo: bultos escamados oscuros.
+function digFront(seed) {
+  const [front, f] = canvas(FRONT_W, FRONT_H);
+  for (let x = 0; x < FRONT_W; x += 9) {
+    const h = 5 + ((x * 7 + seed) % 12), w = 7 + ((x * 3 + seed) % 5);
+    f.fillStyle = '#1a1406'; f.fillRect(x, FRONT_H - h, w, h);
+    f.fillStyle = '#30280c'; f.fillRect(x + 1, FRONT_H - h, w - 2, 1);
+  }
+  return front;
+}
+
+const BUILDERS = { 'digestivo:2': digestivo2, 'digestivo:3': digestivo3, 'digestivo:4': digestivo4, 'pulmonar:2': pulmonar2, 'pulmonar:3': pulmonar3, 'pulmonar:4': pulmonar4, nervioso, pulmonar, digestivo, corazon, oseo, circulatorio, 'nervioso:2': nervioso2, 'nervioso:3': nervioso3, 'nervioso:4': nervioso4 };
 
 // Ritmo de las paredes vivas de cada bioma (0..1).
 const RHYTHMS = {

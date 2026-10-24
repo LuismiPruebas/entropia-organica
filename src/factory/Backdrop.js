@@ -448,10 +448,82 @@ BACKDROPS['pulmonar:4'] = () => {
   return sf.canvas();
 };
 
+// Sistema Digestivo 2 · Vellosidades: la pared del intestino, cuajada de vellosidades
+// (dedos de mucosa) en hileras, con poca diferencia de tono: textura, no dibujo.
+BACKDROPS['digestivo:2'] = () => {
+  const sf = surface();
+  tissue(sf, { lo: '#1a1406', mid: '#2a220c', hi: '#3a3012' }, 81, 3);
+  const r = rng(82), body = hexRgb('#4a3e16'), hi = hexRgb('#6a5a22'), dark = hexRgb('#120e04');
+  // Irregulares: cada una a su altura, ancho y separación (nada de hileras de valla).
+  for (let row = 0; row < 7; row++) {
+    const y0 = row * (S / 7) + r() * 8;
+    const n = 12 + Math.floor(r() * 6);
+    for (let k = 0; k < n; k++) {
+      if (r() < 0.2) continue;                                   // huecos
+      const x0 = (k / n) * S + (r() - 0.5) * 14, h = 8 + r() * 20, w = 2.5 + r() * 2.5;
+      const lean = (r() - 0.5) * 0.25;                            // algo torcidas
+      for (let y = 0; y < h; y++) for (let x0b = -w; x0b <= w; x0b++) {
+        const x = x0b + Math.round(lean * (h - y));
+        const tip = y < w ? Math.sqrt(Math.max(0, 1 - ((w - y) / w) ** 2)) : 1; // punta redonda
+        if (Math.abs(x0b) > w * tip) continue;
+        const lit = (-x0b / w) * 0.6 + (1 - y / h) * 0.3;
+        sf.blend(x0 + x, y0 + y, Math.abs(x0b) > w * tip - 1 ? dark : lit > 0.35 ? hi : body, 0.7);
+      }
+    }
+  }
+  vessels(sf, 4, 83, '#4a2410', '#6a3a1c', { len: 140, thick: 1, branch: 0.02 });
+  return sf.canvas();
+};
+// Sistema Digestivo 3 · Pliegues gástricos: el interior del estómago, con los pliegues de
+// la mucosa (rugosidades) en ondas largas y suaves, tono mostaza y óxido apagado.
+BACKDROPS['digestivo:3'] = () => {
+  const sf = surface();
+  const h = new Float32Array(S * S);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const n = tfbm(x, y, 3, 91) * 0.7 + tfbm(x, y, 6, 92) * 0.3;
+    h[y * S + x] = Math.abs(Math.sin(y * 0.11 + n * 9));      // crestas largas casi horizontales
+  }
+  const H = (x, y) => h[(((y % S) + S) % S) * S + (((x % S) + S) % S)];
+  const ramp = ['#140c04', '#22160a', '#30200e', '#3e2a12', '#4c3618', '#5a4220'].map(hexRgb);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const v = H(x, y), lit = (H(x, y - 2) - H(x, y + 2)) * 1.2;
+    const k = Math.max(0, Math.min(5, Math.floor((0.2 + v * 0.45 + lit * 0.4) * 6)));
+    sf.set(x, y, ramp[k]);
+  }
+  // Fosas gástricas: puntitos hondos repartidos.
+  const r = rng(93);
+  for (let n = 0; n < 160; n++) disc(sf, r() * S, r() * S, 0.9, '#100a04', '#1e140a', '#0a0602', { k: 0.6 });
+  return sf.canvas();
+};
+// Sistema Digestivo 4 · Quimo: el bolo a medio digerir visto de cerca. Una papilla turbia
+// con grumos, fibras y astillas de hueso disueltas a medias, todo en tonos bajos.
+BACKDROPS['digestivo:4'] = () => {
+  const sf = surface();
+  tissue(sf, { lo: '#1c1608', mid: '#2c2410', hi: '#3a3016' }, 101, 5);
+  const r = rng(102);
+  const lump = hexRgb('#4a3c18'), lumpHi = hexRgb('#5e4e22'), dark = hexRgb('#141006');
+  for (let n = 0; n < 40; n++) {
+    const x0 = r() * S, y0 = r() * S, rx = 3 + r() * 7, ry = 2 + r() * 5;
+    for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
+      const d = (x / rx) ** 2 + (y / ry) ** 2;
+      if (d > 1) continue;
+      sf.blend(x0 + x, y0 + y, d > 0.75 ? dark : (-x - y) > 0 ? lumpHi : lump, 0.55);
+    }
+  }
+  // Fibras y astillas de hueso a medio disolver.
+  for (let n = 0; n < 18; n++) {
+    let x = r() * S, y = r() * S, a = r() * Math.PI * 2;
+    const bone = r() < 0.35, len = bone ? 6 + r() * 6 : 12 + r() * 16;
+    for (let i = 0; i < len; i++) { sf.blend(x, y, hexRgb(bone ? '#6a6248' : '#4a2a14'), bone ? 0.55 : 0.45); x += Math.cos(a); y += Math.sin(a); a += (r() - 0.5) * (bone ? 0.05 : 0.3); }
+  }
+  return sf.canvas();
+};
+
 // Fondos que ofrece cada bioma (para el editor). El primero es el de siempre.
 export const BACKDROP_VARIANTS = {
   nervioso: ['Bosque neuronal', 'Córtex', 'Circunvoluciones', 'Ventrículo'],
   pulmonar: ['Árbol bronquial', 'Espuma alveolar', 'Red capilar', 'Bronquiolo ciliado'],
+  digestivo: ['Tubo escamado', 'Vellosidades', 'Pliegues gástricos', 'Quimo'],
 };
 export const backdropKey = (biome, variant) => (variant > 1 && BACKDROPS[`${biome}:${variant}`] ? `${biome}:${variant}` : biome);
 
