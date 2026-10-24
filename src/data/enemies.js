@@ -517,6 +517,7 @@ export const ENEMIES = {
     contactDamage: 12,
     leapDamage: 18,   // el topetazo del salto
     biteDamage: 16,   // el bocado a quemarropa (la cabeza sale disparada)
+    rushDamage: 14,   // la embestida a ras de suelo
     drop: { dna: 'tendon', biomass: 25, fragments: 2, items: ['thymus'] },
     reward: {
       revealBiome: 'digestivo',
@@ -526,7 +527,7 @@ export const ENEMIES = {
     },
     sounds: { reveal: 'toadCroak', attack: 'spit', summon: 'choirRetch', hurt: 'toadHurt', die: 'toadDie' },
     auraPeriod: 3,
-    habits: 'Avanza a saltitos hacia ti. Se agazapa y tiembla (aviso) y salta con las patas traseras para toparte; al caer salpica ácido a los lados y se queda un momento aturdido con la panza al aire. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes; y si le encadenas golpes, se revuelve y te muerde enseguida. Cada poco le revientan las celdas de la espalda y brotan renacuajos que escupen ácido (más cuando está herido). Su piel curtida casi no siente los golpes: atráelo bajo una de las vejigas de bilis del techo y reviéntala disparando a su válvula. Escaldado, se retuerce, pierde sus crías y durante unos segundos queda debilitado.',
+    habits: 'Nunca está quieto mucho rato. Se agazapa y tiembla (aviso) y salta con las patas traseras para toparte, a veces dos o tres veces seguidas; al caer salpica ácido a los lados y, si te tiene cerca, te muerde al momento. Otras veces se agazapa con la mirada fija y sale disparado a ras de suelo con las fauces abiertas: te arrolla y remata con un mordisco. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes; y si le encadenas golpes, se revuelve y te muerde enseguida. Cada poco le revientan las celdas de la espalda y brotan renacuajos que escupen ácido (más cuando está herido). Su piel curtida casi no siente los golpes: atráelo bajo una de las vejigas de bilis del techo y reviéntala disparando a su válvula. Escaldado, se retuerce, pierde sus crías y durante unos segundos queda debilitado.',
     lore: 'Un sapo que el intestino dejó crecer demasiado. Carga a sus crías en la espalda, hundidas en celdas de su propia piel, y las suelta cuando tiene hambre. Salta como si el suelo le quemara... y aquí el suelo quema.',
   },
   larva: {

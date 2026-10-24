@@ -2060,7 +2060,12 @@ export const BEHAVIORS = {
         e.state = 'biteWind'; e.timer = e.biteWT = enraged ? 0.4 : 0.55; e.vx = 0; e.biteK = 0;
         g.audio.play('eelGurgle', e);
       } else if (e.broodCool <= 0 && minions < (enraged ? 4 : 2)) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; e.popPending = toadPickEggs(e, enraged ? 3 : 2, g); g.audio.play(d.sounds.summon, e); }
-      else if (e.timer <= 0 && e.onGround) { e.state = 'crouch'; e.timer = enraged ? 0.35 : 0.6; e.vx = 0; g.audio.play('eelGurgle', e); }
+      else if (e.timer <= 0 && e.onGround) {
+        // A media distancia, a veces la embestida a ras de suelo; si no, saltos (a veces
+        // encadenados: 1-2 más; herido, casi siempre).
+        if (Math.abs(dx) < 230 && Math.random() < 0.45) { e.state = 'rushWind'; e.timer = enraged ? 0.28 : 0.42; e.vx = 0; g.audio.play('eelGurgle', e); }
+        else { e.state = 'crouch'; e.timer = enraged ? 0.35 : 0.55; e.vx = 0; e.chain = enraged ? 1 + (Math.random() < 0.5 ? 1 : 0) : Math.random() < 0.5 ? 1 : 0; g.audio.play('eelGurgle', e); }
+      }
     } else if (e.state === 'crouch') {
       e.vx = 0;
       if (e.timer <= 0) {
@@ -2078,7 +2083,8 @@ export const BEHAVIORS = {
       if (!e.hitDone && overlap(p, e)) { e.hitDone = true; g.hurtPlayer(d.leapDamage, e.cx, d.name); }
       if (e.onGround && e.airT > 0.15) {
         e.state = 'land';
-        e.timer = enraged ? 0.8 : 1.2;
+        e.landT = 0;
+        e.timer = enraged ? 0.5 : 0.75;
         e.vx = 0;
         g.shake = Math.max(g.shake, 6);
         g.audio.play('thump', e);
@@ -2092,7 +2098,7 @@ export const BEHAVIORS = {
       }
     } else if (e.state === 'biteWind') {
       // Anticipación: recoge la cabeza, se le hincha el cuello y abre las fauces despacio.
-      e.vx = 0;
+      e.vx *= 0.8;
       e.dir = Math.sign(dx) || e.dir;
       e.biteWK = 1 - Math.max(0, e.timer) / (e.biteWT ?? 0.5);
       if (e.timer <= 0) { e.state = 'bite'; e.timer = 0.7; e.hitDone = false; e.snapped = false; g.audio.play('stalkerLunge', e); }
@@ -2119,10 +2125,34 @@ export const BEHAVIORS = {
           for (let i = 0; i < 18; i++) g.particles.emit(bx, by, { vx: e.dir * (20 + Math.random() * 110) + (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 120, life: 0.7, gravity: 600, color: [0.6, 0.03, 0.08], stain: '#6a0a14' });
         }
       }
-      if (e.timer <= 0) { e.state = 'sit'; e.biteK = 0; e.snapK = 0; e.timer = enraged ? 0.6 : 1.1; e.biteCool = enraged ? 1.8 : 2.8; }
+      if (e.timer <= 0) { e.state = 'sit'; e.biteK = 0; e.snapK = 0; e.timer = enraged ? 0.4 : 0.7; e.biteCool = enraged ? 1.2 : 1.8; }
     } else if (e.state === 'land') {
       e.vx = 0;
-      if (e.timer <= 0) { e.state = 'sit'; e.timer = enraged ? 0.9 : 1.7; }
+      e.landT = (e.landT ?? 0) + dt;
+      if ((e.chain ?? 0) > 0 && e.landT > 0.16) {
+        e.chain--; e.state = 'crouch'; e.timer = 0.2;                     // otro salto, casi sin pausa
+      } else if (e.landT > 0.14 && Math.abs(dx) < 90 && Math.abs(p.cy - e.cy) < 40 && e.biteCool <= 0) {
+        e.dir = Math.sign(dx) || e.dir;
+        e.state = 'biteWind'; e.timer = e.biteWT = 0.26; e.biteK = 0;      // cae cerca de ti: muerde enseguida
+        g.audio.play('eelGurgle', e);
+      } else if (e.timer <= 0) { e.state = 'sit'; e.timer = enraged ? 0.45 : 0.85; }
+    } else if (e.state === 'rushWind') {
+      // Se agazapa temblando, con la mirada fija.
+      e.vx = 0;
+      e.dir = Math.sign(dx) || e.dir;
+      e.shakeX = Math.random() < 0.5 ? -1 : 1;
+      if (e.timer <= 0) { e.state = 'rush'; e.timer = 0.75; e.rushHit = false; e.shakeX = 0; g.audio.play('stalkerLunge', e); g.audio.play(d.sounds.attack, e); }
+    } else if (e.state === 'rush') {
+      // Embestida a ras de suelo con las fauces abiertas: te arrolla y, si acaba cerca, muerde.
+      e.vx = e.dir * Math.min(290, Math.abs(e.vx) + 1400 * dt);
+      if (Math.random() < 0.7) g.particles.emit(e.cx - e.dir * 20, e.y + e.h - 2, { vx: -e.dir * (40 + Math.random() * 60), vy: -20 - Math.random() * 50, life: 0.5, gravity: 400, color: [0.55, 0.5, 0.4] });
+      if (!e.rushHit && overlap(p, e)) { e.rushHit = true; g.hurtPlayer(d.rushDamage ?? 14, e.cx, d.name); g.shake = Math.max(g.shake, 6); }
+      const close = Math.abs(dx) < 70 && Math.sign(dx) === e.dir;
+      if (e.timer <= 0 || e.hitWall || (close && e.timer < 0.55)) {
+        if (Math.abs(dx) < 90 && Math.abs(p.cy - e.cy) < 40) { e.state = 'biteWind'; e.timer = e.biteWT = 0.18; e.biteK = 0; e.vx *= 0.3; }
+        else { e.state = 'sit'; e.timer = 0.5; }
+        if (e.hitWall) { g.shake = Math.max(g.shake, 5); g.audio.play('thump', e); }
+      }
     } else if (e.state === 'brood') {
       e.vx = 0;
       if (e.timer <= 0) {

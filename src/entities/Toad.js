@@ -257,7 +257,8 @@ export const TOAD = {
   draw(g, gl, e, t, game) {
     const st = e.state ?? 'sit';
     const air = st === 'leap';
-    const crouch = st === 'crouch' ? 1 : 0;
+    const crouch = st === 'crouch' || st === 'rushWind' ? 1 : 0;
+    const rush = st === 'rush' ? 1 : 0;
     const squash = st === 'land' ? 1 : 0;
     const shake = crouch ? Math.round(Math.sin(t * 60)) : 0;
     // Respira hinchando el cuerpo; agazapado jadea deprisa; aturdido boquea.
@@ -353,7 +354,7 @@ export const TOAD = {
 
     // ---- Cabeza. Bocado: se echa atrás (biteWind) y sale disparada sobre el cuello.
     const tremble = windup ? Math.round(Math.sin(t * 70) * wind * 1.5) : snap > 0 && bite > 0.9 ? Math.round(Math.sin(t * 90)) : 0;
-    const hx = bx + 22 - wind * 9 + bite * 28 + tremble, hy = bodyY - 7 + crouch * 2 + squash * 2 + wind * 3 - bite * 3;
+    const hx = bx + 22 - wind * 9 + bite * 28 + rush * 12 + tremble, hy = bodyY - 7 + crouch * 2 + squash * 2 + wind * 3 - bite * 3 + rush * 3;
     if (wind > 0.05) {
       // Anticipación: el cuello se encoge y se hincha como un muelle, con pliegues.
       const nr = 10 + wind * 5;
@@ -380,7 +381,7 @@ export const TOAD = {
     // Apertura: siempre enseña los colmillos; jadea, croa, ruge al saltar y en el
     // bocado se abre de par en par.
     // Bocado: abiertas de par en par al embestir y de golpe cerradas (cepo) al morder.
-    const want = st === 'bite' ? (snap > 0 ? 0 : 1) : windup ? 0.15 + wind * 0.85 + (Math.sin(t * 50) > 0 ? 0.03 : 0)
+    const want = st === 'bite' ? (snap > 0 ? 0 : 1) : rush ? 0.9 : windup ? 0.15 + wind * 0.85 + (Math.sin(t * 50) > 0 ? 0.03 : 0)
       : air ? 0.55 : st === 'brood' ? 0.35 : crouch ? 0.15 + swell * 0.1 : squash ? 0.25 + swell * 0.2 : croak * 0.3;
     e.jaw = st === 'bite' ? want : (e.jaw ?? 0) + (want - (e.jaw ?? 0)) * (windup ? 0.5 : 0.3); // el cepo no se suaviza
     const p = game.player;
