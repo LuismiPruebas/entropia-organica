@@ -319,7 +319,7 @@ function drawContext(z, r) {
 // ¿Cabe la sala en esa posición del mapa sin pisar a otra?
 function mapFree(id, x, y) {
   const r = S.rooms[id], w = r.map?.[2] ?? 1, h = r.map?.[3] ?? 1;
-  return !Object.entries(S.rooms).some(([k, o]) => k !== id && o.map && x < o.map[0] + o.map[2] - 1e-6 && x + w > o.map[0] + 1e-6 && y < o.map[1] + o.map[3] - 1e-6 && y + h > o.map[1] + 1e-6);
+  return !Object.entries(S.rooms).some(([k, o]) => k !== id && o.map && x < o.map[0] + o.map[2] - MAP_EPS && x + w > o.map[0] + MAP_EPS && y < o.map[1] + o.map[3] - MAP_EPS && y + h > o.map[1] + MAP_EPS);
 }
 function startPlacing() {
   if (!S.id) { createRoomAt(0, 0, 2, 1); return; }
@@ -357,7 +357,9 @@ function placingRect() {
   const w = Math.max(2, Math.abs(p.cell[0] - p.from[0]) + 1), h = Math.max(1, Math.abs(p.cell[1] - p.from[1]) + 1);
   return [x0, y0, w, h];
 }
-const overlapsRoom = ([x, y, w, h]) => Object.values(S.rooms).some((o) => o.map && x < o.map[0] + o.map[2] && x + w > o.map[0] && y < o.map[1] + o.map[3] && y + h > o.map[1]);
+// Holgura de medio tile: una sala en x = 1.001 (posiciones con decimales) no "pisa" la celda de al lado.
+const MAP_EPS = 0.03;
+const overlapsRoom = ([x, y, w, h]) => Object.values(S.rooms).some((o) => o.map && x < o.map[0] + o.map[2] - MAP_EPS && x + w > o.map[0] + MAP_EPS && y < o.map[1] + o.map[3] - MAP_EPS && y + h > o.map[1] + MAP_EPS);
 function nextRoomId() {
   const pre = (S.id ?? 'A').replace(/\d+$/, '') || 'A';
   for (let n = 2; ; n++) if (!S.rooms[pre + n]) return pre + n;
