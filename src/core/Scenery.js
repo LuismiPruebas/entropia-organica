@@ -788,29 +788,73 @@ function digestivo3() {
     anim: { motes: { n: 9, colors: ['rgba(200,210,90,0.26)', 'rgba(220,220,120,0.2)'], vx: 0, vy: -5, size: 2, shape: 'bubble', wobble: 3 } },
   };
 }
-// Digestivo 4 · Quimo: grumos grandes de comida a medio digerir flotando (siluetas
-// oscuras de bordes blandos), con alguna astilla de hueso; burbujas lentas.
-function digestivo4() {
-  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
-  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
-  const r = rng(131);
-  // Una tubería de intestino arriba y, colgada de ella por un conducto grueso, una
-  // vejiga gigante; los grumos de quimo flotan alrededor.
-  const frames = viscera({
-    seed: 132,
-    pipes: [{ y: 22, amp: 12, ph: 1, R: 15, dir: 1, h: 2 }],
-    sacs: [{ x: 132, y: 112, rx: 56, ry: 46, ph: 0, ducts: [{ pipe: 0, dx: -14, w: 12 }] }],
-  });
-  for (const [x, y, rad] of [[30, 120, 13], [236, 150, 14], [40, 175, 9]]) {
-    ball(g, x, y, rad, '#2a220e', '#3c3216', '#18120a');
-    for (let k = 0; k < 4; k++) ball(g, x + (r() - 0.5) * rad, y + (r() - 0.5) * rad, 2 + r() * 2, '#34280f', '#42361a', '#1a1408'); // grumos
-    const a = r() * Math.PI;
-    for (let i = -6; i <= 6; i++) dot(g, x + Math.cos(a) * i, y + Math.sin(a) * i, '#4e4632');              // astilla de hueso
+// Lóbulos pancreáticos: racimos de acinos (uvas de carne pálida, granulosa) colgados de
+// un árbol de conductos que se ramifica sin orden. Tamaños muy dispares: un racimo
+// enorme, otros medianos y uvas sueltas a lo largo de los conductos. Cada lóbulo se
+// hincha y se vacía con su propio ritmo (secreción), en fotogramas precalculados.
+const ACI = ['#140a08', '#2a1a12', '#3a2618', '#4a3220', '#5a3e28', '#6e4e34'].map(hex32);
+function pancreas(seed, frames = 12) {
+  const r = rng(seed), ducts = [], lobes = [];
+  // Árbol de conductos: cada rama serpentea, se afina y se parte; en las puntas, racimos.
+  const grow = (x, y, ang, w, depth) => {
+    const pts = [], len = 26 + r() * (depth ? 30 : 70);
+    for (let i = 0; i < len; i++) {
+      pts.push([x, y]);
+      x += Math.cos(ang); y += Math.sin(ang); ang += (r() - 0.5) * 0.18 + Math.sin(i * 0.07 + seed) * 0.01;
+      // Uvas sueltas pegadas al costado del conducto.
+      if (depth && r() < 0.035) { const side = r() < 0.5 ? -1 : 1, rad = 3 + r() * 5; lobes.push({ x: x - Math.sin(ang) * side * (w + rad * 0.6), y: y + Math.cos(ang) * side * (w + rad * 0.6), r: rad, ph: r() * 6, sp: 1 }); }
+    }
+    ducts.push({ pts, w });
+    if (depth < 3 && w > 1.6) {
+      const n = depth === 0 ? 3 : 1 + (r() < 0.6 ? 1 : 0) + (r() < 0.2 ? 1 : 0);
+      for (let k = 0; k < n; k++) grow(x, y, ang + (r() - 0.5) * 2.2, w * (0.55 + r() * 0.2), depth + 1);
+    }
+    // Racimo en la punta: más grande cuanto más grueso llega el conducto (con azar).
+    if (depth >= 1 && (depth === 3 || w <= 1.6 || r() < 0.45)) {
+      const S = (6 + w * 5) * (0.6 + r() * 0.9), n = 3 + Math.round(S / 5);
+      for (let k = 0; k < n; k++) {
+        const ka = r() * Math.PI * 2, kd = r() * S * 0.6;
+        lobes.push({ x: x + Math.cos(ang) * S * 0.45 + Math.cos(ka) * kd, y: y + Math.sin(ang) * S * 0.45 + Math.sin(ka) * kd, r: S * (0.25 + r() * 0.3), ph: r() * 6, sp: 0.7 + r() * 0.6 });
+      }
+    }
+  };
+  grow(18, 176, -0.75, 7, 0);
+  grow(200, 30, 2.3, 4.5, 1);
+  lobes.sort((p, q) => p.r - q.r);                                  // los grandes, delante
+  const out = [];
+  for (let f = 0; f < frames; f++) {
+    const P = pixbuf(), t = (f / frames) * Math.PI * 2;
+    for (const d of ducts) gutTube(P, d.pts, (i) => d.w * (1 - 0.3 * (i / d.pts.length)), 9);
+    for (const L of lobes) {
+      const k = 1 + 0.07 * Math.sin(t * Math.round(L.sp) + L.ph), R = L.r * k;
+      for (let y = -R - 2; y <= R + 2; y++) for (let x = -R - 2; x <= R + 2; x++) {
+        const an = Math.atan2(y, x);
+        // Borde abollonado: el lóbulo está hecho de acinos más pequeños.
+        const rr = R * (1 + 0.09 * Math.abs(Math.sin(an * Math.max(3, Math.round(L.r / 2.2)) + L.ph)));
+        const d = Math.hypot(x, y) / rr;
+        if (d > 1) continue;
+        const nz = Math.sqrt(1 - d * d), lit = nz * 0.55 - (x / rr) * 0.25 - (y / rr) * 0.35;
+        // Grano: celdillas de acinos (hash sobre una rejilla de 3 px).
+        const gx = Math.floor((L.x + x) / 3), gy = Math.floor((L.y + y) / 3);
+        const h = Math.abs(Math.sin(gx * 127.1 + gy * 311.7 + seed) * 43758.5) % 1;
+        let c = d > 0.9 ? 0 : lit > 0.62 ? 5 : lit > 0.4 ? 4 : lit > 0.18 ? 3 : lit > -0.05 ? 2 : 1;
+        if (c > 1 && c < 5 && h < 0.18) c--;
+        P.set(L.x + x, L.y + y, ACI[c]);
+      }
+    }
+    out.push(P.canvas());
   }
-  for (const fr of frames) fr.getContext('2d').drawImage(mid, 0, 0);
+  return out;
+}
+// Digestivo 4 · Páncreas: lóbulos pancreáticos en racimos irregulares colgados de sus
+// conductos, que palpitan despacio; gotitas de jugo que flotan.
+function digestivo4() {
+  const [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const frames = pancreas(141);
   return {
-    mid: frames[0], midFrames: frames, frameTime: 0.22, midGlow: glow, front: digFront(133),
-    anim: { motes: { n: 8, colors: ['rgba(200,190,110,0.24)'], vx: 1, vy: -3, size: 2, shape: 'bubble', wobble: 5 } },
+    mid: frames[0], midFrames: frames, frameTime: 0.2, midGlow: glow, front: digFront(133),
+    anim: { motes: { n: 8, colors: ['rgba(220,190,140,0.22)'], vx: 1, vy: -3, size: 2, shape: 'bubble', wobble: 5 } },
   };
 }
 // Primer plano del digestivo: bultos escamados oscuros.

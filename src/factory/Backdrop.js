@@ -523,7 +523,7 @@ BACKDROPS['digestivo:4'] = () => {
 export const BACKDROP_VARIANTS = {
   nervioso: ['Bosque neuronal', 'Córtex', 'Circunvoluciones', 'Ventrículo'],
   pulmonar: ['Árbol bronquial', 'Espuma alveolar', 'Red capilar', 'Bronquiolo ciliado'],
-  digestivo: ['Tubo escamado', 'Vellosidades', 'Pliegues gástricos', 'Quimo'],
+  digestivo: ['Tubo escamado', 'Vellosidades', 'Pliegues gástricos', 'Páncreas'],
 };
 export const backdropKey = (biome, variant) => (variant > 1 && BACKDROPS[`${biome}:${variant}`] ? `${biome}:${variant}` : biome);
 
