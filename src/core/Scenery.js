@@ -646,23 +646,133 @@ function pulmonar4() {
   };
 }
 
-// Digestivo 2 · Vellosidades: unas pocas vellosidades grandes en silueta que se
-// mecen con la corriente del quimo (muy apagadas); motas de nutrientes que flotan.
+// Digestivo 2 · Vellosidades: la carne está horadada como un hormiguero. Cámaras de
+// formas irregulares (suelo más plano que el techo) unidas por galerías, con las paredes
+// tapizadas de vellosidades que apuntan hacia dentro y se mecen; algunas cámaras
+// guardan un charco de jugo turbio (con su orilla que tiembla y burbujas que suben).
+// Por el fondo de los huecos se entrevé, muy oscuro, el plano lejano.
 function digestivo2() {
-  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
-  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
-  const r = rng(111);
-  for (const [x0, base, h] of [[30, MID_H, 70], [90, MID_H, 50], [150, MID_H, 84], [210, MID_H, 60]]) {
-    // Vellosidad: dedo grueso y blando de mucosa, con la punta redonda.
-    for (let y = 0; y < h; y++) {
-      const w = 7 - (y / h) * 1.5 + Math.sin(y * 0.2 + x0) * 0.6, cx = x0 + Math.sin(y * 0.05 + x0) * 3;
-      for (let x = -w; x <= w; x++) dot(g, cx + x, base - y, x < -w + 1.5 ? '#3e3412' : x > w - 2 ? '#1e1808' : '#2e260c');
-    }
-    ball(g, x0 + Math.sin(h * 0.05 + x0) * 3, base - h, 6, '#2e260c', '#4a3e16', '#1e1808');
+  const W = MID_W, H = MID_H, r = rng(111), N = W * H;
+  const I = (x, y) => wrap(Math.round(y), H) * W + wrap(Math.round(x), W);
+  const M = new Uint8Array(N), ID = new Int8Array(N).fill(-1), LY = new Int16Array(N);
+  // Cámaras: una por celda de una rejilla de 3×2 descolocada (filas desplazadas y
+  // posición al azar dentro de la celda), de tamaños muy distintos.
+  const ch = [];
+  for (let j = 0; j < 2; j++) for (let i = 0; i < 3; i++) {
+    const cw = W / 3, chh = H / 2;
+    ch.push({ x: (i + 0.25 + r() * 0.5 + j * 0.5) * cw, y: (j + 0.3 + r() * 0.4) * chh, rx: 14 + r() * 22, ry: 10 + r() * 12, p: r() * 6 });
   }
+  ch.forEach((c, k) => {
+    for (let y = -c.ry * 1.3; y <= c.ry * 1.3; y++) for (let x = -c.rx * 1.3; x <= c.rx * 1.3; x++) {
+      const an = Math.atan2(y, x), wob = 1 + 0.14 * Math.sin(3 * an + c.p) + 0.07 * Math.sin(5 * an + c.p * 2);
+      const ry = y > 0 ? c.ry * 0.75 : c.ry;                            // suelo más plano
+      if ((x / (c.rx * wob)) ** 2 + (y / (ry * wob)) ** 2 > 1) continue;
+      const i = I(c.x + x, c.y + y);
+      M[i] = 1; ID[i] = k; LY[i] = Math.round(y);
+    }
+  });
+  // Galerías: cada cámara se une a la más cercana y algunas a otra más; serpentean.
+  const dw = (p, q, n) => { let d = q - p; if (d > n / 2) d -= n; if (d < -n / 2) d += n; return d; };
+  const link = (A, B) => {
+    const dx = dw(A.x, B.x, W), dy = dw(A.y, B.y, H), L = Math.hypot(dx, dy), rad = 2.5 + r() * 2.5, ph = r() * 6;
+    for (let t = 0; t <= L; t += 0.7) {
+      const u = t / L, off = Math.sin(u * Math.PI * 2 + ph) * 6 * Math.sin(u * Math.PI);
+      const cx = A.x + dx * u - (dy / L) * off, cy = A.y + dy * u + (dx / L) * off;
+      for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++) if (x * x + y * y <= rad * rad) M[I(cx + x, cy + y)] = 1;
+    }
+  };
+  ch.forEach((A, k) => {
+    const near = ch.map((B, j) => [Math.hypot(dw(A.x, B.x, W), dw(A.y, B.y, H)), j]).filter(([, j]) => j !== k).sort((p, q) => p[0] - q[0]);
+    link(A, ch[near[0][1]]);
+    if (r() < 0.45) link(A, ch[near[1][1]]);
+  });
+  // Campo suavizado del hueco (0 carne … 1 centro de la cámara): sombras y normales.
+  let B = Float32Array.from(M);
+  for (const pass of [0, 1]) {
+    const o = new Float32Array(N);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let sum = 0;
+      for (let k = -4; k <= 4; k++) sum += pass ? B[I(x, y + k)] : B[I(x + k, y)];
+      o[y * W + x] = sum / 9;
+    }
+    B = o;
+  }
+  const at = (x, y) => B[I(x, y)];
+  // Base fija: carne con grano y sombra junto a los huecos; huecos oscuros (algo
+  // transparentes: se adivina el fondo lejano).
+  const FLESH = ['#140e04', '#1c1406', '#241a0a', '#2c220c', '#362a10'].map(hex32);
+  const base = new Uint32Array(N);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    if (M[i]) { const k = Math.min(1, B[i] * 1.4); base[i] = (Math.round(150 + 80 * k) << 24) | 0x020306; continue; }
+    const edge = M[I(x + 1, y)] || M[I(x - 1, y)] || M[I(x, y + 1)] || M[I(x, y - 1)];
+    const n = Math.sin(x * 0.21 + Math.sin(y * 0.13) * 2) * 0.5 + Math.sin(y * 0.17 + x * 0.05) * 0.5;
+    const lip = M[I(x, y - 2)] && !M[I(x, y + 2)] ? 1 : 0;              // labio iluminado del suelo
+    const grain = (Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5) % 1) * 0.6;
+    const v = 2 + n * 0.45 + grain - B[i] * 2.5 + lip * 1.5;
+    base[i] = edge ? FLESH[0] : FLESH[Math.max(0, Math.min(4, Math.round(v)))];
+  }
+  // Vellosidades a lo largo del borde de los huecos, mirando hacia dentro.
+  const villi = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    if (!M[i] || !(!M[I(x + 1, y)] || !M[I(x - 1, y)] || !M[I(x, y + 1)] || !M[I(x, y - 1)])) continue;
+    if (r() > 0.3) continue;
+    let nx = at(x + 2, y) - at(x - 2, y), ny = at(x, y + 2) - at(x, y - 2);
+    const nl = Math.hypot(nx, ny);
+    if (nl < 1e-3) continue;
+    villi.push({ x, y, nx: nx / nl, ny: ny / nl, len: 3 + r() * 3, ph: x * 0.3 + y * 0.2 });
+  }
+  // Charcos: en las cámaras más anchas, un nivel de líquido.
+  const pools = new Map();
+  ch.map((c, k) => [c.rx * c.ry, k]).sort((p, q) => q[0] - p[0]).slice(0, 3).forEach(([, k], j) => pools.set(k, Math.round(ch[k].ry * (j === 0 ? -0.15 : 0.15 + r() * 0.25))));
+  const mix = (c, d, k) => {
+    const f = (sh) => Math.round(((c >>> sh) & 255) * (1 - k) + ((d >>> sh) & 255) * k);
+    return ((0xff << 24) | (f(16) << 16) | (f(8) << 8) | f(0)) >>> 0;
+  };
+  const VB = hex32('#3a3014'), VL = hex32('#5e4e22'), VT = hex32('#7e6a32'), LIQ = hex32('#3a4a12'), SURF = hex32('#5e6c28');
+  const frames = [], FR = 10;
+  for (let f = 0; f < FR; f++) {
+    const t = (f / FR) * Math.PI * 2, d = base.slice();
+    for (const v of villi) {
+      const sway = Math.sin(t + v.ph) * 0.45;
+      for (let k = 0; k < v.len; k++) {
+        const ang = Math.atan2(v.ny, v.nx) + sway * (k / v.len), px = v.x + Math.cos(ang) * k, py = v.y + Math.sin(ang) * k;
+        const c = k >= v.len - 1.5 ? VT : (Math.cos(ang) < 0 ? VL : VB);
+        d[I(px, py)] = c;
+        if (k < v.len - 1) d[I(px - Math.sin(ang), py + Math.cos(ang))] = VB;
+      }
+    }
+    // Charcos: lo que queda por debajo del nivel se tiñe de jugo; la orilla tiembla.
+    for (let i = 0; i < N; i++) {
+      const lv = pools.get(ID[i]);
+      if (lv === undefined) continue;
+      const x = i % W, rip = Math.round(Math.sin(x * 0.35 + t) * 0.8);
+      if (LY[i] < lv + rip) continue;
+      d[i] = LY[i] === lv + rip ? SURF : mix(d[i], LIQ, 0.75);
+    }
+    // Burbujas que suben dentro de los charcos.
+    for (const [k, lv] of pools) {
+      const c = ch[k];
+      for (let j = 0; j < 3; j++) {
+        const bx = c.x + (j - 1) * c.rx * 0.4, rise = ((f / FR + j * 0.33) % 1) * c.ry * 0.6;
+        const by = c.y + c.ry * 0.6 - rise;
+        if (by - c.y > lv + 1) d[I(bx, by)] = SURF;
+      }
+    }
+    const [cv, g] = canvas(W, H), im = g.createImageData(W, H);
+    new Uint32Array(im.data.buffer).set(d);
+    g.putImageData(im, 0, 0);
+    frames.push(cv);
+  }
+  // Brillo tenue de los charcos.
+  const [glow, gl] = canvas(W, H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, W, H);
+  gl.fillStyle = 'rgba(140,180,40,0.12)';
+  for (let i = 0; i < N; i++) { const lv = pools.get(ID[i]); if (lv !== undefined && LY[i] >= lv) gl.fillRect(i % W, (i / W) | 0, 1, 1); }
   return {
-    mid, midGlow: glow, front: digFront(113),
-    anim: { motes: { n: 10, colors: ['rgba(210,200,120,0.28)', 'rgba(230,210,140,0.2)'], vx: 3, vy: -2, size: 1, wobble: 4 } },
+    mid: frames[0], midFrames: frames, frameTime: 0.2, midGlow: glow, front: digFront(113),
+    anim: { motes: { n: 6, colors: ['rgba(210,200,120,0.22)'], vx: 2, vy: -2, size: 1, wobble: 4 } },
   };
 }
 // ---- Vísceras palpitantes (Digestivo 3 y 4) -------------------------------------
