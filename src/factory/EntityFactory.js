@@ -162,6 +162,9 @@ export class EntityFactory {
       .filter(([x, y]) => !g.state.nodules.has(`${id}:${x},${y}`))
       .map(([x, y, kind]) => new Nodule(g, [x, y], def.biome, `${id}:${x},${y}`, kind));
     const pools = (def.fluids ?? []).map((d) => new FluidPool(g, d));
+    // (las válvulas se crean dentro de la lista de peligros; los surtidores ligados a una
+    // válvula, `valve`, la buscan aquí)
+    const valves = [];
     // Mecanismos (entities/Puzzles.js): compuertas, ganglios, sacos en orden, válvulas
     // y balsas. room.targets: lo que se puede reventar a tiros o a golpes.
     room.targets = [];
@@ -185,9 +188,9 @@ export class EntityFactory {
       ...Object.values(room.gates),
       ...(def.pads ?? []).map((d) => new Pad(g, room, d)),
       ...(def.pods ? [new PodChain(g, room, def.pods)] : []),
-      ...(def.valves ?? []).map((d) => new Valve(g, room, d, pools[d.pool], pools[d.pool2])),
+      ...(def.valves ?? []).map((d) => { const v = new Valve(g, room, d, pools[d.pool], pools[d.pool2]); valves.push(v); return v; }),
       // Surtidores (cataratas de ácido) y sumideros que muestran cómo se llenan y vacían.
-      ...(def.spouts ?? []).map((d) => new Spout(g, room, d, pools[d.pool])),
+      ...(def.spouts ?? []).map((d) => new Spout(g, room, d, pools[d.pool], valves[d.valve])),
       ...(def.sinks ?? []).map((d) => new Sink(g, room, d, pools[d.pool])),
       ...(def.floats ?? []).map((d) => new Float(g, room, d, pools[d.pool])),
       ...(def.movers ?? []).map((d) => new Mover(g, room, d)),

@@ -43,8 +43,10 @@ for (const [id, lv] of Object.entries(LEVELS)) {
     if (!SOLID.has(cell(id, p.x, p.y + 1))) fail(`ganglio en [${p.x},${p.y}] sin suelo`);
   }
   if (lv.pods && !gateIds.has(lv.pods.opens)) fail(`los sacos en orden abren una compuerta inexistente ${lv.pods.opens}`);
-  for (const v of [...(lv.valves ?? []), ...(lv.floats ?? [])]) if (!lv.fluids?.[v.pool]) fail(`válvula/balsa ligada a la cubeta ${v.pool}, que no existe`);
-  for (const v of lv.valves ?? []) if (!lv.fluids?.[v.pool]?.manual) fail(`la cubeta ${v.pool} de una válvula debe ser manual`);
+  // (una válvula sin cubeta sirve para soltar una vejiga: un surtidor con `valve`)
+  for (const v of [...(lv.valves ?? []).filter((q) => q.pool !== undefined), ...(lv.floats ?? [])]) if (!lv.fluids?.[v.pool]) fail(`válvula/balsa ligada a la cubeta ${v.pool}, que no existe`);
+  for (const v of lv.valves ?? []) if (v.pool !== undefined && !lv.fluids?.[v.pool]?.manual) fail(`la cubeta ${v.pool} de una válvula debe ser manual`);
+  for (const v of lv.spouts ?? []) if (v.valve !== undefined && !lv.valves?.[v.valve]) fail(`surtidor ligado a la válvula ${v.valve}, que no existe`);
   for (const v of lv.valves ?? []) if (v.action === 'swap' && !lv.fluids?.[v.pool2]?.manual) fail(`válvula de trasvase: la cubeta pool2 (${v.pool2}) no existe o no es manual`);
   for (const v of [...(lv.spouts ?? []), ...(lv.sinks ?? [])]) if (v.pool !== undefined && !lv.fluids?.[v.pool]) fail(`surtidor/sumidero ligado a la cubeta ${v.pool}, que no existe`);
   for (const m of lv.movers ?? []) if (!Array.isArray(m.path) || !m.path.length) fail();

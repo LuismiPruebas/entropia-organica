@@ -8,7 +8,8 @@ import { canvasSprite } from './Puzzles.js';
 //   spouts: [{ x, y, dir, pool, always }]   surtidor: un caño de carne anillada (en el techo,
 //           dir 'down'; en una pared, 'left' o 'right' hacia donde vierte) del que cae una
 //           catarata de ácido espeso y grumoso. Con `pool` vierte mientras esa cubeta sube;
-//           con always: true no para nunca (decoración... que quema).
+//           con always: true no para nunca (decoración... que quema); con `valve` (índice
+//           en valves), vierte mientras esa válvula está abierta (una vejiga que se suelta).
 //   sinks:  [{ x, y, dir, pool }]            sumidero: un esfínter fruncido en el suelo (dir
 //           'up'; o en una pared/techo) que se dilata y traga mientras la cubeta baja.
 // (x, y) es la casilla de roca donde va incrustado.
@@ -52,11 +53,12 @@ const falling = (pool) => pool && pool.trend < 0;
 // la cola de la catarata se desprende y cae. Donde golpea, espuma y salpicaduras.
 const FALL_W = 36;
 export class Spout {
-  constructor(game, room, def, pool) {
+  constructor(game, room, def, pool, valve) {
     this.game = game;
     this.room = room;
     this.def = def;
     this.pool = pool;
+    this.valve = valve;
     this.dir = def.dir ?? 'down';
     const side = this.dir === 'left' ? -1 : this.dir === 'right' ? 1 : 0;
     this.side = side;
@@ -94,7 +96,13 @@ export class Spout {
     this.wasOn = false;
   }
 
-  get on() { return !!this.def.always || rising(this.pool); }
+  get on() { return !!this.def.always || (this.valve ? this.valve.open : rising(this.pool)); }
+
+  // ¿La catarata (lo que está cayendo ahora) toca este rectángulo?
+  hits(r) {
+    if (this.head <= this.tail + 1) return false;
+    return r.x < this.mx + 7 && r.x + r.w > this.mx - 7 && r.y < this.my + this.head && r.y + r.h > this.my + this.tail;
+  }
 
   // Hasta dónde cae ahora: el suelo o la superficie de la cubeta que tenga debajo.
   #landY() {

@@ -1991,9 +1991,30 @@ export const BEHAVIORS = {
     e.timer = (e.timer ?? 1.2) - dt;
     e.broodCool = (e.broodCool ?? 7) - dt;
     const dx = p.cx - e.cx;
-    e.exposed = e.state === 'land';
+    e.exposed = e.state === 'land' || e.state === 'scalded';
     e.biteCool = (e.biteCool ?? 1) - dt;
-    if (e.state === 'sit') {
+    e.weakT = Math.max(0, (e.weakT ?? 0) - dt);
+    e.scaldCool = Math.max(0, (e.scaldCool ?? 0) - dt);
+    // Debilitado: la piel humea y gotea (aviso de que ahora sí le duele).
+    if (e.weakT > 0 && Math.random() < 0.5) g.glowParticles.emit(e.x + Math.random() * e.w, e.y + Math.random() * 10, { vx: (Math.random() - 0.5) * 20, vy: -30 - Math.random() * 30, life: 0.7, color: [0.75, 1, 0.55] });
+    // Una catarata de bilis le cae encima: se escalda (le revientan las celdas de la espalda).
+    if (e.scaldCool <= 0 && e.state !== 'scalded' && g.room.hazards.some((h) => h.hits?.(e))) {
+      e.state = 'scalded'; e.timer = d.scaldStun ?? 2.6; e.vx = 0; e.biteK = 0;
+      e.weakT = d.weakTime ?? 8;
+      e.scaldCool = 3;
+      e.broodCool = Math.max(e.broodCool, 9);
+      e.flash = 0.2;
+      g.shake = Math.max(g.shake, 8);
+      g.audio.play(d.sounds?.hurt ?? 'toadHurt', e);
+      g.audio.play('sizzle', e);
+      for (let i = 0; i < 26; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * e.w, e.y + 2, { vx: (Math.random() - 0.5) * 140, vy: -80 - Math.random() * 120, life: 0.8, gravity: 500, color: Math.random() < 0.5 ? [0.85, 0.8, 0.6] : [0.45, 0.6, 0.2], stain: '#4a6a1a' });
+    }
+    if (e.state === 'scalded') {
+      // Se retuerce panza arriba, humeando: es el momento de pegarle.
+      e.vx = 0;
+      e.shakeX = Math.random() < 0.5 ? -1 : 1;
+      if (e.timer <= 0) { e.state = 'sit'; e.timer = 0.8; e.shakeX = 0; }
+    } else if (e.state === 'sit') {
       e.dir = Math.sign(dx) || e.dir;
       e.vx = e.onGround ? e.dir * 18 * (0.4 + 0.6 * Math.max(0, Math.sin(e.t * 4))) : e.vx;
       const minions = g.room.enemies.filter((m) => m.minion && m.alive).length;
@@ -2523,6 +2544,8 @@ export class Enemy {
     }
     const before = this.hp;
     if (this.exposed && this.def.exposedBonus) n *= this.def.exposedBonus;
+    // Piel curtida (el Sapo): casi nada le hace daño hasta que lo debilitas.
+    if (this.def.armor && !(this.weakT > 0)) n *= this.def.armor;
     // Debilidades por tipo de golpe (p. ej. el Ganglio Madre ante las espinas del simbionte).
     n *= this.def.weakTo?.[kind] ?? 1;
     if (this.deflating) return false;

@@ -507,7 +507,10 @@ export const ENEMIES = {
     behavior: 'bossToad',
     boss: true,
     music: 'coro',
-    exposedBonus: 1.6, // al caer de un salto queda aturdido y la panza al aire
+    exposedBonus: 1.6, // al caer de un salto (o escaldado) queda con la panza al aire
+    armor: 0.25,       // piel curtida y cubierta de crías: casi no le duele... hasta que lo escaldas
+    weakTime: 8,       // segundos debilitado tras escaldarlo con una vejiga de bilis
+    scaldStun: 2.6,    // segundos que se retuerce panza arriba
     hp: 320, w: 64, h: 42,
     light: { color: [0.36, 0.32, 0.42], r: 190 }, // luz cenicienta: que no se confunda con el ácido
     contactDamage: 12,
@@ -522,7 +525,7 @@ export const ENEMIES = {
     },
     sounds: { reveal: 'toadCroak', attack: 'spit', summon: 'choirRetch', hurt: 'toadHurt', die: 'toadDie' },
     auraPeriod: 3,
-    habits: 'Se agazapa, tiembla y salta con las patas traseras para toparte: apártate cuando se encoja. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes. Al caer queda aturdido con la panza al aire, y ahí es cuando más le duele. De vez en cuando le revientan las celdas de la espalda y brotan renacuajos que escupen ácido. La charca se inunda a ratos: súbete a las repisas.',
+    habits: 'Avanza a saltitos hacia ti. Se agazapa y tiembla (aviso) y salta con las patas traseras para toparte; al caer salpica ácido a los lados y se queda un momento aturdido con la panza al aire. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes. Cada poco le revientan las celdas de la espalda y brotan renacuajos que escupen ácido (más cuando está herido). Su piel curtida casi no siente los golpes: atráelo bajo una de las vejigas de bilis del techo y reviéntala disparando a su válvula. Escaldado, se retuerce, pierde sus crías y durante unos segundos queda debilitado.',
     lore: 'Un sapo que el intestino dejó crecer demasiado. Carga a sus crías en la espalda, hundidas en celdas de su propia piel, y las suelta cuando tiene hambre. Salta como si el suelo le quemara... y aquí el suelo quema.',
   },
   larva: {

@@ -390,6 +390,7 @@ export class Valve {
   hit() {
     const g = this.game, act = this.def.action ?? 'fill';
     if (!this.alive || this.cool > 0) return true;
+    if (this.lock > 0) { g.audio.play('thump', this); this.squish = 0.4; this.cool = 0.4; return true; } // aún vacía: no responde
     this.cool = 0.6;
     this.squish = 1;
     g.audio.play('splat', this);
@@ -418,8 +419,10 @@ export class Valve {
     this.t += dt;
     this.cool = Math.max(0, this.cool - dt);
     this.squish = Math.max(0, this.squish - dt * 3);
+    this.lock = Math.max(0, (this.lock ?? 0) - dt);
     if (this.timer > 0) {
       this.timer -= dt;
+      if (this.timer <= 0 && this.def.recharge) this.lock = this.def.recharge;
       if (this.timer <= 0 && this.pool) {
         this.pool.target = 0;
         g.audio.play('glandFlood', this);
@@ -467,8 +470,8 @@ export class Valve {
           // Venas oscuras en el anillo exterior.
           if (r > 0.72 && Math.abs(Math.sin(a * 3 + 0.7)) < 0.08) col = VC.vein;
         }
-        // Cerrado: el punto ámbar que late en el centro.
-        if (k < 0.3 && r < 0.12 + beat * 0.05) col = beat > 0.5 ? VC.amber : VC.amberD;
+        // Cerrado: el punto ámbar que late en el centro (apagado mientras se rellena).
+        if (k < 0.3 && r < 0.12 + beat * 0.05) col = this.lock > 0 ? VC.crease : beat > 0.5 ? VC.amber : VC.amberD;
       }
       if (!col) continue;
       const i = (y * VS + x) * 4;
@@ -477,7 +480,7 @@ export class Valve {
     g.putImageData(im, 0, 0);
     gl.clearRect(0, 0, VS, VS);
     if (k > 0.25) { gl.fillStyle = `rgba(90,255,74,${0.5 * k})`; gl.beginPath(); gl.arc(c + 0.5, cy + 0.5, 1 + k * 5, 0, Math.PI * 2); gl.fill(); }
-    else { gl.fillStyle = `rgba(255,170,60,${0.25 + beat * 0.55})`; gl.fillRect(Math.round(c) - 1, Math.round(cy) - 1, 3, 3); }
+    else if (!(this.lock > 0)) { gl.fillStyle = `rgba(255,170,60,${0.25 + beat * 0.55})`; gl.fillRect(Math.round(c) - 1, Math.round(cy) - 1, 3, 3); }
     this.spr.commit();
   }
 
