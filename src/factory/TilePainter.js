@@ -38,7 +38,7 @@ const px = (g, x, y, color, w = 1, h = 1) => {
   g.fillRect(x, y, w, h);
 };
 
-const isWallChar = (c) => c === '#' || c === 'X' || c === 'f' || c === 'Y' || c === 'Z' || c === 'z' || c === 'm' || isSlope(c);
+const isWallChar = (c) => c === '#' || c === 'X' || c === 'f' || c === 'Y' || c === 'Z' || c === 'K' || c === 'z' || c === 'm' || isSlope(c);
 
 // Mucosa resbaladiza (m): pared cubierta de moco brillante. Se pinta como la pared y
 // encima un barniz verdoso con regueros que relucen (las Garras no se agarran).
@@ -674,6 +674,7 @@ function bulge(g, x, y, dir, r, m) {
 export function paintMembraneGroup(cells, kind = 'crack') {
   if (kind === 'seal') return paintSealGroup(cells);
   if (kind === 'face') return paintSealGroup(cells, FACE_SEAL);
+  if (kind === 'boss') return paintSealGroup(cells, BOSS_SEAL);
   const xs = cells.map(([x]) => x), ys = cells.map(([, y]) => y);
   const minX = Math.min(...xs), minY = Math.min(...ys);
   const w = (Math.max(...xs) - minX + 1) * TILE, h = (Math.max(...ys) - minY + 1) * TILE;
@@ -730,6 +731,8 @@ export function paintMembraneGroup(cells, kind = 'crack') {
 // Colores del esfínter sellado (Y) y de la membrana del Rostro (Z: violeta, con núcleo).
 const SEAL = { hi: '#b0404e', mid: '#8a2a38', lo: '#5a1420', edge: '#4a0e18', fleck: '#d06a78', ring: '#e88a9a', glow: [255, 110, 150], spoke: '#2a0610', core: '#140408' };
 const FACE_SEAL = { hi: '#8a5ac0', mid: '#5e3690', lo: '#36185a', edge: '#22103a', fleck: '#b08ae0', ring: '#d8b8ff', glow: [190, 140, 255], spoke: '#1a0828', core: '#0c0414', nucleus: true };
+// Membrana del jefe (K): carne oscura cruzada de vetas de brasa, con un núcleo que late.
+const BOSS_SEAL = { hi: '#9a3a2a', mid: '#6a2018', lo: '#3a0e0a', edge: '#260806', fleck: '#e07040', ring: '#ffa060', glow: [255, 120, 60], spoke: '#1a0604', core: '#0c0302', nucleus: true };
 function paintSealGroup(cells, P = SEAL) {
   const xs = cells.map(([x]) => x), ys = cells.map(([, y]) => y);
   const minX = Math.min(...xs), minY = Math.min(...ys);

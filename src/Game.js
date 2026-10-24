@@ -9,7 +9,7 @@ import { Particles } from './core/Particles.js';
 import { Gore } from './entities/Gore.js';
 import { overlap, TILE } from './core/Physics.js';
 import { GameState } from './state/State.js';
-import { EntityFactory } from './factory/EntityFactory.js';
+import { EntityFactory, zoneBossDown } from './factory/EntityFactory.js';
 import { Player, GRAVITY } from './entities/Player.js';
 import { Projectile } from './entities/Projectile.js';
 import { Pickup, dnaTag } from './entities/Pickup.js';
@@ -295,6 +295,23 @@ export class Game {
     if (Math.hypot(p.cx - x, p.cy - y) < radius) this.hurtPlayer(damage, x, 'esporas', status);
   }
 
+  // Abre las membranas del jefe ('K') de esta sala si su jefe de zona ya cayó.
+  #openBossMembranes() {
+    const room = this.room, w = room.world;
+    if (!zoneBossDown(this.state, room.def)) return;
+    let any = false;
+    for (let y = 0; y < w.h; y++) for (let x = 0; x < w.w; x++) {
+      if (w.get(x, y) !== 'K') continue;
+      w.set(x, y, '.');
+      any = true;
+      for (let i = 0; i < 5; i++) {
+        this.particles.emit(x * TILE + Math.random() * 16, y * TILE + Math.random() * 16, { vx: (Math.random() - 0.5) * 90, vy: -Math.random() * 70, life: 1, gravity: 300, color: [0.6, 0.22, 0.12] });
+        this.glowParticles.emit(x * TILE + Math.random() * 16, y * TILE + Math.random() * 16, { vx: (Math.random() - 0.5) * 30, vy: -20, life: 0.9, color: [1, 0.55, 0.25] });
+      }
+    }
+    if (any) { this.audio.play('tear', this.player); this.factory.refresh(room); }
+  }
+
   // Todos los jefes recompensan: su llave (si la guardan), una memoria, su bioma
   // grabado en el mapa y, algunos, un cambio permanente en el mundo.
   onBossDefeated(e) {
@@ -313,6 +330,7 @@ export class Game {
     if (r.flag) st.flags.add(r.flag);
     // Los sacos vitelinos unidos a este jefe se marchitan y liberan lo que guardan.
     st.flags.add(`boss:${e.type}`);
+    this.#openBossMembranes();
     for (const s of this.room.sacs) if (s.def.until === e.type) s.release();
     if (r.lore) st.lore.push(r.lore);
     // Los esbirros mueren con su creador.

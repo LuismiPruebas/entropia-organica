@@ -47,6 +47,13 @@ const PICKUP_CHARS = { b: 'biomass', B: 'battery', S: 'scrap', O: 'oxygen', H: '
 const FRAG_CHARS = { i: 'ocular', c: 'neural', d: 'dermal', x: 'balistico' };
 
 // Puente entre los datos (levels/enemies) y la escena de Three.js.
+// Membrana del jefe ('K'): se abre cuando ha caído el jefe de la zona (cualquier jefe del
+// bioma de la sala, o el que diga la sala en bossSeal). La usa también Game al vencerlo.
+export function zoneBossDown(st, def) {
+  if (def.bossSeal) return st.flags.has(`boss:${def.bossSeal}`);
+  return Object.entries(ENEMIES).some(([type, e]) => e.boss && e.biome === def.biome && st.flags.has(`boss:${type}`));
+}
+
 export class EntityFactory {
   constructor(game) {
     this.game = game;
@@ -58,7 +65,10 @@ export class EntityFactory {
     const g = this.game;
     const world = new TileWorld(def.grid);
     const biome = BIOMES[def.biome] ?? BIOMES.nervioso;
-    const room = { id, def, world, biome, ambient: def.ambient ?? biome.ambient, enemies: [], pickups: [], anchors: [], nodes: [], photo: [], meshes: [], tier: roomTier(id) };
+    // Sala de jefe: iluminada (el combate se ve entero); def.ambient manda si la sala lo fija.
+    const bossRoom = (def.enemies ?? []).some((e) => ENEMIES[e.type]?.boss);
+    const ambient = def.ambient ?? (bossRoom ? biome.ambient.map((v) => Math.min(0.75, v * 2.6)) : biome.ambient);
+    const room = { id, def, world, biome, ambient, enemies: [], pickups: [], anchors: [], nodes: [], photo: [], meshes: [], tier: roomTier(id) };
     const hidden = new Set((def.hidden ?? []).map(([x, y]) => `${x},${y}`));
     const photoSeen = new Set();
     // Velo de membrana: capa propia (def.veil) por delante; no cambia la casilla de debajo.
@@ -77,6 +87,8 @@ export class EntityFactory {
           world.set(cx, cy, '.');
         } else if (c === 'Z' && g.state.flags.has(`face:${def.faceSeal ?? def.biome}`)) {
           world.set(cx, cy, '.');                          // su Rostro ya se liberó
+        } else if (c === 'K' && zoneBossDown(g.state, def)) {
+          world.set(cx, cy, '.');                          // el jefe de la zona ya cayó
         } else if (c === 'o') {
           room.anchors.push(center);
         } else if (c === 'f' && !photoSeen.has(`${cx},${cy}`)) {
@@ -243,10 +255,10 @@ export class EntityFactory {
     const seen = new Set();
     for (let cy = 0; cy < room.world.h; cy++) for (let cx = 0; cx < room.world.w; cx++) {
       const kind = room.world.get(cx, cy);
-      if ((kind !== 'X' && kind !== 'Y' && kind !== 'Z') || seen.has(`${cx},${cy}`)) continue;
+      if ((kind !== 'X' && kind !== 'Y' && kind !== 'Z' && kind !== 'K') || seen.has(`${cx},${cy}`)) continue;
       const cells = room.world.floodFill(cx, cy);
       cells.forEach(([x, y]) => seen.add(`${x},${y}`));
-      const p = paintMembraneGroup(cells, kind === 'Y' ? 'seal' : kind === 'Z' ? 'face' : 'crack');
+      const p = paintMembraneGroup(cells, kind === 'Y' ? 'seal' : kind === 'Z' ? 'face' : kind === 'K' ? 'boss' : 'crack');
       const frames = p.frames.map((f) => ({ tex: canvasTexture(f.color), glowTex: canvasTexture(f.glow) }));
       const mk = (map, additive) => {
         const mesh = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), new THREE.MeshBasicMaterial({

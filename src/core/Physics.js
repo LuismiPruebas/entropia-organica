@@ -5,7 +5,7 @@ export const TILE = 16;
 // 'f' = membrana fotosensible cerrada (se abre a 'F' con la luz del ojo).
 // 'D' = compuerta-esfínter cerrada (entities/Puzzles.js la abre y la cierra).
 // 'm' = mucosa resbaladiza: pared en la que las Garras no se agarran.
-const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm', 'Z']);
+const SOLID = new Set(['#', 'X', 'f', 'Y', 'D', 'm', 'Z', 'K']);
 
 // Pendientes (suelos inclinados): sólidas por debajo de una recta. Para cada una, la
 // altura de la superficie (px desde el borde superior de la casilla) en su borde
