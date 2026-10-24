@@ -30,6 +30,17 @@ function ganglionSpot(e, g) {
 // Matriarca: duración de la anticipación del picado.
 const WINDUP = 0.38;
 // Ritmo de la Matriarca: todo corto para que el patrón sea continuo.
+// Arena de la Matriarca: medida desde donde aparece (suelo bajo ella, techo encima y
+// paredes a media altura). Así no se sale por un pozo o una chimenea de la sala.
+function mothArena(e, g) {
+  const w = g.world, tx = Math.floor(e.cx / TILE), ty0 = Math.floor(e.cy / TILE);
+  let fy = ty0; while (fy < w.h - 1 && !w.solid(tx, fy)) fy++;
+  let cy = ty0; while (cy > 0 && !w.solid(tx, cy)) cy--;
+  const my = Math.floor((fy + cy) / 2);
+  let lx = tx; while (lx > 0 && !w.solid(lx, my)) lx--;
+  let rx = tx; while (rx < w.w - 1 && !w.solid(rx, my)) rx++;
+  return { left: (lx + 1) * TILE, right: rx * TILE, top: (cy + 1) * TILE, floor: fy * TILE };
+}
 const MOTH_T = { crawl: 2.2, crawlRage: 1.5, takeoff: 0.3, hover: 1.0, hoverRage: 0.65, chain: 0.32, aim: 0.38, aimRage: 0.28, stuck: 1.0, stuckRage: 0.7, free: 0.4 };
 // Formas de las crías de una división (la colonia bacilar: grumo y pulpa).
 const ENEMY_FORMS = {
@@ -673,11 +684,13 @@ export const BEHAVIORS = {
   bossMoth(e, dt, g) {
     const p = g.player, d = e.def;
     const enraged = e.hp < d.hp / 2;
-    const W = g.world.pixelW, H = g.world.pixelH;
-    // Recorrido por el contorno: [x, y] del centro del cuerpo, en píxeles.
+    const A = (e.arena ??= mothArena(e, g));
+    const MX = (A.left + A.right) / 2, MY = (A.top + A.floor) / 2;
+    const inset = e.h / 2 + 2;
+    // Recorrido por el contorno de la arena (suelo, pared, techo, pared): centro del cuerpo, en px.
     if (!e.path) {
       const pts = (e.crawl ?? d.crawl)?.map(([x, y]) => [x * TILE, y * TILE])
-        ?? [[W - 40, H - 40], [28, H - 40], [28, 28], [W - 28, 28]];
+        ?? [[A.right - inset, A.floor - inset], [A.left + inset, A.floor - inset], [A.left + inset, A.top + inset], [A.right - inset, A.top + inset], [A.right - inset, A.floor - inset]];
       e.path = pts.map(([x, y], i) => {
         const [nx, ny] = pts[i + 1] ?? pts[i];
         return { x, y, len: Math.hypot(nx - x, ny - y) };
@@ -694,8 +707,8 @@ export const BEHAVIORS = {
           const tx = (b.x - a.x) / (a.len || 1), ty = (b.y - a.y) / (a.len || 1);
           // Superficie: el lado del segmento donde hay roca.
           const horiz = Math.abs(tx) > Math.abs(ty);
-          const rot = horiz ? (a.y > H / 2 ? 0 : Math.PI) : (a.x < W / 2 ? Math.PI / 2 : -Math.PI / 2);
-          return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, tx, ty, rot, ceiling: horiz && a.y < H / 2 };
+          const rot = horiz ? (a.y > MY ? 0 : Math.PI) : (a.x < MX ? Math.PI / 2 : -Math.PI / 2);
+          return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, tx, ty, rot, ceiling: horiz && a.y < MY };
         }
         rest -= a.len;
       }
@@ -720,8 +733,62 @@ export const BEHAVIORS = {
     e.glowK = Math.max(0, (e.glowK ?? 0) - dt * 2);
     e.contactDamage = d.contactDamage;
     e.exposed = false;
+    const crawlTime = () => (enraged ? 0.9 : 1.3) + Math.random() * 1.1;
+    const faceTo = (q, x, y) => { const fx = Math.cos(q.rot), fy = Math.sin(q.rot); return Math.sign((x - q.x) * fx + (y - q.y) * fy) || e.face; };
+    if (e.struck) {
+      const h = e.struck;
+      e.struck = null;
+      if ((e.gs === 'crawl' || e.gs === 'hover') && e.t - (e.lastRush ?? -9) > 2.2 && Math.random() < (enraged ? 0.75 : 0.5)) {
+        e.lastRush = e.t;
+        e.rushFrom = e.gs;
+        e.rushAt = { x: h.x, y: h.y };
+        go('turn', 0.24);
+        g.audio.play(d.sounds?.attack ?? 'screech', e);
+      }
+    }
 
-    if (e.gs === 'crawl') {
+    if (e.gs === 'turn') {
+      // Se revuelve: se encara hacia el golpe, temblando, con los ocelos encendidos.
+      e.glowK = 1;
+      if (e.rushFrom === 'crawl') {
+        const q = at(e.s);
+        place(q.x + (Math.random() - 0.5) * 3, q.y);
+        e.pose = 'crawl'; e.rot = q.rot; e.crawlV = 0;
+        e.face = faceTo(q, e.rushAt.x, e.rushAt.y);
+      } else {
+        e.vx *= 0.8; e.vy *= 0.8;
+        place(e.cx + (Math.random() - 0.5) * 3, e.cy);
+        e.pose = 'fly'; e.rot = 0; e.face = 1; e.flapRate = 18;
+      }
+      if (e.timer <= 0) {
+        g.audio.play('whip', e);
+        if (e.rushFrom === 'crawl') { e.rushS = nearestS(e.rushAt.x, e.rushAt.y); go('rush', 1.3); }
+        else {
+          const a = Math.atan2(e.rushAt.y - e.cy, e.rushAt.x - e.cx);
+          e.vx = Math.cos(a) * 340; e.vy = Math.sin(a) * 340;
+          go('ram', 0.45);
+        }
+      }
+    } else if (e.gs === 'rush') {
+      // Carga corriendo por el contorno hacia donde le golpearon, mucho más rápida.
+      e.contactDamage = d.stingDamage;
+      const dir = Math.sign(e.rushS - e.s) || 1;
+      e.crawlV = d.crawlSpeed * 2.8;
+      e.s = Math.max(0, Math.min(e.pathLen, e.s + dir * e.crawlV * dt));
+      const q = at(e.s);
+      place(q.x, q.y);
+      e.pose = 'crawl'; e.rot = q.rot;
+      const fx = Math.cos(q.rot), fy = Math.sin(q.rot);
+      e.face = (q.tx * dir * fx + q.ty * dir * fy) >= 0 ? 1 : -1;
+      if (Math.random() < 0.5) g.particles.emit(q.x, q.y, { vx: -q.tx * dir * 60, vy: -q.ty * dir * 60 - 20, life: 0.4, gravity: 300, color: [0.45, 0.4, 0.42] });
+      if (Math.abs(e.rushS - e.s) < 6 || e.timer <= 0) go('crawl', 0.5);
+    } else if (e.gs === 'ram') {
+      // En el aire: una embestida corta hacia quien le golpeó.
+      e.contactDamage = d.stingDamage;
+      e.pose = 'fly'; e.rot = 0; e.face = 1; e.flapRate = 20;
+      place(Math.max(A.left + inset, Math.min(A.right - inset, e.cx + e.vx * dt)), Math.max(A.top + inset, Math.min(A.floor - inset, e.cy + e.vy * dt)));
+      if (e.timer <= 0) { e.vx = e.vy = 0; go('hover', 0.5); }
+    } else if (e.gs === 'crawl') {
       // Corre por el contorno buscando el techo justo encima de ti (trepa por la pared
       // y cruza el techo para dejarte caer las vainas).
       const target = nearestS(p.cx, 0);
@@ -747,7 +814,16 @@ export const BEHAVIORS = {
         });
         g.audio.play(d.sounds?.attack ?? 'spit', e);
       }
-      if (e.timer <= 0) { go('takeoff', MOTH_T.takeoff); e.from = { x: q.x, y: q.y, rot: q.rot }; g.audio.play('whip', e); }
+      if (e.timer <= 0) {
+        if (Math.random() < (enraged ? 0.6 : 0.5)) {
+          // Se lanza en picado directamente desde la pared, el techo o el suelo.
+          e.diveA = Math.atan2(p.cy - q.y, p.cx - q.x);
+          e.diveFace = Math.cos(e.diveA) >= 0 ? 1 : -1;
+          e.dives = 1; e.ext = 0; e.vx = e.vy = 0;
+          go('windup', WINDUP);
+          g.audio.play('charge', e);
+        } else { go('takeoff', MOTH_T.takeoff); e.from = { x: q.x, y: q.y, rot: q.rot }; g.audio.play('whip', e); }
+      }
     } else if (e.gs === 'takeoff') {
       // Se separa de la superficie hacia el interior de la sala.
       const k = 1 - e.timer / MOTH_T.takeoff;
@@ -757,8 +833,8 @@ export const BEHAVIORS = {
       if (e.timer <= 0) { go('hover', enraged ? MOTH_T.hoverRage : MOTH_T.hover); e.vx = e.vy = 0; e.dives = enraged ? 3 : 2; } // encadena picados
     } else if (e.gs === 'hover' || e.gs === 'aim') {
       // Revolotea sobre ti, a cierta altura, sin salir de la sala.
-      const tx = Math.max(56, Math.min(W - 56, p.cx + Math.sin(e.t * 1.7) * 50));
-      const ty = Math.max(48, Math.min(H - 90, p.cy - 72 + Math.sin(e.t * 3.1) * 8));
+      const tx = Math.max(A.left + 40, Math.min(A.right - 40, p.cx + Math.sin(e.t * 1.7) * 50));
+      const ty = Math.max(A.top + 30, Math.min(A.floor - 80, p.cy - 72 + Math.sin(e.t * 3.1) * 8));
       if (e.gs === 'hover') {
         e.vx += ((tx - e.cx) * 4 - e.vx * 2.4) * dt;
         e.vy += ((ty - e.cy) * 4 - e.vy * 2.4) * dt;
@@ -832,7 +908,7 @@ export const BEHAVIORS = {
       place(ncx, ncy);
       if (Math.random() < 0.6) g.particles.emit(e.cx, e.cy, { vx: -e.vx * 0.1, vy: -e.vy * 0.1, life: 0.3, color: [0.5, 0.42, 0.5] });
       // Clava el aguijón en lo que tenga delante.
-      if (g.world.solidAtPx(tipX, tipY) || tipX < 4 || tipX > W - 4 || tipY > H - 4 || e.timer <= 0) {
+      if (g.world.solidAtPx(tipX, tipY) || tipX < A.left || tipX > A.right || tipY > A.floor || tipY < A.top || e.timer <= 0) {
         go('stuck', enraged ? MOTH_T.stuckRage : MOTH_T.stuck);
         g.shake = Math.max(g.shake, 5);
         g.audio.play('crunch', e);
@@ -855,13 +931,14 @@ export const BEHAVIORS = {
       if (e.timer <= 0) {
         if (--e.dives > 0) { go('hover', MOTH_T.chain); e.vx = 0; e.vy = -160; e.rot = 0; } // se arranca y vuelve a fijarte enseguida
         else { go('free', MOTH_T.free); e.from = { x: e.cx, y: e.cy }; e.s = nearestS(e.cx, e.cy); }
+        e.dives = Math.max(0, e.dives);
       }
     } else if (e.gs === 'free') {
       // Se arranca y vuela a la pared más cercana de su recorrido.
       const k = 1 - Math.max(0, e.timer) / MOTH_T.free, q = at(e.s);
       place(e.from.x + (q.x - e.from.x) * k, e.from.y + (q.y - e.from.y) * k);
       e.pose = 'fly'; e.rot = 0; e.face = 1; e.flapRate = 16;
-      if (e.timer <= 0) go('crawl', enraged ? MOTH_T.crawlRage : MOTH_T.crawl);
+      if (e.timer <= 0) go('crawl', crawlTime());
     }
   },
 
@@ -2042,6 +2119,7 @@ export class Enemy {
     // Debilidades por tipo de golpe (p. ej. el Ganglio Madre ante las espinas del simbionte).
     n *= this.def.weakTo?.[kind] ?? 1;
     this.hp -= n;
+    if (this.def.behavior === 'bossMoth' && n > 0) this.struck = { x: at?.x ?? this.game.player.cx, y: at?.y ?? this.game.player.cy };
     // El enjambre pierde células al ser herido: cada una sigue viva por su cuenta.
     if (this.def.sheds && this.hp > 0 && (this.gen ?? 0) === 0) {
       const lost = Math.ceil(before / this.def.cellHp) - Math.ceil(this.hp / this.def.cellHp);
