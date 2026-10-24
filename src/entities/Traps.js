@@ -260,7 +260,7 @@ export class Wind {
       if (this.dir === 'up') {
         const depth = Math.min(1, Math.max(0, (p.y + p.h - r.y) / LIFT_FADE));
         p.lift = Math.max(p.lift ?? 0, this.force * depth * this.power);
-        p.riseMax = RISE_MAX;
+        p.riseMax = this.def.rise ?? RISE_MAX; // rise: subida más lenta (p. ej. para pararte a media corriente)
       } else if (this.dir === 'down') {
         p.vy = Math.min(Math.max(p.vy, 0) + this.force * this.power * dt, 420); // te aplasta hacia abajo
       } else {

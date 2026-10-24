@@ -518,8 +518,13 @@ export class Player {
       else if (this.vx > target) this.vx = Math.max(target, this.vx - accel * dt);
       if (this.swimming) this.vy += (SWIM_SINK - this.vy) * Math.min(1, dt * 2.5); // se hunde despacio
       else this.vy = Math.min(this.rope ? SWING_MAX : MAX_FALL, this.vy + (GRAVITY - (this.lift ?? 0)) * dt);
-      if (this.lift) this.vy = Math.max(this.vy, -(this.riseMax ?? 230));
+      // En una corriente subes a velocidad tope (flotas)... salvo justo después de saltar:
+      // el impulso del salto no se recorta.
+      if (this.lift && !(this.windJumpT > 0)) this.vy = Math.max(this.vy, -(this.riseMax ?? 230));
     }
+    this.windJumpT = Math.max(0, (this.windJumpT ?? 0) - dt);
+    // Dentro de una corriente vertical la corriente te sostiene: recuperas el doble salto.
+    if ((this.lift ?? 0) > 0) this.airJumps = 1;
     this.windX = 0;
     this.lift = 0;
 
@@ -826,6 +831,7 @@ export class Player {
 
   #jump(v) {
     this.vy = -v;
+    this.windJumpT = 0.35;
     this.jumpBuf = 0;
     this.coyote = 0;
     this.game.audio.play('jump', this);
