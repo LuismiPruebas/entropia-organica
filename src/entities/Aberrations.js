@@ -433,24 +433,35 @@ export const ABERRATIONS = {
         px(g, hx + (air ? -9 : 0), G - 1, '#3a5218', 3, 1);
       }
       // Cuerpo rechoncho: verde oliva con manchas, panza pálida.
-      part(g, cx, by, 7 * sw, 5 * sw, '#6a8a32', '#3e5a1c', '#a8c460');
-      for (const [mx, my] of [[-3, -2], [2, -3], [-1, 1], [4, 0]]) px(g, cx + mx * sw, by + my * sw, '#3e5a1c', 2, 1);
+      part(g, cx, by, 7 * sw, 5 * sw, '#4e5a26', '#26300e', '#7a8a3a');
+      for (const [mx, my] of [[-3, -2], [2, -3], [-1, 1], [4, 0], [-5, 0]]) { px(g, cx + mx * sw, by + my * sw, '#8a8a3a'); px(g, cx + mx * sw + 1, by + my * sw + 1, '#26300e'); } // verrugas
       // Papada / saco que se hincha (pálido, brilla al cargarse).
       const sr = 2 + pf * 5;
       part(g, cx + 5, by + 2 + pf, sr, sr * 0.8, pf > 0.3 ? '#e8f0a0' : '#c8d870', '#8aa040');
       if (pf > 0.2) { const k = Math.round(pf * 3); px(gl, cx + 5 - k, by + 2, '#7ac030', k * 2, k); }
       // Cabeza de rana delante, con la boca ancha.
       const hx = cx + 7, hy = by - 2 - pf;
-      part(g, hx, hy, 5, 3.5, '#7a9a3a', '#3e5a1c', '#b8d070');
+      part(g, hx, hy, 5, 3.5, '#5a6a2a', '#26300e', '#8a9a40');
       const open = st === 'spit' ? 3 : st === 'inflate' ? 1 : 0;
       px(g, hx - 1, hy + 1, '#2a1008', 7, 1 + open);                    // boca
       if (open > 1) { px(g, hx + 3, hy + 2, '#c8f090', 3, open - 1); px(gl, hx + 3, hy + 2, '#8aff60', 3, open - 1); }
-      // Ojos saltones encima, con pupila horizontal.
-      for (const ox of [-2, 2]) {
-        part(g, hx + ox, hy - 4, 1.8, 1.8, '#d8e060', '#3e5a1c');
-        px(g, hx + ox - 1, hy - 4, '#1a0a04', 2, 1);
+      // Un solo ojo, enorme y saltón, en lo alto: iris de brasa amarilla con la pupila
+      // en rendija vertical que se estrecha al cargar. Brilla a oscuras.
+      const ex = hx + 1, ey = hy - 3;
+      part(g, ex, ey, 3.2, 3, '#e89020', '#2a1a08');                          // iris de brasa
+      blob(g, ex, ey, 1.8, 1.8, '#ffd040');                                    // centro más vivo
+      px(g, ex, ey - 2, '#120202', 1, 5);                                      // pupila en rendija
+      if (pf < 0.4) px(g, ex - 1, ey - 1, '#120202', 1, 3);                    // en reposo, algo más ancha
+      px(g, ex + 1, ey - 2, '#fff4c0');                                        // brillo húmedo
+      // Párpado grueso y caído en diagonal: ceño amenazador (tapa el tercio de arriba).
+      for (let i = -4; i <= 4; i++) {
+        const lid = ey - 3 + Math.round((i + 4) * 0.35);
+        px(g, ex + i, lid - 1, '#5a6a2a', 1, 2);
+        px(g, ex + i, lid + 1, '#1a2008');
       }
-      px(gl, hx + 2, hy - 5, '#9be06a');
+      px(gl, ex - 1, ey, pf > 0.3 ? '#ffa020' : '#a06010', 3, 2);
+      // Dientes finos en la boca.
+      for (let i = 0; i < 6; i += 2) px(g, hx + i, hy + 1, '#d8d0b0', 1, 1);
       // Chorro saliendo de la boca mientras escupe.
       if (st === 'spit') for (let i = 0; i < 4; i++) px(g, hx + 6 + i * 2, hy + 2 + Math.sin(t * 40 + i) * 0.6, i % 2 ? '#c8f090' : '#6ac040', 2, 2);
     },
