@@ -337,7 +337,8 @@ export class PlayerBody {
     if (wpn === 'simbionte') part('simbionte', (tg, gl2) => this.#cannon(tg, gl2, ctx));
     else if (wpn === 'escopeta') part('escopeta', (tg) => this.#shotgun(tg, ctx));
     else if (wpn === 'astillas') part('astillas', (tg) => this.#gunArm(tg, ctx));
-    else if (wpn === 'cuchilla') part('quitina2', (tg, gl2) => this.#bareArm(tg, ctx, gl2));
+    // (la cuchilla es de la Dermis II o III: el brazo se dibuja con la que tengas, o sin más)
+    else if (wpn === 'cuchilla' && (shows('quitina2') || shows('nanocutis'))) part(shows('quitina2') ? 'quitina2' : 'nanocutis', (tg, gl2) => this.#bareArm(tg, ctx, gl2));
     else this.#bareArm(g, ctx, gl);
     // Crisis de rechazo: la carne revienta en masas que laten (a lo Tetsuo).
     if ((pose.crisis ?? 0) > 0) this.#crisis(g, gl, ctx, pose.crisis, pose.beat ?? 0);
