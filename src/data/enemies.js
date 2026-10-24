@@ -413,7 +413,8 @@ export const ENEMIES = {
     lucifugo: true, // huye del haz del Ojo Pineal
     frag: 'neural', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Cabeza-Araña',
-    biome: 'pulmonar',
+    biome: 'digestivo', // también del Sistema Óseo (biomes)
+    biomes: ['digestivo', 'oseo'],
     creature: 'cabeza',
     gore: { blood: '#8a0a1a', flesh: ['#d89a80', '#c08068', '#8a2a3c'] },
     voice: ['headScream'],
