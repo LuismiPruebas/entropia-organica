@@ -1055,10 +1055,10 @@ export const LEVELS = {
     biome: 'pulmonar',
     map: [1.001, -9.213, 1, 4.214],
     grid: [
-      '################',
-      '################',
-      '################',
-      '################',
+      '##....####....##',
+      '##....####....##',
+      '##KKKK####KKKK##',
+      '##KKKK####KKKK##',
       '#.............##',
       '#.............##',
       '#.............##',
@@ -1116,10 +1116,14 @@ export const LEVELS = {
       '################',
     ],
     winds: [
-      { x: 10, y: 4, w: 4, h: 54, dir: 'up' },
+      { x: 10, y: 10, w: 4, h: 48, dir: 'up' },
+      { x: 10, y: 4, w: 4, h: 6, dir: 'up', rise: 80 },
+      { x: 10, y: 0, w: 4, h: 2, dir: 'up' },
     ],
     links: [
       { id: 'p1', x: 0, y: 7, w: 1, h: 3, to: 'P6', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 9] },
+      { id: 'p2', x: 2, y: 0, w: 4, h: 2, to: 'P12', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [3, 1] },
+      { id: 'p3', x: 10, y: 0, w: 4, h: 2, to: 'P12', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [11, 1] },
     ],
   },
 
@@ -1134,9 +1138,9 @@ export const LEVELS = {
       '##...########.......############',
       '##...#####................######',
       '##...#####...................###',
-      '##...K........................##',
-      '##...K........................##',
-      '##...K........................##',
+      '##...K..........................',
+      '##...K..........................',
+      '##...K..........................',
       '##...######..................###',
       '##...#########...............###',
       '##...############............###',
@@ -1152,6 +1156,7 @@ export const LEVELS = {
     links: [
       { id: 'p1', x: 2, y: 12, w: 3, h: 2, to: 'P6', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [3, 12] },
       { id: 'p2', x: 2, y: 0, w: 3, h: 2, to: 'P10', toLink: 'p1', trigger: 'touch', look: 'hidden' },
+      { id: 'p3', x: 31, y: 5, w: 1, h: 3, to: 'P11', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [29, 7] },
     ],
   },
 
@@ -1202,6 +1207,7 @@ export const LEVELS = {
     ],
     links: [
       { id: 'p1', x: 18, y: 26, w: 3, h: 2, to: 'P9', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [19, 26] },
+      { id: 'p2', x: 49, y: 26, w: 4, h: 2, to: 'P11', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [50, 25] },
     ],
     backdrop: 4,
   },
@@ -1216,9 +1222,9 @@ export const LEVELS = {
       '#.......##########..........####',
       '#.........#####...............##',
       '#..............................#',
-      '#..............................#',
-      '#..............................#',
-      '#..............................#',
+      '...............................#',
+      '...............................#',
+      '...............................#',
       '#..............................#',
       '#...............................',
       '#...............................',
@@ -1231,10 +1237,16 @@ export const LEVELS = {
       { type: 'hierofante', x: 18, y: 12 },
     ],
     links: [
-      { id: 'p1', x: 1, y: 0, w: 1, h: 2, to: '', toLink: '', trigger: 'touch', look: 'hidden' },
+      { id: 'p1', x: 1, y: 0, w: 4, h: 2, to: 'P10', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [2, 2] },
+      { id: 'p2', x: 2, y: 12, w: 4, h: 2, to: 'P12', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [3, 12] },
+      { id: 'p3', x: 10, y: 12, w: 4, h: 2, to: 'P12', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [11, 12] },
+      { id: 'p4', x: 0, y: 5, w: 1, h: 3, to: 'P9', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [2, 7] },
     ],
     backdrop: 4,
     womb: { sells: { regen: false } },
+    winds: [
+      { x: 10, y: 9, w: 4, h: 5, dir: 'up' },
+    ],
   },
 
   P12: {
@@ -1281,6 +1293,15 @@ export const LEVELS = {
       '##....####....##',
       '##....####....##',
       '##....####....##',
+    ],
+    links: [
+      { id: 'p1', x: 2, y: 0, w: 4, h: 2, to: 'P11', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [3, 1] },
+      { id: 'p2', x: 10, y: 0, w: 4, h: 2, to: 'P11', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [11, 1] },
+      { id: 'p3', x: 2, y: 37, w: 4, h: 2, to: 'P8', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [3, 38] },
+      { id: 'p4', x: 10, y: 37, w: 4, h: 2, to: 'P8', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [11, 38] },
+    ],
+    winds: [
+      { x: 10, y: 0, w: 4, h: 39, dir: 'up' },
     ],
   },
 };
