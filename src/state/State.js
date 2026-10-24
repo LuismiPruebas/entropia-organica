@@ -74,8 +74,10 @@ export const BLADE = {
   controls: 'El antebrazo es una hoja de placas. Clic / R1: combo de tajos (Dermis II: dos; Dermis III: tres avanzando, el último pesado). [R] / R2 vuelve al cañón.',
 };
 const REJECTION_CRITICAL = 100;
+// Segundos de crisis (rechazo al 100 %) hasta que el cuerpo revienta.
+export const CRISIS_TIME = 20;
 // Rechazo gradual: hasta cerca del 100 % no castiga. Al 70 % el cuerpo avisa (se inflama,
-// sin efecto); desde el 85 % las mutaciones fallan cada vez más (hasta REJECTION_FAIL_MAX al
+// sin efecto); el umbral de fallo (85 %) ya solo marca el aviso en pantalla (antes las mutaciones fallaban; REJECTION_FAIL_MAX al
 // 100 %) y al 100 % además el cuerpo se daña. Tramos de aviso: 70, 85, 100.
 export const REJECTION_FAIL_FROM = 85;
 const REJECTION_FAIL_MAX = 0.35;
@@ -231,14 +233,11 @@ export class GameState {
   // Tramo de rechazo (0 sano, 1 inflamado, 2 rechazo, 3 crisis), para los avisos.
   get rejectionTier() { return this.immuneRejection ? 0 : [70, this.failFrom, 100].filter((t) => this.rejection >= t).length; }
 
-  // Con el rechazo alto, las mutaciones fallan a veces (cada vez más).
-  abilityWorks(ability) {
-    if (Math.random() < this.failChance) {
-      this.emit('mutationFail', ability);
-      return false;
-    }
-    return true;
-  }
+  // El rechazo ya no bloquea ni interrumpe nada: las mutaciones siempre responden. Sus
+  // síntomas son el aviso en pantalla y, al 100 %, la crisis (crisisT): el cuerpo se
+  // hincha y, si no lo remedias en CRISIS_TIME s, revienta.
+  abilityWorks() { return true; }
+  get crisisK() { return Math.min(1, (this.crisisT ?? 0) / CRISIS_TIME); }
 
   damage(n, cause) {
     if (this.dead || n <= 0 || this.dev.god || this.timers.shield > 0) return;
@@ -392,7 +391,18 @@ export class GameState {
       this.infection = 0;
     }
 
-    if (this.critical) this.damage(0.8 * dt, 'rechazo');
+    // Crisis de rechazo: al 100 % empieza la cuenta; si baja (un Supresor), se olvida.
+    if (this.critical && !this.dead) {
+      this.crisisT = (this.crisisT ?? 0) + dt;
+      if (this.crisisT >= CRISIS_TIME && !this.dev.god) {
+        this.crisisT = 0;
+        this.emit('rejectionBurst');
+        this.integrity = 0;
+        this.dead = true;
+        this.stats.deaths++;
+        this.emit('death', 'rechazo');
+      }
+    } else this.crisisT = 0;
     if (this.infection > 0) {
       this.infection -= dt;
       this.damage(INFECTION.dps * dt, 'infección');

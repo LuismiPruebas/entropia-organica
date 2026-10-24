@@ -49,7 +49,7 @@ const VEINS = [
 const CATS = {
   heal: { c: '#ff5a6a', info: 'El útero guarda pocas curas; se regeneran con el tiempo.' },
   cell: { c: '#ffd23f', info: `Al ${CELL_STORE_FROM} % o más, además se guarda; las guardadas se gastan solas bajo el ${CELL_AUTO_BELOW} %.` },
-  suppressor: { c: '#c07bff', info: 'Calma tus injertos un rato. Con el rechazo alto las mutaciones fallan; al 100 % te dañan.' },
+  suppressor: { c: '#c07bff', info: 'Calma tus injertos un rato. Al 100 % de rechazo tu cuerpo se hincha y, si no lo calmas en 20 s, revienta.' },
   extender: { c: '#b48cff', info: 'Tu cuerpo tolera más carga: el rechazo sube más despacio. Cada uno cuesta más Alivian mucho, pero solo los 10 Timos Necróticos acaban del todo con el rechazo.' },
   trade: { c: '#c8b8a0', info: 'El útero digiere un recurso y te devuelve el otro.' },
   shield: { c: '#4ff0ff', info: 'Se guarda; se aloja en una cavidad y la usas cuando quieras.' },

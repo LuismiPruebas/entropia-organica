@@ -688,6 +688,17 @@ export class Player {
     const beat = Math.pow(Math.max(0, Math.sin(this.rejPhase * Math.PI)), 6);
     const p = k * (0.25 + 0.55 * beat) + this.spasm * 0.9;
     this.rejTint = [0.45 * p, 0.04 * p, 0.55 * p];
+    // Crisis (rechazo al 100 %): el cuerpo palpita y se hincha, cada vez más deprisa y más;
+    // los últimos 10 s además enrojece.
+    const ck = st.crisisK;
+    if (st.critical && ck > 0) {
+      this.crisisPh = (this.crisisPh ?? 0) + dt * (1.4 + ck * 4.5);
+      const throb = Math.pow(Math.max(0, Math.sin(this.crisisPh * Math.PI)), 2);
+      this.swell = 1 + ck * 0.22 + throb * (0.05 + ck * 0.12);
+      const red = Math.max(0, (ck - 0.5) * 2) * (0.6 + 0.4 * throb);
+      this.rejTint = [this.rejTint[0] + 0.9 * red, this.rejTint[1] * (1 - red), this.rejTint[2] * (1 - red)];
+      if (Math.random() < dt * (2 + ck * 10)) g.particles.emit(this.x + Math.random() * this.w, this.y + 4 + Math.random() * (this.h - 6), { vx: (Math.random() - 0.5) * 30, vy: -10 - Math.random() * 20, life: 0.5, color: red > 0.2 ? [0.7, 0.05, 0.08] : [0.55, 0.15, 0.6] });
+    } else this.swell = 1;
     const jolt = this.spasm > 0.4 ? (Math.random() < 0.5 ? -1 : 1) : 0;
     if (st.rejection >= 70) {
       // Pus violeta que gotea del cuerpo.
@@ -1277,7 +1288,10 @@ export class Player {
     for (const m of [this.mesh, this.selfMesh, this.glowMesh]) {
       placeMesh(m, x, y, BODY_W, BODY_H);
       m.position.x += fx; m.position.y += fy;
-      m.scale.x = this.facing * (1 + 0.14 * (this.dashK ?? 0)); // al lanzarse, la silueta se estira hacia delante
+      const sw = this.swell ?? 1;                                     // hinchado por la crisis de rechazo
+      m.scale.x = this.facing * (1 + 0.14 * (this.dashK ?? 0)) * sw; // al lanzarse, la silueta se estira hacia delante
+      m.scale.y = sw;
+      m.position.y += (sw - 1) * BODY_H / 2;                          // se hincha sin despegar los pies
       m.rotation.z = rz;                                              // nadando o encorvado, inclinado hacia delante
     }
     // Arco del golpe: aparece al salir el brazo y se desvanece, siempre por delante.

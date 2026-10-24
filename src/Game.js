@@ -117,21 +117,16 @@ export class Game {
     const st = this.state;
     st.on('damage', ({ n }) => { if (n >= 1) this.shake = Math.max(this.shake, 3); });
     st.on('death', (cause) => this.#onDeath(cause));
-    // Rechazo: lo que falla se cuenta como algo del cuerpo (diegético), no como un fallo
-    // del juego. El jugador ve el espasmo en el propio personaje (Player.rejectSpasm).
-    const FAIL_TEXT = {
-      dash: 'Los émbolos se agarrotan: tu cuerpo rechaza los Pistones.',
-      doubleJump: 'Los alveolos se cierran en un espasmo: no hay gas para el salto.',
-      wallClimb: 'Las garras tiemblan y no hacen presa: el injerto se resiste.',
-      grapple: 'El tendón se contrae solo y no sale: tu cuerpo lo rechaza.',
-    };
-    st.on('mutationFail', (ability) => {
-      this.audio.play('fail');
-      this.player?.rejectSpasm();
-      this.shake = Math.max(this.shake, 2);
-      if (this.time - (this.lastFailSay ?? -9) > 3) {
-        this.lastFailSay = this.time;
-        this.say(FAIL_TEXT[ability] ?? 'Un injerto no responde: tu cuerpo lo rechaza.', 1.8);
+    // El rechazo te revienta: una explosión de carne, pus y sangre.
+    st.on('rejectionBurst', () => {
+      const p = this.player;
+      this.shake = Math.max(this.shake, 16);
+      this.audio.play('crunch', p);
+      this.audio.play('splat', p);
+      this.gore.burst(p.x - 8, p.y - 6, p.w + 16, p.h + 12, { blood: '#8a0a14', flesh: ['#c98a5e', '#8a3048', '#7a2a8a', '#e8dcc8'] }, 2.2);
+      for (let i = 0; i < 40; i++) {
+        const a = Math.random() * Math.PI * 2, s = 60 + Math.random() * 200;
+        this.particles.emit(p.cx, p.cy, { vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, life: 0.8 + Math.random() * 0.5, gravity: 500, color: Math.random() < 0.4 ? [0.55, 0.15, 0.6] : [0.6, 0.03, 0.08], stain: Math.random() < 0.5 ? '#6a0a14' : '#4a1a50' });
       }
     });
     st.on('rejectionTier', (tier) => {
@@ -139,9 +134,9 @@ export class Game {
       this.player?.rejectSpasm();
       this.say([
         '',
-        'Tus injertos se inflaman (70 %): aún responden, pero no tardarán en fallar. Un Supresor del útero lo calma.',
-        'Tu cuerpo rechaza la carne ajena: las mutaciones empiezan a fallar.',
-        'CRISIS DE RECHAZO: los injertos te devoran por dentro. Busca un útero.',
+        'Tus injertos se inflaman (70 %). Un Supresor del útero lo calma.',
+        'Tu cuerpo rechaza la carne ajena: la presión sube.',
+        'CRISIS DE RECHAZO: tu cuerpo se hincha. Si no lo calmas en 20 segundos, reventarás.',
       ][tier], 4);
     });
     st.on('outOfBreath', () => {
@@ -1007,6 +1002,25 @@ export class Game {
     }
   }
 
+  // Velo del rechazo: un borde violeta que aparece desde el 70 %, late desde el umbral
+  // de fallo y, en la crisis, late cada vez más rápido y enrojece los últimos 10 s.
+  #rejectionVeil(dt) {
+    const st = this.state;
+    this.veilEl ??= document.getElementById('rej-veil');
+    if (!this.veilEl) return;
+    const r = st.immuneRejection || st.dead ? 0 : st.rejection;
+    const ck = st.crisisK;
+    this.veilPh = (this.veilPh ?? 0) + dt * (r >= 100 ? 1.2 + ck * 3 : 0.8);
+    const beat = Math.pow(Math.max(0, Math.sin(this.veilPh * Math.PI)), 3);
+    let o = 0;
+    if (r >= 100) o = 0.45 + 0.35 * beat + ck * 0.2;
+    else if (r >= st.failFrom) o = 0.22 + 0.18 * beat;
+    else if (r >= 70) o = 0.08 + 0.1 * ((r - 70) / (st.failFrom - 70));
+    const red = r >= 100 ? Math.max(0, (ck - 0.5) * 2) : 0; // últimos 10 s: rojo
+    this.veilEl.style.opacity = Math.min(0.8, o).toFixed(3); // que se siga viendo el juego
+    this.veilEl.style.setProperty('--veil', red > 0 ? `rgb(${Math.round(110 + 110 * red)},${Math.round(20 - 10 * red)},${Math.round(140 - 110 * red)})` : 'rgb(110,20,140)');
+  }
+
   #onDeath(cause) {
     this.mode = 'dead';
     this.deathTimer = 2.2;
@@ -1091,6 +1105,7 @@ export class Game {
     // Aberración cromática (0..1, el shader la mezcla al 35 % como máximo): solo late con
     // el corazón cuando la integridad está baja o el rechazo es crítico.
     const aberr = (hp < 0.3 || st.critical) ? this.pulse : 0;
+    this.#rejectionVeil(dt);
 
     const lp = p.lampPos;
     this.visual.render({

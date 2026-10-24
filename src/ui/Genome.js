@@ -1,5 +1,5 @@
 import { MUTATIONS, LINES, LINE_ORDER, FRAGMENTS, SYNERGIES, CLASHES, ROMAN, linesOf } from '../data/mutations.js';
-import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW, BLADE, OXYGEN_BASE, CAPACITY_PER_EXTENDER, THYMUS_TOTAL } from '../state/State.js';
+import { WEAPONS, LIGHT_DRAIN, ITEMS, REGEN_RATE, CELL_STORE_FROM, CELL_AUTO_BELOW, BLADE, OXYGEN_BASE, CAPACITY_PER_EXTENDER, THYMUS_TOTAL, CRISIS_TIME } from '../state/State.js';
 import { dnaTag } from '../entities/Pickup.js';
 import { PlayerBody, BODY_W, BODY_H } from '../entities/PlayerBody.js';
 import { caps } from './Hud.js';
@@ -445,7 +445,7 @@ export class Genome {
         `Células lumínicas, halladas o del útero: recargan el ojo y, con él al ${CELL_STORE_FROM} % o más, además se guardan.`],
       rej: [`${n(st.rejection)} %`,
         st.immuneRejection ? 'Tu sistema inmune calla: ya no rechaza nada.' : `Tu cuerpo rechaza los injertos. Hasta el ${st.failFrom} % no te castiga (al 70 % se inflama, solo aviso).`,
-        st.immuneRejection ? `Gen mutante total (${THYMUS_TOTAL} timos): el rechazo no sube, no falla y no daña.` : st.timers.suppress > 0 ? `Supresor activo: no sube durante ${Math.ceil(st.timers.suppress)} s más.` : `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Desde el ${st.failFrom} % las mutaciones fallan a veces (ahora ${Math.round(st.failChance * 100)} %); al 100 % además te dañan.`,
+        st.immuneRejection ? `Gen mutante total (${THYMUS_TOTAL} timos): el rechazo ya no sube.` : st.timers.suppress > 0 ? `Supresor activo: no sube durante ${Math.ceil(st.timers.suppress)} s más.` : `+${(st.rejectionPerSecond * 60).toFixed(1)}/min (carga ${st.load}/${st.capacity}${st.discord ? `, choques ${st.discord}` : ''}). Al 100 % tu cuerpo se hincha: si no lo calmas en ${CRISIS_TIME} s, revientas.${st.critical ? ` ¡Quedan ${Math.ceil(CRISIS_TIME - (st.crisisT ?? 0))} s!` : ''}`,
         `Lo frenan: Supresor del útero · extensores (${st.extenders}; +${CAPACITY_PER_EXTENDER} de carga cada uno) · Timos Necróticos ${st.thymus}/${THYMUS_TOTAL} (con todos, inmune).`],
     }[id];
     this.vinfo.innerHTML = `

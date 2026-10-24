@@ -24,7 +24,7 @@ const HUD_TUTOR = [
   { id: 'lux', sac: 'lux', color: '#ffd23f', test: (a, b) => b.lux > a.lux + 0.5 || b.cells > a.cells,
     text: '<b>LUZ</b> · la vejiga amarilla: <b>la energía de tu ojo</b>. Se gasta con el ojo encendido (F); las células lumínicas como esta la recargan, y las que sobran se guardan.' },
   { id: 'rej', sac: 'rej', color: '#c07bff', test: (a, b) => b.rej > a.rej,
-    text: '<b>RECHAZO</b> · la vejiga violeta: <b>tu cuerpo lucha contra los injertos</b>. Alto, las mutaciones fallan; al 100 % te hace daño. Lo calman los supresores del útero.' },
+    text: '<b>RECHAZO</b> · la vejiga violeta: <b>tu cuerpo lucha contra los injertos</b>. Al 100 % el cuerpo se hincha y, si no lo calmas en 20 segundos, revientas. Lo calman los supresores del útero.' },
   { id: 'dead', sac: 'dead', color: '#b0a0a8', test: (a, b) => b.dead > a.dead,
     text: '<b>CORRUPCIÓN</b> · el bulto oscuro: <b>tejido muerto</b> que te roba vida máxima. Lo cura el Tejido sano.' },
   { id: 'scrap', slot: 'scrap', color: '#e0d4b8', test: (a, b) => b.scrap > a.scrap,

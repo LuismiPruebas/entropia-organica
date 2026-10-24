@@ -907,6 +907,16 @@ body.touch #controls-btn .dim { display: none; }
 #fullscreen:hover { opacity: 1; color: #7dff9a; }
 :fullscreen #fullscreen { display: none; }
 
+#rej-veil {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  --veil: rgb(110, 20, 140);
+  background: radial-gradient(ellipse at center, transparent 45%, color-mix(in srgb, var(--veil) 55%, transparent) 78%, var(--veil) 100%);
+  mix-blend-mode: screen;
+}
+
 #fade {
   position: absolute;
   inset: 0;
