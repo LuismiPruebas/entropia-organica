@@ -2069,133 +2069,222 @@ export const BEHAVIORS = {
     if (e.hitWall && e.state === 'leap') e.vx = 0;
   },
 
+  // Glándula Gástrica (semijefe, poseída por el parásito). Un ciclo en cuatro tiempos:
+  //   hang   colgada del techo por sus tubos: escupe ácido (enfurecida, rocía) y suelta
+  //          anguilas en la charca.
+  //   detach se exprime, se le rompen los tubos y cae al ácido, que sube e inunda la sala.
+  //   float  flota en la superficie como un pepino de mar, se deja ir hacia ti y te
+  //          latiguea con un tentáculo que se estira; es cuando más expuesta queda.
+  //   climb  lanza los flagelos al techo, se iza y vuelve a colgar (el ácido baja).
+  // Al vencerla se desinfla (deflate): queda una cabeza que habla (talk) y se deshace.
+  // Dibujo: entities/Gland.js (lee attach, flag, float, tent, deflate, talk...).
   bossGland(e, dt, g) {
     const p = g.player, d = e.def;
     const enraged = e.hp < d.hp / 2;
-    // Cuelga del techo (ceilY) a cierta distancia: los tubos se ven y se estiran.
     e.ceilY ??= e.y;
     e.home ??= { x: e.x, y: e.y + 20 };
     e.trackX ??= e.home.x;
     e.depth ??= 0;
-    e.gs ??= 'idle';
+    e.gs ??= 'hang';
+    e.attach ??= 1;
+    e.flag ??= 0;
+    e.float ??= 0;
+    e.deflate ??= 0;
     e.timer = (e.timer ?? 0) - dt;
     e.cool = (e.cool ?? 2.2) - dt;
-    e.floodIn = (e.floodIn ?? 8) - dt;
+    e.phaseT = (e.phaseT ?? (enraged ? 7 : 9)) - dt;
     const pool = g.room.hazards.find((h) => h.def?.manual);
+    const base = d.poolBase ?? 0.35;                                  // el ácido que siempre queda
     const side = Math.sign(p.cx - e.cx) || 1;
     e.face = (e.face ?? side) + (side - (e.face ?? side)) * Math.min(1, dt * 1.6);
     const mouth = () => ({ x: e.cx + e.face * 15, y: e.cy + 8 });
     const go = (st, time) => { e.gs = st; e.timer = time; };
-
-    // Hasta dónde puede descolgarse: casi rozando el suelo que tiene debajo.
-    if (e.maxDip === undefined) {
-      let y = e.home.y + e.h;
-      while (y < g.world.pixelH && !g.world.solidAtPx(e.cx, y)) y += 2;
-      e.maxDip = Math.max(0, Math.min(72, y - (e.home.y + e.h) - 4));
-    }
-
-    // Seguimiento lento y péndulo.
-    const target = Math.max(e.home.x - 40, Math.min(e.home.x + 40, p.cx - e.w / 2));
-    e.trackX += Math.sign(target - e.trackX) * Math.min(Math.abs(target - e.trackX), (enraged ? 26 : 18) * dt);
-    e.swingV = (e.swingV ?? 0) + (-(e.swingX ?? 0) * 9 - (e.swingV ?? 0) * 0.6) * dt + Math.sin(e.t * 1.1) * 14 * dt;
-    e.swingX = (e.swingX ?? 0) + e.swingV * dt;
-
-    let want = 6 + Math.sin(e.t * (enraged ? 2.2 : 1.6)) * 7; // respira subiendo y bajando
-    let rate = 3;
-    e.mouthOpen = 0.18 + Math.max(0, Math.sin(e.t * 2.3)) * 0.12;
     e.swell = Math.max(0, (e.swell ?? 0) - dt * 2);
     e.lash = Math.max(0, (e.lash ?? 0) - dt * 1.5);
+    e.mouthOpen = 0.18 + Math.max(0, Math.sin(e.t * 2.3)) * 0.12;
+    const surfaceY = () => (pool && pool.level > 0.01 ? pool.surfaceY : g.world.pixelH - TILE * 2);
+    const tentTip = () => {
+      const T = e.tent; if (!T) return null;
+      const len = 18 + T.k * 120;
+      return { x: e.cx + Math.cos(T.a) * len, y: e.cy + Math.sin(T.a) * len };
+    };
 
-    if (e.flooding > 0) {
-      e.flooding -= dt;
-      if (pool) pool.target = 1;
-      if (e.flooding <= 0 && pool) pool.target = 0;
-      want = -4 + Math.sin(e.t * 9) * 2; // se exprime pegada al techo
-      e.swell = 0.6 + Math.sin(e.t * 9) * 0.4;
-      e.mouthOpen = 1;
-    } else if (e.gs === 'idle') {
-      if (e.floodIn <= 0) {
-        e.flooding = 4.5;
-        e.floodIn = enraged ? 9 : 12;
-        g.audio.play(d.sounds?.flood ?? 'mutate', e);
-        g.say('La glándula se exprime: el ácido sube. ¡Busca altura!', 2.5);
-      } else if (e.cool <= 0) {
-        const below = Math.abs(p.cx - e.cx) < 46 && p.y > e.y && e.maxDip > 16;
-        e.atk = (e.atk ?? 0) + 1;
-        if (below && e.atk % 2 === 0) { go('dipWind', 0.6); g.audio.play('glandRumble', e); }
-        else if (enraged && e.atk % 3 === 0) { go('sprayWind', 0.5); g.audio.play(d.sounds?.attack ?? 'charge', e); }
-        else { go('spitWind', 0.8); g.audio.play(d.sounds?.attack ?? 'charge', e); }
-      }
-    } else if (e.gs === 'spitWind') {
-      want = -3;
-      e.swell = Math.min(1, 1 - e.timer / 0.8 + 0.2);
-      e.mouthOpen = 0.3 + 0.7 * (1 - e.timer / 0.8);
-      if (e.timer <= 0) {
-        const m = mouth();
-        for (const k of enraged ? [-1, -0.5, 0, 0.5, 1] : [-1, 0, 1]) {
-          g.spawnProjectile({
-            x: m.x - 3, y: m.y - 3, w: 6, h: 6, vx: (p.cx - m.x) / 1.0 + k * 45, vy: -120, gravity: 420, life: 3,
-            damage: 6, kind: 'acidGlob', owner: 'enemy', color: '#9be06a', glow: [0.4, 1, 0.3], burstRadius: 22, burstDamage: 5,
-          });
-        }
-        g.audio.play('acid', e);
-        e.depth -= 10; // retroceso
-        e.swingV -= side * 30;
-        e.swell = 0;
-        go('recover', 0.5);
-      }
-    } else if (e.gs === 'sprayWind') {
-      want = -2;
-      e.swell = 1 - e.timer / 0.5;
-      e.mouthOpen = 1;
-      if (e.timer <= 0) { go('spray', 1.3); e.drip = 0; g.audio.play(d.sounds?.vomit ?? 'glandRetch', e); }
-    } else if (e.gs === 'spray') {
-      e.mouthOpen = 1;
-      e.drip = (e.drip ?? 0) - dt;
-      if (e.drip <= 0) {
-        e.drip = 0.06;
-        const m = mouth(), k = 1 - e.timer / 1.3;
-        const a = Math.atan2(p.cy - m.y, p.cx - m.x) + (k - 0.5) * 1.1 * -side;
-        g.spawnProjectile({
-          x: m.x - 2, y: m.y - 2, w: 4, h: 4, vx: Math.cos(a) * 190, vy: Math.sin(a) * 190, gravity: 280, life: 1.6,
-          damage: 4, kind: 'acidStream', owner: 'enemy', color: '#9be06a', glow: [0.4, 1, 0.3],
+    // --- Desinflada: cae, habla y se deshace.
+    if (e.gs === 'deflate') {
+      e.exposed = false;
+      e.tent = null;
+      e.attach = Math.max(0, e.attach - dt * 3);
+      e.flag = Math.max(0, e.flag - dt * 2);
+      e.deflate = Math.min(1, e.deflate + dt / 2.4);
+      if (pool) pool.target = 0;
+      e.vy = Math.min(220, (e.vy ?? 0) + GRAVITY * 0.5 * dt);
+      e.vx = 0;
+      g.world.move(e, dt);
+      if (Math.random() < 0.5) g.glowParticles.emit(e.cx + (Math.random() - 0.5) * e.w * (1 - e.deflate * 0.6), e.cy, { vx: (Math.random() - 0.5) * 60, vy: -30 - Math.random() * 40, life: 0.6, color: [0.4, 1, 0.3] });
+      if (Math.random() < dt * 6) g.audio.play('sizzle', e);
+      if (e.deflate >= 1 && e.onGround && e.timer <= 0) {
+        go('talk', 0);
+        e.talk = 0;
+        g.dialogue(d.lastWords ?? ['...'], {
+          speaker: d.headName ?? 'La cabeza',
+          owner: e,
+          onLine: () => { e.talk = 1.5; g.audio.play('faceFree', e); },
+          onEnd: () => { e.gs = 'dissolve'; e.timer = 1.2; },
         });
-        if (Math.random() < 0.25) g.audio.play('sizzle', m);
       }
-      if (e.timer <= 0) go('recover', 0.6);
-    } else if (e.gs === 'dipWind') {
-      want = -8 + Math.sin(e.t * 30) * 1.5; // se encoge temblando contra el techo
-      e.swell = 0.5;
-      e.lash = 0.6;
-      e.mouthOpen = 0.6;
-      if (e.timer <= 0) go('dip', 0.5);
-    } else if (e.gs === 'dip') {
-      want = e.maxDip;
-      rate = 14;
-      e.lash = 1;
-      e.mouthOpen = 1;
-      if (e.depth > e.maxDip - 4 || e.timer <= 0) { go('dipHold', enraged ? 0.9 : 0.7); g.shake = Math.max(g.shake, 4); g.audio.play('thump', e); }
-    } else if (e.gs === 'dipHold') {
-      want = e.maxDip - 2 + Math.sin(e.t * 14) * 2;
-      e.lash = 1;
-      e.mouthOpen = 1;
-      // Los cilios barren todo lo que hay debajo y a los lados.
-      hitZone(g, e, e.cx - 46, e.y + e.h - 6, 92, 26, 10);
-      if (e.timer <= 0) go('rise', 1.2);
-    } else if (e.gs === 'rise') {
-      want = 6;
-      rate = 1.6;
-      if (e.timer <= 0) go('recover', 0.2);
-    } else if (e.gs === 'recover' && e.timer <= 0) {
-      e.gs = 'idle';
-      e.cool = enraged ? 1.6 : 2.4;
+      return;
+    }
+    if (e.gs === 'talk' || e.gs === 'dissolve') {
+      e.exposed = false;
+      e.talk = Math.max(0, (e.talk ?? 0) - dt);
+      e.vy = Math.min(220, (e.vy ?? 0) + GRAVITY * 0.5 * dt);
+      g.world.move(e, dt);
+      if (e.gs === 'dissolve') {
+        e.melt = Math.min(1, (e.melt ?? 0) + dt / 1.2);
+        if (Math.random() < 0.6) g.particles.emit(e.cx + (Math.random() - 0.5) * 16, e.y + e.h - 4, { vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, life: 0.6, gravity: 400, color: [0.75, 0.55, 0.6], stain: '#5a3a44' });
+        if (e.timer <= 0) { e.deflating = false; e.hp = 0; e.die(); }
+      }
+      return;
     }
 
-    e.depth += (want - e.depth) * Math.min(1, dt * rate);
-    e.x = e.trackX + e.swingX;
-    e.y = e.home.y + Math.max(-4, e.depth);
-    e.exposed = e.flooding > 0 || ['spitWind', 'sprayWind', 'spray', 'dip', 'dipHold'].includes(e.gs);
+    // --- Tentáculo (flotando): se encoge hacia atrás, se dispara hacia ti y vuelve.
+    if (e.tent) {
+      const T = e.tent;
+      T.t += dt;
+      if (T.st === 'wind') { T.k = Math.max(0, 0.15 - T.t * 0.3); T.a += (Math.atan2(p.cy - e.cy, p.cx - e.cx) - T.a) * Math.min(1, dt * 6); if (T.t >= T.wind) { T.st = 'lash'; T.t = 0; g.audio.play('stalkerLunge', e); } }
+      else if (T.st === 'lash') {
+        T.k = Math.min(1, T.t / 0.22);
+        // Hiere a lo largo del último tramo del tentáculo.
+        if (!T.hit) {
+          for (let u = 0.45; u <= 1.001; u += 0.11) {
+            const len = (18 + T.k * 120) * u, x = e.cx + Math.cos(T.a) * len, y = e.cy + Math.sin(T.a) * len;
+            if (x > p.x - 4 && x < p.x + p.w + 4 && y > p.y - 4 && y < p.y + p.h + 4) { T.hit = true; g.hurtPlayer(d.lashDamage ?? 12, e.cx, d.name); break; }
+          }
+        }
+        if (T.t >= 0.5) { T.st = 'back'; T.t = 0; }
+      } else { T.k = Math.max(0, 1 - T.t / 0.35); if (T.t >= 0.35) e.tent = null; }
+    }
+
+    if (e.gs === 'hang') {
+      // Colgada: respira, sigue tu posición y ataca desde arriba.
+      e.attach = Math.min(1, e.attach + dt * 2);
+      e.float = Math.max(0, e.float - dt * 2);
+      if (pool) pool.target = base;
+      const target = Math.max(e.home.x - 60, Math.min(e.home.x + 60, p.cx - e.w / 2));
+      e.trackX += Math.sign(target - e.trackX) * Math.min(Math.abs(target - e.trackX), (enraged ? 26 : 18) * dt);
+      e.swingV = (e.swingV ?? 0) + (-(e.swingX ?? 0) * 9 - (e.swingV ?? 0) * 0.6) * dt + Math.sin(e.t * 1.1) * 14 * dt;
+      e.swingX = (e.swingX ?? 0) + e.swingV * dt;
+      let want = 6 + Math.sin(e.t * (enraged ? 2.2 : 1.6)) * 7;
+      if (e.atk === 'spitWind') {
+        want = -3; e.swell = Math.min(1, 1 - e.timer / 0.8 + 0.2); e.mouthOpen = 0.3 + 0.7 * (1 - e.timer / 0.8);
+        if (e.timer <= 0) {
+          const m = mouth();
+          for (const k of enraged ? [-1, -0.5, 0, 0.5, 1] : [-1, 0, 1]) {
+            g.spawnProjectile({ x: m.x - 3, y: m.y - 3, w: 6, h: 6, vx: (p.cx - m.x) / 1.0 + k * 45, vy: -120, gravity: 420, life: 3, damage: 6, kind: 'acidGlob', owner: 'enemy', color: '#9be06a', glow: [0.4, 1, 0.3], burstRadius: 22, burstDamage: 5 });
+          }
+          g.audio.play('acid', e);
+          e.depth -= 10; e.swell = 0; e.atk = null; e.cool = enraged ? 1.4 : 2.1;
+        }
+      } else if (e.atk === 'spray') {
+        e.mouthOpen = 1;
+        e.drip = (e.drip ?? 0) - dt;
+        if (e.drip <= 0) {
+          e.drip = 0.06;
+          const m = mouth(), k = 1 - e.timer / 1.3;
+          const an = Math.atan2(p.cy - m.y, p.cx - m.x) + (k - 0.5) * 1.1 * -side;
+          g.spawnProjectile({ x: m.x - 2, y: m.y - 2, w: 4, h: 4, vx: Math.cos(an) * 190, vy: Math.sin(an) * 190, gravity: 280, life: 1.6, damage: 4, kind: 'acidStream', owner: 'enemy', color: '#9be06a', glow: [0.4, 1, 0.3] });
+        }
+        if (e.timer <= 0) { e.atk = null; e.cool = 1.8; }
+      } else if (e.atk === 'brood') {
+        // Pare anguilas: le revientan las vesículas y caen al ácido.
+        e.swell = 0.8; e.mouthOpen = 0.9;
+        if (e.timer <= 0) {
+          const n = enraged ? 2 : 1;
+          for (let i = 0; i < n; i++) {
+            const m = mouth(), eel = g.spawnMinion('anguila', m.x + (i - 0.5) * 16, m.y + 6);
+            eel.state = 'air'; eel.leftT = 1; eel.vx = eel.leapVx = (Math.random() - 0.5) * 60; eel.vy = 0; eel.home = { x: eel.x, y: eel.y };
+          }
+          g.audio.play('splat', e);
+          e.atk = null; e.cool = 1.6;
+        }
+      } else if (e.cool <= 0) {
+        const eels = g.room.enemies.filter((m) => m.minion && m.alive && m.type === 'anguila').length;
+        if (eels < (enraged ? 4 : 2) && Math.random() < 0.4) { e.atk = 'brood'; e.timer = 0.9; g.audio.play('glandRumble', e); }
+        else if (enraged && Math.random() < 0.4) { e.atk = 'spray'; e.timer = 1.3; g.audio.play(d.sounds?.attack ?? 'charge', e); }
+        else { e.atk = 'spitWind'; e.timer = 0.8; g.audio.play(d.sounds?.attack ?? 'charge', e); }
+      }
+      e.depth += (want - e.depth) * Math.min(1, dt * 3);
+      e.x = e.trackX + e.swingX;
+      e.y = e.home.y + Math.max(-4, e.depth);
+      e.exposed = e.atk === 'spitWind' || e.atk === 'spray';
+      if (e.phaseT <= 0 && !e.atk) { go('detach', 0.9); g.audio.play(d.sounds?.flood ?? 'glandFlood', e); }
+      return;
+    }
+    if (e.gs === 'detach') {
+      // Se exprime, los tubos revientan y cae.
+      e.swell = 1; e.mouthOpen = 1;
+      e.x += (Math.random() - 0.5) * 2;
+      if (e.timer <= 0 && e.attach > 0.5) {
+        e.attach = 0.4;
+        e.vy = 0;
+        g.shake = Math.max(g.shake, 6);
+        g.audio.play('tear', e);
+        for (let i = 0; i < 20; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * 60, e.y, { vx: (Math.random() - 0.5) * 80, vy: -20 - Math.random() * 60, life: 0.7, gravity: 500, color: [0.55, 0.45, 0.5] });
+      }
+      if (e.timer <= 0) {
+        e.attach = Math.max(0, e.attach - dt * 1.5);
+        if (pool) pool.target = 1;                                    // el ácido sube con ella
+        e.vy = Math.min(300, (e.vy ?? 0) + GRAVITY * 0.6 * dt);
+        e.y += e.vy * dt;
+        const sy = surfaceY();
+        if (e.y + e.h * 0.55 >= sy) {
+          e.y = sy - e.h * 0.55;
+          g.shake = Math.max(g.shake, 8);
+          g.audio.play('splat', e);
+          for (let i = 0; i < 24; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * 70, sy, { vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 140, life: 0.8, gravity: 600, color: [0.35, 0.75, 0.15], stain: '#4a8a1a' });
+          go('float', enraged ? 6.5 : 7.5);
+          e.cool = 0.8;
+        }
+      }
+      return;
+    }
+    if (e.gs === 'float') {
+      // Flota como un pepino de mar: se alarga, cabecea con las olas y se arrastra hacia ti.
+      e.attach = 0;
+      e.float = Math.min(1, e.float + dt * 2);
+      e.exposed = true;
+      e.mouthOpen = 0.6 + 0.4 * Math.max(0, Math.sin(e.t * 3));
+      if (pool) pool.target = 1;
+      const sy = surfaceY();
+      e.y += (sy - e.h * 0.55 + Math.sin(e.t * 2) * 2 - e.y) * Math.min(1, dt * 4);
+      const tx = p.cx - e.w / 2;
+      const lo = TILE * 2, hi = g.world.pixelW - TILE * 2 - e.w;
+      if (!e.tent) e.x = Math.max(lo, Math.min(hi, e.x + Math.sign(tx - e.x) * Math.min(Math.abs(tx - e.x), (enraged ? 34 : 24) * dt)));
+      if (!e.tent && e.cool <= 0) {
+        e.tent = { st: 'wind', t: 0, k: 0, wind: enraged ? 0.35 : 0.5, a: Math.atan2(p.cy - e.cy, p.cx - e.cx), hit: false };
+        e.cool = enraged ? 1.1 : 1.6;
+        g.audio.play('glandRumble', e);
+      }
+      if (e.timer <= 0 && !e.tent) { go('climb', 2.6); e.flag = 0; e.climbFrom = e.y; e.home.x = Math.max(lo, Math.min(hi, e.x)); e.trackX = e.home.x; e.swingX = 0; }
+      return;
+    }
+    if (e.gs === 'climb') {
+      // Los flagelos suben al techo (1 s) y la izan (1,6 s); el ácido baja.
+      e.exposed = false;
+      e.float = Math.max(0, e.float - dt * 1.5);
+      const k = 1 - e.timer / 2.6;
+      e.flag = Math.min(1, k / 0.38);
+      if (k > 0.38) {
+        const u = Math.min(1, (k - 0.38) / 0.62), ease = u * u * (3 - 2 * u);
+        e.y = e.climbFrom + (e.home.y + 6 - e.climbFrom) * ease;
+        e.attach = Math.min(1, u * 1.2);
+        if (pool) pool.target = base;
+      }
+      if (e.timer <= 0) { go('hang', 0); e.flag = 0; e.attach = 1; e.depth = 6; e.phaseT = enraged ? 7 : 9; e.cool = 1.2; }
+      return;
+    }
   },
+
 };
 
 export class Enemy {
@@ -2436,7 +2525,14 @@ export class Enemy {
     if (this.exposed && this.def.exposedBonus) n *= this.def.exposedBonus;
     // Debilidades por tipo de golpe (p. ej. el Ganglio Madre ante las espinas del simbionte).
     n *= this.def.weakTo?.[kind] ?? 1;
+    if (this.deflating) return false;
     this.hp -= n;
+    if (this.def.deflates && this.hp <= 0 && !this.deflating) {
+      this.hp = 1; this.deflating = true; this.gs = 'deflate'; this.timer = 0.6; this.vy = 0; this.tent = null;
+      this.flash = 0.08; this.game.audio.play(this.def.sounds?.hurt ?? 'hit', this);
+      this.game.audio.stopBossMusic?.(0.6);
+      return true;
+    }
     if (this.def.behavior === 'bossMoth' && n > 0) this.struck = { x: at?.x ?? this.game.player.cx, y: at?.y ?? this.game.player.cy };
     if (this.def.behavior === 'golem' && n > 0 && !(this.gen > 0)) this.provoked = true;
     if (this.state === 'latch' && n > 0) this.shaken = true;

@@ -390,22 +390,32 @@ export const ENEMIES = {
     gore: { blood: '#6aa02a', flesh: ['#7a2f50', '#5e1e3c', '#9be06a', '#e8dcc8'] },
     voice: ['bubble', 'growl'],
     behavior: 'bossGland',
-    boss: true,
-    exposedOnly: true, // solo vulnerable con la boca abierta
-    hp: 120, w: 62, h: 50,
+    boss: true, // semijefe: el jefe de la zona es el Sapo Partero
+    exposedOnly: true, // solo vulnerable con la boca abierta (y flotando en el ácido)
+    hp: 140, w: 62, h: 50,
     light: { color: [0.34, 0.2, 0.24], r: 170 },
     contactDamage: 10,
-    drop: { dna: 'tendon' },
+    lashDamage: 12,  // el latigazo del tentáculo (flotando)
+    poolBase: 0.35,  // el ácido que siempre queda en su arena (las anguilas viven en él)
+    deflates: true,  // no revienta al morir: se desinfla, habla y se deshace
+    headName: 'El que vino antes',
+    lastWords: [
+      'Ah... Por fin se calla. Hacía tanto que no oía mi propia voz...',
+      'Yo también bajé hasta aquí, como tú. Con mis injertos y mi luz, a arrancarle el parásito a este cuerpo.',
+      'Llegué hasta el estómago. Él me encontró antes. No me mató: me dejó dentro, digiriendo para él.',
+      'Cada gota de ácido que te escupía, te la escupía yo. No podía dejar de hacerlo.',
+      'Más abajo está la criadora. Lo que él quiere de este cuerpo nace allí.',
+      'Toma lo que me queda. A mí ya no me sirve... No dejes que te haga lo mismo.',
+    ],
+    drop: { items: ['thymus'] },
     reward: {
-      revealBiome: 'digestivo',
-      flag: 'mouthsSealed',
       lore: ['MEMORIA: EL HAMBRE', 'Recuerdas el comedor del laboratorio. Te daban de comer algo que todavía se movía. "Es para que tu cuerpo aprenda", dijeron. Tu cuerpo aprendió.'],
-      text: 'El Sistema Digestivo se cierra: todas sus bocas se sellan.',
+      text: 'De la glándula no queda más que un charco.',
     },
     sounds: { reveal: 'glandRumble', aura: 'glandRumble', attack: 'glandRetch', flood: 'glandFlood', hurt: 'glandHurt', die: 'glandDie' },
     auraPeriod: 3.2,
-    habits: 'Sube y baja colgada de sus tubos y se balancea. Se hincha y escupe grumos de ácido; enfurecida, rocía un chorro que barre el suelo. Si te pones debajo, se descuelga de golpe y te latiguea con los cilios. Solo se la puede herir con la boca abierta.',
-    lore: 'El estómago del organismo, colgado del techo de su propia cavidad por los conductos que lo alimentan. Mastica en vacío lo que ya no le llega. Escupe lo que no puede digerir y, cuando se exprime, inunda la sala de ácido.',
+    habits: 'Colgada del techo por sus tubos, escupe grumos de ácido (enfurecida, rocía un chorro) y pare anguilas que caen a la charca. Cada poco se exprime, se le rompen los tubos y cae al ácido, que inunda la sala: flota como un pepino de mar, se arrastra hacia ti y te latiguea con un tentáculo que se estira. Luego lanza sus flagelos al techo y se iza. Solo se la puede herir con la boca abierta, y flotando la tiene siempre abierta.',
+    lore: 'El estómago del organismo, colgado del techo de su propia cavidad por los conductos que lo alimentan. Pero no siempre fue un estómago: el parásito encontró dentro a alguien que había bajado a buscarlo, y lo puso a digerir.',
   },
   // ======================= JEFES ABERRACIÓN =======================
   // Cuerpos de distintas especies fundidos en uno. Tienen música propia (`music`,
@@ -503,10 +513,12 @@ export const ENEMIES = {
     contactDamage: 12,
     leapDamage: 18,   // el topetazo del salto
     biteDamage: 16,   // el bocado a quemarropa (la cabeza sale disparada)
-    drop: { biomass: 25, fragments: 2, items: ['thymus'] },
+    drop: { dna: 'tendon', biomass: 25, fragments: 2, items: ['thymus'] },
     reward: {
+      revealBiome: 'digestivo',
+      flag: 'mouthsSealed',
       lore: ['MEMORIA: LA CRIADORA', 'En el laboratorio había una cámara húmeda donde lo criaban todo. Alguien dijo que lo que crecía allí no debía salir nunca. Lo que crecía allí te miraba cuando pasabas por delante del cristal.'],
-      text: 'La charca se aquieta. Las crías que quedaban se deshacen en el ácido.',
+      text: 'La charca se aquieta y las crías se deshacen en el ácido. El Sistema Digestivo se cierra: todas sus bocas se sellan.',
     },
     sounds: { reveal: 'toadCroak', attack: 'spit', summon: 'choirRetch', hurt: 'toadHurt', die: 'toadDie' },
     auraPeriod: 3,

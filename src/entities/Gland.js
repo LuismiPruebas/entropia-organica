@@ -46,18 +46,23 @@ const SHADES = [C.deep, C.sulcus, C.shade, C.low, C.mid, C.light, C.crest];
 
 // Lóbulos que se inflan por turnos: ángulo, amplitud, velocidad, fase.
 const LOBES = [[-2.4, 0.09, 1.3, 0], [-1.6, 0.07, 1.7, 2], [-0.7, 0.1, 1.1, 4], [0.3, 0.06, 2.1, 1], [2.6, 0.08, 1.5, 3]];
+const GW_C = 300, GH_C = 440;
 const angDist = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
 
 export const GLAND = {
-  size: () => [150, 190],
-  // El lienzo arranca en el techo del que cuelga (e.ceilY, lo fija bossGland).
-  origin: (e) => [e.cx - 75, (e.ceilY ?? e.y) - 2],
+  // Lienzo grande: del techo del que cuelga (e.ceilY, lo fija bossGland) hasta el ácido
+  // en el que flota, y ancho para el latigazo del tentáculo.
+  size: () => [GW_C, GH_C],
+  origin: (e) => [e.cx - GW_C / 2, (e.ceilY ?? e.y) - 2],
   noFlip: true,
   draw(g, gl, e, t, game) {
     const F = field();
     const [ox, oy] = GLAND.origin(e);
     const cx = e.cx - ox, cy = e.cy - oy; // centro del cuerpo en el lienzo
-    const RX = 31, RY = 24;
+    // Flotando se alarga como un pepino de mar; desinflada encoge y se arruga.
+    const fl = e.float ?? 0, df = e.deflate ?? 0, melt = e.melt ?? 0;
+    const RX = 31 * (1 + fl * 0.45) * (1 - df * 0.62) * (1 - melt * 0.5), RY = 24 * (1 - fl * 0.28) * (1 - df * 0.5) * (1 - melt * 0.6);
+    const attach = e.attach ?? 1;
     const open = e.mouthOpen ?? 0.2;
     const swell = e.swell ?? 0; // contracción antes de escupir / inundar
     const lash = e.lash ?? 0; // cilios latigueando (al bajar)
@@ -77,7 +82,31 @@ export const GLAND = {
     // --- Tubos: del techo (fijos en el mundo) al cuerpo. Anillos que se separan
     // cuando el cuerpo baja (elásticos) y una onda que los recorre bombeando.
     const homeCx = e.home ? e.home.x + e.w / 2 - ox : cx;
-    for (const [i, ax, bx] of [[0, -24, -17], [1, -9, -6], [2, 7, 6], [3, 22, 16]]) {
+    // Muñones de los tubos rotos colgando del techo (y goteando) mientras no está colgada.
+    if (attach < 0.98) {
+      for (const [i, ax] of [[0, -24], [1, -9], [2, 7], [3, 22]]) {
+        const x0 = homeCx + ax, L = 14 + attach * 30 + Math.sin(t * 2 + i) * 2;
+        for (let y = 0; y < L; y++) { const sw = Math.sin(t * 1.5 + i + y * 0.1) * y * 0.06; P(g, x0 + sw - 2, y, C.tubeDark, 5, 1); P(g, x0 + sw - 1, y, y % 4 === 0 ? C.brass : C.tube, 3, 1); }
+        const dl = ((t * 30 + i * 9) % 20);
+        P(g, x0, L + dl, '#9be06a'); P(gl, x0, L + dl, '#5aff4a');
+      }
+    }
+    // Flagelos que suben al techo para izarla (e.flag 0..1).
+    const flag = e.flag ?? 0;
+    if (flag > 0) {
+      for (let i = 0; i < 6; i++) {
+        const bx = cx + (i - 2.5) * RX * 0.3, by = cy - RY * 0.8;
+        const tx = homeCx + (i - 2.5) * 12, ty = 0;
+        const n = 60, upto = Math.floor(n * Math.min(1, flag));
+        for (let k = 0; k <= upto; k++) {
+          const u = k / n, wob = Math.sin(t * 6 + i * 1.7 + u * 9) * 4 * (1 - u) * (1 - flag * 0.6);
+          const x = bx + (tx - bx) * u + wob, y = by + (ty - by) * u;
+          P(g, x, y, k % 6 === 0 ? C.ciliaTip : C.cilia, 2, 1);
+        }
+        if (upto >= n) P(gl, tx, 1, '#ff8090', 2, 2);
+      }
+    }
+    if (attach >= 0.98) for (const [i, ax, bx] of [[0, -24, -17], [1, -9, -6], [2, 7, 6], [3, 22, 16]]) {
       const x0 = homeCx + ax, y0 = 0;
       const top = cy - RY * R(-Math.PI / 2) + 3;
       const x1 = cx + bx, y1 = top + Math.abs(bx) * 0.35;
@@ -133,6 +162,27 @@ export const GLAND = {
       if (reach > 0.4 || lash > 0.5) P(gl, x, y, '#ff8090');
     }
 
+    // --- Tentáculo que se estira hacia ti (flotando): grueso en la raíz, ventosas pálidas
+    // a un lado y una garra de hueso en la punta.
+    if (e.tent) {
+      const T = e.tent, len = 18 + T.k * 120, ca = Math.cos(T.a), sa = Math.sin(T.a);
+      const steps = Math.ceil(len / 1.5);
+      for (let k = 0; k <= steps; k++) {
+        const u = k / steps, l = u * len, wv = Math.sin(t * 9 - u * 8) * 3 * (1 - T.k * 0.7) * u;
+        const x = cx + ca * l - sa * wv, y = cy + sa * l + ca * wv;
+        const w = Math.max(1.5, 7 * (1 - u * 0.75));
+        for (let q = -w; q <= w; q += 1) {
+          const px = x - sa * q, py = y + ca * q;
+          const c = Math.abs(q) > w - 1 ? C.outline : q < -w * 0.3 ? C.light : q > w * 0.4 ? C.shade : C.mid;
+          P(g, px, py, c);
+        }
+        if (k % 5 === 0 && u > 0.15) { P(g, x + sa * (w - 1.5), y - ca * (w - 1.5), C.ciliaTip, 2, 2); }
+      }
+      const tx = cx + ca * len, ty = cy + sa * len;
+      for (const s2 of [-1, 1]) for (let k = 0; k < 6; k++) P(g, tx + ca * k + -sa * s2 * k * 0.6, ty + sa * k + ca * s2 * k * 0.6, k > 3 ? C.tooth : C.toothDark);
+      if (T.st === 'lash') P(gl, tx - 2, ty - 2, '#ff6070', 4, 4);
+    }
+
     // --- Cuerpo: silueta lobulada, sombreado como una esfera y circunvoluciones.
     const u0 = face * 0.35; // la textura gira un poco con la boca (como si rotara)
     for (let y = -RY - 6; y <= RY + 6; y++) {
@@ -148,7 +198,7 @@ export const GLAND = {
         const fv = Math.min(GH - 1, Math.max(0, Math.round((y / (RY * rr) * 0.5 + 0.5) * (GH - 1))));
         const f = F[fv * GW + fu];
         const bulge = Math.sin(f * Math.PI); // cresta de la circunvolución
-        let v = lit * 0.6 + bulge * 0.5 - 0.05;
+        let v = lit * 0.6 + bulge * 0.5 - 0.05 - df * 0.25 - melt * 0.3;
         if (f < 0.07 || f > 0.95) v = Math.min(v, 0.18); // surco
         if (y > RY * 0.35) v -= 0.18 * ((y - RY * 0.35) / RY) * 2; // la parte de abajo, en sombra
         P(g, cx + x, cy + y, SHADES[Math.max(0, Math.min(6, Math.floor(v * 7)))]);
@@ -165,6 +215,25 @@ export const GLAND = {
         if (q < 0.4 && swell > 0.3) P(gl, ex + xx, ey + yy, '#7aff5a');
       }
       P(g, ex - r * 0.4, ey - r * 0.4, '#ffffff');
+    }
+
+    // Desinflada: lo que queda es una cabeza. Ojos hundidos de hombre y una boca que se
+    // mueve al hablar.
+    if (df > 0.6) {
+      const k = Math.min(1, (df - 0.6) / 0.4) * (1 - melt);
+      const talk = (e.talk ?? 0) > 0 ? Math.abs(Math.sin(t * 14)) : 0;
+      for (const sx of [-1, 1]) {
+        P(g, cx + sx * 5 - 2, cy - 3, C.outline, 4, 3);
+        P(g, cx + sx * 5 - 1, cy - 2, k > 0.5 ? '#e8d8d0' : C.deep, 2, 1);
+        if (k > 0.5) P(g, cx + sx * 5, cy - 2, '#3a1a20');
+        P(g, cx + sx * 5 - 2, cy - 5, C.sulcus, 4, 1);                    // ceja fruncida
+      }
+      P(g, cx - 1, cy, C.shade, 2, 3);                                      // nariz
+      P(g, cx - 4, cy + 5, C.outline, 8, 1 + Math.round(talk * 2));         // boca
+      if (talk > 0.4) P(g, cx - 3, cy + 6, C.throat, 6, 1);
+      for (let i = 0; i < 3; i++) { const dl = (t * 10 + i * 7) % 8; P(g, cx - 3 + i * 3, cy + 7 + dl, '#c8a0a8'); }
+      e.spotsLocal = [];
+      return;
     }
 
     // --- Boca vertical de colmillos, en el costado que mira hacia ti. Mastica en vacío;

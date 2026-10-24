@@ -53,15 +53,15 @@ export const FACES = {
     ],
   },
   digestivo: {
-    boss: 'glandula',
+    boss: 'sapo',
     taunts: [
       'Bienvenido a mis entrañas. Todo lo que entra aquí acaba digerido.',
       'Huelo tu miedo. Sabe a ácido.',
       'Te disolveré capa a capa, y con lo que quede alimentaré a mis crías.',
       'Lárgate mientras aún tengas piel.',
-      'Mi Glándula te espera con la boca abierta. Ve. Entra.',
+      'Mi Glándula te espera con la boca abierta. Y más abajo, mi criadora.',
     ],
-    thanks: 'Mi vientre ya no arde contra sí mismo... Gracias. La Glándula me estaba devorando desde dentro.',
+    thanks: 'Mi vientre ya no arde contra sí mismo... Gracias. La criadora llenaba mis entrañas de sus crías.',
     opens: 'Abro las membranas de mis entrañas. Pasa: ya no te digeriré.',
     hints: [
       'La mucosa resbala: no te quedes quieto sobre ella.',
