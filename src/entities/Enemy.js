@@ -1122,6 +1122,80 @@ export const BEHAVIORS = {
 
   // Vestigio: avanza a tirones; a media distancia se queda quieto, sacude la cabeza
   // y arranca en una carrera torpe y repentina que acaba en un zarpazo.
+  // Glotón: avanza pesado; pegado a ti alza los dos brazos y descarga un mazazo contra
+  // el suelo delante; a media distancia se agacha (sentadilla) y salta hacia ti, y al
+  // caer hace temblar el suelo. e.st: walk · raise · smash · recover · squat · hop · land
+  // (e.stK = avance de la pose, para el dibujo).
+  glutton(e, dt, g) {
+    const d = e.def, s = senses(e, g, 70), dx = s.dx, p = s.p;
+    e.cool = (e.cool ?? 0.8) - dt;
+    e.hopCool = (e.hopCool ?? 1.5) - dt;
+    e.st ??= 'walk';
+    e.timer = (e.timer ?? 0) - dt;
+    const set = (st, time) => { e.st = st; e.timer = time; e.stT = time; };
+    e.stK = e.stT ? Math.max(0, Math.min(1, 1 - e.timer / e.stT)) : 0;
+    const ground = (x) => {
+      g.shake = Math.max(g.shake, 6);
+      g.audio.play('thump', e);
+      for (let i = 0; i < 14; i++) g.particles.emit(x + (Math.random() - 0.5) * 30, e.y + e.h - 2, { vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 120, life: 0.7, gravity: 600, color: Math.random() < 0.5 ? [0.75, 0.6, 0.3] : [0.8, 0.4, 0.5] });
+    };
+    if (e.st === 'raise') {
+      e.vx = 0;
+      if (e.timer <= 0) { set('smash', 0.18); e.hitDone = false; }
+    } else if (e.st === 'smash') {
+      e.vx = 0;
+      if (!e.hitDone && e.timer <= 0.09) {
+        e.hitDone = true;
+        const box = { x: e.dir > 0 ? e.x + e.w - 8 : e.x - d.smashRange + 8, y: e.y + e.h * 0.25, w: d.smashRange, h: e.h * 0.75 + 4 };
+        if (overlap(p, box)) g.hurtPlayer(d.smashDamage, e.cx, d.name);
+        ground(e.cx + e.dir * 26);
+        g.audio.play('crunch', e);
+      }
+      if (e.timer <= 0) set('recover', 0.7);
+    } else if (e.st === 'squat') {
+      e.vx = 0;
+      if (e.timer <= 0) {
+        set('hop', 1.5);
+        e.vy = -d.hopPower;
+        e.vx = e.dir * Math.min(d.hopSpeed, Math.abs(dx) * 1.3 + 30);
+        e.airborne = false;
+        g.audio.play(d.sounds?.attack ?? 'growl', e);
+      }
+    } else if (e.st === 'hop') {
+      if (!e.onGround) e.airborne = true;
+      if (e.airborne && e.onGround) {
+        set('land', 0.45);
+        e.vx = 0;
+        ground(e.cx);
+        // La onda del golpe al caer: hiere si estás pegado a él en el suelo.
+        if (Math.abs(p.cx - e.cx) < d.landRange && Math.abs(p.y + p.h - (e.y + e.h)) < 10) g.hurtPlayer(d.landDamage, e.cx, d.name);
+      } else if (e.timer <= 0) set('land', 0.3);
+    } else if (e.st === 'land' || e.st === 'recover') {
+      e.vx *= 0.8;
+      if (e.timer <= 0) set('walk', 0);
+    } else {
+      if (s.sees) e.dir = Math.sign(dx) || e.dir;
+      if (s.sees && Math.abs(dx) < d.smashRange && Math.abs(s.dy) < 40 && e.cool <= 0) {
+        set('raise', d.smashWindup);
+        e.cool = d.smashCool;
+        g.audio.play(d.sounds?.reveal ?? 'growl', e);
+      } else if (s.sees && Math.abs(dx) > d.hopRange[0] && Math.abs(dx) < d.hopRange[1] && e.hopCool <= 0 && e.onGround) {
+        set('squat', d.squatTime);
+        e.hopCool = d.hopCool;
+      } else {
+        // Paso pesado: avanza a empujones.
+        let speed = (s.sees ? d.chaseSpeed : d.speed) * (0.3 + 0.7 * Math.max(0, Math.sin(e.t * 4)));
+        speed = speedMods(e, g, speed);
+        const footX = e.dir > 0 ? e.x + e.w + 1 : e.x - 1;
+        if (ledgeAhead(g, e, footX) && e.onGround) { if (s.sees) speed = 0; else e.dir *= -1; }
+        e.vx = e.dir * speed;
+      }
+    }
+    e.vy = Math.min(380, e.vy + GRAVITY * dt);
+    g.world.move(e, dt);
+    if (e.hitWall && e.st === 'walk') e.dir = -e.hitWall;
+  },
+
   shambler(e, dt, g) {
     const d = e.def, s = senses(e, g, 48);
     const dx = s.dx;

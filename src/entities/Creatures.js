@@ -18,6 +18,7 @@ import { TOAD } from './Toad.js';
 import { POLLINATOR } from './Pollinator.js';
 import { STILT } from './Stilt.js';
 import { HIEROPHANT } from './Hierophant.js';
+import { GLUTTON } from './Glutton.js';
 
 const P = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
 
@@ -258,6 +259,8 @@ export const CREATURES = {
 
   // COLONIA BACILAR: gólem de bacterias que te imita (entities/Golem.js).
   colonia: GOLEM,
+  // GLOTÓN: gólem de comida a medio digerir (entities/Glutton.js).
+  gloton: GLUTTON,
 
   // CIERVO ACORAZADO: centauro escarabajo erguido (entities/StagBeetle.js).
   ciervo: STAG,
