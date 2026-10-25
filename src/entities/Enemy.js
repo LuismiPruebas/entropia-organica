@@ -2280,8 +2280,22 @@ export const BEHAVIORS = {
             if (x > p.x - 4 && x < p.x + p.w + 4 && y > p.y - 4 && y < p.y + p.h + 4) { T.hit = true; g.hurtPlayer(d.lashDamage ?? 12, e.cx, d.name); break; }
           }
         }
-        if (T.t >= 0.5) { T.st = 'back'; T.t = 0; }
-      } else { T.k = Math.max(0, 1 - T.t / 0.35); if (T.t >= 0.35) e.tent = null; }
+        if (T.t >= 0.34) { T.st = 'back'; T.t = 0; }
+      } else { T.k = Math.max(0, 1 - T.t / 0.22); if (T.t >= 0.22) e.tent = null; }
+    }
+    // Un latigazo de tentáculo hacia ti (wind: lo que tarda en cargarlo).
+    const lashAt = (wind) => {
+      e.tent = { st: 'wind', t: 0, k: 0, wind, a: Math.atan2(p.cy - e.cy, p.cx - e.cx), hit: false };
+      g.audio.play('glandRumble', e);
+    };
+    const near = Math.hypot(p.cx - e.cx, p.cy - e.cy);
+    e.tentCool = (e.tentCool ?? 0) - dt;
+    // Le pegas cuerpo a cuerpo: no lo aguanta, se iza deprisa al techo y desde allí te
+    // bombardea.
+    if (e.meleeHit) {
+      e.meleeHit = false;
+      if (e.gs === 'float') { e.tent = null; go('climb', 1.0); e.climbDur = 1.0; e.thenBomb = true; e.flag = 0; e.climbFrom = e.y; e.home.x = Math.max(TILE * 2, Math.min(g.world.pixelW - TILE * 2 - e.w, e.x)); e.trackX = e.home.x; e.swingX = 0; }
+      else if (e.gs === 'swing' || (e.gs === 'hang' && e.atk !== 'bomb' && e.atk !== 'retreat')) { e.tent = null; e.gs = 'hang'; e.atk = 'retreat'; e.timer = 0.45; e.swL = undefined; e.trackX = e.x; e.depth = e.y - e.home.y; e.swingX = 0; e.swingV = 0; }
     }
 
     if (e.gs === 'hang') {
@@ -2294,7 +2308,27 @@ export const BEHAVIORS = {
       e.swingV = (e.swingV ?? 0) + (-(e.swingX ?? 0) * 9 - (e.swingV ?? 0) * 0.6) * dt + Math.sin(e.t * 1.1) * 14 * dt;
       e.swingX = (e.swingX ?? 0) + e.swingV * dt;
       let want = 6 + Math.sin(e.t * (enraged ? 2.2 : 1.6)) * 7;
-      if (e.atk === 'spitWind') {
+      if (e.atk === 'retreat') {
+        // Se recoge de golpe contra el techo.
+        want = -4; e.swell = 0.6;
+        e.depth += (want - e.depth) * Math.min(1, dt * 9);
+        if (e.timer <= 0) { e.atk = 'bomb'; e.timer = enraged ? 2.6 : 2.0; e.drip = 0.2; g.audio.play(d.sounds?.attack ?? 'charge', e); }
+      } else if (e.atk === 'bomb') {
+        // Bombardeo: grumos de ácido seguidos, apuntados a donde estás (y a donde vas).
+        want = -3; e.mouthOpen = 1; e.swell = 0.5 + Math.sin(e.t * 20) * 0.3;
+        e.drip = (e.drip ?? 0) - dt;
+        if (e.drip <= 0) {
+          e.drip = enraged ? 0.2 : 0.27;
+          const m = mouth(), lead = p.vx * 0.5 + (Math.random() - 0.5) * 50;
+          g.spawnProjectile({ x: m.x - 3, y: m.y - 3, w: 6, h: 6, vx: (p.cx + lead - m.x) / 0.9, vy: -60, gravity: 420, life: 3, damage: 6, kind: 'acidGlob', owner: 'enemy', color: '#9be06a', glow: [0.4, 1, 0.3], burstRadius: 22, burstDamage: 5 });
+          g.audio.play('acid', e);
+        }
+        if (e.timer <= 0) {
+          e.atk = null; e.cool = 0.6;
+          // Si no has subido a por ella, baja colgada de sus tubos y te ataca pendulando.
+          if (p.y > e.home.y + TILE * 7) { e.gs = 'swing'; e.timer = enraged ? 7 : 5.5; e.swA = 0; e.swV = 0; e.trackX = e.x; e.tentCool = 0.8; g.audio.play('glandRumble', e); return; }
+        }
+      } else if (e.atk === 'spitWind') {
         want = -3; e.swell = Math.min(1, 1 - e.timer / 0.8 + 0.2); e.mouthOpen = 0.3 + 0.7 * (1 - e.timer / 0.8);
         if (e.timer <= 0) {
           const m = mouth();
@@ -2326,8 +2360,12 @@ export const BEHAVIORS = {
           g.audio.play('splat', e);
           e.atk = null; e.cool = 1.6;
         }
+      } else if (!e.tent && e.tentCool <= 0 && near < 150) {
+        // Te tiene a su alcance (has subido): latigazos con el tentáculo.
+        lashAt(enraged ? 0.18 : 0.26); e.tentCool = enraged ? 0.55 : 0.75;
       } else if (e.cool <= 0) {
         const eels = g.room.enemies.filter((m) => m.minion && m.alive && m.type === 'anguila').length;
+        if (p.y > e.home.y + TILE * 9 && Math.random() < 0.3) { e.gs = 'swing'; e.timer = enraged ? 6 : 4.5; e.swA = 0; e.swV = 0; e.trackX = e.x; e.tentCool = 0.8; e.cool = 1; g.audio.play('glandRumble', e); return; }
         if (eels < (enraged ? 4 : 2) && Math.random() < 0.4) { e.atk = 'brood'; e.timer = 0.9; g.audio.play('glandRumble', e); }
         else if (enraged && Math.random() < 0.4) { e.atk = 'spray'; e.timer = 1.3; g.audio.play(d.sounds?.attack ?? 'charge', e); }
         else { e.atk = 'spitWind'; e.timer = 0.8; g.audio.play(d.sounds?.attack ?? 'charge', e); }
@@ -2335,8 +2373,39 @@ export const BEHAVIORS = {
       e.depth += (want - e.depth) * Math.min(1, dt * 3);
       e.x = e.trackX + e.swingX;
       e.y = e.home.y + Math.max(-4, e.depth);
-      e.exposed = e.atk === 'spitWind' || e.atk === 'spray';
+      e.exposed = e.atk === 'spitWind' || e.atk === 'spray' || e.atk === 'bomb' || !!e.tent;
       if (e.phaseT <= 0 && !e.atk) { go('detach', 0.9); g.audio.play(d.sounds?.flood ?? 'glandFlood', e); }
+      return;
+    }
+    if (e.gs === 'swing') {
+      // Baja colgada de sus tubos estirados hasta tu altura y se balancea como un péndulo
+      // sobre ti, menea los cilios y te latiguea una y otra vez.
+      e.attach = 1;
+      e.lash = 1;
+      e.exposed = true;
+      e.mouthOpen = 0.5 + 0.5 * Math.max(0, Math.sin(e.t * 4));
+      if (pool) pool.target = base;
+      const lo = TILE * 2, hi = g.world.pixelW - TILE * 2 - e.w;
+      const pivTarget = Math.max(lo, Math.min(hi, p.cx - e.w / 2));
+      e.trackX += Math.sign(pivTarget - e.trackX) * Math.min(Math.abs(pivTarget - e.trackX), (enraged ? 70 : 50) * dt);
+      e.home.x += (e.trackX - e.home.x) * Math.min(1, dt * 2);
+      const sy = surfaceY();
+      const wantL = Math.max(30, Math.min(sy - e.h - 8 - e.ceilY, p.cy - 22 - e.ceilY - e.h / 2));
+      e.swL = (e.swL ?? (e.y - e.ceilY)) + (wantL - (e.swL ?? (e.y - e.ceilY))) * Math.min(1, dt * 2.2);
+      // Péndulo con empuje: se impulsa hacia ti.
+      const L = Math.max(30, e.swL);
+      e.swV += (-(9.8 * 60 / L) * Math.sin(e.swA) - e.swV * 0.25) * dt + Math.sign(p.cx - e.cx) * (enraged ? 2.6 : 2) * dt;
+      e.swA = Math.max(-0.75, Math.min(0.75, e.swA + e.swV * dt));
+      if (Math.abs(e.swA) < 0.05 && Math.abs(e.swV) < 0.3) e.swV += (Math.random() < 0.5 ? -1 : 1) * 0.8;
+      e.x = Math.max(lo, Math.min(hi, e.home.x + Math.sin(e.swA) * L));
+      e.y = e.ceilY + Math.cos(e.swA) * L;
+      if (!e.tent && e.tentCool <= 0 && near < 170) { lashAt(enraged ? 0.15 : 0.22); e.tentCool = enraged ? 0.45 : 0.6; }
+      if (e.timer <= 0 && !e.tent) {
+        // Vuelve arriba.
+        e.gs = 'hang'; e.swL = undefined; e.trackX = e.x; e.swingX = 0; e.swingV = 0;
+        e.home.x = Math.max(lo, Math.min(hi, e.x));
+        e.depth = e.y - e.home.y; e.cool = 1;
+      }
       return;
     }
     if (e.gs === 'detach') {
@@ -2368,8 +2437,10 @@ export const BEHAVIORS = {
       return;
     }
     if (e.gs === 'float') {
-      // Flota como un pepino de mar: se alarga, cabecea con las olas y se arrastra hacia ti.
+      // Flota tal cual es, cabeceando con las olas, meneando cilios y tentáculo; se arrastra
+      // hacia ti y te latiguea una y otra vez.
       e.attach = 0;
+      e.lash = Math.max(e.lash, 0.7);
       e.float = Math.min(1, e.float + dt * 2);
       e.exposed = true;
       e.mouthOpen = 0.6 + 0.4 * Math.max(0, Math.sin(e.t * 3));
@@ -2378,20 +2449,16 @@ export const BEHAVIORS = {
       e.y += (sy - e.h * 0.55 + Math.sin(e.t * 2) * 2 - e.y) * Math.min(1, dt * 4);
       const tx = p.cx - e.w / 2;
       const lo = TILE * 2, hi = g.world.pixelW - TILE * 2 - e.w;
-      if (!e.tent) e.x = Math.max(lo, Math.min(hi, e.x + Math.sign(tx - e.x) * Math.min(Math.abs(tx - e.x), (enraged ? 34 : 24) * dt)));
-      if (!e.tent && e.cool <= 0) {
-        e.tent = { st: 'wind', t: 0, k: 0, wind: enraged ? 0.35 : 0.5, a: Math.atan2(p.cy - e.cy, p.cx - e.cx), hit: false };
-        e.cool = enraged ? 1.1 : 1.6;
-        g.audio.play('glandRumble', e);
-      }
-      if (e.timer <= 0 && !e.tent) { go('climb', 2.6); e.flag = 0; e.climbFrom = e.y; e.home.x = Math.max(lo, Math.min(hi, e.x)); e.trackX = e.home.x; e.swingX = 0; }
+      e.x = Math.max(lo, Math.min(hi, e.x + Math.sign(tx - e.x) * Math.min(Math.abs(tx - e.x), (enraged ? 46 : 34) * (e.tent ? 0.4 : 1) * dt)));
+      if (!e.tent && e.cool <= 0) { lashAt(enraged ? 0.16 : 0.24); e.cool = enraged ? 0.4 : 0.6; }
+      if (e.timer <= 0 && !e.tent) { go('climb', 1.8); e.climbDur = 1.8; e.flag = 0; e.climbFrom = e.y; e.home.x = Math.max(lo, Math.min(hi, e.x)); e.trackX = e.home.x; e.swingX = 0; }
       return;
     }
     if (e.gs === 'climb') {
       // Los flagelos suben al techo (1 s) y la izan (1,6 s); el ácido baja.
       e.exposed = false;
       e.float = Math.max(0, e.float - dt * 1.5);
-      const k = 1 - e.timer / 2.6;
+      const k = 1 - e.timer / (e.climbDur ?? 1.8);
       e.flag = Math.min(1, k / 0.38);
       if (k > 0.38) {
         const u = Math.min(1, (k - 0.38) / 0.62), ease = u * u * (3 - 2 * u);
@@ -2399,7 +2466,10 @@ export const BEHAVIORS = {
         e.attach = Math.min(1, u * 1.2);
         if (pool) pool.target = base;
       }
-      if (e.timer <= 0) { go('hang', 0); e.flag = 0; e.attach = 1; e.depth = 6; e.phaseT = enraged ? 7 : 9; e.cool = 1.2; }
+      if (e.timer <= 0) {
+        go('hang', 0); e.flag = 0; e.attach = 1; e.depth = 6; e.phaseT = enraged ? 7 : 9; e.cool = 1.2;
+        if (e.thenBomb) { e.thenBomb = false; e.atk = 'bomb'; e.timer = enraged ? 2.6 : 2.0; e.drip = 0.15; e.depth = -3; }
+      }
       return;
     }
   },
@@ -2658,6 +2728,7 @@ export class Enemy {
     if (this.def.behavior === 'golem' && n > 0 && !(this.gen > 0)) this.provoked = true;
     if (this.state === 'latch' && n > 0) this.shaken = true;
     if (this.def.behavior === 'bossToad' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.2; if (kind !== 'melee' && kind !== 'dash') this.shotAt = true; }
+    if (this.def.behavior === 'bossGland' && n > 0 && kind === 'melee') this.meleeHit = true;
     if (this.def.behavior === 'glutton' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.4; }
     // El enjambre pierde células al ser herido: cada una sigue viva por su cuenta.
     if (this.def.sheds && this.hp > 0 && (this.gen ?? 0) === 0) {

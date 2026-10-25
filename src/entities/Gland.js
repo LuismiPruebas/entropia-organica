@@ -59,9 +59,9 @@ export const GLAND = {
     const F = field();
     const [ox, oy] = GLAND.origin(e);
     const cx = e.cx - ox, cy = e.cy - oy; // centro del cuerpo en el lienzo
-    // Flotando se alarga como un pepino de mar; desinflada encoge y se arruga.
+    // Desinflada encoge y se arruga (flotando conserva su forma).
     const fl = e.float ?? 0, df = e.deflate ?? 0, melt = e.melt ?? 0;
-    const RX = 31 * (1 + fl * 0.45) * (1 - df * 0.62) * (1 - melt * 0.5), RY = 24 * (1 - fl * 0.28) * (1 - df * 0.5) * (1 - melt * 0.6);
+    const RX = 31 * (1 - df * 0.62) * (1 - melt * 0.5), RY = 24 * (1 - df * 0.5) * (1 - melt * 0.6);
     const attach = e.attach ?? 1;
     const open = e.mouthOpen ?? 0.2;
     const swell = e.swell ?? 0; // contracción antes de escupir / inundar
