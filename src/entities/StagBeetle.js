@@ -11,12 +11,12 @@
 // Sin coraza (arrancada con el Tendón) se ve la carne roja bajo las placas.
 import { px, seg, limb, part, jointLeg, OUTLINE } from './Rig.js';
 
-const ARMOR = { dark: '#262230', mid: '#3e3650', light: '#6a5c84', shine: '#a898c8', bronze: '#7a5a34', bronzeLight: '#c09a62', joint: '#5a2a34' };
+const ARMOR = { dark: '#5e5868', mid: '#9a94a4', light: '#c8c2cc', shine: '#eeeaf0', bronze: '#8a7656', bronzeLight: '#d4c098', joint: '#6a3a44' }; // quitina pálida
 const FLESH = { dark: '#4a1420', mid: '#8a3040', light: '#c05060', shine: '#f09090', bronze: '#6a2a30', bronzeLight: '#a04a50', joint: '#e07080' };
 
 // Tamaño: se dibuja con las medidas de siempre (56 x 52) y se encoge K al pintar cada
 // píxel (sin bajar nunca de uno): sale más pequeño sin perder la nitidez.
-const K = 0.75, W0 = 56, H0 = 52, W = Math.round(W0 * K), H = Math.round(H0 * K);
+const K = 0.6, W0 = 56, H0 = 52, W = Math.round(W0 * K), H = Math.round(H0 * K);
 const shrink = (c) => ({
   set fillStyle(v) { c.fillStyle = v; },
   get fillStyle() { return c.fillStyle; },
