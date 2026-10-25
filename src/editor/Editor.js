@@ -1353,8 +1353,23 @@ function setTool(t) {
 function renderTools() {
   $('tools').innerHTML = TOOLS.map(([id, label, key]) => `<button data-tool="${id}" title="${label} (${key})">${label}<kbd>${key}</kbd></button>`).join('');
   for (const b of document.querySelectorAll('[data-tool]')) b.onclick = () => setTool(b.dataset.tool);
-  $('kind').innerHTML = Object.entries(KINDS).filter(([k]) => k !== 'exits').map(([k, K]) => `<option value="${k}">${K.label}</option>`).join('');
-  $('kind').onchange = () => { S.kind = $('kind').value; S.noduleLux = false; showDecorRow(); if (S.id) renderPalette(); };
+  // Al final, atajos a las casillas especiales (se pintan con el pincel, no se colocan):
+  // así se encuentran también desde aquí.
+  const TILE_SHORTCUTS = ['o', 'Y', 'X', 'K', 'f', 'N'];
+  $('kind').innerHTML = Object.entries(KINDS).filter(([k]) => k !== 'exits').map(([k, K]) => `<option value="${k}">${K.label}</option>`).join('')
+    + `<optgroup label="Casillas (se pintan con el pincel)">${TILE_SHORTCUTS.map((c) => `<option value="tile:${c}">${TILE_BY_CHAR[c].name} · casilla ${c}</option>`).join('')}</optgroup>`;
+  $('kind').onchange = () => {
+    const v = $('kind').value;
+    if (v.startsWith('tile:')) {
+      S.tile = v.slice(5);
+      $('kind').value = S.kind;
+      setTool('brush');
+      $('msg').textContent = `${TILE_BY_CHAR[S.tile].name}: píntalo con el pincel (casilla ${S.tile}).`;
+      if (S.id) renderPalette();
+      return;
+    }
+    S.kind = v; S.noduleLux = false; showDecorRow(); if (S.id) renderPalette();
+  };
   $('decor-type').innerHTML = Object.entries(DECOR).map(([k, d]) => `<option value="${k}">${d.name}</option>`).join('');
   if (!DECOR[S.decorType]) S.decorType = 'neurona';
   $('decor-type').value = S.decorType;
