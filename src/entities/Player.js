@@ -1071,8 +1071,8 @@ export class Player {
           st.scrap--;
           for (let i = 0; i < 7; i++) {
             this.#shoot(pos, {
-              speed: 360 + Math.random() * 90, damage: 5 * dmg, kind: 'shard', w: 3, h: 3, color: '#e8dcc8', breaks: true,
-              spread: (i - 3) * 0.09 + (Math.random() - 0.5) * 0.06, life: 0.3 + Math.random() * 0.08, knock: 120,
+              speed: 360 + Math.random() * 90, damage: 8 * dmg, kind: 'shard', w: 3, h: 3, color: '#e8dcc8', breaks: true, // de un tiro, lo débil revienta
+              spread: (i - 3) * 0.075 + (Math.random() - 0.5) * 0.05, life: 0.3 + Math.random() * 0.08, knock: 120,
             }, i > 0);
           }
           // Retroceso: te empuja contra la dirección del disparo y levanta el brazo.
