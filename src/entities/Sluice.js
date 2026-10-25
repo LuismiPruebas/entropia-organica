@@ -309,92 +309,31 @@ export class Sink {
 }
 
 // ---------------------------------------------------------------------------
-// Vejiga de bilis: el espejo de una cubeta en el techo. Una cámara hueca en la roca,
-// cerrada por abajo con una membrana translúcida: lo que se bombea de la cubeta (válvula
-// 'pump', su esfínter) sube en gotas y llena la cámara, y la membrana se comba con el
-// peso; al devolverla, la membrana se abre por el centro y la bilis cae en la cubeta.
-// En data/worlds/*.js, por sala:
+// Vejiga de bilis: el espejo de una cubeta en el techo. Una cámara cerrada en la roca,
+// sobre la cubeta; lo que se bombea de la cubeta (válvula 'pump', su esfínter) sube en
+// gotas por el caño del techo y llena la cámara; al devolverla, la bilis vuelve a caer por
+// el caño (un surtidor con pool: la cubeta). En data/worlds/*.js, por sala:
 //   bladders: [{ pool, chamber }]  pool: la cubeta del suelo; chamber: la cámara del techo
 //             (otra cubeta de fluids, con ceiling: true). La cámara es el reflejo de la cubeta.
-const BL = { out: rgb('#1a0810'), mem: rgb('#c89078'), memL: rgb('#ecc8a8'), memD: rgb('#7a4a40'), vein: rgb('#8a2a3a') };
 export class Bladder {
   constructor(game, room, def, pool, chamber) {
     this.game = game;
     this.def = def;
     this.pool = pool;
     this.chamber = chamber;
-    this.x0 = chamber.x0 - 4;
-    this.y0 = chamber.yBottom - 4;                       // la membrana, en la boca de la cámara
-    this.W = chamber.w + 8;
-    this.H = Math.max(24, (pool ? pool.yBottom : this.y0 + 40) - this.y0);
-    this.spr = canvasSprite(game, this.W, this.H, 4);
-    this.spr.place(this.x0, this.y0);
-    this.t = Math.random() * 10;
-    this.frame = 0;
-    this.wob = 0;
-    this.trend = 0;
   }
 
-  update(dt) {
+  update() {
     const g = this.game, p = this.pool, c = this.chamber;
-    this.t += dt;
-    // La cámara es el reflejo de la cubeta: lo que falta abajo está arriba.
-    const k = p ? 1 - p.level : 0;
-    c.target = c.level = k;
-    this.trend = p ? -p.trend : 0;
-    if (this.trend) this.wob = Math.min(1, this.wob + dt * 3); else this.wob = Math.max(0, this.wob - dt * 1.5);
-    const cx = c.x0 + c.w / 2;
-    // Bombeando: gotas de bilis que suben de la cubeta a la cámara.
-    if (this.trend > 0 && p && Math.random() < 0.8) {
-      const x = c.x0 + 6 + Math.random() * (c.w - 12), y0 = p.surfaceY - 2, y1 = c.yBottom + 4;
-      g.glowParticles.emit(x, y0, { vx: (Math.random() - 0.5) * 10, vy: -(y0 - y1) / 0.45, life: 0.45, color: [0.45, 1, 0.3] });
+    if (!p || !c) return;
+    // Lo que falta abajo está arriba.
+    c.target = c.level = 1 - p.level;
+    // Bombeando: gotas de bilis que suben de la cubeta al caño del techo.
+    if (p.trend < 0 && Math.random() < 0.8) {
+      const x = c.x0 + c.w / 2 + (Math.random() - 0.5) * Math.min(60, c.w - 12), y0 = p.surfaceY - 2, y1 = c.yBottom + TILE;
+      g.glowParticles.emit(x, y0, { vx: (c.x0 + c.w / 2 - x) * 1.5, vy: -(y0 - y1) / 0.5, life: 0.5, color: [0.45, 1, 0.3] });
     }
-    // Devolviéndola: salpica donde cae el chorro.
-    if (this.trend < 0 && p && Math.random() < 0.7) g.particles.emit(cx + (Math.random() - 0.5) * 14, p.surfaceY - 2, { vx: (Math.random() - 0.5) * 120, vy: -40 - Math.random() * 80, life: 0.5, gravity: 600, color: Math.random() < 0.3 ? [0.85, 1, 0.55] : [0.35, 0.75, 0.15] });
-    if ((this.frame++ & 1) === 0) this.#draw(k);
   }
 
-  #draw(k) {
-    const { g, gl } = this.spr, t = this.t, W = this.W, H = this.H;
-    g.clearRect(0, 0, W, H); gl.clearRect(0, 0, W, H);
-    const pour = this.trend < 0;
-    const mid = W / 2;
-    // Membrana: tensa de pared a pared; con peso se comba hacia abajo y late al moverse.
-    const sag = 1 + k * 7 + this.wob * Math.sin(t * 9) * 1.5;
-    const hole = pour ? 7 : 0;                                       // se abre por el centro al verter
-    const im = g.createImageData(W, H), d = im.data;
-    const set = (x, y, c) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; };
-    for (let x = 2; x < W - 2; x++) {
-      const u = (x - 2) / (W - 5) * 2 - 1;                           // -1..1
-      if (Math.abs(x - mid) < hole) continue;
-      const yb = 4 + Math.round(sag * (1 - u * u));
-      // Debajo de la membrana se transparenta la bilis (más llena, más verde).
-      for (let y = 2; y <= yb; y++) {
-        const edge = y >= yb - 1;
-        let c;
-        if (edge) c = BL.out;
-        else if (k > 0.05 && y > 3) c = AC[Math.max(1, Math.min(5, 2 + Math.round(k * 2 + Math.sin(x * 0.5 + y * 0.8 + t * 4) * 0.8)))];
-        else c = (x + Math.floor(t * 2)) % 9 === 0 ? BL.vein : y < 4 ? BL.memL : BL.mem;
-        if (!edge && Math.abs(Math.sin(x * 0.31 + 1.7)) < 0.05) c = BL.vein;  // venas
-        set(x, y, c);
-      }
-      set(x, yb + 1, BL.memD);
-    }
-    g.putImageData(im, 0, 0);
-    // Labios del agujero y chorro espeso hasta la cubeta.
-    if (pour && this.pool) {
-      const bot = Math.round(this.pool.surfaceY - this.y0);
-      for (let y = 4; y < bot; y++) {
-        const w = 4 + Math.sin(y * 0.4 - t * 20);
-        g.fillStyle = '#1e4a10'; g.fillRect(Math.round(mid - w - 1), y, Math.round(w * 2 + 2), 1);
-        g.fillStyle = (y + Math.floor(t * 30)) % 7 < 2 ? '#b8f070' : '#4aa822'; g.fillRect(Math.round(mid - w), y, Math.round(w * 2), 1);
-        if (y % 3 === 0) { gl.fillStyle = '#5aff4a'; gl.fillRect(Math.round(mid), y, 1, 1); }
-      }
-      g.fillStyle = '#e898a0'; g.fillRect(Math.round(mid - hole - 2), 4, 3, 4); g.fillRect(Math.round(mid + hole - 1), 4, 3, 4);
-    }
-    if (k > 0.6) for (let i = 0; i < 6; i++) { gl.fillStyle = '#3a9a2a'; gl.fillRect(Math.round(6 + ((i * 37 + Math.floor(t * 3)) % (W - 12))), 5 + (i % 3), 1, 1); }
-    this.spr.commit();
-  }
-
-  dispose() { this.spr.dispose(); }
+  dispose() {}
 }
