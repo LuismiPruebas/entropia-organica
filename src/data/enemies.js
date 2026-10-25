@@ -509,7 +509,7 @@ export const ENEMIES = {
     voice: ['toadCroak', 'toadCroak', 'eelGurgle'],
     behavior: 'bossToad',
     boss: true,
-    music: 'coro',
+    music: 'sapo', // «Diseased Machine»
     exposedBonus: 1.6, // al caer de un salto (o escaldado) queda con la panza al aire
     armor: 0.25,       // piel curtida y cubierta de crías: casi no le duele... hasta que lo escaldas
     meleeResist: 0.5,  // y a golpes, aún menos
