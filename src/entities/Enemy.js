@@ -1976,6 +1976,107 @@ export const BEHAVIORS = {
     }
   },
 
+  // Ciervo Acorazado: trepa por cualquier superficie (suelo, paredes y techo) y desde
+  // cualquiera se encabrita y se lanza en línea recta hacia ti; al chocar se agarra a lo
+  // que toque (si se clava, se queda aturdido con los élitros abiertos). Pegado a ti,
+  // cierra las mandíbulas de golpe.
+  //   e.n  normal hacia la superficie a la que está agarrado ({x,y}: suelo 0,1; techo 0,-1;
+  //        pared a la izquierda -1,0; a la derecha 1,0). Sin superficie, cae.
+  //   e.td sentido de la marcha a lo largo de ella (+1/-1).
+  stagCrawl(e, dt, g) {
+    const d = e.def, p = g.player, w = g.world;
+    e.state ??= 'walk';
+    e.n ??= { x: 0, y: 1 };
+    e.td ??= e.dir || 1;
+    tick(e, dt);
+    const rage = e.armored ? 1 : 1.4;
+    const fwd = () => ({ x: e.td * e.n.y, y: -e.td * e.n.x });            // avance a lo largo de la superficie
+    const solid = (dx, dy) => w.rectSolid(Math.round(e.x) + dx, Math.round(e.y) + dy, e.w, e.h);
+    const dx = p.cx - e.cx, dy = p.cy - e.cy, dist = Math.hypot(dx, dy);
+    const sees = dist < d.sight && w.lineOfSight(e.cx, e.cy, p.cx, p.cy);
+    e.contactDamage = e.state === 'gore' ? d.goreDamage : d.contactDamage;
+    // Agarrarse a lo que haya tocado (tras caer o embestir).
+    const grab = () => {
+      if (e.onGround) e.n = { x: 0, y: 1 };
+      else if (e.hitCeiling) e.n = { x: 0, y: -1 };
+      else if (e.hitWall) e.n = { x: e.hitWall, y: 0 };
+      else return false;
+      e.x = Math.round(e.x); e.y = Math.round(e.y); e.vx = e.vy = 0;
+      return true;
+    };
+    // Volando (embestida o caída): recto, con algo de gravedad.
+    if (e.state === 'gore' || e.state === 'fall') {
+      e.vy = Math.min(380, e.vy + GRAVITY * (e.state === 'gore' ? 0.35 : 1) * dt);
+      w.move(e, dt);
+      if (e.state === 'gore') {
+        hitZone(g, e, e.x - 3, e.y - 3, e.w + 6, e.h + 6, d.goreDamage);
+        if (Math.random() < 0.5) g.particles.emit(e.cx, e.cy, { vx: -e.vx * 0.15, vy: -e.vy * 0.15, life: 0.3, color: [0.6, 0.58, 0.62] });
+      }
+      if (grab()) {
+        const hard = e.state === 'gore' && (e.hitWall || e.hitCeiling);
+        if (hard) { g.shake = Math.max(g.shake, 3); g.audio.play('crunch', e); }
+        e.state = e.state === 'gore' ? 'dazed' : 'walk';
+        e.timer = hard ? d.stuck : d.dazed;
+      } else if (e.state === 'gore' && e.timer <= 0) e.state = 'fall';
+      return;
+    }
+    // Agarrado: ¿sigue habiendo superficie? (si la han quitado, cae).
+    if (!solid(e.n.x, e.n.y)) {
+      e.state = 'fall'; e.vx = 0; e.vy = 0;
+      return;
+    }
+    if (e.state === 'walk') {
+      // Hacia ti a lo largo de la superficie (cambia de sentido con calma, sin temblar).
+      e.turnT = (e.turnT ?? 0) - dt;
+      const f = fwd();
+      if (sees && e.turnT <= 0 && f.x * dx + f.y * dy < -4) { e.td = -e.td; e.turnT = 0.5; }
+      if (!sees && e.turnT <= 0 && Math.random() < dt * 0.06) { e.td = -e.td; e.turnT = 3; }
+      // Avanza píxel a píxel: en una esquina hacia dentro sube por la pared; en un borde,
+      // lo rodea y sigue por la otra cara.
+      e.acc = (e.acc ?? 0) + speedMods(e, g, (sees ? d.chaseSpeed : d.speed) * rage) * dt;
+      while (e.acc >= 1) {
+        e.acc -= 1;
+        const f1 = fwd();
+        if (solid(f1.x, f1.y)) { e.n = { x: f1.x, y: f1.y }; continue; }          // esquina hacia dentro
+        e.x = Math.round(e.x) + f1.x; e.y = Math.round(e.y) + f1.y;
+        if (!solid(e.n.x, e.n.y)) {                                            // borde: lo rodea
+          e.x += e.n.x; e.y += e.n.y;
+          e.n = { x: -f1.x, y: -f1.y };
+          if (!solid(e.n.x, e.n.y)) { e.state = 'fall'; return; }
+        }
+      }
+      if (sees && e.cool <= 0) {
+        if (dist < d.pinchRange) { e.state = 'pinchWind'; e.timer = 0.3 / rage; g.audio.play('click', e); }
+        else if (dist < d.goreRange) { e.state = 'rear'; e.timer = 0.55 / rage; g.audio.play(d.sounds?.attack ?? 'growl', e); }
+      }
+    } else if (e.state === 'rear') {
+      // Se encabrita y apunta; al acabar, se suelta y se lanza recto hacia ti.
+      if (e.timer <= 0) {
+        const a = Math.atan2(dy, dx), sp = d.goreSpeed * rage;
+        e.vx = Math.cos(a) * sp; e.vy = Math.sin(a) * sp - GRAVITY * 0.35 * (dist / sp) * 0.5; // apunta algo alto: la caída lo baja
+        e.x += -e.n.x; e.y += -e.n.y;                                          // se despega
+        e.state = 'gore'; e.timer = d.goreTime; e.hitWall = 0;
+        g.audio.play('dash', e); g.shake = Math.max(g.shake, 2);
+      }
+    } else if (e.state === 'pinchWind') {
+      if (e.timer <= 0) {
+        e.state = 'pinch'; e.timer = 0.22; g.audio.play('crunch', e);
+        hitZone(g, e, e.x - 8, e.y - 8, e.w + 16, e.h + 16, d.pinchDamage);
+      }
+    } else if (e.state === 'pinch') {
+      if (e.timer <= 0) { e.state = 'walk'; e.cool = d.attackCool / rage; }
+    } else {
+      // Aturdido: jadea con los élitros abiertos.
+      if (Math.random() < 0.08) g.particles.emit(e.cx, e.cy, { vx: (Math.random() - 0.5) * 20, vy: -15, life: 0.5, color: [0.6, 0.55, 0.5] });
+      if (e.timer <= 0) { e.state = 'walk'; e.cool = d.attackCool / rage; }
+    }
+    // Para el dibujo: hacia dónde mira (a lo largo de la superficie) y el giro.
+    e.dir = e.td;
+    if (e.state === 'walk') e.vx = 20;                                          // (anda: para la animación)
+    else if (e.state !== 'gore' && e.state !== 'fall') e.vx = 0;
+    e.surfRot = Math.atan2(e.n.x, e.n.y);                                         // 0 suelo, π techo, ±π/2 paredes
+  },
+
   // Escarabajo rinoceronte (entities/RhinoBeetle.js): conoce la quitina, y su coraza
   // frontal lo para todo (def.frontArmor: de frente rebota, por la espalda hiere más).
   // Camina pesado; al verte escarba el suelo, baja el cuerno y carga. Si te alcanza,
@@ -3025,6 +3126,14 @@ export class Enemy {
     placeMesh(this.glowMesh, sx, oy, w, h);
     const flip = c.noFlip ? 1 : (this.dir > 0 ? 1 : -1);
     this.mesh.scale.x = this.glowMesh.scale.x = flip;
+    // Agarrado a una pared o al techo (Ciervo Acorazado): el dibujo gira para que las patas
+    // pisen la superficie, apoyado en ella.
+    const rot = this.surfRot ?? 0;
+    if (rot) {
+      const k = h / 2 - this.h / 2, n = this.n;
+      for (const m of [this.mesh, this.glowMesh]) m.position.set(this.cx - n.x * k, -(this.cy - n.y * k), 0);
+    }
+    this.mesh.rotation.z = this.glowMesh.rotation.z = rot;
     this.mesh.visible = this.glowMesh.visible = !this.submerged && !this.vanish;
   }
 
