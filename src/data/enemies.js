@@ -279,12 +279,16 @@ export const ENEMIES = {
     gore: { blood: '#8a0a14', flesh: ['#9a7a6a', '#6a5048', '#8a6a5a', '#e8dcc8'] },
     voice: ['vestigioBreath', 'moan', 'vestigioBreath'],
     behavior: 'shambler',
-    hp: 50, w: 14, h: 32,
+    hp: 30, w: 16, h: 34,      // frágil: se desmorona enseguida...
+    reforms: true,             // ...pero no muere: al rato se recompone
+    reformTime: 5, reformWarn: 1.4, // segundos en el suelo; los últimos, tiembla y se le enciende el cráneo
+    pileHp: 14,                // destroza el montón de huesos y ya no se levanta
     speed: 12, chaseSpeed: 28, sight: 150,
-    reach: 26, swingDamage: 12,
+    reach: 30, swingDamage: 14, swingDamage2: 16, // dos estocadas seguidas: pegan fuerte
+    swingTime: 0.6, swing2Time: 0.42, comboCool: 1.9,
     lurch: 0.4, sprintSpeed: 115, sprintTime: 0.7, sprintCool: 2.8,
     contactDamage: 6,
-    habits: 'Arrastra los pies. A media distancia se queda quieto, le da un latigazo la cabeza y arranca en una carrera torpe que acaba en zarpazo.',
+    habits: 'Arrastra los pies apoyándose en sus brazos-estaca. A media distancia se queda quieto, le da un latigazo el cráneo y arranca en una carrera torpe. De cerca echa un brazo atrás y te lo clava, y enseguida el otro: dos estocadas que hacen mucho daño. Se rompe con poco, pero no muere: se desmorona en un montón de huesos y a los pocos segundos tiembla, se le enciende el cráneo y se recompone. Destroza el montón mientras está en el suelo y ya no se levantará.',
     drop: { biomass: 10 },
     sounds: { reveal: 'vestigioAlert', die: 'vestigioDie', hurt: 'vestigioHurt' },
     lore: 'Lo que el estómago no terminó de digerir. Todavía camina erguido a ratos, todavía tiene un ojo que brilla como el tuyo. Una pierna le creció más larga que la otra mientras esperaba a que alguien viniera a buscarlo.',

@@ -293,68 +293,121 @@ export const CREATURES = {
     },
   },
 
-  // VESTIGIO (Sistema Digestivo): lo que queda de alguien casi humano, armado
-  // como el protagonista (huesos articulados) pero roto: una pierna más larga con la
-  // rodilla al revés, la columna encorvada, la cabeza caída, costillas al aire, dos
-  // brazos larguísimos que arrastra y un tercero atrofiado en la espalda.
-  // Poses: arrastra los pies, latigazo de cabeza (aviso), carrera inclinada, zarpazo.
+  // VESTIGIO: un esqueleto encorvado, con la columna erizada de púas, las costillas al
+  // aire con jirones de carne seca y el cráneo colgando por delante. Los brazos, larguísimos,
+  // acaban en estacas de hueso con púas: camina apoyándose en ellas como en muletas y las
+  // clava en dos estocadas. Caído, es un montón de huesos que tiembla antes de levantarse.
   vestigio: {
-    size: () => [44, 48],
-    origin: (e) => bottom(e, 44, 48),
+    size: () => [76, 54],
+    origin: (e) => bottom(e, 76, 54),
     draw(g, gl, e, t) {
-      const G0 = 47;
+      const G0 = 53;
+      const B = { bone: '#d8cfb0', boneL: '#f2ead0', boneD: '#a89e80', boneDD: '#6e664e', flesh: '#6a2a1a', fleshL: '#8a3a24', fleshD: '#3a140c' };
+      const spike = (x0, y0, x1, y1, w = 2) => {                   // púa: base ancha, punta fina
+        const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0));
+        for (let i = 0; i <= n; i++) { const k = i / n, ww = Math.max(1, Math.round(w * (1 - k))); px(g, x0 + (x1 - x0) * k - (ww + 1) / 2, y0 + (y1 - y0) * k - (ww + 1) / 2, OUTLINE, ww + 1, ww + 1); }
+        for (let i = 0; i <= n; i++) { const k = i / n, ww = Math.max(1, Math.round(w * (1 - k))) - (k > 0.85 ? 0 : 0); px(g, x0 + (x1 - x0) * k - ww / 2, y0 + (y1 - y0) * k - ww / 2, k > 0.6 ? B.boneL : B.bone, ww, ww); }
+      };
+      // ---- Caído: montón de huesos (y, al final, se recompone temblando).
+      if (e.state === 'pile') {
+        const rk = e.reformK ?? 0, shake = rk ? Math.sin(t * 60) * rk * 1.5 : 0;
+        const lift = rk * rk * 4;
+        const bones = [[18, 50, 40, 46], [24, 44, 46, 51], [14, 51, 34, 49], [30, 48, 50, 44], [20, 47, 30, 42]];
+        bones.forEach(([a, b, c, d], i) => { const j = Math.sin(t * 50 + i) * rk; limb(g, a + j, b - lift * (i % 2), c - j, d - lift * ((i + 1) % 2), 2, i % 2 ? B.boneD : B.bone); });
+        spike(26, 46 - lift, 18, 38 - lift, 2); spike(38, 47 - lift, 47, 40 - lift, 2);
+        for (let i = 0; i < 4; i++) seg(g, 22 + i * 4 + shake, 47 - lift, 24 + i * 4 + shake, 51, B.boneD);   // costillas sueltas
+        const sx = 32 + shake, sy = 45 - lift * 1.5;
+        part(g, sx, sy, 4.4, 3.8, B.bone, B.boneD, B.boneL);
+        px(g, sx + 1, sy - 1, OUTLINE, 2, 2);
+        px(g, sx + 1, sy - 1, rk > 0.2 ? '#ff3b2f' : '#2a1410');
+        if (rk > 0.2) px(gl, sx + 1, sy - 1, rk > 0.7 ? '#ffd0a0' : '#ff3b2f');
+        px(g, sx + 2, sy + 3, B.boneDD, 3, 1);
+        return;
+      }
       const sprint = e.sprinting, lurch = e.lurch > 0;
       const moving = Math.abs(e.vx) > 2;
-      const ph = e.t * (sprint ? 12 : moving ? 5.5 : 1);
-      const skin = '#9a7a6a', skinD = '#6a5048', bone = '#e8dcc8';
-      const hip = [20, 30 - (sprint ? 1 : 0)];
-      // Piernas: la trasera larga y con la rodilla hacia atrás; la delantera corta.
+      const ph = e.t * (sprint ? 12 : moving ? 5 : 1);
+      // Estocadas: k 0..1 dentro de cada una; antes de golpear, el brazo atrás.
+      const sw = e.swing > 0 ? 1 - e.swing / (e.swingDur || 0.6) : -1;
+      const wind = sw >= 0 && sw < 0.6, stab = sw >= 0.6;
+      const lean = sprint ? 5 : wind ? -2 : stab ? 4 : moving ? Math.max(0, Math.sin(ph)) * 1.5 : Math.sin(t * 1.2) * 0.6;
+      const hip = [22, 31 + (sprint ? 1 : 0)];
+      // ---- Piernas: huesos finos con la rodilla hacia delante y garras de pie.
       for (const [i, far] of [[0, true], [1, false]]) {
         const hx = hip[0] + (far ? -1 : 1);
-        const step = moving ? Math.sin(ph + i * Math.PI) * (sprint ? 7 : 4) : 0;
-        const fx = hx + step + (far ? -2 : 2), fy = G0 - (moving ? Math.max(0, Math.cos(ph + i * Math.PI)) * 3 : 0);
-        jointLeg(g, hx, hip[1], fx, fy, far ? 9.5 : 8, far ? 9.5 : 8, far ? 1 : -1, far ? 2 : 3, far ? skinD : skin, far ? '#4a3430' : skinD, far ? null : '#c0a090');
-        px(g, fx - 1, fy, OUTLINE, 4, 1);
-        px(g, fx, fy - 1, far ? '#4a3430' : skinD, 3, 1);
+        const step = moving ? Math.sin(ph + i * Math.PI) * (sprint ? 6 : 3.5) : 0;
+        const fx = hx + step + (far ? -4 : 1), fy = G0 - (moving ? Math.max(0, Math.cos(ph + i * Math.PI)) * 2.5 : 0);
+        const [kx, ky] = jointLeg(g, hx, hip[1], fx, fy, 13, 13, -1, 2, far ? B.boneD : B.bone, far ? B.boneDD : B.boneD, far ? null : B.boneL);
+        part(g, kx, ky, 1.4, 1.4, far ? B.boneD : B.bone);                // rótula
+        for (const ox of [-2, 0, 2]) seg(g, fx, fy - 1, fx + ox + 1, fy, far ? B.boneDD : B.boneD);
       }
-      // Columna encorvada; en carrera se inclina hacia delante.
-      const lean = sprint ? 7 : lurch ? -2 : moving ? Math.max(0, Math.sin(ph)) * 2 : Math.sin(t) * 0.5;
-      const sh = [hip[0] + 4 + lean, hip[1] - 12 + (sprint ? 3 : 0)];
-      for (let i = 0; i <= 10; i++) {
-        const k = i / 10;
-        const x = hip[0] + (sh[0] - hip[0]) * k - Math.sin(k * Math.PI) * 3;
-        const y = hip[1] + (sh[1] - hip[1]) * k - Math.sin(k * Math.PI) * 3;
-        part(g, x, y, 2.5, 1.8, k > 0.4 && k < 0.8 ? '#8a6a5a' : skin, null);
+      // Pelvis.
+      part(g, hip[0], hip[1] - 1, 3.4, 2.2, B.bone, B.boneD, B.boneL);
+      // ---- Columna: arco encorvado de la pelvis a los hombros, con púas en el lomo.
+      const sh = [hip[0] + 22 + lean, hip[1] - 9 + (sprint ? 3 : 0) + (stab ? 2 : 0)];
+      const sp = (k) => [hip[0] + (sh[0] - hip[0]) * k, hip[1] + (sh[1] - hip[1]) * k - Math.sin(k * Math.PI) * 9];
+      // Costillas colgando por debajo del arco (detrás de todo lo demás del torso).
+      for (let r = 0; r < 5; r++) {
+        const [x, y] = sp(0.35 + r * 0.12);
+        const len = 6 + Math.sin(r * 1.7) * 1.5;
+        for (let q = 0; q <= len; q++) { const k = q / len; px(g, x + Math.sin(k * 2.4) * 3 - 1, y + q, OUTLINE, 3, 1); }
+        for (let q = 0; q <= len; q++) { const k = q / len; px(g, x + Math.sin(k * 2.4) * 3, y + q, r % 2 ? B.boneD : B.bone); }
       }
-      // Costillas al aire y una herida.
-      for (let r = 0; r < 3; r++) {
-        const x = hip[0] + (sh[0] - hip[0]) * (0.5 + r * 0.12) + 1, y = hip[1] + (sh[1] - hip[1]) * (0.5 + r * 0.12);
-        seg(g, x - 1, y, x + 3, y + 1, bone);
+      // Jirones de carne seca que cuelgan y se mecen.
+      for (const [k, L] of [[0.4, 9], [0.62, 12], [0.8, 7], [0.25, 6]]) {
+        const [x, y] = sp(k);
+        for (let q = 0; q < L; q++) { const sx = x + Math.sin(t * 2.5 + k * 9 + q * 0.4) * q * 0.12 - (moving ? q * 0.1 : 0); px(g, sx, y + 2 + q, q % 4 === 1 ? B.fleshD : q > L - 3 ? B.fleshL : B.flesh, q < L / 2 ? 2 : 1, 1); }
       }
-      px(g, hip[0] + 2, hip[1] - 5, '#7a2a34', 2, 2);
-      // Brazo atrofiado de la espalda, que tiembla.
-      const bx = hip[0] + (sh[0] - hip[0]) * 0.6 - 3, by = hip[1] + (sh[1] - hip[1]) * 0.6 - 2;
-      limb(g, bx, by, bx - 4 + Math.sin(t * 11) * 1.5, by - 5, 1, '#7a5a50');
-      // Cabeza caída a un lado; el latigazo la echa hacia atrás.
-      const hx = sh[0] + 3 + (lurch ? -3 + Math.sin(t * 40) : 0), hy = sh[1] - 3 + (lurch ? -2 : 1);
-      part(g, hx, hy, 3.4, 3.8, '#8a6a5a', '#5a4038', '#b09080');
-      px(g, hx + 1, hy - 1, OUTLINE, 2, 2);
-      px(g, hx + 1, hy - 1, '#ff3b2f');
-      px(gl, hx + 1, hy - 1, lurch ? '#ffd0a0' : '#ff3b2f');
-      px(g, hx + 2, hy + 2, '#3a1418', 2, 2); // mandíbula colgando
-      px(g, hx - 3, hy - 4, '#3a2a28', 4, 1);  // mechón de pelo
-      // Brazos larguísimos: arrastran, se echan atrás en carrera o se alzan para el zarpazo.
-      const swing = e.swing > 0 ? e.swing : 0;
+      for (let i = 0; i <= 12; i++) {
+        const k = i / 12, [x, y] = sp(k);
+        part(g, x, y, 2.2, 1.7, i % 2 ? B.boneD : B.bone);
+      }
+      // Púas del lomo: largas en la cruz, cortas hacia la pelvis, inclinadas hacia atrás.
+      for (let i = 1; i <= 5; i++) {
+        const k = i / 6, [x, y] = sp(k);
+        const L = 4 + Math.sin(k * Math.PI) * 7 + (i % 2) * 2;
+        spike(x, y - 1, x - L * 0.35 + 1, y - L, 2);
+      }
+      // ---- Cráneo: grande, colgando por delante de los hombros; la mandíbula descolgada.
+      const jerk = lurch ? Math.sin(t * 40) * 1.5 : 0;
+      const hx = sh[0] + 7 + (lurch ? -4 : 0) + jerk, hy = sh[1] + 9 + (lurch ? -6 : 0) + (stab ? 2 : 0);
+      seg(g, sh[0], sh[1], hx - 1, hy - 2, B.boneD, 2);                // cuello
+      part(g, hx, hy, 5.6, 5, B.bone, B.boneD, B.boneL);
+      px(g, hx + 2, hy - 1, OUTLINE, 3, 3);                           // cuenca
+      px(g, hx + 3, hy, '#ff3b2f');
+      px(gl, hx + 3, hy, lurch || stab ? '#ffd0a0' : '#ff3b2f');
+      px(g, hx + 4, hy + 2, OUTLINE, 2, 2);                           // fosa nasal
+      const jaw = wind || lurch ? 3 : 1;
+      seg(g, hx - 2, hy + 4, hx + 4, hy + 4 + jaw, OUTLINE, 2);       // mandíbula
+      seg(g, hx - 2, hy + 4, hx + 4, hy + 3 + jaw, B.boneD);
+      for (let i = 0; i < 3; i++) px(g, hx + 1 + i * 1.3, hy + 3, B.boneL);   // dientes
+      // ---- Brazos: hombro, codo y antebrazo que es una estaca de hueso con púas.
+      const strike = e.strike ?? 0;
       for (const far of [true, false]) {
-        const s = [sh[0] + (far ? -2 : 1), sh[1] + 1];
-        let hand;
-        if (swing > 0.3 && !far) hand = [s[0] + 3, s[1] - 12];
-        else if (swing > 0 && !far) hand = [s[0] + 15, s[1] + 6];
-        else if (sprint) hand = [s[0] - 10 + (far ? -2 : 0), s[1] + 6 + Math.sin(ph + (far ? 0 : 2)) * 3];
-        else hand = [s[0] + 3 + Math.sin(ph + (far ? 0 : 1.5)) * 3, G0 - 2];
-        jointLeg(g, s[0], s[1], hand[0], hand[1], 7, 8, swing > 0 && !far ? 1 : -1, far ? 1 : 2, far ? skinD : skin, far ? '#4a3430' : '#8a6a5a');
-        // Dedos-garra.
-        for (const dx of [-1, 1, 2]) seg(g, hand[0], hand[1], hand[0] + dx, hand[1] + 2, far ? '#a89a80' : '#d8b48a');
+        const s0 = [sh[0] + (far ? -2 : 1), sh[1] + 1];
+        const mine = (strike === 1 && !far) || (strike === 2 && far);
+        let tip;
+        if (mine && wind) tip = [s0[0] - 6, s0[1] - 18];                          // atrás y arriba
+        else if (mine && stab) tip = [s0[0] + 28, s0[1] + 16];                    // clavada
+        else if (sprint) tip = [s0[0] - 18 + (far ? -3 : 0), s0[1] + 18 + Math.sin(ph + (far ? 0 : 2)) * 3];
+        else tip = [s0[0] + (far ? 12 : 23) + (moving ? Math.sin(ph + (far ? 0 : Math.PI)) * 4 : 0), G0];   // muleta
+        const L = Math.hypot(tip[0] - s0[0], tip[1] - s0[1]);
+        // El codo: a un tercio, desplazado hacia fuera.
+        const ex = s0[0] + (tip[0] - s0[0]) * 0.3 + (tip[1] - s0[1]) / L * 4, ey = s0[1] + (tip[1] - s0[1]) * 0.3 - (tip[0] - s0[0]) / L * 4;
+        limb(g, s0[0], s0[1], ex, ey, 2, far ? B.boneD : B.bone, far ? null : B.boneL);
+        part(g, ex, ey, 1.6, 1.6, far ? B.boneD : B.bone);
+        // Estaca: del codo a la punta, afinándose, con púas cortas a los lados.
+        spike(ex, ey, tip[0], tip[1], 3);
+        const ux = (tip[0] - ex) / Math.hypot(tip[0] - ex, tip[1] - ey), uy = (tip[1] - ey) / Math.hypot(tip[0] - ex, tip[1] - ey);
+        for (const k of [0.25, 0.45, 0.65]) {
+          const bx = ex + (tip[0] - ex) * k, by = ey + (tip[1] - ey) * k;
+          spike(bx, by, bx - uy * 3 - ux * 1.5, by + ux * 3 - uy * 1.5, 1);
+          spike(bx, by, bx + uy * 2.5 - ux * 1.5, by - ux * 2.5 - uy * 1.5, 1);
+        }
+        // Venda de carne en la muñeca.
+        const wx = ex + (tip[0] - ex) * 0.12, wy = ey + (tip[1] - ey) * 0.12;
+        px(g, wx - 1, wy - 1, B.flesh, 3, 2);
+        if (mine && stab) px(gl, tip[0], tip[1], '#ffe8c0');
       }
     },
   },

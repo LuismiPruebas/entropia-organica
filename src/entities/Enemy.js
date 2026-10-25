@@ -1402,20 +1402,58 @@ export const BEHAVIORS = {
     if (e.hitWall && e.st === 'walk' && !s.sees) e.dir = -e.hitWall;
   },
 
+  // Vestigio: un esqueleto encorvado que se apoya en sus brazos-estaca. Arrastra los pies;
+  // a media distancia da un latigazo con la cabeza y arranca en una carrera torpe. Cuerpo
+  // a cuerpo, dos estocadas seguidas (un brazo y luego el otro). Al caer no muere: se
+  // desmorona en un montón de huesos y al rato se recompone (salvo que destroces el montón).
   shambler(e, dt, g) {
     const d = e.def, s = senses(e, g, 48);
     const dx = s.dx;
     e.cool = (e.cool ?? 0) - dt;
     e.sprintCool = (e.sprintCool ?? 1) - dt;
+    // Montón de huesos: quieto; los últimos segundos tiembla, el cráneo se enciende y se
+    // recompone.
+    if (e.state === 'pile') {
+      e.contactDamage = 0;
+      e.vx = 0;
+      e.pileT -= dt;
+      e.reformK = Math.max(0, 1 - e.pileT / (d.reformWarn ?? 1.4));
+      if (e.reformK > 0 && Math.random() < dt * 12) g.audio.play('click', e);
+      if (e.pileT <= 0) {
+        e.state = null; e.reformK = 0;
+        e.hp = d.hp;
+        e.y -= d.h - e.h; e.h = d.h;                                   // de pie otra vez
+        e.flash = 0.15;
+        e.swing = 0; e.lurch = 0; e.sprint = 0; e.cool = 0.8;
+        g.audio.play('crunch', e);
+        g.audio.play(d.sounds?.reveal ?? 'screech', e);
+        for (let i = 0; i < 10; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * 16, e.y + e.h - 4, { vx: (Math.random() - 0.5) * 80, vy: -40 - Math.random() * 60, life: 0.5, gravity: 500, color: [0.85, 0.8, 0.65] });
+      }
+      e.vy = Math.min(380, e.vy + GRAVITY * dt);
+      g.world.move(e, dt);
+      return;
+    }
+    e.contactDamage = undefined;
     if (e.swing > 0) {
+      // Estocada: se echa el brazo atrás (aviso) y lo clava hacia delante y abajo.
       e.swing -= dt;
       e.vx *= 0.7;
-      if (e.swing < 0.25 && !e.hitDone) {
+      const hitAt = e.swingDur * 0.4;                              // tramo final: el golpe
+      if (e.swing < hitAt && !e.hitDone) {
         e.hitDone = true;
-        const box = { x: e.dir > 0 ? e.x + e.w : e.x - d.reach, y: e.y, w: d.reach, h: e.h };
-        if (overlap(s.p, box)) g.hurtPlayer(d.swingDamage, e.cx, d.name);
+        e.vx = e.dir * 60;                                         // un paso al clavar
+        const box = { x: e.dir > 0 ? e.x + e.w - 4 : e.x - d.reach + 4, y: e.y + 4, w: d.reach, h: e.h - 4 };
+        if (overlap(s.p, box)) g.hurtPlayer(e.strike === 2 ? (d.swingDamage2 ?? d.swingDamage) : d.swingDamage, e.cx, d.name);
         g.audio.play('melee', e);
       }
+      if (e.swing <= 0 && e.strike === 1) {
+        // Segunda estocada, con el otro brazo, casi sin pausa.
+        e.strike = 2;
+        e.dir = Math.sign(dx) || e.dir;
+        e.swing = e.swingDur = d.swing2Time ?? 0.42;
+        e.hitDone = false;
+        g.audio.play('screech', e);
+      } else if (e.swing <= 0) { e.strike = 0; e.cool = d.comboCool ?? 1.9; }
     } else if (e.lurch > 0) {
       // Aviso: se detiene y la cabeza le da un latigazo hacia atrás.
       e.lurch -= dt;
@@ -1428,9 +1466,9 @@ export const BEHAVIORS = {
       if (e.sprint <= 0) e.sprintCool = d.sprintCool;
     } else if (s.sees && Math.abs(dx) < d.reach + 8 && e.cool <= 0) {
       e.dir = Math.sign(dx) || e.dir;
-      e.swing = 0.75;
+      e.strike = 1;
+      e.swing = e.swingDur = d.swingTime ?? 0.6;
       e.hitDone = false;
-      e.cool = 1.8;
       g.audio.play('screech', e);
     } else if (s.sees && Math.abs(dx) > 50 && Math.abs(dx) < 140 && e.sprintCool <= 0 && e.onGround) {
       e.dir = Math.sign(dx) || e.dir;
@@ -2788,7 +2826,26 @@ export class Enemy {
     // Debilidades por tipo de golpe (p. ej. el Ganglio Madre ante las espinas del simbionte).
     n *= this.def.weakTo?.[kind] ?? 1;
     if (this.deflating) return false;
+    // Montón de huesos (el Vestigio caído): los golpes lo deshacen; si lo destrozas, ya no
+    // se levanta.
+    if (this.state === 'pile') {
+      this.pileHp -= n;
+      this.flash = 0.06;
+      this.game.audio.play('crunch', this);
+      for (let i = 0; i < 5; i++) this.game.particles.emit(this.cx + (Math.random() - 0.5) * 16, this.y + this.h - 6, { vx: (Math.random() - 0.5) * 100, vy: -40 - Math.random() * 70, life: 0.5, gravity: 500, color: [0.85, 0.8, 0.65] });
+      if (this.pileHp <= 0) { this.hp = 0; this.die(); }
+      return true;
+    }
     this.hp -= n;
+    if (this.def.reforms && this.hp <= 0) {
+      // No muere: se desmorona y al rato se recompone.
+      this.hp = 0; this.state = 'pile'; this.pileT = this.def.reformTime ?? 5; this.pileHp = this.def.pileHp ?? 14;
+      this.swing = 0; this.lurch = 0; this.sprint = 0; this.strike = 0; this.vx = 0; this.flash = 0.1;
+      this.y += this.h - 12; this.h = 12;                          // el montón: bajo
+      this.game.audio.play(this.def.sounds?.die ?? 'crunch', this);
+      this.game.gore.burst(this.cx, this.cy, this.w, this.h, this.def.gore, 0.3);
+      return true;
+    }
     if (this.weakT > 0 && this.weakFloor > 0 && this.hp < this.weakFloor) this.hp = this.weakFloor;
     if (this.def.deflates && this.hp <= 0 && !this.deflating) {
       this.hp = 1; this.deflating = true; this.gs = 'deflate'; this.timer = 0.6; this.vy = 0; this.tent = null;
