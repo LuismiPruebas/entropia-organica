@@ -12,19 +12,22 @@
 // Sin coraza (arrancada con el Tendón) se ve la carne roja bajo las placas.
 import { px, seg, OUTLINE } from './Rig.js';
 
-const ARMOR = { dark: '#5e5868', mid: '#9a94a4', light: '#c8c2cc', shine: '#f4f0f6', ivory: '#d8c8a0', ivoryD: '#8a7656', joint: '#6a3a44' }; // quitina pálida
+// Hueso nacarado: marfil con reflejos que viran entre rosa y azul pálido (nácar).
+const ARMOR = { dark: '#7a7088', mid: '#d2cac2', light: '#efe8dc', shine: '#ffffff', ivory: '#ece0c4', ivoryD: '#9a8a6a', joint: '#8a5a64', pink: '#f2d2dc', blue: '#d0e2f0' };
 const FLESH = { dark: '#4a1420', mid: '#8a3040', light: '#c05060', shine: '#f09090', ivory: '#a04a50', ivoryD: '#6a2a30', joint: '#e07080' };
 const W = 32, H = 24, G = 23; // lienzo y suelo
 
 // Placa abombada: elipse con contorno y cuatro tonos según la luz (de arriba a la
 // izquierda), y un punto de brillo. Así una placa de 5 px sigue leyéndose como volumen.
-function plate(g, cx, cy, rx, ry, C) {
+function plate(g, cx, cy, rx, ry, C, t = 0) {
   for (let y = -Math.ceil(ry) - 1; y <= Math.ceil(ry) + 1; y++) for (let x = -Math.ceil(rx) - 1; x <= Math.ceil(rx) + 1; x++) {
     const nx = x / rx, ny = y / ry, d = nx * nx + ny * ny;
     const dOut = (x / (rx + 1)) ** 2 + (y / (ry + 1)) ** 2;
     if (d <= 1) {
       const lit = -nx * 0.45 - ny * 0.75;
-      px(g, cx + x, cy + y, lit > 0.45 ? C.light : lit > -0.35 ? C.mid : C.dark);
+      // Las luces del nácar: viran entre rosa, marfil y azul según el punto y el momento.
+      const nac = C.pink ? Math.sin((cx + x) * 0.9 + (cy + y) * 0.6 + t * 2) : 0;
+      px(g, cx + x, cy + y, lit > 0.45 ? (nac > 0.45 ? C.pink : nac < -0.45 ? C.blue : C.light) : lit > -0.35 ? (lit > 0.2 && nac > 0.7 ? C.pink : C.mid) : C.dark);
     } else if (dOut <= 1) px(g, cx + x, cy + y, OUTLINE);
   }
   px(g, cx - Math.round(rx * 0.4), cy - Math.round(ry * 0.5), C.shine);
@@ -41,6 +44,30 @@ export const STAG = {
     const lean = st === 'gore' ? 1 : st === 'pinch' ? 0.5 : 0;
     const dazed = st === 'dazed';
     const pinch = st === 'pinchWind' ? 1 - tm / 0.35 : st === 'pinch' ? -1 : 0;
+    // Hecho bola: una esfera de placas que gira al rodar (se enrolla y se desenrolla).
+    if (st === 'curl' || st === 'roll' || st === 'uncurl') {
+      const k = st === 'curl' ? Math.min(1, 1 - tm / 0.3) : st === 'uncurl' ? Math.min(1, tm / 0.35) : 1;
+      const r = 5 + k * 2.5, bx = 16, by = G - r, ra = e.rollA ?? 0;
+      const cs = Math.cos(ra), sn = Math.sin(ra);
+      for (let y = -Math.ceil(r) - 1; y <= r + 1; y++) for (let x = -Math.ceil(r) - 1; x <= r + 1; x++) {
+        const d = Math.hypot(x, y) / r;
+        if (d > 1.13) continue;
+        if (d > 1) { px(g, bx + x, by + y, OUTLINE); continue; }
+        const lit = -x / r * 0.45 - y / r * 0.75 + (1 - d) * 0.5;
+        // Placas: bandas paralelas que giran con la bola.
+        const u = (x * cs + y * sn) / r * 2.2 + 10, f = u % 1, seam = f < 0.2, rim = f >= 0.2 && f < 0.36;
+        const nac = C.pink ? Math.sin((bx + x) * 0.9 + (by + y) * 0.6 + t * 2) : 0;
+        let c = lit > 0.5 ? (nac > 0.45 ? C.pink : nac < -0.45 ? C.blue : C.light) : lit > -0.15 ? C.mid : C.dark;
+        if (seam) c = C.dark;                                       // junta entre placas
+        else if (rim && lit > -0.2) c = lit > 0.4 ? C.shine : C.light;    // filo de luz de la placa
+        px(g, bx + x, by + y, c);
+      }
+      px(g, bx - Math.round(r * 0.4), by - Math.round(r * 0.5), C.shine);
+      // Las puntas de las mandíbulas asoman, girando con la bola.
+      for (const o of [0, 0.5]) px(g, bx + Math.cos(ra + o) * (r + 0.5), by + Math.sin(ra + o) * (r + 0.5), C.ivory);
+      e.spotsLocal = [{ x: bx, y: by, r, weak: false }];
+      return;
+    }
     const moving = Math.abs(e.vx) > 2;
     e.walkPh = (e.walkPh ?? 0) + Math.abs(e.vx) * 0.02 + (moving ? 0 : 0.002);
     const ph = e.walkPh * Math.PI * 2;
@@ -81,7 +108,7 @@ export const STAG = {
         px(g, tx + 1, ty + 1, C.light);
       }
     } else {
-      plate(g, ax, ay - 1, 7, 4, C);
+      plate(g, ax, ay - 1, 7, 4, C, t);
       seg(g, ax - 6, ay - 1, ax + 5, ay - 2, C.dark);                                        // sutura de los élitros
       px(g, ax - 3, ay - 3, C.shine); px(g, ax + 2, ay - 4, C.light, 2, 1);
     }
@@ -91,7 +118,7 @@ export const STAG = {
     const bx = 16, by = ay - 1;
     const P = (d) => [bx + Math.sin(tilt) * d, by - Math.cos(tilt) * d];
     const [s1x, s1y] = P(3), [s2x, s2y] = P(7);
-    plate(g, s1x, s1y, 3.2, 2.4, C);
+    plate(g, s1x, s1y, 3.2, 2.4, C, t);
     px(g, s1x - 2, s1y + 2, C.joint, 4, 1);
     // Garfios (el lejano detrás).
     const arm = (far) => {
@@ -103,7 +130,7 @@ export const STAG = {
       px(g, hx + 1, hy - 1, far ? C.dark : C.ivory);                                         // garfio
     };
     arm(true);
-    plate(g, s2x, s2y, 2.8, 2.2, C);
+    plate(g, s2x, s2y, 2.8, 2.2, C, t);
     arm(false);
 
     // --- Cabeza con mandíbulas de ciervo volante: dos astas curvas de un píxel, con una
@@ -128,7 +155,7 @@ export const STAG = {
       const [ex, ey] = j.pts[j.pts.length - 1];
       px(g, ex, ey, C.shine);                                                                // punta
     }
-    plate(g, hx, hy, 2.4, 2, C);
+    plate(g, hx, hy, 2.4, 2, C, t);
     px(g, hx - 2, hy - 2, C.ivoryD, 2, 1);                                                   // cresta
     // Ojo compuesto de ámbar.
     px(g, hx + 1, hy - 1, '#ffb030');

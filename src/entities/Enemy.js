@@ -1994,7 +1994,26 @@ export const BEHAVIORS = {
     const solid = (dx, dy) => w.rectSolid(Math.round(e.x) + dx, Math.round(e.y) + dy, e.w, e.h);
     const dx = p.cx - e.cx, dy = p.cy - e.cy, dist = Math.hypot(dx, dy);
     const sees = dist < d.sight && w.lineOfSight(e.cx, e.cy, p.cx, p.cy);
-    e.contactDamage = e.state === 'gore' ? d.goreDamage : d.contactDamage;
+    const ball = e.state === 'curl' || e.state === 'roll' || e.state === 'uncurl';
+    e.contactDamage = e.state === 'gore' ? d.goreDamage : e.state === 'roll' ? d.rollDamage : d.contactDamage;
+    e.hard = ball;                                                               // hecho bola, todo rebota
+    // Avanza n píxeles a lo largo de la superficie: en una esquina hacia dentro sube por la
+    // pared; en un borde, lo rodea y sigue por la otra cara. (false si se queda sin nada)
+    const crawl = (speed) => {
+      e.acc = (e.acc ?? 0) + speed * dt;
+      while (e.acc >= 1) {
+        e.acc -= 1;
+        const f1 = fwd();
+        if (solid(f1.x, f1.y)) { e.n = { x: f1.x, y: f1.y }; continue; }        // esquina hacia dentro
+        e.x = Math.round(e.x) + f1.x; e.y = Math.round(e.y) + f1.y;
+        if (!solid(e.n.x, e.n.y)) {                                          // borde: lo rodea
+          e.x += e.n.x; e.y += e.n.y;
+          e.n = { x: -f1.x, y: -f1.y };
+          if (!solid(e.n.x, e.n.y)) { e.state = 'fall'; e.hard = false; return false; }
+        }
+      }
+      return true;
+    };
     // Agarrarse a lo que haya tocado (tras caer o embestir).
     const grab = () => {
       if (e.onGround) e.n = { x: 0, y: 1 };
@@ -2031,24 +2050,30 @@ export const BEHAVIORS = {
       const f = fwd();
       if (sees && e.turnT <= 0 && f.x * dx + f.y * dy < -4) { e.td = -e.td; e.turnT = 0.5; }
       if (!sees && e.turnT <= 0 && Math.random() < dt * 0.06) { e.td = -e.td; e.turnT = 3; }
-      // Avanza píxel a píxel: en una esquina hacia dentro sube por la pared; en un borde,
-      // lo rodea y sigue por la otra cara.
-      e.acc = (e.acc ?? 0) + speedMods(e, g, (sees ? d.chaseSpeed : d.speed) * rage) * dt;
-      while (e.acc >= 1) {
-        e.acc -= 1;
-        const f1 = fwd();
-        if (solid(f1.x, f1.y)) { e.n = { x: f1.x, y: f1.y }; continue; }          // esquina hacia dentro
-        e.x = Math.round(e.x) + f1.x; e.y = Math.round(e.y) + f1.y;
-        if (!solid(e.n.x, e.n.y)) {                                            // borde: lo rodea
-          e.x += e.n.x; e.y += e.n.y;
-          e.n = { x: -f1.x, y: -f1.y };
-          if (!solid(e.n.x, e.n.y)) { e.state = 'fall'; return; }
-        }
-      }
+      if (!crawl(speedMods(e, g, (sees ? d.chaseSpeed : d.speed) * rage))) return;
       if (sees && e.cool <= 0) {
+        // De cerca muerde; a media distancia embiste o se hace bola; de lejos, rueda hacia ti.
+        const curl = () => { e.state = 'curl'; e.timer = 0.3; g.audio.play('click', e); };
         if (dist < d.pinchRange) { e.state = 'pinchWind'; e.timer = 0.3 / rage; g.audio.play('click', e); }
-        else if (dist < d.goreRange) { e.state = 'rear'; e.timer = 0.55 / rage; g.audio.play(d.sounds?.attack ?? 'growl', e); }
+        else if (dist < d.goreRange && Math.random() < 0.6) { e.state = 'rear'; e.timer = 0.55 / rage; g.audio.play(d.sounds?.attack ?? 'growl', e); }
+        else curl();
       }
+    } else if (e.state === 'curl') {
+      // Se enrolla en una bola de placas.
+      if (e.timer <= 0) {
+        const f = fwd();
+        if (f.x * dx + f.y * dy < 0) e.td = -e.td;                             // rueda hacia ti
+        e.state = 'roll'; e.timer = d.rollTime; g.audio.play('dash', e);
+      }
+    } else if (e.state === 'roll') {
+      // Rueda muy deprisa por la superficie (suelo, paredes, techo); te arrolla al pasar.
+      e.rollA = (e.rollA ?? 0) + e.td * d.rollSpeed * rage * dt / 7;
+      if (!crawl(d.rollSpeed * rage)) return;
+      if (Math.random() < 0.4) g.particles.emit(e.cx - e.n.x * -6, e.cy + e.n.y * 6, { vx: (Math.random() - 0.5) * 40, vy: -20, life: 0.3, color: [0.85, 0.82, 0.8] });
+      if (e.timer <= 0) { e.state = 'uncurl'; e.timer = 0.35; }
+    } else if (e.state === 'uncurl') {
+      // Se desenrolla: un instante vulnerable.
+      if (e.timer <= 0) { e.state = 'walk'; e.cool = d.attackCool / rage; }
     } else if (e.state === 'rear') {
       // Se encabrita y apunta; al acabar, se suelta y se lanza recto hacia ti.
       if (e.timer <= 0) {

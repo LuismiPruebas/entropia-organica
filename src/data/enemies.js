@@ -266,8 +266,9 @@ export const ENEMIES = {
     goreRange: 150, goreSpeed: 175, goreTime: 0.5, goreDamage: 16,
     pinchRange: 24, pinchDamage: 14,
     dazed: 1.1, stuck: 1.8, attackCool: 1.8,
+    rollSpeed: 150, rollTime: 2.2, rollDamage: 14, // hecho bola: rueda por suelos y paredes
     contactDamage: 10,
-    habits: 'Pequeño, rápido y molesto, casi todo coraza. Trepa por cualquier superficie: suelo, paredes y techo. Desde donde esté se encabrita abriendo las mandíbulas y se lanza recto hacia ti; al chocar se agarra a lo que toque, y si se clava queda atascado. Tras embestir jadea con los élitros abiertos: dispara a la carne del abdomen. Pegado a ti, cierra las mandíbulas de golpe. El Tendón le arranca la coraza.',
+    habits: 'Pequeño, rápido y molesto, casi todo coraza. Trepa por cualquier superficie: suelo, paredes y techo. Desde donde esté se encabrita abriendo las mandíbulas y se lanza recto hacia ti; al chocar se agarra a lo que toque, y si se clava queda atascado. Tras embestir jadea con los élitros abiertos: dispara a la carne del abdomen. Pegado a ti, cierra las mandíbulas de golpe. Otras veces se enrolla en una bola de placas y rueda muy deprisa por suelos, paredes y techos, arrollándote; hecho bola todo le rebota, pero al desenrollarse queda un instante vulnerable. El Tendón le arranca la coraza.',
     drop: { biomass: 14 },
     sounds: { reveal: 'stagBellow', attack: 'stagGrunt', die: 'isopodDie', hurt: 'stagGrunt' },
     lore: 'Se cubrió con la quitina de todo lo que digería hasta que las placas fueron su piel, y se irguió para vigilar el estómago como un guardia. Las mandíbulas le crecieron como astas. Solo un tirón de tendón deja ver la carne que todavía tiene debajo.',
