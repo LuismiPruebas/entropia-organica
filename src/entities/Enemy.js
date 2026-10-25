@@ -2214,6 +2214,8 @@ export const BEHAVIORS = {
     e.phaseT = (e.phaseT ?? (enraged ? 7 : 9)) - dt;
     const pool = g.room.hazards.find((h) => h.def?.manual);
     const base = d.poolBase ?? 0.35;                                  // el ácido que siempre queda
+    // El tanque: ella lo llena (sus tubos) salvo con los sumideros abiertos (válvula flush).
+    const setPool = (v) => { if (pool && !(pool.flushT > 0)) pool.target = v; };
     const side = Math.sign(p.cx - e.cx) || 1;
     e.face = (e.face ?? side) + (side - (e.face ?? side)) * Math.min(1, dt * 1.6);
     const mouth = () => ({ x: e.cx + e.face * 15, y: e.cy + 8 });
@@ -2302,7 +2304,7 @@ export const BEHAVIORS = {
       // Colgada: respira, sigue tu posición y ataca desde arriba.
       e.attach = Math.min(1, e.attach + dt * 2);
       e.float = Math.max(0, e.float - dt * 2);
-      if (pool) pool.target = base;
+      setPool(base);
       const target = Math.max(e.home.x - 60, Math.min(e.home.x + 60, p.cx - e.w / 2));
       e.trackX += Math.sign(target - e.trackX) * Math.min(Math.abs(target - e.trackX), (enraged ? 26 : 18) * dt);
       e.swingV = (e.swingV ?? 0) + (-(e.swingX ?? 0) * 9 - (e.swingV ?? 0) * 0.6) * dt + Math.sin(e.t * 1.1) * 14 * dt;
@@ -2384,7 +2386,7 @@ export const BEHAVIORS = {
       e.lash = 1;
       e.exposed = true;
       e.mouthOpen = 0.5 + 0.5 * Math.max(0, Math.sin(e.t * 4));
-      if (pool) pool.target = base;
+      setPool(base);
       const lo = TILE * 2, hi = g.world.pixelW - TILE * 2 - e.w;
       const pivTarget = Math.max(lo, Math.min(hi, p.cx - e.w / 2));
       e.trackX += Math.sign(pivTarget - e.trackX) * Math.min(Math.abs(pivTarget - e.trackX), (enraged ? 70 : 50) * dt);
@@ -2421,7 +2423,7 @@ export const BEHAVIORS = {
       }
       if (e.timer <= 0) {
         e.attach = Math.max(0, e.attach - dt * 1.5);
-        if (pool) pool.target = 1;                                    // el ácido sube con ella
+        setPool(1);                                                   // revientan sus tubos: el ácido inunda el tanque
         e.vy = Math.min(300, (e.vy ?? 0) + GRAVITY * 0.6 * dt);
         e.y += e.vy * dt;
         const sy = surfaceY();
@@ -2444,7 +2446,16 @@ export const BEHAVIORS = {
       e.float = Math.min(1, e.float + dt * 2);
       e.exposed = true;
       e.mouthOpen = 0.6 + 0.4 * Math.max(0, Math.sin(e.t * 3));
-      if (pool) pool.target = 1;
+      setPool(1);
+      // Le vacían el tanque: se queda varada en el fondo.
+      if (pool && pool.flushT > 0 && pool.level < 0.12) {
+        e.tent = null;
+        go('beached', d.beachedTime ?? 5);
+        g.shake = Math.max(g.shake, 6);
+        g.audio.play('thump', e);
+        g.audio.play(d.sounds?.hurt ?? 'glandHurt', e);
+        return;
+      }
       const sy = surfaceY();
       e.y += (sy - e.h * 0.55 + Math.sin(e.t * 2) * 2 - e.y) * Math.min(1, dt * 4);
       const tx = p.cx - e.w / 2;
@@ -2452,6 +2463,23 @@ export const BEHAVIORS = {
       e.x = Math.max(lo, Math.min(hi, e.x + Math.sign(tx - e.x) * Math.min(Math.abs(tx - e.x), (enraged ? 46 : 34) * (e.tent ? 0.4 : 1) * dt)));
       if (!e.tent && e.cool <= 0) { lashAt(enraged ? 0.16 : 0.24); e.cool = enraged ? 0.4 : 0.6; }
       if (e.timer <= 0 && !e.tent) { go('climb', 1.8); e.climbDur = 1.8; e.flag = 0; e.climbFrom = e.y; e.home.x = Math.max(lo, Math.min(hi, e.x)); e.trackX = e.home.x; e.swingX = 0; }
+      return;
+    }
+    if (e.gs === 'beached') {
+      // Varada en el fondo vacío: se retuerce sin poder flotar ni huir, con la boca abierta
+      // boqueando; los cilios se agitan en el aire. El momento de destrozarla.
+      e.attach = 0;
+      e.exposed = true;
+      e.lash = 1;
+      e.mouthOpen = 0.7 + 0.3 * Math.max(0, Math.sin(e.t * 9));
+      e.swell = 0.3 + Math.max(0, Math.sin(e.t * 6)) * 0.3;
+      const floorY = surfaceY();
+      e.y += (floorY - e.h * 0.8 - e.y) * Math.min(1, dt * 8);
+      e.x += Math.sin(e.t * 13) * 0.6;
+      if (Math.random() < dt * 3) g.particles.emit(e.cx + (Math.random() - 0.5) * e.w, e.y + e.h * 0.8, { vx: (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 40, life: 0.5, gravity: 400, color: [0.45, 0.75, 0.2] });
+      // Si el tanque se vuelve a llenar, flota otra vez; si no, al rato se iza.
+      if (pool && pool.level > 0.3) { go('float', 3); e.cool = 0.6; return; }
+      if (e.timer <= 0) { go('climb', 2.2); e.climbDur = 2.2; e.flag = 0; e.climbFrom = e.y; const lo = TILE * 2, hi = g.world.pixelW - TILE * 2 - e.w; e.home.x = Math.max(lo, Math.min(hi, e.x)); e.trackX = e.home.x; e.swingX = 0; }
       return;
     }
     if (e.gs === 'climb') {
@@ -2464,7 +2492,7 @@ export const BEHAVIORS = {
         const u = Math.min(1, (k - 0.38) / 0.62), ease = u * u * (3 - 2 * u);
         e.y = e.climbFrom + (e.home.y + 6 - e.climbFrom) * ease;
         e.attach = Math.min(1, u * 1.2);
-        if (pool) pool.target = base;
+        setPool(base);
       }
       if (e.timer <= 0) {
         go('hang', 0); e.flag = 0; e.attach = 1; e.depth = 6; e.phaseT = enraged ? 7 : 9; e.cool = 1.2;
@@ -2693,7 +2721,8 @@ export class Enemy {
       n *= this.def.backBonus ?? 1.6;
     }
     // Aguante al cuerpo a cuerpo (def.meleeResist: fracción del daño que le llega).
-    if (kind === 'melee' && this.def.meleeResist) n *= this.def.meleeResist;
+    if (kind === 'melee' && this.def.meleeResist && this.gs !== 'beached') n *= this.def.meleeResist;
+    if (this.gs === 'beached') n *= this.def.beachedBonus ?? 1;
     // Contraataque (def.counterChance): si le golpeas de frente cuerpo a cuerpo, a veces
     // responde enseguida (lo recoge su comportamiento, p. ej. una embestida corta).
     if (kind === 'melee' && this.def.counterChance && (this.game.player.cx - this.cx) * this.dir > 0 && Math.random() < this.def.counterChance) this.counter = true;
@@ -2728,7 +2757,7 @@ export class Enemy {
     if (this.def.behavior === 'golem' && n > 0 && !(this.gen > 0)) this.provoked = true;
     if (this.state === 'latch' && n > 0) this.shaken = true;
     if (this.def.behavior === 'bossToad' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.2; if (kind !== 'melee' && kind !== 'dash') this.shotAt = true; }
-    if (this.def.behavior === 'bossGland' && n > 0 && kind === 'melee') this.meleeHit = true;
+    if (this.def.behavior === 'bossGland' && n > 0 && kind === 'melee' && this.gs !== 'beached') this.meleeHit = true;
     if (this.def.behavior === 'glutton' && n > 0) { this.provoked = true; this.hits = (this.hits ?? 0) + 1; this.hitT = 1.4; }
     // El enjambre pierde células al ser herido: cada una sigue viva por su cuenta.
     if (this.def.sheds && this.hp > 0 && (this.gen ?? 0) === 0) {

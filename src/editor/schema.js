@@ -112,7 +112,7 @@ export const KINDS = {
     make: (x, y, room) => { room.pods ??= { opens: 'g1', at: [], order: [] }; room.pods.at.push([x, y]); room.pods.order = room.pods.at.map((_, i) => i); return null; },
   },
   valves: {
-    label: 'Válvula-esfínter (fill · drain · toggle · swap)', color: '#c8c040',
+    label: 'Válvula-esfínter (fill · drain · toggle · swap · flush)', color: '#c8c040',
     make: (x, y) => ({ x, y, dir: 'left', pool: 0, action: 'toggle' }), box: (o) => [o.x, o.y, 1, 1], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => o.action,
   },
   floats: {

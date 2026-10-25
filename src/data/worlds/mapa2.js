@@ -1963,6 +1963,10 @@ export const LEVELS = {
       { x: 10, y: 26, dir: 'up', pool: 0 },
       { x: 36, y: 26, dir: 'up', pool: 0 },
     ],
+    valves: [
+      { x: 1, y: 15, dir: 'right', pool: 0, action: 'flush', time: 7, recharge: 8 },
+      { x: 43, y: 15, dir: 'left', pool: 0, action: 'flush', time: 7, recharge: 8 },
+    ],
     links: [
       { id: 'p1', x: 0, y: 4, w: 1, h: 3, to: 'A12', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [2, 6] },
       { id: 'p2', x: 45, y: 27, w: 2, h: 1, to: 'D6', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [45, 9] },

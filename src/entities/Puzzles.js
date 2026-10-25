@@ -403,6 +403,10 @@ export class Valve {
       if (this.pool) this.pool.target = 0;
     } else if (act === 'toggle') {
       if (this.pool) this.pool.target = this.pool.target >= 0.5 ? 0 : 1;
+    } else if (act === 'flush') {
+      this.timer = this.def.time ?? 7;
+      if (this.pool) { this.pool.flushT = this.timer; this.pool.target = 0; }
+      g.audio.play('glandFlood', this);
     } else if (act === 'swap') {
       const fillA = (this.pool?.target ?? 0) < 0.5;
       if (this.pool) this.pool.target = fillA ? 1 : 0;
@@ -423,7 +427,8 @@ export class Valve {
     if (this.timer > 0) {
       this.timer -= dt;
       if (this.timer <= 0 && this.def.recharge) this.lock = this.def.recharge;
-      if (this.timer <= 0 && this.pool) {
+      if (this.pool && this.def.action === 'flush') this.pool.flushT = Math.max(0, this.timer);
+      if (this.timer <= 0 && this.pool && this.def.action !== 'flush') {
         this.pool.target = 0;
         g.audio.play('glandFlood', this);
       }
