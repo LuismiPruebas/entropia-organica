@@ -448,6 +448,118 @@ const SOUNDS = {
     a.tone(o, { type: 'sine', f0: 65, f1: 32, dur: 0.3, vol: 0.55, delay: 0.75 });
     a.noise(o, { dur: 0.25, vol: 0.3, type: 'lowpass', f0: 800, f1: 100, delay: 0.75 });
   },
+  // ---- Criaturas del Territorio del Hueso: todo suena a hueso, calcio y quitina.
+  // Vestigio: los dientes le castañetean y resuella entre las costillas rotas.
+  boneChatter: (a, o) => {
+    const n = 6 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) a.knock(o, { f: rnd(1700, 2600), q: 14, dur: 0.04, vol: 0.22, delay: i * rnd(0.035, 0.06) });
+    a.noise(o, { dur: 0.4, vol: 0.06, type: 'bandpass', f0: 900, f1: 1300, q: 3 });
+  },
+  boneRasp: (a, o) => {
+    a.noise(o, { dur: 0.9, vol: 0.14, type: 'bandpass', f0: 420, f1: 1250, q: 3 });
+    a.voice(o, { pitch: [[0, 68], [1, 56]], dur: 0.9, vol: 0.18, growl: 1, growlRate: 19, growlWave: 'square', formants: [[380, 6, 1], [1100, 8, 0.3]], attack: 0.15, release: 0.4 });
+    for (let i = 0; i < 3; i++) a.knock(o, { f: rnd(500, 800), q: 8, dur: 0.06, vol: 0.12, delay: 0.2 + i * 0.22 });
+  },
+  // Al atacar: un chillido rasposo de garganta seca, con la mandíbula chasqueando.
+  boneShriek: (a, o) => {
+    a.voice(o, { pitch: [[0, 520], [0.3, 880], [1, 640]], dur: 0.45, vol: 0.28, growl: 0.8, growlRate: 34, breath: 0.7, formants: [[1200, 6, 1], [2600, 8, 0.5]], attack: 0.02, release: 0.2 });
+    a.knock(o, { f: 1400, q: 16, dur: 0.05, vol: 0.3 }); a.knock(o, { f: 1100, q: 16, dur: 0.05, vol: 0.25, delay: 0.08 });
+  },
+  // La estaca se clava: silbido corto y el crujido de la punta.
+  boneStab: (a, o) => {
+    a.noise(o, { dur: 0.12, vol: 0.3, type: 'bandpass', f0: 600, f1: 2400, q: 2 });
+    a.knock(o, { f: 900, q: 6, dur: 0.12, vol: 0.4, delay: 0.08 });
+    a.noise(o, { dur: 0.08, vol: 0.2, type: 'highpass', f0: 3000, delay: 0.08 });
+  },
+  // Se desmorona: una cascada de huesos que caen y rebotan, y el cráneo que golpea el último.
+  boneCollapse: (a, o) => {
+    let d = 0;
+    for (let i = 0; i < 16; i++) { a.knock(o, { f: rnd(350, 1600), q: rnd(8, 16), dur: 0.08, vol: rnd(0.15, 0.3), delay: d }); d += rnd(0.02, 0.07) * (1 + i * 0.05); }
+    a.tone(o, { type: 'sine', f0: 90, f1: 45, dur: 0.25, vol: 0.35, delay: 0.05 });
+    a.knock(o, { f: 260, q: 5, dur: 0.25, vol: 0.4, delay: d + 0.05 });
+    a.noise(o, { dur: 0.5, vol: 0.12, type: 'highpass', f0: 3000, f1: 5000 });
+  },
+  // Se recompone: huesos que se buscan y encajan cada vez más deprisa, y la mandíbula.
+  boneReform: (a, o) => {
+    let d = 0, gap = 0.16;
+    for (let i = 0; i < 12; i++) { a.knock(o, { f: 500 + i * 70 + rnd(-40, 40), q: 14, dur: 0.06, vol: 0.18 + i * 0.012, delay: d }); d += gap; gap *= 0.82; }
+    a.knock(o, { f: 1800, q: 18, dur: 0.07, vol: 0.4, delay: d + 0.04 }); a.knock(o, { f: 1300, q: 18, dur: 0.07, vol: 0.35, delay: d + 0.12 });
+    a.voice(o, { pitch: [[0, 90], [1, 120]], dur: 0.6, vol: 0.18, growl: 1, growlRate: 22, breath: 0.5, formants: [[500, 6, 1]], attack: 0.1, delay: d });
+  },
+  boneCrack: (a, o) => {
+    a.knock(o, { f: rnd(1100, 1600), q: 8, dur: 0.07, vol: 0.45 });
+    a.noise(o, { dur: 0.12, vol: 0.25, type: 'bandpass', f0: 2500, f1: 900, q: 2 });
+    a.noise(o, { dur: 0.25, vol: 0.12, type: 'bandpass', f0: 500, f1: 900, q: 3, delay: 0.06 });   // resuello
+  },
+  // Ciervo Acorazado: quitina de nácar. Estridula, sisea, chasquea las mandíbulas.
+  stagChitter: (a, o) => {
+    const n = 8 + Math.floor(Math.random() * 6), f = rnd(3200, 4200);
+    for (let i = 0; i < n; i++) a.tone(o, { type: 'square', f0: f, f1: f * 0.92, dur: 0.018, vol: 0.05, delay: i * 0.03 });
+  },
+  stagHiss: (a, o) => {
+    a.noise(o, { dur: 0.5, vol: 0.22, type: 'bandpass', f0: 2600, f1: 4200, q: 2 });
+    for (let i = 0; i < 5; i++) a.tone(o, { type: 'square', f0: 3800, f1: 3400, dur: 0.02, vol: 0.06, delay: 0.05 + i * 0.05 });
+  },
+  stagClack: (a, o) => {
+    a.knock(o, { f: 1700, q: 22, dur: 0.06, vol: 0.5 });
+    a.knock(o, { f: 950, q: 18, dur: 0.08, vol: 0.4, delay: 0.015 });
+    a.tone(o, { type: 'sine', f0: 2400, f1: 2300, dur: 0.15, vol: 0.06, delay: 0.015 });          // brillo de nácar
+  },
+  // Se enrolla: las placas encajan una tras otra como un trinquete.
+  stagCurl: (a, o) => { for (let i = 0; i < 6; i++) a.knock(o, { f: 800 + i * 120, q: 16, dur: 0.05, vol: 0.28, delay: i * 0.04 }); },
+  // Rodando: un tac-tac de placas contra la piedra (lo dispara el comportamiento).
+  stagRollTick: (a, o) => { a.knock(o, { f: rnd(500, 700), q: 7, dur: 0.06, vol: 0.18 }); a.noise(o, { dur: 0.05, vol: 0.06, type: 'bandpass', f0: 1500, q: 2 }); },
+  // Herido: un tintineo cerámico de nácar (la coraza aguanta).
+  stagPing: (a, o) => {
+    a.tone(o, { type: 'sine', f0: rnd(2200, 2600), f1: 2100, dur: 0.35, vol: 0.12 });
+    a.tone(o, { type: 'sine', f0: 3500, f1: 3400, dur: 0.2, vol: 0.05 });
+    a.knock(o, { f: 1900, q: 26, dur: 0.06, vol: 0.35 });
+  },
+  // Muere: porcelana de nácar que se hace añicos.
+  stagShatter: (a, o) => {
+    deathImpact(a, o, 0.8);
+    for (let i = 0; i < 14; i++) a.knock(o, { f: rnd(1800, 4200), q: rnd(14, 28), dur: 0.06, vol: rnd(0.12, 0.25), delay: rnd(0, 0.35) });
+    for (let i = 0; i < 4; i++) a.tone(o, { type: 'sine', f0: rnd(2000, 3200), f1: rnd(1800, 2400), dur: 0.4, vol: 0.05, delay: rnd(0.05, 0.3) });
+    a.noise(o, { dur: 0.35, vol: 0.2, type: 'highpass', f0: 3500, f1: 6000 });
+  },
+  // El Relicario: un cuerno de hueso colosal, la guadaña que silba, el golpe que agrieta el
+  // suelo y el núcleo que chilla.
+  reaperBellow: (a, o) => {
+    a.voice(o, { pitch: [[0, 42], [0.4, 48], [1, 34]], dur: 2.2, vol: 0.5, growl: 0.8, growlRate: 14, growlWave: 'square', wave: 'sawtooth', formants: [[180, 4, 1], [520, 6, 0.6], [1300, 8, 0.2]], attack: 0.3, release: 0.8 });
+    a.tone(o, { type: 'sine', f0: 31, f1: 27, dur: 2.2, vol: 0.4 });
+    a.tone(o, { type: 'triangle', f0: 126, f1: 104, dur: 1.8, vol: 0.06, delay: 0.2 });
+    a.noise(o, { dur: 1.6, vol: 0.06, type: 'bandpass', f0: 300, f1: 160, q: 2 });
+  },
+  reaperScythe: (a, o) => {
+    a.noise(o, { dur: 0.45, vol: 0.35, type: 'bandpass', f0: 300, f1: 2600, q: 1.8 });
+    a.tone(o, { type: 'triangle', f0: 1240, f1: 1180, dur: 0.9, vol: 0.05, delay: 0.25 });          // el filo vibra
+    a.tone(o, { type: 'sine', f0: 1870, f1: 1820, dur: 0.6, vol: 0.025, delay: 0.25 });
+  },
+  reaperSlam: (a, o) => {
+    a.knock(o, { f: 42, q: 2, dur: 1.2, vol: 0.9 });
+    a.tone(o, { type: 'sine', f0: 60, f1: 24, dur: 0.9, vol: 0.6 });
+    a.noise(o, { dur: 0.7, vol: 0.4, type: 'lowpass', f0: 1800, f1: 120 });
+    for (let i = 0; i < 10; i++) a.knock(o, { f: rnd(400, 1500), q: 10, dur: 0.06, vol: rnd(0.1, 0.2), delay: 0.12 + i * rnd(0.03, 0.08) });
+    a.tone(o, { type: 'triangle', f0: 1240, f1: 1240, dur: 1.4, vol: 0.04, delay: 0.05 });          // la hoja clavada zumba
+  },
+  reaperCore: (a, o) => {
+    a.voice(o, { pitch: [[0, 340], [0.3, 520], [1, 260]], dur: 0.5, vol: 0.35, growl: 0.6, growlRate: 40, breath: 0.5, formants: [[900, 5, 1], [2200, 7, 0.4]], attack: 0.01, release: 0.25 });
+    for (let i = 0; i < 4; i++) a.tone(o, { type: 'sine', f0: rnd(200, 400), f1: rnd(500, 800), dur: 0.06, vol: 0.08, delay: 0.1 + i * 0.07 });  // burbujeo
+  },
+  // El suelo de hueso retumba y cruje (aviso del géiser de púas).
+  boneRumble: (a, o) => {
+    a.noise(o, { dur: 0.8, vol: 0.3, type: 'lowpass', f0: 220, f1: 90 });
+    a.tone(o, { type: 'sine', f0: 48, f1: 40, dur: 0.8, vol: 0.3 });
+    for (let i = 0; i < 6; i++) a.knock(o, { f: rnd(300, 900), q: 8, dur: 0.06, vol: 0.12, delay: 0.1 + i * rnd(0.06, 0.12) });
+  },
+  reaperDie: (a, o) => {
+    deathImpact(a, o, 2.2);
+    a.voice(o, { pitch: [[0, 48], [1, 20]], dur: 3.5, vol: 0.55, growl: 1, growlRate: 10, growlWave: 'square', wave: 'sawtooth', formants: [[160, 4, 1], [480, 6, 0.5]], attack: 0.1, release: 1.5 });
+    let d = 0.6;
+    for (let i = 0; i < 26; i++) { a.knock(o, { f: rnd(200, 1400), q: rnd(5, 14), dur: 0.12, vol: rnd(0.15, 0.4), delay: d }); d += rnd(0.04, 0.14); }
+    a.tone(o, { type: 'sine', f0: 900, f1: 120, dur: 0.6, vol: 0.2, delay: 0.3 });                 // el núcleo se apaga
+    a.knock(o, { f: 36, q: 2, dur: 1.5, vol: 0.8, delay: d });
+  },
   // Anguila: chapuzón violento, siseo del ácido y coletazos.
   eelDie: (a, o) => {
     deathImpact(a, o, 0.9);

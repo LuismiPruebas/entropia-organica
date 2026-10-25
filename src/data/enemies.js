@@ -257,7 +257,7 @@ export const ENEMIES = {
     biome: 'oseo',
     creature: 'ciervo',
     gore: { blood: '#5a0a14', flesh: ['#9a94a4', '#5e5868', '#8a3040', '#d4c098'] },
-    voice: ['stagHuff', 'stagBellow', 'stagHuff'],
+    voice: ['stagChitter', 'stagChitter', 'stagHiss'], // estridula la quitina, sisea
     behavior: 'stagCrawl',     // trepa por suelo, paredes y techo
     noStagger: true,
     hp: 60, w: 14, h: 14,      // pequeño...
@@ -270,7 +270,7 @@ export const ENEMIES = {
     contactDamage: 10,
     habits: 'Pequeño, rápido y molesto, casi todo coraza. Trepa por cualquier superficie: suelo, paredes y techo. Desde donde esté se encabrita abriendo las mandíbulas y se lanza recto hacia ti; al chocar se agarra a lo que toque, y si se clava queda atascado. Tras embestir jadea con los élitros abiertos: dispara a la carne del abdomen. Pegado a ti, cierra las mandíbulas de golpe. Otras veces se enrolla en una bola de placas y rueda muy deprisa por suelos, paredes y techos, arrollándote; hecho bola todo le rebota, pero al desenrollarse queda un instante vulnerable. El Tendón le arranca la coraza.',
     drop: { biomass: 14 },
-    sounds: { reveal: 'stagBellow', attack: 'stagGrunt', die: 'isopodDie', hurt: 'stagGrunt' },
+    sounds: { reveal: 'stagHiss', attack: 'stagHiss', die: 'stagShatter', hurt: 'stagPing' },
     lore: 'Se cubrió con la quitina de todo lo que digería hasta que las placas fueron su piel, y se irguió para vigilar el estómago como un guardia. Las mandíbulas le crecieron como astas. Solo un tirón de tendón deja ver la carne que todavía tiene debajo.',
   },
   relicario: {
@@ -279,7 +279,7 @@ export const ENEMIES = {
     biome: 'oseo',
     creature: 'relicario',
     gore: { blood: '#8a1a10', flesh: ['#a8906c', '#6e5a42', '#cfb88e', '#ff6a2a'] },
-    voice: ['stagBellow', 'growl'],
+    voice: ['reaperBellow'],
     behavior: 'bossReaper',
     boss: true,
     music: 'coro',
@@ -297,7 +297,7 @@ export const ENEMIES = {
       lore: ['MEMORIA: EL RELICARIO', 'Te enseñaron una caja de cristal con un corazón dentro que todavía latía. Dijeron que era del primero. Dijeron que algún día el tuyo estaría al lado.'],
       text: 'Las costillas se cierran por última vez sobre un núcleo apagado.',
     },
-    sounds: { reveal: 'stagBellow', attack: 'stagBellow', hurt: 'stagGrunt', die: 'isopodDie' },
+    sounds: { reveal: 'reaperBellow', attack: 'reaperBellow', hurt: 'reaperCore', die: 'reaperDie' },
     auraPeriod: 3,
     habits: 'Asoma del suelo y apenas se mueve: se desliza despacio hacia ti. Alza una guadaña temblando y barre el suelo de fuera adentro por tu lado: sáltala. O la alza sobre la cabeza y la clava donde estás: al clavarla el suelo se resquebraja a los lados, la guadaña se queda atascada y se le abren las costillas. Su único punto débil es el núcleo que late dentro, y solo con la caja abierta. Si te alejas, el suelo tiembla bajo tus pies y revientan púas de hueso. Herido, más deprisa, y a veces clava una guadaña tras otra.',
     lore: 'La caja torácica de algo que fue enorme, y que el parásito no ha dejado morir. Guarda dentro un núcleo que late como un corazón ajeno, y siega todo lo que se acerca a él.',
@@ -308,7 +308,7 @@ export const ENEMIES = {
     biome: 'oseo',
     creature: 'vestigio',
     gore: { blood: '#8a0a14', flesh: ['#9a7a6a', '#6a5048', '#8a6a5a', '#e8dcc8'] },
-    voice: ['vestigioBreath', 'moan', 'vestigioBreath'],
+    voice: ['boneChatter', 'boneRasp', 'boneChatter'], // dientes que castañetean, resuello entre costillas
     behavior: 'shambler',
     hp: 30, w: 16, h: 34,      // frágil: se desmorona enseguida...
     reforms: true,             // ...pero no muere: al rato se recompone
@@ -321,7 +321,7 @@ export const ENEMIES = {
     contactDamage: 6,
     habits: 'Arrastra los pies apoyándose en sus brazos-estaca. A media distancia se queda quieto, le da un latigazo el cráneo y arranca en una carrera torpe. De cerca echa un brazo atrás y te lo clava, y enseguida el otro: dos estocadas que hacen mucho daño. Se rompe con poco, pero no muere: se desmorona en un montón de huesos y a los pocos segundos tiembla, se le enciende el cráneo y se recompone. Destroza el montón mientras está en el suelo y ya no se levantará.',
     drop: { biomass: 10 },
-    sounds: { reveal: 'vestigioAlert', die: 'vestigioDie', hurt: 'vestigioHurt' },
+    sounds: { reveal: 'boneShriek', die: 'boneCollapse', hurt: 'boneCrack' },
     lore: 'Lo que el estómago no terminó de digerir. Todavía camina erguido a ratos, todavía tiene un ojo que brilla como el tuyo. Una pierna le creció más larga que la otra mientras esperaba a que alguien viniera a buscarlo.',
   },
   anguila: {

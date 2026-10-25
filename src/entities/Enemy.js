@@ -1425,8 +1425,7 @@ export const BEHAVIORS = {
         e.y -= d.h - e.h; e.h = d.h;                                   // de pie otra vez
         e.flash = 0.15;
         e.swing = 0; e.lurch = 0; e.sprint = 0; e.cool = 0.8;
-        g.audio.play('crunch', e);
-        g.audio.play(d.sounds?.reveal ?? 'screech', e);
+        g.audio.play('boneReform', e);
         for (let i = 0; i < 10; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * 16, e.y + e.h - 4, { vx: (Math.random() - 0.5) * 80, vy: -40 - Math.random() * 60, life: 0.5, gravity: 500, color: [0.85, 0.8, 0.65] });
       }
       e.vy = Math.min(380, e.vy + GRAVITY * dt);
@@ -1445,6 +1444,7 @@ export const BEHAVIORS = {
         const box = { x: e.dir > 0 ? e.x + e.w - 4 : e.x - d.reach + 4, y: e.y + 4, w: d.reach, h: e.h - 4 };
         if (overlap(s.p, box)) g.hurtPlayer(e.strike === 2 ? (d.swingDamage2 ?? d.swingDamage) : d.swingDamage, e.cx, d.name);
         g.audio.play('melee', e);
+        g.audio.play('boneStab', e);
       }
       if (e.swing <= 0 && e.strike === 1) {
         // Segunda estocada, con el otro brazo, casi sin pausa.
@@ -1452,13 +1452,13 @@ export const BEHAVIORS = {
         e.dir = Math.sign(dx) || e.dir;
         e.swing = e.swingDur = d.swing2Time ?? 0.42;
         e.hitDone = false;
-        g.audio.play('screech', e);
+        g.audio.play('boneShriek', e);
       } else if (e.swing <= 0) { e.strike = 0; e.cool = d.comboCool ?? 1.9; }
     } else if (e.lurch > 0) {
       // Aviso: se detiene y la cabeza le da un latigazo hacia atrás.
       e.lurch -= dt;
       e.vx = 0;
-      if (e.lurch <= 0) { e.sprint = d.sprintTime; g.audio.play('screech', e); }
+      if (e.lurch <= 0) { e.sprint = d.sprintTime; g.audio.play('boneShriek', e); }
     } else if (e.sprint > 0) {
       e.sprint -= dt;
       e.vx = e.dir * d.sprintSpeed;
@@ -1469,7 +1469,7 @@ export const BEHAVIORS = {
       e.strike = 1;
       e.swing = e.swingDur = d.swingTime ?? 0.6;
       e.hitDone = false;
-      g.audio.play('screech', e);
+      g.audio.play('boneShriek', e);
     } else if (s.sees && Math.abs(dx) > 50 && Math.abs(dx) < 140 && e.sprintCool <= 0 && e.onGround) {
       e.dir = Math.sign(dx) || e.dir;
       e.lurch = d.lurch;
@@ -2053,8 +2053,8 @@ export const BEHAVIORS = {
       if (!crawl(speedMods(e, g, (sees ? d.chaseSpeed : d.speed) * rage))) return;
       if (sees && e.cool <= 0) {
         // De cerca muerde; a media distancia embiste o se hace bola; de lejos, rueda hacia ti.
-        const curl = () => { e.state = 'curl'; e.timer = 0.3; g.audio.play('click', e); };
-        if (dist < d.pinchRange) { e.state = 'pinchWind'; e.timer = 0.3 / rage; g.audio.play('click', e); }
+        const curl = () => { e.state = 'curl'; e.timer = 0.3; g.audio.play('stagCurl', e); };
+        if (dist < d.pinchRange) { e.state = 'pinchWind'; e.timer = 0.3 / rage; g.audio.play('stagHiss', e); }
         else if (dist < d.goreRange && Math.random() < 0.6) { e.state = 'rear'; e.timer = 0.55 / rage; g.audio.play(d.sounds?.attack ?? 'growl', e); }
         else curl();
       }
@@ -2069,6 +2069,9 @@ export const BEHAVIORS = {
       // Rueda muy deprisa por la superficie (suelo, paredes, techo); te arrolla al pasar.
       e.rollA = (e.rollA ?? 0) + e.td * d.rollSpeed * rage * dt / 7;
       if (!crawl(d.rollSpeed * rage)) return;
+      // Tac-tac de las placas contra la piedra, al ritmo de la rodada.
+      e.tickA = (e.tickA ?? 0) + d.rollSpeed * rage * dt;
+      if (e.tickA > 14) { e.tickA = 0; g.audio.play('stagRollTick', e); }
       if (Math.random() < 0.4) g.particles.emit(e.cx - e.n.x * -6, e.cy + e.n.y * 6, { vx: (Math.random() - 0.5) * 40, vy: -20, life: 0.3, color: [0.85, 0.82, 0.8] });
       if (e.timer <= 0) { e.state = 'uncurl'; e.timer = 0.35; }
     } else if (e.state === 'uncurl') {
@@ -2085,7 +2088,7 @@ export const BEHAVIORS = {
       }
     } else if (e.state === 'pinchWind') {
       if (e.timer <= 0) {
-        e.state = 'pinch'; e.timer = 0.22; g.audio.play('crunch', e);
+        e.state = 'pinch'; e.timer = 0.22; g.audio.play('stagClack', e);
         hitZone(g, e, e.x - 8, e.y - 8, e.w + 16, e.h + 16, d.pinchDamage);
       }
     } else if (e.state === 'pinch') {
@@ -2150,7 +2153,7 @@ export const BEHAVIORS = {
         const far = Math.abs(dx) > (d.reach ?? 180);
         if (far) {
           e.state = 'geyser'; e.timer = 0.8; e.gx = p.cx; e.geysers = rage ? 3 : 2;
-          g.audio.play('glandRumble', e);
+          g.audio.play('boneRumble', e);
         } else {
           const kind = Math.random() < 0.5 ? 'sweep' : 'slam';
           e.atkSide = side; e.atkKind = kind;
@@ -2158,7 +2161,7 @@ export const BEHAVIORS = {
           a.pose = 'raise'; a.kind = kind; a.k = 0;
           a.tx = Math.max(50, Math.min(180, Math.abs(dx)));
           e.state = 'raise'; e.timer = kind === 'slam' ? 0.85 : 0.75;
-          g.audio.play(d.sounds?.attack ?? 'growl', e);
+          g.audio.play(Math.random() < 0.4 ? (d.sounds?.attack ?? 'growl') : 'reaperScythe', e); // a veces brama; si no, la hoja silba al alzarse
         }
       }
     } else if (e.state === 'raise') {
@@ -2168,7 +2171,7 @@ export const BEHAVIORS = {
       if (e.timer <= 0) {
         a.pose = e.atkKind; a.k = 0; e.hitDone = false;
         e.state = e.atkKind; e.timer = e.atkKind === 'slam' ? 0.2 : 0.5;
-        g.audio.play('dash', e);
+        g.audio.play('reaperScythe', e);
       }
     } else if (e.state === 'sweep') {
       const a = arm(e.atkSide);
@@ -2185,7 +2188,7 @@ export const BEHAVIORS = {
         a.pose = 'stuck';
         e.state = 'stuck'; e.timer = d.stuckTime ?? 2.2;
         g.shake = Math.max(g.shake, 9);
-        g.audio.play('crunch', e); g.audio.play('thump', e);
+        g.audio.play('reaperSlam', e);
         const tx = ox + C.CX + e.atkSide * a.tx;
         for (let i = 0; i < 24; i++) g.particles.emit(tx + (Math.random() - 0.5) * 30, floorY - 2, { vx: (Math.random() - 0.5) * 220, vy: -80 - Math.random() * 160, life: 0.8, gravity: 700, color: Math.random() < 0.5 ? [0.8, 0.72, 0.55] : [0.45, 0.38, 0.3] });
         // Onda por el suelo a los dos lados de la hoja.
@@ -2201,7 +2204,7 @@ export const BEHAVIORS = {
           const s2 = -e.atkSide, b = arm(s2);
           b.pose = 'raise'; b.kind = 'slam'; b.k = 0; b.tx = Math.max(50, Math.min(180, Math.abs(p.cx - e.cx)));
           e.atkSide = s2; e.atkKind = 'slam'; e.state = 'raise'; e.timer = 0.6;
-          g.audio.play(d.sounds?.attack ?? 'growl', e);
+          g.audio.play(Math.random() < 0.4 ? (d.sounds?.attack ?? 'growl') : 'reaperScythe', e); // a veces brama; si no, la hoja silba al alzarse
         } else { e.chained = false; e.state = 'recover'; e.timer = 0.6; }
       }
     } else if (e.state === 'recover') {
