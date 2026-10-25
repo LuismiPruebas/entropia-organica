@@ -272,6 +272,35 @@ export const ENEMIES = {
     sounds: { reveal: 'stagBellow', attack: 'stagGrunt', die: 'isopodDie', hurt: 'stagGrunt' },
     lore: 'Se cubrió con la quitina de todo lo que digería hasta que las placas fueron su piel, y se irguió para vigilar el estómago como un guardia. Las mandíbulas le crecieron como astas. Solo un tirón de tendón deja ver la carne que todavía tiene debajo.',
   },
+  relicario: {
+    frag: 'balistico', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
+    name: 'El Relicario',
+    biome: 'oseo',
+    creature: 'relicario',
+    gore: { blood: '#8a1a10', flesh: ['#a8906c', '#6e5a42', '#cfb88e', '#ff6a2a'] },
+    voice: ['stagBellow', 'growl'],
+    behavior: 'bossReaper',
+    boss: true,
+    music: 'coro',
+    weakOnly: true,    // solo el núcleo...
+    exposedOnly: true, // ...y solo con las costillas abiertas (tras clavar la guadaña)
+    hp: 460, w: 100, h: 150,
+    light: { color: [0.5, 0.3, 0.2], r: 230 },
+    contactDamage: 12,
+    reach: 180,        // hasta dónde llegan sus guadañas desde el centro
+    drift: 10,         // se desliza despacio hacia ti
+    sweepDamage: 20, slamDamage: 26, geyserDamage: 12,
+    stuckTime: 2.2,    // segundos con la guadaña clavada y el núcleo al aire
+    drop: { biomass: 40, fragments: 3, items: ['thymus'] },
+    reward: {
+      lore: ['MEMORIA: EL RELICARIO', 'Te enseñaron una caja de cristal con un corazón dentro que todavía latía. Dijeron que era del primero. Dijeron que algún día el tuyo estaría al lado.'],
+      text: 'Las costillas se cierran por última vez sobre un núcleo apagado.',
+    },
+    sounds: { reveal: 'stagBellow', attack: 'stagBellow', hurt: 'stagGrunt', die: 'isopodDie' },
+    auraPeriod: 3,
+    habits: 'Asoma del suelo y apenas se mueve: se desliza despacio hacia ti. Alza una guadaña temblando y barre el suelo de fuera adentro por tu lado: sáltala. O la alza sobre la cabeza y la clava donde estás: al clavarla el suelo se resquebraja a los lados, la guadaña se queda atascada y se le abren las costillas. Su único punto débil es el núcleo que late dentro, y solo con la caja abierta. Si te alejas, el suelo tiembla bajo tus pies y revientan púas de hueso. Herido, más deprisa, y a veces clava una guadaña tras otra.',
+    lore: 'La caja torácica de algo que fue enorme, y que el parásito no ha dejado morir. Guarda dentro un núcleo que late como un corazón ajeno, y siega todo lo que se acerca a él.',
+  },
   vestigio: {
     frag: 'balistico', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)
     name: 'Vestigio',

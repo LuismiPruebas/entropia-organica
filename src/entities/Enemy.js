@@ -2077,6 +2077,125 @@ export const BEHAVIORS = {
     e.surfRot = Math.atan2(e.n.x, e.n.y);                                         // 0 suelo, π techo, ±π/2 paredes
   },
 
+  // El Relicario: asoma del suelo y apenas se mueve (se desliza despacio hacia ti). Sus
+  // ataques, con aviso claro:
+  //   siega   alza una guadaña temblando y barre el suelo de fuera adentro por tu lado
+  //           (hay que saltarla);
+  //   tajo    la alza sobre la cabeza y la clava donde estás; queda clavada y se le abren
+  //           las costillas: el núcleo, su único punto débil, queda al aire;
+  //   géiser  si te alejas, el suelo tiembla bajo tus pies y revientan púas de hueso.
+  // Furioso (por debajo de la mitad), más deprisa, y a veces encadena dos tajos.
+  bossReaper(e, dt, g) {
+    const d = e.def, p = g.player, C = e.creature;
+    const rage = e.hp < d.hp / 2;
+    const sp = rage ? 1.35 : 1;
+    e.state ??= 'idle';
+    e.arms ??= { L: { pose: 'idle' }, R: { pose: 'idle' } };
+    e.timer = (e.timer ?? 1.5) - dt * sp;
+    e.beatPh = (e.beatPh ?? 0) + dt * (1.1 + (e.open ?? 0) * 1.6 + (rage ? 0.6 : 0));
+    e.beat = Math.max(0, Math.sin(e.beatPh * Math.PI * 2)) ** 3;
+    const wantOpen = e.state === 'stuck' ? 1 : 0;
+    e.open = (e.open ?? 0) + (wantOpen - (e.open ?? 0)) * Math.min(1, dt * (wantOpen ? 5 : 2.5));
+    e.exposed = e.open > 0.5;
+    e.contactDamage = d.contactDamage;
+    // Asentado en el suelo (de donde asoma): cae hasta tocarlo y ya no se mueve en vertical.
+    if (!e.onGround) { e.vx = 0; e.vy = Math.min(380, (e.vy ?? 0) + GRAVITY * dt); g.world.move(e, dt); }
+    const [ox, oy] = C.origin(e);
+    const floorY = oy + C.FY;
+    const dx = p.cx - e.cx;
+    const side = (dx >= 0 ? 1 : -1);
+    const arm = (s) => e.arms[s < 0 ? 'L' : 'R'];
+    // La hoja (sus puntos, en el lienzo) corta: si te toca durante el golpe, hiere.
+    const bladeHits = (s, dmg) => {
+      const b = e.bladePts?.find((q) => q.side === s);
+      if (!b || p.invuln > 0) return false;
+      for (let i = 20; i < b.pts.length; i += 3) {
+        const x = ox + b.pts[i][0], y = oy + b.pts[i][1];
+        if (x > p.x - 3 && x < p.x + p.w + 3 && y > p.y - 3 && y < p.y + p.h + 3) { g.hurtPlayer(dmg, x, d.name, undefined, undefined, 240); return true; }
+      }
+      return false;
+    };
+    // Se desliza despacio hacia ti cuando no ataca (sin salirse de la sala).
+    if (e.state === 'idle') {
+      const lo = TILE * 4, hi = g.world.pixelW - TILE * 4 - e.w;
+      e.x = Math.max(lo, Math.min(hi, e.x + Math.sign(dx) * Math.min(Math.abs(dx), (d.drift ?? 10) * dt)));
+    }
+    if (e.state === 'idle') {
+      if (e.timer <= 0) {
+        const far = Math.abs(dx) > (d.reach ?? 180);
+        if (far) {
+          e.state = 'geyser'; e.timer = 0.8; e.gx = p.cx; e.geysers = rage ? 3 : 2;
+          g.audio.play('glandRumble', e);
+        } else {
+          const kind = Math.random() < 0.5 ? 'sweep' : 'slam';
+          e.atkSide = side; e.atkKind = kind;
+          const a = arm(side);
+          a.pose = 'raise'; a.kind = kind; a.k = 0;
+          a.tx = Math.max(50, Math.min(180, Math.abs(dx)));
+          e.state = 'raise'; e.timer = kind === 'slam' ? 0.85 : 0.75;
+          g.audio.play(d.sounds?.attack ?? 'growl', e);
+        }
+      }
+    } else if (e.state === 'raise') {
+      const a = arm(e.atkSide);
+      a.k = Math.min(1, a.k + dt * sp / (e.atkKind === 'slam' ? 0.85 : 0.75));
+      if (e.atkKind === 'slam') a.tx = Math.max(50, Math.min(180, Math.abs(p.cx - e.cx) * (Math.sign(p.cx - e.cx) === e.atkSide ? 1 : 0) || 60)); // apunta hasta el último momento
+      if (e.timer <= 0) {
+        a.pose = e.atkKind; a.k = 0; e.hitDone = false;
+        e.state = e.atkKind; e.timer = e.atkKind === 'slam' ? 0.2 : 0.5;
+        g.audio.play('dash', e);
+      }
+    } else if (e.state === 'sweep') {
+      const a = arm(e.atkSide);
+      a.k = Math.min(1, a.k + dt * sp / 0.5);
+      if (!e.hitDone && bladeHits(e.atkSide, d.sweepDamage)) e.hitDone = true;
+      if (Math.random() < 0.6) g.particles.emit(ox + C.CX + e.atkSide * (176 - a.k * 132), floorY - 2, { vx: -e.atkSide * 120, vy: -40 - Math.random() * 40, life: 0.4, gravity: 600, color: [0.75, 0.68, 0.52] });
+      if (e.timer <= 0) { a.pose = 'recover'; a.k = 0; e.state = 'recover'; e.timer = 0.45; }
+    } else if (e.state === 'slam') {
+      const a = arm(e.atkSide);
+      a.k = Math.min(1, a.k + dt * sp / 0.2);
+      if (!e.hitDone && bladeHits(e.atkSide, d.slamDamage)) e.hitDone = true;
+      if (e.timer <= 0) {
+        // Clavada: temblor, escombros, y se le abren las costillas.
+        a.pose = 'stuck';
+        e.state = 'stuck'; e.timer = d.stuckTime ?? 2.2;
+        g.shake = Math.max(g.shake, 9);
+        g.audio.play('crunch', e); g.audio.play('thump', e);
+        const tx = ox + C.CX + e.atkSide * a.tx;
+        for (let i = 0; i < 24; i++) g.particles.emit(tx + (Math.random() - 0.5) * 30, floorY - 2, { vx: (Math.random() - 0.5) * 220, vy: -80 - Math.random() * 160, life: 0.8, gravity: 700, color: Math.random() < 0.5 ? [0.8, 0.72, 0.55] : [0.45, 0.38, 0.3] });
+        // Onda por el suelo a los dos lados de la hoja.
+        for (const s of [-1, 1]) shockwave(g, tx, floorY, s, '#d8c49c', [0.7, 0.6, 0.4]);
+      }
+    } else if (e.state === 'stuck') {
+      if (e.timer <= 0) {
+        const a = arm(e.atkSide);
+        a.pose = 'recover'; a.k = 0;
+        // Furioso: a veces encadena otro tajo con la otra guadaña.
+        if (rage && !e.chained && Math.random() < 0.5) {
+          e.chained = true;
+          const s2 = -e.atkSide, b = arm(s2);
+          b.pose = 'raise'; b.kind = 'slam'; b.k = 0; b.tx = Math.max(50, Math.min(180, Math.abs(p.cx - e.cx)));
+          e.atkSide = s2; e.atkKind = 'slam'; e.state = 'raise'; e.timer = 0.6;
+          g.audio.play(d.sounds?.attack ?? 'growl', e);
+        } else { e.chained = false; e.state = 'recover'; e.timer = 0.6; }
+      }
+    } else if (e.state === 'recover') {
+      for (const s of [-1, 1]) { const a = arm(s); if (a.pose === 'recover') { a.k = Math.min(1, a.k + dt * 2); if (a.k >= 1) a.pose = 'idle'; } }
+      if (e.timer <= 0) { for (const s of [-1, 1]) arm(s).pose = 'idle'; e.state = 'idle'; e.timer = (rage ? 0.8 : 1.4) + Math.random() * 0.6; }
+    } else if (e.state === 'geyser') {
+      // El suelo tiembla donde estás (aviso) y revientan púas de hueso hacia arriba.
+      if (Math.random() < 0.7) g.particles.emit(e.gx + (Math.random() - 0.5) * 24, floorY - 1, { vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 30, life: 0.4, gravity: 300, color: [0.7, 0.62, 0.48] });
+      if (e.timer <= 0) {
+        g.shake = Math.max(g.shake, 4);
+        g.audio.play('crunch', e);
+        for (let i = -2; i <= 2; i++) g.spawnProjectile({ x: e.gx + i * 7 - 3, y: floorY - 10, w: 6, h: 12, vx: i * 25, vy: -330 - (2 - Math.abs(i)) * 70, gravity: 700, life: 1.4, damage: d.geyserDamage ?? 12, kind: 'shard', owner: 'enemy', color: '#e8dcc8' });
+        e.geysers--;
+        if (e.geysers > 0) { e.timer = 0.45; e.gx = p.cx; }
+        else { e.state = 'idle'; e.timer = rage ? 0.9 : 1.5; }
+      }
+    }
+  },
+
   // Escarabajo rinoceronte (entities/RhinoBeetle.js): conoce la quitina, y su coraza
   // frontal lo para todo (def.frontArmor: de frente rebota, por la espalda hiere más).
   // Camina pesado; al verte escarba el suelo, baja el cuerno y carga. Si te alcanza,
