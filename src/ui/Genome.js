@@ -309,14 +309,17 @@ export class Genome {
     }).join('');
     // Carga genética: lo que ocupan las mutaciones frente a lo que toleras.
     const over = st.load > st.capacity;
-    this.el.querySelector('#g-load').innerHTML = `<span class="g-loadlbl${over ? ' over' : ''}">CARGA ${st.load}/${st.capacity}</span>`
-      + `<span class="g-loadbar">${Array.from({ length: Math.max(st.capacity, st.load) }, (_, i) => `<i class="${i < st.load ? (i >= st.capacity ? 'over' : 'on') : ''}"></i>`).join('')}</span>`
-      + (st.extenders ? `<span class="g-ext">+${st.extenders} EXT</span>` : '');
-    // Sinergias (verde) y choques (rojo) activos.
-    this.el.querySelector('#g-pairs').innerHTML = [
-      ...st.synergies.map((p) => `<span class="g-pair syn" title="${p.text}">+ ${p.name}</span>`),
-      ...st.clashes.map((p) => `<span class="g-pair clash" title="${p.text}">✕ ${p.name}${p.k > 1 ? ' x' + p.k : ''}</span>`),
-    ].join('');
+    // (las casillas que dan los extensores llevan un borde de hueso dentro de la barra)
+    const fromExt = st.capacity - st.extenders * CAPACITY_PER_EXTENDER;
+    const loadT = `Carga genética: lo que ocupan tus mutaciones frente a lo que toleras${st.extenders ? ` (${st.extenders} extensor${st.extenders > 1 ? 'es' : ''})` : ''}`;
+    this.el.querySelector('#g-load').innerHTML = `<span class="g-loadbar" title="${loadT}">${Array.from({ length: Math.max(st.capacity, st.load) }, (_, i) => `<i class="${i < st.load ? (i >= st.capacity ? 'over' : 'on') : ''}${i >= fromExt && i < st.capacity ? ' ext' : ''}"></i>`).join('')}</span>`
+      + `<span class="g-loadlbl${over ? ' over' : ''}">${st.load}/${st.capacity}</span>`;
+    // Sinergias (verde) y choques (rojo) activos: solo cuántos. Los nombres, al pasar por
+    // encima; y cada uno, en la ficha de su mutación.
+    const synT = st.synergies.map((p) => `+ ${p.name}: ${p.text}`).join('\n');
+    const claT = st.clashes.map((p) => `✕ ${p.name}${p.k > 1 ? ' x' + p.k : ''}: ${p.text}`).join('\n');
+    this.el.querySelector('#g-pairs').innerHTML = (st.synergies.length ? `<span class="g-pair syn" title="${synT}">+${st.synergies.length}</span>` : '')
+      + (st.clashes.length ? `<span class="g-pair clash" title="${claT}">✕${st.clashes.reduce((n, p) => n + (p.k ?? 1), 0)}</span>` : '');
     this.el.querySelector('#g-mem').innerHTML = st.lore.map((_, i) => `<i class="g-memory" data-mem="${i}"></i>`).join('');
     // Cavidades: qué lleva cada una; la marcada, resaltada. (Se rehacen si cambia cuántas hay.)
     const cavs = this.el.querySelector('.g-cavs');

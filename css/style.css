@@ -982,8 +982,10 @@ body.touch #controls-btn .dim { display: none; }
 .g-loadbar i { width: 3px; height: 4px; background: #2a1830; display: inline-block; }
 .g-loadbar i.on { background: #a040d8; }
 .g-loadbar i.over { background: #ff4a6a; }
+.g-loadbar i.ext { outline: 1px solid #e8dcc8; outline-offset: -1px; }
 .g-ext { color: #e8dcc8; }
-#g-pairs { display: flex; flex-wrap: wrap; gap: 1px 4px; font-size: 3px; flex: 1 1 100%; order: -1; }
+#g-pairs { display: flex; gap: 3px; font-size: 4px; }
+.g-pair { cursor: help; }
 .g-pair.syn { color: #6aff9a; }
 .g-pair.clash { color: #ff6a7a; }
 #genome .i-pairs { font-size: 3px; margin-top: 2px; line-height: 1.5; }
