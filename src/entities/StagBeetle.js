@@ -14,10 +14,21 @@ import { px, seg, limb, part, jointLeg, OUTLINE } from './Rig.js';
 const ARMOR = { dark: '#262230', mid: '#3e3650', light: '#6a5c84', shine: '#a898c8', bronze: '#7a5a34', bronzeLight: '#c09a62', joint: '#5a2a34' };
 const FLESH = { dark: '#4a1420', mid: '#8a3040', light: '#c05060', shine: '#f09090', bronze: '#6a2a30', bronzeLight: '#a04a50', joint: '#e07080' };
 
+// Tamaño: se dibuja con las medidas de siempre (56 x 52) y se encoge K al pintar cada
+// píxel (sin bajar nunca de uno): sale más pequeño sin perder la nitidez.
+const K = 0.75, W0 = 56, H0 = 52, W = Math.round(W0 * K), H = Math.round(H0 * K);
+const shrink = (c) => ({
+  set fillStyle(v) { c.fillStyle = v; },
+  get fillStyle() { return c.fillStyle; },
+  set globalAlpha(v) { c.globalAlpha = v; },
+  fillRect(x, y, w, h) { c.fillRect(Math.round(x * K), Math.round(y * K), Math.max(1, Math.round(w * K)), Math.max(1, Math.round(h * K))); },
+});
+
 export const STAG = {
-  size: () => [56, 52],
-  origin: (e) => [e.cx - 28, e.y + e.h - 52],
-  draw(g, gl, e, t) {
+  size: () => [W, H],
+  origin: (e) => [e.cx - W / 2, e.y + e.h - H],
+  draw(g0, gl0, e, t) {
+    const g = shrink(g0), gl = shrink(gl0);
     const C = e.armored ? ARMOR : FLESH;
     const st = e.state ?? 'walk';
     const tm = Math.max(0, e.timer ?? 0);
@@ -130,6 +141,6 @@ export const STAG = {
     if (st === 'gore' && Math.sin(t * 40) > 0) px(gl, 32 + Math.random() * 8, G - 1, '#ffd25a');
 
     // Fijado y punto vulnerable: la carne del abdomen cuando abre los élitros.
-    e.spotsLocal = [{ x: ax, y: ay, r: 8, weak: dazed || !e.armored }, { x: hx, y: hy, r: 5, weak: false }];
+    e.spotsLocal = [{ x: ax * K, y: ay * K, r: 8 * K, weak: dazed || !e.armored }, { x: hx * K, y: hy * K, r: 5 * K, weak: false }];
   },
 };

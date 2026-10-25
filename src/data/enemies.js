@@ -259,14 +259,14 @@ export const ENEMIES = {
     gore: { blood: '#5a0a14', flesh: ['#3e3650', '#262230', '#8a3040', '#c09a62'] },
     voice: ['stagHuff', 'stagBellow', 'stagHuff'],
     behavior: 'centaur',
-    hp: 60, w: 26, h: 34,
-    speed: 9, chaseSpeed: 16, sight: 140, lightFear: 0.7, darkMult: 1.6,
+    hp: 60, w: 20, h: 26,      // más pequeño...
+    speed: 15, chaseSpeed: 28, sight: 150, lightFear: 0.7, darkMult: 1.6, // ...y más rápido
     armored: true, // la coraza solo cede al Tendón... o con los élitros abiertos (aturdido)
-    goreRange: 110, goreSpeed: 125, goreTime: 0.55, goreDamage: 16,
-    pinchRange: 30, pinchDamage: 14,
-    dazed: 1.3, stuck: 2.2, attackCool: 2.4,
+    goreRange: 120, goreSpeed: 175, goreTime: 0.5, goreDamage: 16,
+    pinchRange: 24, pinchDamage: 14,
+    dazed: 1.1, stuck: 1.8, attackCool: 1.8,
     contactDamage: 10,
-    habits: 'Camina erguido, despacio, y casi todo en él es coraza. Se encabrita abriendo las mandíbulas y embiste; si se clava en una pared queda atascado. Tras embestir jadea con los élitros abiertos: dispara a la carne del abdomen. Pegado a ti, cierra las mandíbulas de golpe. El Tendón le arranca la coraza.',
+    habits: 'Pequeño y vivo, camina erguido a paso rápido, y casi todo en él es coraza. Se encabrita abriendo las mandíbulas y embiste; si se clava en una pared queda atascado. Tras embestir jadea con los élitros abiertos: dispara a la carne del abdomen. Pegado a ti, cierra las mandíbulas de golpe. El Tendón le arranca la coraza.',
     drop: { biomass: 14 },
     sounds: { reveal: 'stagBellow', attack: 'stagGrunt', die: 'isopodDie', hurt: 'stagGrunt' },
     lore: 'Se cubrió con la quitina de todo lo que digería hasta que las placas fueron su piel, y se irguió para vigilar el estómago como un guardia. Las mandíbulas le crecieron como astas. Solo un tirón de tendón deja ver la carne que todavía tiene debajo.',
