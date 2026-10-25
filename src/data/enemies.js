@@ -259,7 +259,7 @@ export const ENEMIES = {
     gore: { blood: '#5a0a14', flesh: ['#9a94a4', '#5e5868', '#8a3040', '#d4c098'] },
     voice: ['stagHuff', 'stagBellow', 'stagHuff'],
     behavior: 'centaur',
-    hp: 60, w: 16, h: 21,      // pequeño...
+    hp: 60, w: 14, h: 17,      // pequeño...
     speed: 15, chaseSpeed: 28, sight: 150, lightFear: 0.7, darkMult: 1.6, // ...y más rápido
     armored: true, // la coraza solo cede al Tendón... o con los élitros abiertos (aturdido)
     goreRange: 120, goreSpeed: 175, goreTime: 0.5, goreDamage: 16,
