@@ -2044,6 +2044,19 @@ export const BEHAVIORS = {
       e.state = 'fall'; e.vx = 0; e.vy = 0;
       return;
     }
+    // Golpeado en la coraza: no se queda quieto, se revuelve enseguida contra ti (te muerde
+    // si estás encima; si no, embiste o se hace bola y rueda hacia ti).
+    if (e.provoked) {
+      e.provoked = false;
+      if (e.state === 'walk' || e.state === 'pinch') {
+        const f = fwd();
+        if (f.x * dx + f.y * dy < 0) e.td = -e.td;
+        g.audio.play('stagHiss', e);
+        if (dist < d.pinchRange + 6) { e.state = 'pinchWind'; e.timer = 0.22; }
+        else if (dist < d.goreRange && w.lineOfSight(e.cx, e.cy, p.cx, p.cy) && Math.random() < 0.5) { e.state = 'rear'; e.timer = 0.4; }
+        else { e.state = 'curl'; e.timer = 0.25; g.audio.play('stagCurl', e); }
+      }
+    }
     if (e.state === 'walk') {
       // Hacia ti a lo largo de la superficie (cambia de sentido con calma, sin temblar).
       e.turnT = (e.turnT ?? 0) - dt;
@@ -3057,11 +3070,14 @@ export class Enemy {
     // Endurecido (ojo con el párpado cerrado): todo rebota.
     if (this.hard && kind !== 'acid') {
       if (!silent) this.game.audio.play('ricochet', this);
+      if (this.def.behavior === 'stagCrawl') this.#nacreSpark(silent);
       return false;
     }
     // La coraza para todo menos el tendón... y la carne del ciervo aturdido (élitros abiertos).
     if (this.armored && kind !== 'tendon' && this.state !== 'dazed') {
       if (!silent) this.game.audio.play('ricochet', this);
+      // El Ciervo Acorazado: la coraza salta en chispas de nácar y se revuelve contra ti.
+      if (this.def.behavior === 'stagCrawl') { this.#nacreSpark(silent); this.provoked = true; }
       // Reacción: al notar el golpe se enrosca.
       // El ciervo se vuelve hacia quien le dispara.
       if (this.def.behavior === 'centaur' && this.state === 'walk') this.dir = Math.sign(this.game.player.cx - this.cx) || this.dir;
@@ -3077,6 +3093,7 @@ export class Enemy {
     // Montón de huesos (el Vestigio caído): es inmortal. Los golpes desperdigan los huesos y
     // retrasan un poco que se recomponga, pero siempre vuelve.
     if (this.state === 'pile') {
+      if (silent) return false;
       this.flash = 0.06;
       this.game.audio.play('crunch', this);
       this.pileT = Math.min((this.def.reformTime ?? 5) + 2, (this.pileT ?? 0) + 0.4);
@@ -3128,6 +3145,19 @@ export class Enemy {
     this.seenOnce = true;
     if (this.hp <= 0) this.die();
     return true;
+  }
+
+  // El golpe rebota en la coraza de nácar: chispas irisadas, tintineo y un destello, para que
+  // se vea que lo has tocado (aunque no le hagas daño).
+  #nacreSpark(silent) {
+    if (silent) return;
+    this.flash = 0.05;
+    if (this.game.time - (this.pingAt ?? -9) > 0.2) { this.pingAt = this.game.time; this.game.audio.play('stagPing', this); }
+    const cols = [[1, 0.97, 0.92], [0.95, 0.82, 0.86], [0.82, 0.88, 0.95]];
+    for (let i = 0; i < 7; i++) {
+      const a = Math.random() * Math.PI * 2, s = 60 + Math.random() * 90;
+      this.game.glowParticles.emit(this.cx, this.cy, { vx: Math.cos(a) * s, vy: Math.sin(a) * s - 30, life: 0.25 + Math.random() * 0.2, gravity: 300, color: cols[i % 3] });
+    }
   }
 
   applyAcid(dps, time) {
