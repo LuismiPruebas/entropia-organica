@@ -259,6 +259,7 @@ export const ENEMIES = {
     gore: { blood: '#5a0a14', flesh: ['#9a94a4', '#5e5868', '#8a3040', '#d4c098'] },
     voice: ['stagChitter', 'stagChitter', 'stagHiss'], // estridula la quitina, sisea
     behavior: 'stagCrawl',     // trepa por suelo, paredes y techo
+    rotatable: true, // en el editor se gira: suelo, techo o paredes
     noStagger: true,
     hp: 60, w: 14, h: 14,      // pequeño...
     speed: 15, chaseSpeed: 28, sight: 170, lightFear: 0.7, darkMult: 1.6, // ...y más rápido

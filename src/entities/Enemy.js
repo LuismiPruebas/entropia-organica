@@ -1986,7 +1986,9 @@ export const BEHAVIORS = {
   stagCrawl(e, dt, g) {
     const d = e.def, p = g.player, w = g.world;
     e.state ??= 'walk';
-    e.n ??= { x: 0, y: 1 };
+    // Colocado en el techo o en una pared: se agarra a ella (sin anclaje, al suelo).
+    e.n ??= { techo: { x: 0, y: -1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[e.anchor] ?? { x: 0, y: 1 };
+    e.anchor = null;
     e.td ??= e.dir || 1;
     tick(e, dt);
     const rage = e.armored ? 1 : 1.4;
