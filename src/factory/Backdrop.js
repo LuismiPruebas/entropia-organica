@@ -313,7 +313,7 @@ const BACKDROPS = {
     return sf.canvas();
   },
   // Hueso esponjoso (oseo:2): por dentro del hueso. Un entramado de trabéculas (puntales de
-  // hueso redondeados) y, entre ellas, poros hondos de médula roja con gotas de grasa.
+  // hueso redondeados) y, entre ellas, poros hondos de médula roja.
   'oseo:2'() {
     const sf = surface();
     tissue(sf, { lo: '#240e0a', mid: '#341610', hi: '#461e14' }, 61, 4);
@@ -339,51 +339,40 @@ const BACKDROPS = {
         if (hash(x >> 1, y >> 1, 7) < 0.05 && r > 0.3) sf.blend(x, y, hexRgb('#a8342a'), 0.6); // células de la médula
       }
     }
-    // Gotas de grasa amarilla en algunos poros.
-    const r = rng(23);
-    for (let i = 0; i < 22; i++) {
-      const x = r() * S, y = r() * S, rad = 1.5 + r() * 2.5;
-      disc(sf, x, y, rad, '#d8b060', '#f4dc98', '#8a6a2a', { k: 0.9 });
-    }
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) sf.blend(x, y, hexRgb('#140a08'), 0.4); // en la penumbra
     return sf.canvas();
   },
 
-  // Osario (oseo:3): una pared de catacumba hecha de calaveras apiladas en hileras, con
-  // cabezas de fémur asomando entre ellas.
+  // Catedral de hueso (oseo:3): al fondo, columnas y arcos de hueso gigantes en penumbra,
+  // con sus vetas, entre una bruma de polvo.
   'oseo:3'() {
     const sf = surface();
-    tissue(sf, { lo: '#1c100a', mid: '#2a1810', hi: '#382116' }, 67, 4);
-    const L = hexRgb('#b49a76'), M = hexRgb('#86704f'), D = hexRgb('#544230'), O = hexRgb('#140a06'), H = hexRgb('#0e0604');
-    const r = rng(29);
-    // Cabezas de fémur (redondas) entre las hileras.
-    for (let row = 0; row < 16; row++) for (let col = 0; col < 16; col++) {
-      if (hash(col, row, 4) < 0.55) continue;
-      disc(sf, col * 16 + 8 + (row % 2) * 8, row * 16 + 15, 3, '#6e5a42', '#9a8462', '#3e2e20', { k: 0.8, rim: '#140a06' });
+    tissue(sf, { lo: '#1c100a', mid: '#281810', hi: '#342014' }, 67, 3);
+    const L = hexRgb('#8a7458'), M = hexRgb('#665440'), D = hexRgb('#42342a'), O = hexRgb('#140a06');
+    // Columnas enormes de arriba abajo.
+    for (const [cx, W] of [[30, 28], [104, 20], [170, 34], [232, 16]]) {
+      for (let y = 0; y < S; y++) {
+        const hw = W / 2 * (1 + 0.12 * Math.sin(y * 0.03 + cx));
+        for (let x = -hw - 1; x <= hw + 1; x++) {
+          const q = x / hw;
+          if (Math.abs(q) > 1) { sf.set(cx + x, y, O); continue; }
+          const lit = -q * 0.9 + 0.1;
+          let c = lit > 0.35 ? L : lit > -0.3 ? M : D;
+          if (((Math.round(x * 1.5 + Math.sin(y * 0.04) * 3)) % 6 === 0) && Math.abs(q) < 0.8) c = D;
+          sf.set(cx + x, y, c);
+        }
+      }
     }
-    // Calaveras: cráneo abombado, cuencas, hueco nasal, dientes y mandíbula.
-    const skull = (x0, y0, s, tilt) => {
-      for (let y = -7; y <= 7; y++) for (let x = -7; x <= 7; x++) {
-        const xx = x * Math.cos(tilt) + y * Math.sin(tilt), yy = -x * Math.sin(tilt) + y * Math.cos(tilt);
-        const cran = (xx / (6 * s)) ** 2 + ((yy + 1) / (5.2 * s)) ** 2;
-        const jaw = Math.abs(xx) < 3.6 * s && yy > 2 * s && yy < 6 * s;
-        if (cran > 1.12 && !jaw) continue;
-        let c = cran > 1 && !jaw ? O : (-xx - yy) / (6 * s) > 0.35 ? L : (-xx - yy) / (6 * s) < -0.4 ? D : M;
-        // Cuencas y nariz.
-        if (((Math.abs(xx) - 2.4 * s) ** 2 / (1.6 * s) ** 2 + (yy - 0.4 * s) ** 2 / (1.5 * s) ** 2) < 1) c = H;
-        if (Math.abs(xx) < 0.9 * s && yy > 1.8 * s && yy < 3.4 * s) c = H;
-        // Dientes.
-        if (jaw && yy > 4 * s && yy < 5.2 * s) c = (Math.round(xx) % 2) ? L : O;
-        if (jaw && Math.abs(xx) > 3.2 * s) c = O;
-        sf.set(x0 + x, y0 + y, c);
+    // Arcos: costillas gigantes que unen las columnas.
+    const arch = (x0, x1, y0, sag, w) => {
+      for (let s = 0; s <= 1; s += 0.002) {
+        const x = x0 + (x1 - x0) * s, y = y0 - Math.sin(s * Math.PI) * sag;
+        for (let k = -w - 1; k <= w + 1; k++) sf.set(x, y + k, Math.abs(k) > w ? O : k < -w * 0.3 ? L : k > w * 0.4 ? D : M);
       }
     };
-    for (let row = 0; row < 16; row++) for (let col = 0; col < 16; col++) {
-      const x = col * 16 + (row % 2) * 8 + 8 + (r() - 0.5) * 2, y = row * 16 + 8 + (r() - 0.5) * 2;
-      if (hash(col, row, 11) < 0.12) continue;                           // hueco: un vacío oscuro
-      skull(x, y, 0.85 + r() * 0.2, (r() - 0.5) * 0.4);
-    }
-    vessels(sf, 3, 41, '#4a160e', '#6a2416', { len: 120, thick: 1, branch: 0.02 }); // regueros secos
+    arch(30, 170, 120, 70, 4);
+    arch(170, 286, 210, 50, 3);
+    arch(104, 232, 40, 30, 3);
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) sf.blend(x, y, hexRgb('#140a08'), 0.4); // en la penumbra
     return sf.canvas();
   },
@@ -599,7 +588,7 @@ export const BACKDROP_VARIANTS = {
   nervioso: ['Bosque neuronal', 'Córtex', 'Circunvoluciones', 'Ventrículo'],
   pulmonar: ['Árbol bronquial', 'Espuma alveolar', 'Red capilar', 'Bronquiolo ciliado'],
   digestivo: ['Tubo escamado', 'Vellosidades', 'Pliegues gástricos', 'Páncreas'],
-  oseo: ['Columna y costillas', 'Hueso esponjoso', 'Osario'],
+  oseo: ['Columna y costillas', 'Hueso esponjoso', 'Catedral de hueso'],
 };
 export const backdropKey = (biome, variant) => (variant > 1 && BACKDROPS[`${biome}:${variant}`] ? `${biome}:${variant}` : biome);
 

@@ -402,60 +402,64 @@ function boneLine(g, pts, wAt, pal) {
     const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
     const a = Math.atan2(y1 - y0, x1 - x0), nx = -Math.sin(a), ny = Math.cos(a);
     const w = wAt(i / pts.length);
-    for (let k = -w - 1 + pass; k <= w + 1 - pass; k += 0.5) {
-      let c = pal.out;
-      if (pass) { const q = k / w, lit = -(nx * q) - (ny * q); c = lit > 0.35 ? pal.light : lit < -0.4 ? pal.dark : pal.mid; }
-      dotW(g, x1 + nx * k, y1 + ny * k, c);
+    // Pasos finos a lo largo y a lo ancho: el trazo sale macizo, sin rayas en diagonal.
+    for (let t = 0; t < 1; t += 0.34) {
+      const x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
+      for (let k = -w - 1 + pass; k <= w + 1 - pass; k += 0.34) {
+        let c = pal.out;
+        if (pass) { const q = k / w, lit = -(nx * q) - (ny * q); c = lit > 0.35 ? pal.light : lit < -0.4 ? pal.dark : pal.mid; }
+        dotW(g, x + nx * k, y + ny * k, c);
+      }
     }
   }
 }
 
-// Hueso esponjoso (oseo:2): grandes osteonas (los anillos del hueso compacto vistos en
-// corte), cada una con su canal central por el que pasa un vaso que brilla; canales que las
-// unen y glóbulos de médula a la deriva.
+// Hueso esponjoso (oseo:2): una red de vigas de hueso que se cruzan en diagonal, con nudos
+// irregulares donde se unen, como el interior de un hueso visto de cerca. Entre ellas, la
+// médula; algún destello rojo en los huecos y glóbulos a la deriva.
 function oseo2() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
   const r = rng(83);
-  const RING = ['#e2cfa8', '#c4ab84', '#a68c66', '#cdb58e'];
-  const osteons = [];
-  for (let i = 0; i < 9; i++) osteons.push([r() * MID_W, 18 + r() * (MID_H - 36), 13 + r() * 13]);
-  // Canales de Volkmann: tubos rojizos que unen las osteonas (detrás).
-  for (let i = 0; i < osteons.length; i++) {
-    const [ax, ay] = osteons[i], [bx, by] = osteons[(i + 3) % osteons.length];
-    const n = Math.ceil(Math.hypot(bx - ax, by - ay));
-    for (let s = 0; s <= n; s++) {
-      const u = s / n, x = ax + (bx - ax) * u, y = ay + (by - ay) * u + Math.sin(u * Math.PI * 2) * 4;
-      dotW(g, x, y - 1, '#2a0e0a', 1, 3); dotW(g, x, y, '#6a1a14');
-      if (s % 9 === 0) dotW(gl, x, y, '#5a0c08');
+  const IV = { out: '#2a1a10', dark: '#7e6446', mid: '#b89c74', light: '#e8d6b0' };
+  const FAR = { out: '#1e120a', dark: '#4e3c2a', mid: '#6e5a42', light: '#8e785a' };
+  // Nodos de la red (envueltos) y sus vecinos más cercanos.
+  const nodes = [];
+  for (let i = 0; i < 20; i++) nodes.push([r() * MID_W, r() * MID_H, r() < 0.4]);
+  const wd = (a, b) => { let dx = b[0] - a[0], dy = b[1] - a[1]; dx -= Math.round(dx / MID_W) * MID_W; dy -= Math.round(dy / MID_H) * MID_H; return [dx, dy]; };
+  const beams = [];
+  nodes.forEach((a, i) => {
+    const near = nodes.map((b, j) => [j, Math.hypot(...wd(a, b))]).filter(([j]) => j !== i).sort((p, q) => p[1] - q[1]).slice(0, 3);
+    for (const [j] of near) if (i < j || !beams.some(([p, q]) => p === j && q === i)) beams.push([i, j]);
+  });
+  // Viga: se adelgaza hacia el centro (como una trabécula), curvada, con nudos en los extremos.
+  const beam = (a, b, pal, w0) => {
+    const [dx, dy] = wd(a, b), L = Math.hypot(dx, dy), bend = (r() - 0.5) * 10;
+    const nx = -dy / L, ny = dx / L, pts = [];
+    for (let s = 0; s <= L; s += 1) { const u = s / L; pts.push([a[0] + dx * u + nx * Math.sin(u * Math.PI) * bend, a[1] + dy * u + ny * Math.sin(u * Math.PI) * bend]); }
+    boneLine(g, pts, (u) => w0 * (1 - 0.45 * Math.sin(u * Math.PI)), pal);
+    // Poros finos a lo largo.
+    for (let k = 4; k < pts.length - 4; k += 7) dotW(g, pts[k][0], pts[k][1], pal.out);
+  };
+  // Nudo: masa irregular (no redonda) donde se unen las vigas.
+  const knot = (x0, y0, R, pal) => {
+    const ph = r() * 6;
+    for (let y = -R - 3; y <= R + 3; y++) for (let x = -R - 3; x <= R + 3; x++) {
+      const a = Math.atan2(y, x), rr = R * (1 + 0.28 * Math.sin(a * 3 + ph) + 0.15 * Math.sin(a * 5 - ph));
+      const q = Math.hypot(x, y) / rr;
+      if (q > 1.08) continue;
+      const lit = (-x - y) / (rr * 1.4);
+      dotW(g, x0 + x, y0 + y, q > 1 ? pal.out : lit > 0.35 ? pal.light : lit < -0.35 ? pal.dark : pal.mid);
     }
-  }
-  for (const [x0, y0, R] of osteons) {
-    for (let y = -R - 1; y <= R + 1; y++) for (let x = -R - 1; x <= R + 1; x++) {
-      const d = Math.hypot(x, y);
-      if (d > R + 1) continue;
-      let c;
-      if (d > R) c = '#2a1a10';                                          // línea de cemento
-      else if (d < 3.2) c = d < 2 ? '#3a0606' : '#7a1a14';                 // canal central
-      else {
-        const ring = Math.floor((d + Math.sin(Math.atan2(y, x) * 5) * 0.4) / 2.2);
-        c = RING[ring % 4];
-        const lit = (-x - y) / (R * 1.4);
-        if (lit < -0.35 && ring % 2) c = '#86704f';
-        if (lit > 0.4 && ring % 2 === 0) c = '#f2e4c4';
-        // Lagunas de osteocitos: puntitos oscuros en los anillos, con sus canalículos.
-        if (((Math.round(x * 3 + y * 7) % 23) === 0) && d > 4) c = '#3a2418';
-      }
-      dotW(g, x0 + x, y0 + y, c);
-    }
-    // El vaso del canal, que late (brillo propio).
-    dotW(gl, x0 - 1, y0 - 1, '#c8281a', 2, 2); dotW(gl, x0, y0, '#ff6a3a');
-    // Una grieta radial.
-    const a = r() * Math.PI * 2;
-    for (let s = 4; s < R; s++) dotW(g, x0 + Math.cos(a) * s, y0 + Math.sin(a) * s, '#3a2418');
-  }
+  };
+  // Atrás, una red más oscura; delante, la principal.
+  for (const [i, j] of beams.filter((_, k) => k % 3 === 0)) beam([nodes[i][0] + 9, nodes[i][1] + 6], [nodes[j][0] + 9, nodes[j][1] + 6], FAR, 4);
+  for (const [i, j] of beams) beam(nodes[i], nodes[j], IV, 4.5 + r() * 2);
+  for (const [x, y, big] of nodes) knot(x, y, big ? 7 : 5, IV);
+  // Destellos de médula en algunos huecos.
+  for (let i = 0; i < 14; i++) { const x = r() * MID_W, y = r() * MID_H; dotW(gl, x, y, '#a8281a', 2, 1); dotW(gl, x + 1, y, '#ff6a3a'); }
   const [front, f] = canvas(FRONT_W, FRONT_H);
-  // Primer plano: espículas de hueso esponjoso que asoman, ramificadas.
+  // Primer plano: espículas de hueso que asoman, ramificadas.
   for (let x = 6; x < FRONT_W; x += 14 + Math.floor(r() * 8)) {
     const h = 12 + Math.floor(r() * 20);
     for (let i = 0; i < h; i++) {
@@ -469,72 +473,76 @@ function oseo2() {
     mid, midGlow: glow, front,
     anim: {
       pulseGlow: 0.6,
-      motes: { n: 26, colors: ['rgba(200,60,40,0.55)', 'rgba(230,190,120,0.45)', 'rgba(150,30,24,0.5)'], vx: 3, vy: -3, size: 2, shape: 'bubble', wobble: 5 },
+      motes: { n: 26, colors: ['rgba(200,60,40,0.55)', 'rgba(230,190,120,0.45)', 'rgba(150,30,24,0.5)'], vx: 3, vy: -3, size: 1, wobble: 5 },
     },
   };
 }
 
-// Osario (oseo:3): un montón de fémures cruzados y, entre ellos, cráneos grandes con brasas
-// en las cuencas; polvo de hueso que cae.
+// Catedral de hueso (oseo:3): fémures gigantes plantados como columnas de lado a lado de la
+// altura, con sus cabezas articulares, vetas a lo largo y grietas por las que asoma la
+// médula; entre ellos, costillas colosales arqueadas como bóvedas.
 function oseo3() {
   const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
   gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
   const r = rng(97);
-  const IV = { out: '#2a1a12', dark: '#7a6248', mid: '#bea47e', light: '#ecdcbc' };
-  const FAR = { out: '#1a100a', dark: '#46362a', mid: '#685440', light: '#8a7458' };
-  // Fémur: diáfisis con cintura y dos cabezas abultadas en cada extremo.
-  const femur = (x0, y0, ang, len, w, pal) => {
-    const cs = Math.cos(ang), sn = Math.sin(ang), nx = -sn, ny = cs;
-    const pts = []; for (let t = 0; t <= len; t += 1) pts.push([x0 + cs * t, y0 + sn * t]);
-    boneLine(g, pts, (s) => w * (1 - 0.3 * Math.sin(s * Math.PI)), pal);
-    for (const e of [0, 1]) for (const sgn of [-1, 1]) {
-      const ex = x0 + cs * len * e + nx * w * 0.8 * sgn, ey = y0 + sn * len * e + ny * w * 0.8 * sgn;
-      const rad = w * (sgn > 0 && e ? 1.5 : 1.15);
-      for (let y = -Math.ceil(rad) - 1; y <= rad + 1; y++) for (let x = -Math.ceil(rad) - 1; x <= rad + 1; x++) {
-        const q = Math.hypot(x, y) / rad;
-        if (q > 1.12) continue;
-        const lit = (-x - y) / (rad * 1.4);
-        dotW(g, ex + x, ey + y, q > 1 ? pal.out : lit > 0.35 ? pal.light : lit < -0.35 ? pal.dark : pal.mid);
+  const IV = { out: '#22160e', dark: '#6e5840', mid: '#a88e6a', light: '#dcc8a2', hl: '#f2e4c4' };
+  // Columna: un hueso enorme de arriba abajo (se repite en vertical), sombreado como un
+  // cilindro, con vetas, una cabeza articular a media altura y grietas.
+  const column = (cx, W, joint) => {
+    for (let y = 0; y < MID_H; y++) {
+      const dj = (y - joint) / 22, bulge = Math.exp(-dj * dj) * 0.45;          // la articulación se ensancha
+      const waist = 1 - 0.08 * Math.sin((y / MID_H) * Math.PI * 2);
+      const hw = W / 2 * waist * (1 + bulge);
+      for (let x = -hw - 1; x <= hw + 1; x++) {
+        const q = x / hw;
+        if (Math.abs(q) > 1) { dotW(g, cx + x, y, IV.out); continue; }
+        const lit = -q * 0.9 + 0.15;
+        let c = lit > 0.62 ? IV.hl : lit > 0.25 ? IV.light : lit > -0.3 ? IV.mid : IV.dark;
+        // Vetas longitudinales y la línea de la articulación.
+        if (((Math.round(x * 1.7 + Math.sin(y * 0.05) * 3)) % 7 === 0) && Math.abs(q) < 0.85) c = lit > 0.25 ? IV.mid : IV.dark;
+        if (Math.abs(y - joint) < 1 && Math.abs(q) < 0.9) c = IV.out;
+        if (Math.abs(y - joint - 2) < 1 && Math.abs(q) < 0.8) c = IV.hl;
+        dotW(g, cx + x, y, c);
       }
     }
-  };
-  // Capa de atrás, oscura; luego la de delante.
-  for (let i = 0; i < 14; i++) femur(r() * MID_W, r() * MID_H, (r() - 0.5) * 1.6 + (r() < 0.5 ? 0 : Math.PI), 34 + r() * 26, 2.4, FAR);
-  // Cráneos grandes (entre las capas), con brasas en las cuencas.
-  const skull = (x0, y0, s) => {
-    for (let y = -Math.ceil(13 * s); y <= 13 * s; y++) for (let x = -Math.ceil(12 * s); x <= 12 * s; x++) {
-      const cran = (x / (11 * s)) ** 2 + ((y + 2 * s) / (9.5 * s)) ** 2;
-      const jaw = Math.abs(x) < 6.5 * s && y > 3 * s && y < 11 * s && (x / (6.5 * s)) ** 2 + ((y - 7 * s) / (4.5 * s)) ** 2 < 1;
-      if (cran > 1.1 && !jaw) continue;
-      const lit = (-x * 0.6 - y) / (11 * s);
-      let c = cran > 1 && !jaw ? IV.out : lit > 0.4 ? IV.light : lit < -0.35 ? IV.dark : IV.mid;
-      const eye = ((Math.abs(x) - 4.4 * s) / (2.8 * s)) ** 2 + ((y - 0.5 * s) / (2.6 * s)) ** 2;
-      if (eye < 1) c = eye < 0.35 ? '#5a1a08' : '#140806';
-      if (Math.abs(x) < 1.4 * s && y > 3.5 * s && y < 6 * s && Math.abs(x) < (y - 3.5 * s) * 0.7 + 0.5) c = '#140806';
-      if (jaw && y > 7.5 * s && y < 9.3 * s) c = (Math.round(x / s) % 2) ? IV.light : IV.out;
-      if (cran < 1 && Math.abs(x + 3 * s) < 0.6 && y < -3 * s && y > -8 * s) c = IV.out; // grieta
-      dotW(g, x0 + x, y0 + y, c);
+    // Grietas largas por las que asoma la médula (brilla tenue).
+    for (let k = 0; k < 3; k++) {
+      let x = cx + (r() - 0.5) * W * 0.5, y = r() * MID_H;
+      for (let s = 0; s < 26 + r() * 20; s++) {
+        x += (r() - 0.5) * 1.6; y += 1;
+        dotW(g, x, y, '#3a0e0a');
+        if (s % 4 === 0) dotW(gl, x, y, '#6a140a');
+      }
     }
-    // Brasas en las cuencas.
-    for (const sx of [-1, 1]) { dotW(gl, x0 + sx * 4.4 * s - 1, y0 + 0.5 * s - 1, '#c84a14', 2, 2); dotW(gl, x0 + sx * 4.4 * s, y0 + 0.5 * s, '#ffb050'); }
+    // Agujeros nutricios.
+    for (let k = 0; k < 2; k++) { const y = r() * MID_H, x = cx + (r() - 0.3) * W * 0.4; dotW(g, x, y, IV.out, 2, 3); dotW(g, x + 2, y, IV.hl, 1, 3); }
   };
-  for (let i = 0; i < 5; i++) skull(i * (MID_W / 5) + 20 + r() * 12, 40 + r() * (MID_H - 80), 0.9 + r() * 0.5);
-  for (let i = 0; i < 12; i++) femur(r() * MID_W, r() * MID_H, (r() - 0.5) * 1.4 + (r() < 0.5 ? 0 : Math.PI), 40 + r() * 30, 3, IV);
+  // Costilla colosal arqueada entre dos columnas (bóveda).
+  const vault = (x0, x1, y0, sag, w) => {
+    const pts = [];
+    for (let s = 0; s <= 1.0001; s += 0.01) pts.push([x0 + (x1 - x0) * s, y0 - Math.sin(s * Math.PI) * sag]);
+    boneLine(g, pts, () => w, { out: IV.out, dark: IV.dark, mid: IV.mid, light: IV.light });
+  };
+  // Dos bóvedas a distinta altura (detrás de las columnas) y dos columnas por vuelta.
+  vault(-20, 150, 70, 46, 6);
+  vault(110, 280, 150, 40, 5);
+  column(40, 40, 130);
+  column(178, 34, 70);
   const [front, f] = canvas(FRONT_W, FRONT_H);
-  // Primer plano: el borde del montón, huesos cruzados en silueta.
-  for (let x = 0; x < FRONT_W; x += 18 + Math.floor(r() * 10)) {
-    const ang = -0.5 - r() * 0.8, len = 18 + r() * 16;
-    for (let t = 0; t < len; t++) {
-      const xx = x + Math.cos(ang) * t * (r() < 0.5 ? 1 : 1), yy = FRONT_H - Math.abs(Math.sin(ang)) * t;
-      f.fillStyle = t > len - 3 ? '#4a3626' : '#22140c';
-      f.fillRect(Math.round(xx), Math.round(yy), 2, 2);
+  // Primer plano: bases de otras columnas, enormes y en silueta, con su cabeza redondeada.
+  for (let x = 10; x < FRONT_W; x += 80 + Math.floor(r() * 50)) {
+    const w = 22 + Math.floor(r() * 14), h = 22 + Math.floor(r() * 14);
+    for (let i = 0; i < h; i++) {
+      const top = h - i, round = top < w / 2 ? Math.sqrt(1 - ((w / 2 - top) / (w / 2)) ** 2) : 1;  // cabeza redonda
+      const ww = Math.round(w * round);
+      f.fillStyle = '#1a100a'; f.fillRect(x + Math.round((w - ww) / 2), FRONT_H - i, ww, 1);
+      if (top < 3) { f.fillStyle = '#3a2a1e'; f.fillRect(x + Math.round((w - ww) / 2) + 1, FRONT_H - i, Math.max(1, ww - 2), 1); }
     }
-    f.fillStyle = '#2e1e14'; f.fillRect(Math.round(x + Math.cos(ang) * len) - 2, Math.round(FRONT_H - Math.abs(Math.sin(ang)) * len) - 2, 5, 4);
   }
   return {
     mid, midGlow: glow, front,
     anim: {
-      pulseGlow: 0.9,
+      pulseGlow: 0.5,
       motes: { n: 40, colors: ['rgba(230,215,185,0.5)', 'rgba(190,165,130,0.4)'], vx: 1, vy: 9, size: 1, wobble: 2 },
     },
   };
