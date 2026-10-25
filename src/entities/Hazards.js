@@ -109,6 +109,9 @@ export class FluidPool {
     if (visible && overlapsRect(p, this.x0, sy + 2, this.w, this.yBottom - sy)) acidHurt(g, dt);
   }
 
+  // ¿El fluido (lo que hay ahora en la cubeta) toca este rectángulo?
+  hits(r) { return this.level > 0.05 && overlapsRect(r, this.x0, this.surfaceY + 2, this.w, this.yBottom - this.surfaceY); }
+
   // Franja de la superficie: ondas lentas, grumos que flotan a la deriva (más deprisa si
   // sube o baja), burbujas que se hinchan y revientan y un borde húmedo que brilla.
   #paintSurface(t) {

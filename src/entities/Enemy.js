@@ -2019,7 +2019,7 @@ export const BEHAVIORS = {
     // Debilitado: la piel humea y gotea (aviso de que ahora sí le duele).
     if (e.weakT > 0 && Math.random() < 0.5) g.glowParticles.emit(e.x + Math.random() * e.w, e.y + Math.random() * 10, { vx: (Math.random() - 0.5) * 20, vy: -30 - Math.random() * 30, life: 0.7, color: [0.75, 1, 0.55] });
     // Una catarata de bilis le cae encima: se escalda (le revientan las celdas de la espalda).
-    if (e.scaldCool <= 0 && e.state !== 'scalded' && g.room.hazards.some((h) => h.hits?.(e))) {
+    if (e.scaldCool <= 0 && e.state !== 'scalded' && !(e.weakT > 3) && g.room.hazards.some((h) => h.hits?.(e))) {
       e.state = 'scalded'; e.timer = d.scaldStun ?? 2.6; e.vx = 0; e.biteK = 0;
       toadPopEggs(e, g, toadPickEggs(e, 5, g));                        // el ácido revienta sus huevos
       e.popPending = [];
@@ -2073,13 +2073,14 @@ export const BEHAVIORS = {
       else if (e.timer <= 0 && e.onGround) {
         // A media distancia, a veces la embestida a ras de suelo; si no, saltos (a veces
         // encadenados: 1-2 más; herido, casi siempre).
-        if (Math.abs(dx) < 230 && Math.random() < 0.45) { e.state = 'rushWind'; e.timer = enraged ? 0.28 : 0.42; e.vx = 0; g.audio.play('eelGurgle', e); }
+        if (!e.preferLeap && Math.abs(dx) < 230 && Math.random() < 0.45) { e.state = 'rushWind'; e.timer = enraged ? 0.28 : 0.42; e.vx = 0; g.audio.play('eelGurgle', e); }
         else { e.state = 'crouch'; e.timer = enraged ? 0.35 : 0.55; e.vx = 0; e.chain = enraged ? 1 + (Math.random() < 0.5 ? 1 : 0) : Math.random() < 0.5 ? 1 : 0; g.audio.play('eelGurgle', e); }
       }
     } else if (e.state === 'crouch') {
       e.vx = 0;
       if (e.timer <= 0) {
         e.state = 'leap';
+        e.preferLeap = false;
         e.dir = Math.sign(dx) || e.dir;
         const far = (e.farLeap ?? 0) > 0 && Math.abs(dx) > 90;
         if (e.farLeap > 0) e.farLeap--;
@@ -2087,10 +2088,12 @@ export const BEHAVIORS = {
         e.vy = (far ? -290 : -360) - Math.min(120, Math.max(0, -(p.cy - e.cy)) * 0.8); // más alto si estás arriba
         e.hitDone = false;
         e.airT = 0;
+        e.leapVx = e.vx;                                                 // conserva el impulso aunque roce un escalón
         g.audio.play(d.sounds.attack, e);
       }
     } else if (e.state === 'leap') {
       e.airT += dt;
+      if (!e.onGround) e.vx = e.leapVx ?? e.vx;
       // El topetazo: una vez por salto.
       if (!e.hitDone && overlap(p, e)) { e.hitDone = true; g.hurtPlayer(d.leapDamage, e.cx, d.name); }
       if (e.onGround && e.airT > 0.15) {
@@ -2163,7 +2166,7 @@ export const BEHAVIORS = {
       if (e.timer <= 0 || e.hitWall || (close && e.timer < 0.55)) {
         if (Math.abs(dx) < 90 && Math.abs(p.cy - e.cy) < 40) { e.state = 'biteWind'; e.timer = e.biteWT = 0.18; e.biteK = 0; e.vx *= 0.3; }
         else { e.state = 'sit'; e.timer = 0.5; }
-        if (e.hitWall) { g.shake = Math.max(g.shake, 5); g.audio.play('thump', e); }
+        if (e.hitWall) { g.shake = Math.max(g.shake, 5); g.audio.play('thump', e); e.preferLeap = true; }
       }
     } else if (e.state === 'brood') {
       e.vx = 0;
