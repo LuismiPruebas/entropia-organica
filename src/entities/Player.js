@@ -37,7 +37,7 @@ const RAM_DAMAGE = 12;     // la embestida atraviesa y hiere
 const BURST_SIZE = 3;          // espinas por ráfaga
 const BURST_GAP = 0.07;        // segundos entre espinas de una ráfaga
 const BURST_REST = 0.2;        // pausa entre ráfagas
-const BIOMASS_PER_BURST = 1;   // biomasa que devora cada ráfaga (hambriento: más que antes)
+const BIOMASS_PER_BURST = 1.35; // biomasa que devora cada ráfaga (hambriento: unos 4 por segundo disparando)
 // Cuerpo a cuerpo: siempre disponible como último recurso.
 const MELEE_ABSORB = 3;      // biomasa que absorbes por golpe acertado
 const MELEE_DAMAGE = 14;     // culatazo: más que una astilla, pero hay que estar pegado

@@ -319,7 +319,7 @@ export const MUTATIONS = {
     hunger: 0.15,
     desc: 'Cañón II: ráfagas de espinas de plasma alimentadas con tu biomasa; revientan las membranas agrietadas. Tiene hambre constante.',
     brief: 'Un cañón vivo: ráfagas de espinas de plasma que devoran tu biomasa sin parar.',
-    controls: 'Mantén el disparo: ráfagas automáticas de espinas de plasma (1 de biomasa por ráfaga). Al agotar la biomasa el cañón se vacía y escupe un glóbulo incandescente que sigue quemando. [R] cambia de arma.',
+    controls: 'Mantén el disparo: ráfagas automáticas de espinas de plasma (1,35 de biomasa por ráfaga). Al agotar la biomasa el cañón se vacía y escupe un glóbulo incandescente que sigue quemando. [R] cambia de arma.',
     effect: 'Sus disparos revientan las membranas agrietadas (X), como la embestida. No gasta hueso.',
     drawback: 'Tiene hambre: devora 0,15 de biomasa por segundo, dispares o no.',
     lore: 'El tubo de hueso se abre como una flor de carne y se suelda a tu antebrazo. Late. Tiene hambre. La alimentas con lo que eres.',
