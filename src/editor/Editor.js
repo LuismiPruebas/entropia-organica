@@ -761,7 +761,11 @@ function draw() {
     const auto = !l.arrive;
     if (auto && ax >= l.x && ax < l.x + (l.w ?? 1) && ay >= l.y && ay < l.y + (l.h ?? 2)) continue;   // sobre el propio punto: no hace falta marca
     g.strokeStyle = auto ? 'rgba(58,255,138,0.5)' : '#3aff8a'; g.lineWidth = 2; g.setLineDash([3, 3]);
-    g.strokeRect(ax * z + 1, (ay - 1) * z + 1, z - 2, 2 * z - 2); g.setLineDash([]);
+    g.strokeRect(ax * z + 1, (ay - 1) * z + 1, z - 2, 2 * z - 2);
+    // Una línea la une a su punto: se ve por qué abertura se llega ahí.
+    g.lineWidth = 1; g.beginPath();
+    g.moveTo((l.x + (l.w ?? 1) / 2) * z, (l.y + (l.h ?? 2) / 2) * z); g.lineTo((ax + 0.5) * z, ay * z);
+    g.stroke(); g.setLineDash([]);
     g.fillStyle = auto ? 'rgba(58,255,138,0.6)' : '#3aff8a'; g.font = '10px monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
     g.fillText(`llegada ${l.id}${auto ? ' (auto)' : ''}`, ax * z, (ay - 1) * z - 1);
   }
