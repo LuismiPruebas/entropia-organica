@@ -192,7 +192,7 @@ export class EntityFactory {
       // Surtidores (cataratas de ácido) y sumideros que muestran cómo se llenan y vacían.
       ...(def.spouts ?? []).map((d) => new Spout(g, room, d, pools[d.pool], valves[d.valve])),
       ...(def.sinks ?? []).map((d) => new Sink(g, room, d, pools[d.pool])),
-      ...(def.bladders ?? []).map((d) => new Bladder(g, room, d, pools[d.pool], valves[d.valve])),
+      ...(def.bladders ?? []).map((d) => new Bladder(g, room, d, pools[d.pool], pools[d.chamber])),
       ...(def.floats ?? []).map((d) => new Float(g, room, d, pools[d.pool])),
       ...(def.movers ?? []).map((d) => new Mover(g, room, d)),
       ...buildFangs(g, world), // colmillos animados de púas y abismos

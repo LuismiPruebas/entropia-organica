@@ -2024,7 +2024,7 @@ export const BEHAVIORS = {
     // Su charca: cubetas de bilis (manual). Si le vacías la suya, se queja y se muda a una
     // llena; con las tres vacías (la bilis en sus vejigas) se resiente y queda debilitado un
     // rato, sin dejar de pelear; luego las vejigas le devuelven la bilis y vuelta a empezar.
-    const basins = g.room.hazards.filter((h) => h.surfaceY !== undefined && h.def?.manual);
+    const basins = g.room.hazards.filter((h) => h.surfaceY !== undefined && h.def?.manual && !h.def.ceiling);
     const fullB = (b) => b.target > 0.5;
     const inB = basins.find((b) => e.cx >= b.x0 && e.cx <= b.x0 + b.w);
     if (inB && !fullB(inB) && e.dryOf !== inB && !(e.weakT > 0) && e.state !== 'scalded') {
