@@ -395,6 +395,151 @@ function oseo() {
   };
 }
 
+// --- Variantes del bioma de Hueso (lv.backdrop) -------------------------------------
+// Hueso a lo largo de un recorrido (para las variantes): grosor w(s), luz arriba-izquierda.
+function boneLine(g, pts, wAt, pal) {
+  for (const pass of [0, 1]) for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    const a = Math.atan2(y1 - y0, x1 - x0), nx = -Math.sin(a), ny = Math.cos(a);
+    const w = wAt(i / pts.length);
+    for (let k = -w - 1 + pass; k <= w + 1 - pass; k += 0.5) {
+      let c = pal.out;
+      if (pass) { const q = k / w, lit = -(nx * q) - (ny * q); c = lit > 0.35 ? pal.light : lit < -0.4 ? pal.dark : pal.mid; }
+      dotW(g, x1 + nx * k, y1 + ny * k, c);
+    }
+  }
+}
+
+// Hueso esponjoso (oseo:2): grandes osteonas (los anillos del hueso compacto vistos en
+// corte), cada una con su canal central por el que pasa un vaso que brilla; canales que las
+// unen y glóbulos de médula a la deriva.
+function oseo2() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const r = rng(83);
+  const RING = ['#e2cfa8', '#c4ab84', '#a68c66', '#cdb58e'];
+  const osteons = [];
+  for (let i = 0; i < 9; i++) osteons.push([r() * MID_W, 18 + r() * (MID_H - 36), 13 + r() * 13]);
+  // Canales de Volkmann: tubos rojizos que unen las osteonas (detrás).
+  for (let i = 0; i < osteons.length; i++) {
+    const [ax, ay] = osteons[i], [bx, by] = osteons[(i + 3) % osteons.length];
+    const n = Math.ceil(Math.hypot(bx - ax, by - ay));
+    for (let s = 0; s <= n; s++) {
+      const u = s / n, x = ax + (bx - ax) * u, y = ay + (by - ay) * u + Math.sin(u * Math.PI * 2) * 4;
+      dotW(g, x, y - 1, '#2a0e0a', 1, 3); dotW(g, x, y, '#6a1a14');
+      if (s % 9 === 0) dotW(gl, x, y, '#5a0c08');
+    }
+  }
+  for (const [x0, y0, R] of osteons) {
+    for (let y = -R - 1; y <= R + 1; y++) for (let x = -R - 1; x <= R + 1; x++) {
+      const d = Math.hypot(x, y);
+      if (d > R + 1) continue;
+      let c;
+      if (d > R) c = '#2a1a10';                                          // línea de cemento
+      else if (d < 3.2) c = d < 2 ? '#3a0606' : '#7a1a14';                 // canal central
+      else {
+        const ring = Math.floor((d + Math.sin(Math.atan2(y, x) * 5) * 0.4) / 2.2);
+        c = RING[ring % 4];
+        const lit = (-x - y) / (R * 1.4);
+        if (lit < -0.35 && ring % 2) c = '#86704f';
+        if (lit > 0.4 && ring % 2 === 0) c = '#f2e4c4';
+        // Lagunas de osteocitos: puntitos oscuros en los anillos, con sus canalículos.
+        if (((Math.round(x * 3 + y * 7) % 23) === 0) && d > 4) c = '#3a2418';
+      }
+      dotW(g, x0 + x, y0 + y, c);
+    }
+    // El vaso del canal, que late (brillo propio).
+    dotW(gl, x0 - 1, y0 - 1, '#c8281a', 2, 2); dotW(gl, x0, y0, '#ff6a3a');
+    // Una grieta radial.
+    const a = r() * Math.PI * 2;
+    for (let s = 4; s < R; s++) dotW(g, x0 + Math.cos(a) * s, y0 + Math.sin(a) * s, '#3a2418');
+  }
+  const [front, f] = canvas(FRONT_W, FRONT_H);
+  // Primer plano: espículas de hueso esponjoso que asoman, ramificadas.
+  for (let x = 6; x < FRONT_W; x += 14 + Math.floor(r() * 8)) {
+    const h = 12 + Math.floor(r() * 20);
+    for (let i = 0; i < h; i++) {
+      const w = Math.max(1, Math.round((1 - i / h) * 3));
+      f.fillStyle = i > h - 3 ? '#5a4232' : '#2a1810';
+      f.fillRect(x - Math.floor(w / 2) + Math.round(Math.sin(i * 0.3) * 2), FRONT_H - i, w, 1);
+      if (i === Math.floor(h * 0.5)) { f.fillRect(x + 1, FRONT_H - i - 3, 1, 3); f.fillRect(x + 2, FRONT_H - i - 5, 1, 2); }
+    }
+  }
+  return {
+    mid, midGlow: glow, front,
+    anim: {
+      pulseGlow: 0.6,
+      motes: { n: 26, colors: ['rgba(200,60,40,0.55)', 'rgba(230,190,120,0.45)', 'rgba(150,30,24,0.5)'], vx: 3, vy: -3, size: 2, shape: 'bubble', wobble: 5 },
+    },
+  };
+}
+
+// Osario (oseo:3): un montón de fémures cruzados y, entre ellos, cráneos grandes con brasas
+// en las cuencas; polvo de hueso que cae.
+function oseo3() {
+  const [mid, g] = canvas(MID_W, MID_H), [glow, gl] = canvas(MID_W, MID_H);
+  gl.fillStyle = '#000'; gl.fillRect(0, 0, MID_W, MID_H);
+  const r = rng(97);
+  const IV = { out: '#2a1a12', dark: '#7a6248', mid: '#bea47e', light: '#ecdcbc' };
+  const FAR = { out: '#1a100a', dark: '#46362a', mid: '#685440', light: '#8a7458' };
+  // Fémur: diáfisis con cintura y dos cabezas abultadas en cada extremo.
+  const femur = (x0, y0, ang, len, w, pal) => {
+    const cs = Math.cos(ang), sn = Math.sin(ang), nx = -sn, ny = cs;
+    const pts = []; for (let t = 0; t <= len; t += 1) pts.push([x0 + cs * t, y0 + sn * t]);
+    boneLine(g, pts, (s) => w * (1 - 0.3 * Math.sin(s * Math.PI)), pal);
+    for (const e of [0, 1]) for (const sgn of [-1, 1]) {
+      const ex = x0 + cs * len * e + nx * w * 0.8 * sgn, ey = y0 + sn * len * e + ny * w * 0.8 * sgn;
+      const rad = w * (sgn > 0 && e ? 1.5 : 1.15);
+      for (let y = -Math.ceil(rad) - 1; y <= rad + 1; y++) for (let x = -Math.ceil(rad) - 1; x <= rad + 1; x++) {
+        const q = Math.hypot(x, y) / rad;
+        if (q > 1.12) continue;
+        const lit = (-x - y) / (rad * 1.4);
+        dotW(g, ex + x, ey + y, q > 1 ? pal.out : lit > 0.35 ? pal.light : lit < -0.35 ? pal.dark : pal.mid);
+      }
+    }
+  };
+  // Capa de atrás, oscura; luego la de delante.
+  for (let i = 0; i < 14; i++) femur(r() * MID_W, r() * MID_H, (r() - 0.5) * 1.6 + (r() < 0.5 ? 0 : Math.PI), 34 + r() * 26, 2.4, FAR);
+  // Cráneos grandes (entre las capas), con brasas en las cuencas.
+  const skull = (x0, y0, s) => {
+    for (let y = -Math.ceil(13 * s); y <= 13 * s; y++) for (let x = -Math.ceil(12 * s); x <= 12 * s; x++) {
+      const cran = (x / (11 * s)) ** 2 + ((y + 2 * s) / (9.5 * s)) ** 2;
+      const jaw = Math.abs(x) < 6.5 * s && y > 3 * s && y < 11 * s && (x / (6.5 * s)) ** 2 + ((y - 7 * s) / (4.5 * s)) ** 2 < 1;
+      if (cran > 1.1 && !jaw) continue;
+      const lit = (-x * 0.6 - y) / (11 * s);
+      let c = cran > 1 && !jaw ? IV.out : lit > 0.4 ? IV.light : lit < -0.35 ? IV.dark : IV.mid;
+      const eye = ((Math.abs(x) - 4.4 * s) / (2.8 * s)) ** 2 + ((y - 0.5 * s) / (2.6 * s)) ** 2;
+      if (eye < 1) c = eye < 0.35 ? '#5a1a08' : '#140806';
+      if (Math.abs(x) < 1.4 * s && y > 3.5 * s && y < 6 * s && Math.abs(x) < (y - 3.5 * s) * 0.7 + 0.5) c = '#140806';
+      if (jaw && y > 7.5 * s && y < 9.3 * s) c = (Math.round(x / s) % 2) ? IV.light : IV.out;
+      if (cran < 1 && Math.abs(x + 3 * s) < 0.6 && y < -3 * s && y > -8 * s) c = IV.out; // grieta
+      dotW(g, x0 + x, y0 + y, c);
+    }
+    // Brasas en las cuencas.
+    for (const sx of [-1, 1]) { dotW(gl, x0 + sx * 4.4 * s - 1, y0 + 0.5 * s - 1, '#c84a14', 2, 2); dotW(gl, x0 + sx * 4.4 * s, y0 + 0.5 * s, '#ffb050'); }
+  };
+  for (let i = 0; i < 5; i++) skull(i * (MID_W / 5) + 20 + r() * 12, 40 + r() * (MID_H - 80), 0.9 + r() * 0.5);
+  for (let i = 0; i < 12; i++) femur(r() * MID_W, r() * MID_H, (r() - 0.5) * 1.4 + (r() < 0.5 ? 0 : Math.PI), 40 + r() * 30, 3, IV);
+  const [front, f] = canvas(FRONT_W, FRONT_H);
+  // Primer plano: el borde del montón, huesos cruzados en silueta.
+  for (let x = 0; x < FRONT_W; x += 18 + Math.floor(r() * 10)) {
+    const ang = -0.5 - r() * 0.8, len = 18 + r() * 16;
+    for (let t = 0; t < len; t++) {
+      const xx = x + Math.cos(ang) * t * (r() < 0.5 ? 1 : 1), yy = FRONT_H - Math.abs(Math.sin(ang)) * t;
+      f.fillStyle = t > len - 3 ? '#4a3626' : '#22140c';
+      f.fillRect(Math.round(xx), Math.round(yy), 2, 2);
+    }
+    f.fillStyle = '#2e1e14'; f.fillRect(Math.round(x + Math.cos(ang) * len) - 2, Math.round(FRONT_H - Math.abs(Math.sin(ang)) * len) - 2, 5, 4);
+  }
+  return {
+    mid, midGlow: glow, front,
+    anim: {
+      pulseGlow: 0.9,
+      motes: { n: 40, colors: ['rgba(230,215,185,0.5)', 'rgba(190,165,130,0.4)'], vx: 1, vy: 9, size: 1, wobble: 2 },
+    },
+  };
+}
+
 // Sistema circulatorio: arterias rojas y venas azules gruesas y brillantes que cruzan la
 // sala sin cortes (recorridos periódicos) y de las que brota una red de capilares de
 // colores que brilla tenue; glóbulos rojos a la deriva. Todo late con el corazón.
@@ -978,7 +1123,7 @@ function digFront(seed) {
   return front;
 }
 
-const BUILDERS = { 'digestivo:2': digestivo2, 'digestivo:3': digestivo3, 'digestivo:4': digestivo4, 'pulmonar:2': pulmonar2, 'pulmonar:3': pulmonar3, 'pulmonar:4': pulmonar4, nervioso, pulmonar, digestivo, corazon, oseo, circulatorio, 'nervioso:2': nervioso2, 'nervioso:3': nervioso3, 'nervioso:4': nervioso4 };
+const BUILDERS = { 'oseo:2': oseo2, 'oseo:3': oseo3, 'digestivo:2': digestivo2, 'digestivo:3': digestivo3, 'digestivo:4': digestivo4, 'pulmonar:2': pulmonar2, 'pulmonar:3': pulmonar3, 'pulmonar:4': pulmonar4, nervioso, pulmonar, digestivo, corazon, oseo, circulatorio, 'nervioso:2': nervioso2, 'nervioso:3': nervioso3, 'nervioso:4': nervioso4 };
 
 // Ritmo de las paredes vivas de cada bioma (0..1).
 const RHYTHMS = {
