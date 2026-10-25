@@ -2032,6 +2032,7 @@ export const BEHAVIORS = {
       g.audio.play(d.sounds?.hurt ?? 'toadHurt', e);
     }
     if (inB && fullB(inB)) e.dryOf = null;
+    e.inFull = !basins.length || (!!inB && fullB(inB) && inB.level > 0.5); // en su bilis: más duro y puede criar
     let dryNow = false;
     if (basins.length && !e.drained && basins.every((b) => !fullB(b) && b.level < 0.1)) { e.drained = true; dryNow = true; }
     if (e.drained && e.wasWeak && e.weakT <= 0) {
@@ -2092,16 +2093,16 @@ export const BEHAVIORS = {
       e.dir = Math.sign(dx) || e.dir;
       e.vx = e.onGround ? e.dir * 18 * (0.4 + 0.6 * Math.max(0, Math.sin(e.t * 4))) : e.vx;
       const minions = g.room.enemies.filter((m) => m.minion && m.alive).length;
-      // Su cubeta está seca: salta a una llena.
-      if (e.goalX != null && Math.abs(e.goalX - e.cx) > 40 && e.onGround && e.timer <= 0.6) {
+      // Pegado a ti: el bocado (la cabeza sale disparada con las fauces abiertas).
+      if (Math.abs(dx) < 62 && Math.abs(p.cy - e.cy) < 34 && e.biteCool <= 0 && e.onGround) {
+        e.state = 'biteWind'; e.timer = e.biteWT = enraged ? 0.4 : 0.55; e.vx = 0; e.biteK = 0;
+        g.audio.play('eelGurgle', e);
+      } else if (e.broodCool <= 0 && minions < BROOD.max && e.inFull) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; e.popPending = toadPickEggs(e, BROOD.n, g); g.audio.play(d.sounds.summon, e); } // solo cría dentro de una cubeta llena
+      // Su cubeta está seca: en sus pausas, a veces salta a una llena (sigue atacando).
+      else if (e.timer <= 0 && e.onGround && e.goalX != null && Math.abs(e.goalX - e.cx) > 40 && Math.random() < 0.4) {
         e.state = 'crouch'; e.timer = 0.3; e.vx = 0; e.chain = 0; e.leapTo = e.goalX;
         g.audio.play('eelGurgle', e);
       }
-      // Pegado a ti: el bocado (la cabeza sale disparada con las fauces abiertas).
-      else if (Math.abs(dx) < 62 && Math.abs(p.cy - e.cy) < 34 && e.biteCool <= 0 && e.onGround) {
-        e.state = 'biteWind'; e.timer = e.biteWT = enraged ? 0.4 : 0.55; e.vx = 0; e.biteK = 0;
-        g.audio.play('eelGurgle', e);
-      } else if (e.broodCool <= 0 && minions < BROOD.max) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; e.popPending = toadPickEggs(e, BROOD.n, g); g.audio.play(d.sounds.summon, e); }
       else if (e.timer <= 0 && e.onGround) {
         // A media distancia, a veces la embestida a ras de suelo; si no, saltos (a veces
         // encadenados: 1-2 más; herido, casi siempre).
@@ -2783,7 +2784,7 @@ export class Enemy {
     const before = this.hp;
     if (this.exposed && this.def.exposedBonus) n *= this.def.exposedBonus;
     // Piel curtida (el Sapo): casi nada le hace daño hasta que lo debilitas.
-    if (this.def.armor) n *= this.weakT > 0 ? (this.def.weakArmor ?? 1) : this.def.armor;
+    if (this.def.armor) n *= this.weakT > 0 ? (this.def.weakArmor ?? 1) : this.inFull === false ? (this.def.dryArmor ?? this.def.armor) : this.def.armor;
     // Debilidades por tipo de golpe (p. ej. el Ganglio Madre ante las espinas del simbionte).
     n *= this.def.weakTo?.[kind] ?? 1;
     if (this.deflating) return false;
