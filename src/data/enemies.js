@@ -511,10 +511,12 @@ export const ENEMIES = {
     boss: true,
     music: 'sapo', // «Diseased Machine»
     exposedBonus: 1.6, // al caer de un salto (o escaldado) queda con la panza al aire
-    armor: 0.25,       // piel curtida y cubierta de crías: casi no le duele... hasta que lo escaldas
+    armor: 0.25,       // piel curtida y empapada en su charca: casi no le duele... hasta que se la vacías
+    weakArmor: 0.6,    // sin bilis le entra más, pero sigue siendo duro
+    weakShare: 0.36,   // lo más que pierde cada vez que lo dejas seco (hay que repetirlo unas tres veces)
     meleeResist: 0.5,  // y a golpes, aún menos
-    weakTime: 8,       // segundos debilitado tras escaldarlo con una vejiga de bilis
-    scaldStun: 2.6,    // segundos que se retuerce panza arriba
+    weakTime: 12,      // segundos resentido con las tres cubetas vacías (luego las vejigas le devuelven la bilis)
+    scaldStun: 2.0,    // segundos que convulsiona al quedarse sin una gota
     hp: 320, w: 64, h: 42,
     light: { color: [0.36, 0.32, 0.42], r: 190 }, // luz cenicienta: que no se confunda con el ácido
     contactDamage: 12,
@@ -531,7 +533,7 @@ export const ENEMIES = {
     },
     sounds: { reveal: 'toadCroak', attack: 'spit', summon: 'choirRetch', hurt: 'toadHurt', die: 'toadDie' },
     auraPeriod: 3,
-    habits: 'Nunca está quieto mucho rato. Se agazapa y tiembla (aviso) y salta con las patas traseras para toparte, a veces dos o tres veces seguidas; al caer salpica ácido a los lados y, si te tiene cerca, te muerde al momento. Otras veces se agazapa con la mirada fija y sale disparado a ras de suelo con las fauces abiertas: te arrolla y remata con un mordisco. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes; y si le encadenas golpes, se revuelve y te muerde enseguida. Si le disparas de lejos, no se queda a recibir: salta hacia ti. Cada poco le revientan las celdas de la espalda y brotan renacuajos que escupen ácido (más cuando está herido). Su piel curtida casi no siente los golpes: su charca está partida en tres cubetas, y sobre cada una cuelga del techo un esfínter con su caño. Cuando esté en una cubeta, dispara a su esfínter: la cubeta se llena de bilis unos segundos y le quema las patas (tú, a salvo en los lomos). Escaldado, se retuerce, pierde sus crías y durante unos segundos queda debilitado.',
+    habits: 'Nunca está quieto mucho rato. Se agazapa y tiembla (aviso) y salta con las patas traseras para toparte, a veces dos o tres veces seguidas; al caer salpica ácido a los lados y, si te tiene cerca, te muerde al momento. Otras veces se agazapa con la mirada fija y sale disparado a ras de suelo con las fauces abiertas: te arrolla y remata con un mordisco. Si te tiene pegado, echa la cabeza atrás y la dispara hacia ti con unas fauces enormes; y si le encadenas golpes, se revuelve y te muerde enseguida. Si le disparas de lejos, no se queda a recibir: salta hacia ti. Cada poco le revientan las celdas de la espalda y brotan renacuajos que escupen ácido (más cuando está herido). Vive en una charca de bilis partida en tres cubetas, y mientras la tiene su piel curtida casi no siente los golpes. Cada cubeta tiene un esfínter en el lomo a su izquierda: golpéalo y la bilis sube por un conducto a la vejiga que cuelga encima. Si le vacías la suya, se queja y salta a otra llena. Con las tres vacías convulsiona, pierde sus crías y queda resentido unos segundos (le entra más, pero sigue siendo duro); luego las vejigas se exprimen y le devuelven la bilis. Hay que dejarlo seco varias veces.',
     lore: 'Un sapo que el intestino dejó crecer demasiado. Carga a sus crías en la espalda, hundidas en celdas de su propia piel, y las suelta cuando tiene hambre. Salta como si el suelo le quemara... y aquí el suelo quema.',
   },
   larva: {

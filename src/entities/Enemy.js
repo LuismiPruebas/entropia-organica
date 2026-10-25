@@ -2010,6 +2010,9 @@ export const BEHAVIORS = {
     e.state ??= 'sit';
     e.timer = (e.timer ?? 1.2) - dt;
     e.broodCool = (e.broodCool ?? 7) - dt;
+    // Fase según lo cerca que está de morir: cada fase, más crías (y más seguidas).
+    const phase = e.hp > d.hp * 0.66 ? 0 : e.hp > d.hp * 0.33 ? 1 : 2;
+    const BROOD = [{ n: 2, max: 3, cool: 9 }, { n: 3, max: 5, cool: 7 }, { n: 5, max: 8, cool: 5 }][phase];
     const dx = p.cx - e.cx;
     e.exposed = e.state === 'land' || e.state === 'scalded';
     e.biteCool = (e.biteCool ?? 1) - dt;
@@ -2018,18 +2021,42 @@ export const BEHAVIORS = {
     e.scaldCool = Math.max(0, (e.scaldCool ?? 0) - dt);
     // Debilitado: la piel humea y gotea (aviso de que ahora sí le duele).
     if (e.weakT > 0 && Math.random() < 0.5) g.glowParticles.emit(e.x + Math.random() * e.w, e.y + Math.random() * 10, { vx: (Math.random() - 0.5) * 20, vy: -30 - Math.random() * 30, life: 0.7, color: [0.75, 1, 0.55] });
-    // Una catarata de bilis le cae encima: se escalda (le revientan las celdas de la espalda).
-    if (e.scaldCool <= 0 && e.state !== 'scalded' && !(e.weakT > 3) && g.room.hazards.some((h) => h.hits?.(e))) {
+    // Su charca: cubetas de bilis (manual). Si le vacías la suya, se queja y se muda a una
+    // llena; con las tres vacías (la bilis en sus vejigas) se resiente y queda debilitado un
+    // rato, sin dejar de pelear; luego las vejigas le devuelven la bilis y vuelta a empezar.
+    const basins = g.room.hazards.filter((h) => h.surfaceY !== undefined && h.def?.manual);
+    const fullB = (b) => b.target > 0.5;
+    const inB = basins.find((b) => e.cx >= b.x0 && e.cx <= b.x0 + b.w);
+    if (inB && !fullB(inB) && e.dryOf !== inB && !(e.weakT > 0) && e.state !== 'scalded') {
+      e.dryOf = inB; e.flash = 0.15; g.shake = Math.max(g.shake, 4);
+      g.audio.play(d.sounds?.hurt ?? 'toadHurt', e);
+    }
+    if (inB && fullB(inB)) e.dryOf = null;
+    let dryNow = false;
+    if (basins.length && !e.drained && basins.every((b) => !fullB(b) && b.level < 0.1)) { e.drained = true; dryNow = true; }
+    if (e.drained && e.wasWeak && e.weakT <= 0) {
+      e.drained = false;                                               // las vejigas se exprimen
+      for (const b of basins) b.target = 1;
+      g.audio.play('glandFlood', e);
+    }
+    e.wasWeak = e.weakT > 0;
+    e.goalX = null;
+    if (!(e.weakT > 0) && basins.some(fullB) && (!inB || !fullB(inB))) {
+      const best = basins.filter(fullB).sort((a, b) => Math.abs(a.x0 + a.w / 2 - e.cx) - Math.abs(b.x0 + b.w / 2 - e.cx))[0];
+      e.goalX = best.x0 + best.w / 2;
+    }
+    // Sin una gota en su charca: convulsiona, le revientan las celdas y queda resentido.
+    if (dryNow) {
       e.state = 'scalded'; e.timer = d.scaldStun ?? 2.6; e.vx = 0; e.biteK = 0;
-      toadPopEggs(e, g, toadPickEggs(e, 5, g));                        // el ácido revienta sus huevos
+      toadPopEggs(e, g, toadPickEggs(e, 5, g));
       e.popPending = [];
-      e.weakT = d.weakTime ?? 8;
+      e.weakT = d.weakTime ?? 12;
+      e.weakFloor = Math.max(0, e.hp - d.hp * (d.weakShare ?? 0.36)); // no cae de un solo golpe de suerte
       e.scaldCool = 3;
       e.broodCool = Math.max(e.broodCool, 9);
       e.flash = 0.2;
       g.shake = Math.max(g.shake, 8);
       g.audio.play(d.sounds?.hurt ?? 'toadHurt', e);
-      g.audio.play('sizzle', e);
       for (let i = 0; i < 26; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * e.w, e.y + 2, { vx: (Math.random() - 0.5) * 140, vy: -80 - Math.random() * 120, life: 0.8, gravity: 500, color: Math.random() < 0.5 ? [0.85, 0.8, 0.6] : [0.45, 0.6, 0.2], stain: '#4a6a1a' });
     }
     // Le pegas: no se queda quieto. Aturdido tras un salto, se recompone enseguida; a los
@@ -2065,11 +2092,16 @@ export const BEHAVIORS = {
       e.dir = Math.sign(dx) || e.dir;
       e.vx = e.onGround ? e.dir * 18 * (0.4 + 0.6 * Math.max(0, Math.sin(e.t * 4))) : e.vx;
       const minions = g.room.enemies.filter((m) => m.minion && m.alive).length;
+      // Su cubeta está seca: salta a una llena.
+      if (e.goalX != null && Math.abs(e.goalX - e.cx) > 40 && e.onGround && e.timer <= 0.6) {
+        e.state = 'crouch'; e.timer = 0.3; e.vx = 0; e.chain = 0; e.leapTo = e.goalX;
+        g.audio.play('eelGurgle', e);
+      }
       // Pegado a ti: el bocado (la cabeza sale disparada con las fauces abiertas).
-      if (Math.abs(dx) < 62 && Math.abs(p.cy - e.cy) < 34 && e.biteCool <= 0 && e.onGround) {
+      else if (Math.abs(dx) < 62 && Math.abs(p.cy - e.cy) < 34 && e.biteCool <= 0 && e.onGround) {
         e.state = 'biteWind'; e.timer = e.biteWT = enraged ? 0.4 : 0.55; e.vx = 0; e.biteK = 0;
         g.audio.play('eelGurgle', e);
-      } else if (e.broodCool <= 0 && minions < (enraged ? 4 : 2)) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; e.popPending = toadPickEggs(e, enraged ? 3 : 2, g); g.audio.play(d.sounds.summon, e); }
+      } else if (e.broodCool <= 0 && minions < BROOD.max) { e.state = 'brood'; e.timer = 0.9; e.vx = 0; e.popPending = toadPickEggs(e, BROOD.n, g); g.audio.play(d.sounds.summon, e); }
       else if (e.timer <= 0 && e.onGround) {
         // A media distancia, a veces la embestida a ras de suelo; si no, saltos (a veces
         // encadenados: 1-2 más; herido, casi siempre).
@@ -2084,8 +2116,11 @@ export const BEHAVIORS = {
         e.dir = Math.sign(dx) || e.dir;
         const far = (e.farLeap ?? 0) > 0 && Math.abs(dx) > 90;
         if (e.farLeap > 0) e.farLeap--;
-        e.vx = far ? Math.sign(dx) * 340 : clamp(dx * 1.3, -230, 230);
-        e.vy = (far ? -290 : -360) - Math.min(120, Math.max(0, -(p.cy - e.cy)) * 0.8); // más alto si estás arriba
+        const to = e.leapTo != null ? e.leapTo - e.cx : null;
+        if (to != null) e.dir = Math.sign(to) || e.dir;
+        e.vx = to != null ? clamp(to / 0.85, -340, 340) : far ? Math.sign(dx) * 340 : clamp(dx * 1.3, -230, 230);
+        e.vy = to != null ? -360 : (far ? -290 : -360) - Math.min(120, Math.max(0, -(p.cy - e.cy)) * 0.8); // más alto si estás arriba
+        e.leapTo = null;
         e.hitDone = false;
         e.airT = 0;
         e.leapVx = e.vx;                                                 // conserva el impulso aunque roce un escalón
@@ -2174,14 +2209,15 @@ export const BEHAVIORS = {
         // Revientan las celdas: los huevos estallan y las crías saltan de la espalda.
         toadPopEggs(e, g, e.popPending ?? []);
         e.popPending = [];
-        for (let i = 0; i < (enraged ? 3 : 2); i++) {
-          g.spawnMinion('larva', e.cx + (i - 1) * 10, e.y - 6);
+        for (let i = 0; i < BROOD.n; i++) {
+          const sp = i - (BROOD.n - 1) / 2;
+          g.spawnMinion('larva', e.cx + sp * 10, e.y - 6);
           const m = g.room.enemies[g.room.enemies.length - 1];
           // Salen disparadas de la espalda: hacia arriba y abiertas, algo hacia ti.
-          m.vy = -250 - Math.random() * 60; m.vx = (i - 1) * 110 + Math.sign(p.cx - e.cx) * 40;
+          m.vy = -250 - Math.random() * 60; m.vx = sp * (BROOD.n > 3 ? 70 : 110) + Math.sign(p.cx - e.cx) * 40;
         }
         for (let i = 0; i < 12; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * 30, e.y + 4, { vx: (Math.random() - 0.5) * 100, vy: -60 - Math.random() * 80, life: 0.6, gravity: 400, color: [0.45, 0.6, 0.2] });
-        e.broodCool = enraged ? 6 : 9;
+        e.broodCool = BROOD.cool;
         e.state = 'sit';
         e.timer = 1;
       }
@@ -2747,11 +2783,12 @@ export class Enemy {
     const before = this.hp;
     if (this.exposed && this.def.exposedBonus) n *= this.def.exposedBonus;
     // Piel curtida (el Sapo): casi nada le hace daño hasta que lo debilitas.
-    if (this.def.armor && !(this.weakT > 0)) n *= this.def.armor;
+    if (this.def.armor) n *= this.weakT > 0 ? (this.def.weakArmor ?? 1) : this.def.armor;
     // Debilidades por tipo de golpe (p. ej. el Ganglio Madre ante las espinas del simbionte).
     n *= this.def.weakTo?.[kind] ?? 1;
     if (this.deflating) return false;
     this.hp -= n;
+    if (this.weakT > 0 && this.weakFloor > 0 && this.hp < this.weakFloor) this.hp = this.weakFloor;
     if (this.def.deflates && this.hp <= 0 && !this.deflating) {
       this.hp = 1; this.deflating = true; this.gs = 'deflate'; this.timer = 0.6; this.vy = 0; this.tent = null;
       this.flash = 0.08; this.game.audio.play(this.def.sounds?.hurt ?? 'hit', this);

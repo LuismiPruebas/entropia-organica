@@ -382,6 +382,7 @@ export class Valve {
     const act = this.def.action ?? 'fill';
     if (act === 'drain') return this.done;
     if (act === 'toggle' || act === 'swap') return (this.pool?.target ?? 0) >= 0.5;
+    if (act === 'pump') return (this.pool?.target ?? 1) < 0.5;
     return this.timer > 0;
   }
 
@@ -390,6 +391,7 @@ export class Valve {
   hit() {
     const g = this.game, act = this.def.action ?? 'fill';
     if (!this.alive || this.cool > 0) return true;
+    if (act === 'pump' && !(this.pool && this.pool.target >= 0.5 && this.pool.level > 0.95)) { g.audio.play('thump', this); this.squish = 0.4; this.cool = 0.4; return true; } // aún no está llena
     if (this.lock > 0) { g.audio.play('thump', this); this.squish = 0.4; this.cool = 0.4; return true; } // aún vacía: no responde
     this.cool = 0.6;
     this.squish = 1;
@@ -403,6 +405,9 @@ export class Valve {
       if (this.pool) this.pool.target = 0;
     } else if (act === 'toggle') {
       if (this.pool) this.pool.target = this.pool.target >= 0.5 ? 0 : 1;
+    } else if (act === 'pump') {
+      if (this.pool) this.pool.target = 0;
+      g.audio.play('glandFlood', this);
     } else if (act === 'flush') {
       this.timer = this.def.time ?? 7;
       if (this.pool) { this.pool.flushT = this.timer; this.pool.target = 0; }
