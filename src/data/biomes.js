@@ -95,9 +95,10 @@ export const BIOMES = {
     camo: '#3e2a20',
     // Sepia, marfil y sangre reseca.
     ambient: [0.2, 0.16, 0.14],
-    // Un osario por donde pasa el viento: un tubo hueco que resuena (el lecho estrecho y
-    // un zumbido que se hincha despacio), huesos que silban y campanillas de hueso.
-    sound: { drone: 36.7, wave: 'triangle', filter: 160, q: 3, lfo: 0.05, level: 0.028, bed: { freq: 520, q: 6, level: 0.012 }, hum: { wave: 'sine', freq: 73.4, level: 0.012, trem: 0.13 }, layer: 'ossuary' },
+    // Una fábrica de hueso: un zumbido grave y áspero de maquinaria (sierra muy filtrada),
+    // un latido mecánico lento, el rumor de la nave y, encima, el ciclo de la prensa, el
+    // trinquete, los escapes de presión y la muela (capa 'boneworks').
+    sound: { drone: 30.9, wave: 'sawtooth', filter: 120, q: 4, lfo: 0.07, level: 0.04, bed: { freq: 170, q: 2, level: 0.022 }, hum: { wave: 'square', freq: 61.7, level: 0.01, trem: 2.4 }, layer: 'boneworks' },
     mapColor: '#c8b090',
     fragments: ['balistico', 'dermal', 'balistico'],
   },

@@ -588,6 +588,71 @@ const LAYERS = {
       a.ambient(0, (o) => { a.knock(o, { f: 68, q: 3, dur: 0.7, vol: 0.12 }); a.knock(o, { f: 60, q: 3, dur: 0.8, vol: 0.09, delay: 0.55 }); }, true);
     }
   },
+  // Territorio del Hueso: una fábrica de hueso. Una nave enorme donde algo procesa calcio
+  // sin descanso. Un ciclo de máquina (~2,4 s): la prensa cae con un golpe sordo y tritura
+  // hueso (crujido seco); un trinquete de vértebras encaja diente a diente; de vez en
+  // cuando la médula escapa a presión por un hueso hueco (siseo de vapor), una muela muele
+  // hueso, cadenas de vértebras traquetean y un martillo lejano resuena en la nave. Algunos
+  // ciclos la máquina se para un instante: el silencio pesa más que el ruido.
+  boneworks(a, t) {
+    const cyc = Math.floor(t / 16), step = t % 16;
+    // La máquina se detiene un ciclo de cada cinco o seis (sin ritmo fijo).
+    a.bwStop ??= 5;
+    if (step === 0) {
+      a.bwIdle = cyc % a.bwStop === a.bwStop - 1;
+      if (a.bwIdle) a.bwStop = 5 + Math.floor(Math.random() * 2);
+    }
+    if (!a.bwIdle) {
+      if (step === 0) {
+        // La prensa: un golpe sordo y pesado que se mete en el pecho.
+        a.ambient(-0.15, (o) => {
+          a.knock(o, { f: 52, q: 2.5, dur: 0.9, vol: 0.2 });
+          a.tone(o, { type: 'sine', f0: 58, f1: 31, dur: 0.6, vol: 0.16 });
+          a.noise(o, { dur: 0.35, vol: 0.09, type: 'lowpass', f0: 900, f1: 120 });
+        }, true);
+      } else if (step === 2) {
+        // Hueso triturado bajo la prensa: crujido seco que se astilla.
+        a.ambient(-0.1, (o) => {
+          a.noise(o, { dur: 0.5, vol: 0.06, type: 'bandpass', f0: 1400, f1: 300, q: 2.5 });
+          for (let i = 0; i < 6; i++) a.knock(o, { f: 900 + Math.random() * 1600, q: 10, dur: 0.05, vol: 0.035, delay: i * (0.03 + Math.random() * 0.05) });
+        });
+      } else if (step >= 8 && step <= 11) {
+        // El trinquete: vértebras que encajan diente a diente (clac seco y hueco).
+        const f = 620 + (step - 8) * 25 + Math.random() * 40;
+        a.ambient(0.25, (o) => { a.knock(o, { f, q: 16, dur: 0.09, vol: 0.06 }); a.knock(o, { f: f * 0.5, q: 6, dur: 0.12, vol: 0.04, delay: 0.01 }); }, true);
+      } else if (step === 13 && cyc % 3 === 1) {
+        // Escape de presión: la médula sale silbando por un hueso hueco.
+        a.ambient(0.4, (o) => {
+          a.noise(o, { dur: 1.4, vol: 0.05, type: 'bandpass', f0: 2400, f1: 900, q: 3 });
+          a.noise(o, { dur: 1.1, vol: 0.03, type: 'highpass', f0: 4000, f1: 2500 });
+          a.tone(o, { type: 'sine', f0: 880, f1: 660, dur: 1.2, vol: 0.012 });
+        }, true);
+      }
+    }
+    const r = Math.random(), pan = Math.random() * 2 - 1;
+    if (r < 0.006) {
+      // La muela: piedra de hueso que muele hueso, áspera, unos segundos.
+      a.ambient(pan * 0.6, (o) => a.voice(o, { pitch: [[0, 46], [0.5, 52], [1, 44]], dur: 3 + Math.random() * 2, vol: 0.05, growl: 1, growlRate: 26 + Math.random() * 10, growlWave: 'square', wave: 'sawtooth', formants: [[260, 4, 1], [1100, 6, 0.5], [2600, 8, 0.2]], attack: 0.8, release: 1.2 }), true);
+    } else if (r < 0.012) {
+      // Cadena de vértebras que traquetea al moverse.
+      const n = 8 + Math.floor(Math.random() * 6), f0 = 400 + Math.random() * 300;
+      a.ambient(pan, (o) => { let d = 0; for (let i = 0; i < n; i++) { a.knock(o, { f: f0 * (0.9 + Math.random() * 0.25), q: 12, dur: 0.07, vol: 0.03 + Math.random() * 0.02, delay: d }); d += 0.035 + Math.random() * 0.05; } }, true);
+    } else if (r < 0.016) {
+      // Martillo lejano: un golpe hueco que resuena en la nave, con su eco.
+      a.ambient(pan, (o) => {
+        a.knock(o, { f: 118, q: 20, dur: 1.2, vol: 0.07 });
+        a.knock(o, { f: 236, q: 24, dur: 0.6, vol: 0.025 });
+        a.knock(o, { f: 118, q: 20, dur: 1, vol: 0.03, delay: 0.42 });
+        a.knock(o, { f: 118, q: 20, dur: 0.8, vol: 0.013, delay: 0.84 });
+      }, true);
+    } else if (r < 0.05) {
+      // Polvo de calcio que cae y crepita (seco, fino).
+      a.ambient(pan, (o) => { a.noise(o, { dur: 0.25, vol: 0.012, type: 'highpass', f0: 5000, f1: 7000 }); for (let i = 0; i < 3; i++) a.knock(o, { f: 3000 + Math.random() * 2500, q: 8, dur: 0.02, vol: 0.012, delay: Math.random() * 0.2 }); });
+    } else if (r < 0.06) {
+      // Una gota de médula en una cuba.
+      a.ambient(pan, (o) => { const f = 500 + Math.random() * 300; a.tone(o, { type: 'sine', f0: f, f1: f * 0.5, dur: 0.14, vol: 0.022 }); }, true);
+    }
+  },
   // El Corazón: el latido lo llena todo.
   // Sistema circulatorio: la sangre corre (un siseo que crece y se apaga) y, lejos,
   // el "lub-dub" del corazón que lo empuja todo.
