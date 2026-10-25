@@ -3074,24 +3074,25 @@ export class Enemy {
     // Debilidades por tipo de golpe (p. ej. el Ganglio Madre ante las espinas del simbionte).
     n *= this.def.weakTo?.[kind] ?? 1;
     if (this.deflating) return false;
-    // Montón de huesos (el Vestigio caído): los golpes lo deshacen; si lo destrozas, ya no
-    // se levanta.
+    // Montón de huesos (el Vestigio caído): es inmortal. Los golpes desperdigan los huesos y
+    // retrasan un poco que se recomponga, pero siempre vuelve.
     if (this.state === 'pile') {
-      this.pileHp -= n;
       this.flash = 0.06;
       this.game.audio.play('crunch', this);
+      this.pileT = Math.min((this.def.reformTime ?? 5) + 2, (this.pileT ?? 0) + 0.4);
       for (let i = 0; i < 5; i++) this.game.particles.emit(this.cx + (Math.random() - 0.5) * 16, this.y + this.h - 6, { vx: (Math.random() - 0.5) * 100, vy: -40 - Math.random() * 70, life: 0.5, gravity: 500, color: [0.85, 0.8, 0.65] });
-      if (this.pileHp <= 0) { this.hp = 0; this.die(); }
       return true;
     }
     this.hp -= n;
     if (this.def.reforms && this.hp <= 0) {
       // No muere: se desmorona y al rato se recompone.
-      this.hp = 0; this.state = 'pile'; this.pileT = this.def.reformTime ?? 5; this.pileHp = this.def.pileHp ?? 14;
+      this.hp = 0; this.state = 'pile'; this.pileT = this.def.reformTime ?? 5;
       this.swing = 0; this.lurch = 0; this.sprint = 0; this.strike = 0; this.vx = 0; this.flash = 0.1;
       this.y += this.h - 12; this.h = 12;                          // el montón: bajo
       this.game.audio.play(this.def.sounds?.die ?? 'crunch', this);
       this.game.gore.burst(this.cx, this.cy, this.w, this.h, this.def.gore, 0.3);
+      // Su biomasa, la primera vez que lo derribas (no se puede granjear).
+      if (!this.droppedOnce && this.def.drop?.biomass) { this.droppedOnce = true; this.game.dropPickup('biomass', this.cx, this.cy, this.def.drop.biomass); }
       return true;
     }
     if (this.weakT > 0 && this.weakFloor > 0 && this.hp < this.weakFloor) this.hp = this.weakFloor;
