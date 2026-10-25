@@ -2216,6 +2216,8 @@ export const BEHAVIORS = {
     const base = d.poolBase ?? 0.35;                                  // el ácido que siempre queda
     // El tanque: ella lo llena (sus tubos) salvo con los sumideros abiertos (válvula flush).
     const setPool = (v) => { if (pool && !(pool.flushT > 0)) pool.target = v; };
+    // Varada no hace daño al tocarla (está indefensa: puedes pegarte a ella).
+    e.contactDamage = e.gs === 'beached' ? 0 : undefined;
     const side = Math.sign(p.cx - e.cx) || 1;
     e.face = (e.face ?? side) + (side - (e.face ?? side)) * Math.min(1, dt * 1.6);
     const mouth = () => ({ x: e.cx + e.face * 15, y: e.cy + 8 });

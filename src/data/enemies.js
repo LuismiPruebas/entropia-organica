@@ -394,7 +394,7 @@ export const ENEMIES = {
     exposedOnly: true, // solo vulnerable con la boca abierta (y flotando en el ácido)
     hp: 300, w: 62, h: 50,
     meleeResist: 0.4, // el cuerpo a cuerpo apenas la hiere (y la espanta al techo)
-    beachedTime: 5,   // varada en el tanque vacío: segundos indefensa
+    beachedTime: 8,   // varada en el tanque vacío: segundos indefensa
     beachedBonus: 1.6, // y cuánto más le duele (el cuerpo a cuerpo le entra entero)
     light: { color: [0.34, 0.2, 0.24], r: 170 },
     contactDamage: 10,
@@ -417,7 +417,7 @@ export const ENEMIES = {
     },
     sounds: { reveal: 'glandRumble', aura: 'glandRumble', attack: 'glandRetch', flood: 'glandFlood', hurt: 'glandHurt', die: 'glandDie' },
     auraPeriod: 3.2,
-    habits: 'Colgada del techo por sus tubos, escupe grumos de ácido (enfurecida, rocía un chorro) y pare anguilas que caen a la charca; si subes hasta ella, te latiguea con su tentáculo. Si te quedas abajo, baja colgada de sus tubos y se balancea sobre ti como un péndulo, latigueándote una y otra vez. Cada poco se exprime, se le rompen los tubos y cae al ácido, que inunda la sala: flota meneando cilios y tentáculo, se arrastra hacia ti y te latiguea sin descanso. Luego lanza sus flagelos al techo y se iza. Si mientras flota abres los sumideros del fondo (las válvulas de las paredes), el tanque se vacía y se queda varada: unos segundos indefensa, boqueando en el suelo; ahí sí le entra todo. Aguanta mal el cuerpo a cuerpo: si le pegas, se iza deprisa al techo y te bombardea con ácido. Solo se la puede herir con la boca abierta (y cuando ataca la tiene abierta).',
+    habits: 'Colgada del techo por sus tubos, escupe grumos de ácido (enfurecida, rocía un chorro) y pare anguilas que caen a la charca; si subes hasta ella, te latiguea con su tentáculo. Si te quedas abajo, baja colgada de sus tubos y se balancea sobre ti como un péndulo, latigueándote una y otra vez. Cada poco se exprime, se le rompen los tubos y cae al ácido, que inunda la sala: flota meneando cilios y tentáculo, se arrastra hacia ti y te latiguea sin descanso. Luego lanza sus flagelos al techo y se iza. Si mientras flota abres los sumideros del fondo (las válvulas de las paredes), el tanque se vacía y se queda varada: unos segundos indefensa, boqueando en el suelo (ni te hace daño al tocarla); ahí sí le entra todo. Aguanta mal el cuerpo a cuerpo: si le pegas, se iza deprisa al techo y te bombardea con ácido. Solo se la puede herir con la boca abierta (y cuando ataca la tiene abierta).',
     lore: 'El estómago del organismo, colgado del techo de su propia cavidad por los conductos que lo alimentan. Pero no siempre fue un estómago: el parásito encontró dentro a alguien que había bajado a buscarlo, y lo puso a digerir.',
   },
   // ======================= JEFES ABERRACIÓN =======================
