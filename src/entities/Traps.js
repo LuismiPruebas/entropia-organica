@@ -306,3 +306,286 @@ export class Wind {
 
   dispose() { this.spr.dispose(); }
 }
+
+// ---------------------------------------------------------------------------
+// Trampas de derrumbe del Territorio del Hueso. En data/worlds/*.js, por sala:
+//
+//   slabs:   [{ x, y, w, delay, regrow }]  Losa de hueso quebradiza: ocupa w tiles de la
+//            fila y (es suelo). Al pisarla cruje y se agrieta (las grietas enrojecen) y a
+//            `delay` s (0,5) se parte y cae; a `regrow` s (5) vuelve a crecer.
+//   fangs:   [{ x, y, len, regrow }]  Colmillo de techo: estalactita de hueso que cuelga
+//            del techo sobre el tile (x, y), de `len` tiles. Si pasas por debajo tiembla,
+//            se desprende y cae (hiere a lo que pille, también a las criaturas), se hace
+//            añicos contra el suelo y vuelve a crecer a `regrow` s (4).
+//   pillars: [{ x, y, h, fall, hits }]  Pilar de hueso quebradizo: columna de h tiles
+//            cuya base es el tile (x, y). Bloquea el paso; tras `hits` golpes (4) se
+//            agrieta del todo y se derrumba hacia `fall` ('left'/'right'), quedando
+//            tumbado sobre la fila y como un puente. Queda así para siempre.
+const BONE = { out: '#140c08', dark: '#6e5a42', mid: '#b8a07a', light: '#e2d0aa', hl: '#f6ead0', crack: '#3a1a10', blood: '#8a2a1c' };
+const stand = (p, x, y, w) => p.x + p.w > x + 1 && p.x < x + w - 1 && Math.abs(p.y + p.h - y) < 3;
+
+export class BoneSlab {
+  constructor(game, room, def) {
+    this.game = game;
+    this.room = room;
+    this.def = def;
+    this.x = def.x * TILE; this.y = def.y * TILE;
+    this.w = (def.w ?? 2) * TILE; this.h = TILE;
+    this.cells = Array.from({ length: def.w ?? 2 }, (_, i) => [def.x + i, def.y]);
+    this.state = 'solid';
+    this.t = 0;
+    this.k = 0;                 // grietas 0..1
+    this.dropY = 0; this.dropV = 0; this.rot = 0;
+    this.spr = canvasSprite(game, this.w, this.h + 2, 2);
+    this.#solid(true);
+    this.acc = 1;
+    this.seed = Math.random() * 100;
+  }
+
+  #solid(on) { for (const [x, y] of this.cells) this.room.world.set(x, y, on ? 'D' : '.'); }
+
+  update(dt) {
+    const g = this.game, p = g.player, d = this.def;
+    this.t += dt;
+    if (this.state === 'solid') {
+      if (stand(p, this.x, this.y, this.w) && p.onGround) { this.state = 'crack'; this.t = 0; g.audio.play('boneCreak', { x: this.x + this.w / 2, y: this.y }); }
+    } else if (this.state === 'crack') {
+      this.k = Math.min(1, this.t / (d.delay ?? 0.5));
+      if (Math.random() < 0.6) g.particles.emit(this.x + Math.random() * this.w, this.y + TILE, { vx: (Math.random() - 0.5) * 30, vy: 20 + Math.random() * 30, life: 0.5, gravity: 300, color: [0.82, 0.74, 0.6] });
+      if (this.t >= (d.delay ?? 0.5)) {
+        // Se parte: deja de ser suelo y cae dando vueltas.
+        this.state = 'fall'; this.t = 0; this.dropY = 0; this.dropV = 30; this.rot = 0;
+        this.#solid(false);
+        g.audio.play('crunch', { x: this.x + this.w / 2, y: this.y });
+        g.shake = Math.max(g.shake, 1.5);
+        for (let i = 0; i < 10; i++) g.particles.emit(this.x + Math.random() * this.w, this.y + 4, { vx: (Math.random() - 0.5) * 80, vy: -20 - Math.random() * 40, life: 0.6, gravity: 500, color: [0.85, 0.78, 0.62] });
+      }
+    } else if (this.state === 'fall') {
+      this.dropV += 900 * dt; this.dropY += this.dropV * dt; this.rot += dt * (this.seed % 2 > 1 ? 1.4 : -1.4);
+      if (this.t > 1.2) { this.state = 'gone'; this.t = 0; }
+    } else if (this.state === 'gone') {
+      if (this.t >= (d.regrow ?? 5) && !overlap(p, this)) { this.state = 'grow'; this.t = 0; this.k = 0; this.dropY = 0; this.rot = 0; }
+    } else if (this.state === 'grow') {
+      if (this.t >= 0.6) {
+        if (overlap(p, this)) return;                                     // no te encierra dentro
+        this.state = 'solid'; this.t = 0; this.k = 0; this.#solid(true);
+      }
+    }
+    // Sprite: en su sitio; al caer, baja y gira.
+    const m = this.spr.mesh, gm = this.spr.glow;
+    this.spr.place(this.x, this.y + this.dropY);
+    m.rotation.z = gm.rotation.z = this.state === 'fall' ? this.rot * 0.4 : 0;
+    m.visible = gm.visible = this.state !== 'gone';
+    const sc = this.state === 'grow' ? Math.min(1, this.t / 0.6) : 1;
+    m.scale.set(sc, 1, 1); gm.scale.set(sc, 1, 1);
+    this.#paint(dt);
+  }
+
+  #paint(dt) {
+    this.acc += dt;
+    if (this.acc < 1 / 20) return;
+    this.acc = 0;
+    const { g, gl } = this.spr, W = this.w, H = this.h + 2, k = this.state === 'fall' ? 1 : this.k, t = this.t;
+    g.clearRect(0, 0, W, H); gl.clearRect(0, 0, W, H);
+    const shake = this.state === 'crack' ? Math.round(Math.sin(t * 70) * k) : 0;
+    // Losa: hueso plano con la cara de arriba clara, el canto en sombra y poros.
+    for (let x = 0; x < W; x++) {
+      const top = (x === 0 || x === W - 1) ? 2 : 0;
+      for (let y = top; y < H - 1; y++) {
+        let c = y === top ? BONE.out : y < 3 ? BONE.hl : y < 6 ? BONE.light : y < 11 ? BONE.mid : y < H - 2 ? BONE.dark : BONE.out;
+        if (x === 0 || x === W - 1) c = BONE.out;
+        if (((x * 7 + y * 3 + Math.floor(this.seed)) % 23) === 0 && y > 3 && y < H - 3) c = BONE.dark;
+        px(g, x + shake, y, c);
+      }
+    }
+    // Grietas: se abren desde el centro y enrojecen; al partirse, la losa en tres trozos.
+    if (k > 0) {
+      for (const cx of [W * 0.33, W * 0.66]) {
+        let x = cx + Math.sin(this.seed) * 3;
+        for (let y = 1; y < H - 1; y++) {
+          if (y / H > k * 1.2) break;
+          x += Math.sin(y * 1.7 + this.seed) * 0.8;
+          px(g, x + shake, y, BONE.crack);
+          if (k > 0.4) { px(g, x + shake + 1, y, BONE.blood); px(gl, x + shake, y, `rgba(255,80,50,${0.3 * k})`); }
+          if (this.state === 'fall') px(g, x + shake + 1, y, 'rgba(0,0,0,0)');
+        }
+      }
+    }
+    this.spr.commit();
+  }
+
+  dispose() { this.spr.dispose(); }
+}
+
+export class BoneFang {
+  constructor(game, room, def) {
+    this.game = game;
+    this.room = room;
+    this.def = def;
+    this.cx = def.x * TILE + 8;
+    this.top = def.y * TILE;
+    this.L = Math.round((def.len ?? 2) * TILE);
+    this.state = 'hang';
+    this.t = 0;
+    this.y = this.top; this.vy = 0;
+    this.grow = 1;
+    this.spr = canvasSprite(game, 12, this.L, 2);
+    this.acc = 1;
+  }
+
+  get rect() { return { x: this.cx - 4, y: this.y, w: 8, h: this.L * this.grow }; }
+
+  update(dt) {
+    const g = this.game, p = g.player, d = this.def, w = this.room.world;
+    this.t += dt;
+    if (this.state === 'hang') {
+      // Pasas por debajo: tiembla y suelta polvo.
+      const below = Math.abs(p.cx - this.cx) < 18 && p.y > this.top && p.y - this.top < 13 * TILE;
+      if (below && !g.state.dead && w.lineOfSight(this.cx, this.top + this.L + 2, p.cx, p.y + 2)) { this.state = 'shake'; this.t = 0; g.audio.play('boneCreak', { x: this.cx, y: this.top }); }
+    } else if (this.state === 'shake') {
+      if (Math.random() < 0.5) g.particles.emit(this.cx + (Math.random() - 0.5) * 8, this.top + 2, { vx: (Math.random() - 0.5) * 20, vy: 30, life: 0.5, gravity: 300, color: [0.82, 0.74, 0.6] });
+      if (this.t >= (d.warn ?? 0.45)) { this.state = 'fall'; this.t = 0; this.vy = 40; }
+    } else if (this.state === 'fall') {
+      this.vy = Math.min(520, this.vy + 1100 * dt);
+      this.y += this.vy * dt;
+      const r = this.rect;
+      if (p.invuln <= 0 && overlap(p, r)) g.hurtPlayer(d.damage ?? 16, null, 'un colmillo de hueso');
+      for (const e of this.room.enemies) if (e.alive && !e.fangHit && overlap(e, r)) { e.fangHit = true; e.hurt(20, 'trap', false, { x: this.cx, y: r.y + r.h }); }
+      // Choca con el suelo (o se sale de la sala): se hace añicos.
+      if (w.solidAtPx(this.cx, this.y + this.L) || this.y > w.pixelH) {
+        this.state = 'gone'; this.t = 0;
+        g.audio.play('crunch', { x: this.cx, y: this.y + this.L });
+        g.shake = Math.max(g.shake, 2.5);
+        for (let i = 0; i < 14; i++) g.particles.emit(this.cx + (Math.random() - 0.5) * 10, this.y + this.L - 2, { vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 120, life: 0.7, gravity: 700, color: Math.random() < 0.5 ? [0.9, 0.84, 0.7] : [0.6, 0.5, 0.38] });
+        for (const e of this.room.enemies) e.fangHit = false;
+      }
+    } else if (this.state === 'gone') {
+      if (this.t >= (d.regrow ?? 4)) { this.state = 'grow'; this.t = 0; this.y = this.top; this.grow = 0; }
+    } else if (this.state === 'grow') {
+      this.grow = Math.min(1, this.t / 1.2);
+      if (this.grow >= 1) { this.state = 'hang'; this.t = 0; }
+    }
+    const sh = this.state === 'shake' ? Math.sin(this.t * 60) * 1 : 0;
+    this.spr.place(this.cx - 6 + sh, this.y);
+    this.spr.mesh.visible = this.spr.glow.visible = this.state !== 'gone';
+    this.#paint(dt);
+  }
+
+  #paint(dt) {
+    this.acc += dt;
+    if (this.acc < 1 / 20) return;
+    this.acc = 0;
+    const { g, gl } = this.spr, L = this.L, len = Math.max(2, Math.round(L * this.grow));
+    g.clearRect(0, 0, 12, L); gl.clearRect(0, 0, 12, L);
+    // Raíz rota en el techo y colmillo afilado hacia abajo, con su luz a la izquierda.
+    for (let y = 0; y < len; y++) {
+      const u = y / L, hw = Math.max(0.5, 5 * (1 - u) ** 0.8);
+      for (let x = -Math.ceil(hw) - 1; x <= hw + 1; x++) {
+        const q = x / hw;
+        const c = Math.abs(q) > 1 ? BONE.out : q < -0.4 ? BONE.hl : q < 0.2 ? BONE.light : q < 0.7 ? BONE.mid : BONE.dark;
+        px(g, 6 + x, y, c);
+      }
+      if (y % 7 === 3 && hw > 2) px(g, 6, y, BONE.crack);
+    }
+    if (this.state === 'shake') for (let y = 0; y < 4; y++) px(gl, 4, y, 'rgba(255,90,60,0.5)', 4, 1);
+    this.spr.commit();
+  }
+
+  dispose() { this.spr.dispose(); }
+}
+
+export class BonePillar {
+  constructor(game, room, def) {
+    this.game = game;
+    this.room = room;
+    this.def = def;
+    this.hN = def.h ?? 4;
+    this.dir = def.fall === 'left' ? -1 : 1;
+    this.key = `pillar:${room.id}:${def.x},${def.y}`;
+    this.x = def.x * TILE; this.y = (def.y - this.hN + 1) * TILE; this.w = TILE; this.h = this.hN * TILE;
+    this.cracks = 0;
+    this.k = game.state.flags.has(this.key) ? 1 : 0;   // 0 de pie .. 1 tumbado
+    this.state = this.k ? 'down' : 'up';
+    this.alive = this.state === 'up';
+    this.t = 0;
+    this.spr = canvasSprite(game, TILE, this.h, 2);
+    this.#cells();
+    this.acc = 1;
+    if (this.alive) room.targets.push(this);
+  }
+
+  // Ocupa la columna de pie o la fila tumbado.
+  #cells() {
+    const { x, y } = this.def, w = this.room.world;
+    for (let i = 0; i < this.hN; i++) w.set(x, y - i, this.state === 'up' || this.state === 'topple' ? 'D' : '.');
+    if (this.state === 'down') for (let i = 1; i <= this.hN; i++) w.set(x + this.dir * i, y, 'D');
+  }
+
+  hit() {
+    const g = this.game;
+    if (this.state !== 'up') return false;
+    this.cracks++;
+    this.shake = 0.2;
+    g.audio.play('boneCreak', { x: this.x + 8, y: this.y + this.h / 2 });
+    for (let i = 0; i < 6; i++) g.particles.emit(this.x + 8, this.y + Math.random() * this.h, { vx: (Math.random() - 0.5) * 90, vy: -30 - Math.random() * 40, life: 0.5, gravity: 500, color: [0.85, 0.78, 0.62] });
+    if (this.cracks >= (this.def.hits ?? 4)) {
+      this.state = 'topple'; this.t = 0; this.alive = false;
+      g.audio.play('crunch', { x: this.x + 8, y: this.y });
+    }
+    return true;
+  }
+
+  update(dt) {
+    const g = this.game;
+    this.t += dt;
+    this.shake = Math.max(0, (this.shake ?? 0) - dt);
+    if (this.state === 'topple') {
+      this.k = Math.min(1, (this.t / 0.7) ** 2);
+      if (this.k >= 1) {
+        this.state = 'down';
+        g.state.flags.add(this.key);
+        this.#cells();
+        g.shake = Math.max(g.shake, 6);
+        g.audio.play('thump', { x: this.x + this.dir * this.h / 2, y: this.y + this.h });
+        for (let i = 0; i < 24; i++) g.particles.emit(this.x + 8 + this.dir * Math.random() * this.h, (this.def.y + 1) * TILE - 2, { vx: (Math.random() - 0.5) * 120, vy: -40 - Math.random() * 90, life: 0.8, gravity: 600, color: [0.8, 0.72, 0.58] });
+      }
+    }
+    // Cae girando sobre la esquina de su base, hacia su lado.
+    const a = this.k * Math.PI / 2 * this.dir;
+    const pivX = this.x + (this.dir > 0 ? TILE : 0), pivY = (this.def.y + 1) * TILE;
+    const rx = (this.dir > 0 ? -8 : 8), ry = -this.h / 2;
+    const cx = pivX + rx * Math.cos(a) - ry * Math.sin(a), cy = pivY + rx * Math.sin(a) + ry * Math.cos(a);
+    const sh = this.shake > 0 ? Math.sin(this.t * 80) : 0;
+    this.spr.place(cx - TILE / 2 + sh, cy - this.h / 2);
+    this.spr.mesh.rotation.z = this.spr.glow.rotation.z = -a;
+    this.#paint(dt);
+  }
+
+  #paint(dt) {
+    this.acc += dt;
+    if (this.acc < 1 / 15) return;
+    this.acc = 0;
+    const { g, gl } = this.spr, H = this.h, n = this.def.hits ?? 4, k = Math.min(1, this.cracks / n);
+    g.clearRect(0, 0, TILE, H); gl.clearRect(0, 0, TILE, H);
+    // Columna de hueso: cilindro con anillos de vértebra y una cabeza ancha arriba.
+    for (let y = 0; y < H; y++) {
+      const head = y < 6 ? 1 : 0, foot = y > H - 4 ? 1 : 0;
+      const hw = 6 + head * 2 + foot;
+      for (let x = -hw - 1; x <= hw; x++) {
+        const q = (x + 0.5) / hw;
+        let c = Math.abs(q) > 1 ? BONE.out : q < -0.5 ? BONE.hl : q < 0 ? BONE.light : q < 0.55 ? BONE.mid : BONE.dark;
+        if (y % 12 === 0 && Math.abs(q) < 1) c = BONE.dark;                 // anillo
+        if (y % 12 === 1 && Math.abs(q) < 0.9) c = BONE.hl;
+        px(g, 8 + x, y, c);
+      }
+    }
+    // Grietas: más y más rojas cuantos más golpes lleva.
+    for (let i = 0; i < Math.ceil(k * 4); i++) {
+      let x = 6 + i % 3 * 2, y0 = (i * 0.27 % 1) * H;
+      for (let s = 0; s < 6 + k * 10; s++) { x += Math.sin(s * 1.9 + i) * 0.9; px(g, x, y0 + s, BONE.crack); if (k > 0.5) px(gl, x, y0 + s, `rgba(255,80,50,${0.4 * k})`); }
+    }
+    this.spr.commit();
+  }
+
+  dispose() { this.spr.dispose(); }
+}

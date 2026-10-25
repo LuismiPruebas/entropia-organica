@@ -153,6 +153,18 @@ export const KINDS = {
     box: (o) => { const n = o.n ?? 2, l = Math.ceil(o.len ?? 2.5); return o.dir === 'down' ? [o.x, o.y, n, l] : o.dir === 'left' ? [o.x - l + 1, o.y, l, n] : o.dir === 'right' ? [o.x, o.y, l, n] : [o.x, o.y - l + 1, n, l]; },
     move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => `estacas ${o.dir}${o.period ? ` ${o.period}s` : ''}`,
   },
+  slabs: {
+    label: 'Losa de hueso quebradiza (se cae al pisarla)', color: '#d8c8a8',
+    make: (x, y) => ({ x, y, w: 2 }), box: (o) => [o.x, o.y, o.w ?? 2, 1], move: (o, x, y) => { o.x = x; o.y = y; }, text: () => 'losa',
+  },
+  fangs: {
+    label: 'Colmillo de techo (cae al pasar debajo)', color: '#f0e0c0',
+    make: (x, y) => ({ x, y, len: 2 }), box: (o) => [o.x, o.y, 1, Math.ceil(o.len ?? 2)], move: (o, x, y) => { o.x = x; o.y = y; }, text: () => 'colmillo',
+  },
+  pillars: {
+    label: 'Pilar de hueso quebradizo (golpes: se derrumba en puente)', color: '#c8b088',
+    make: (x, y) => ({ x, y, h: 4, fall: 'right' }), box: (o) => [o.x, o.y - (o.h ?? 4) + 1, 1, o.h ?? 4], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => (o.fall === 'left' ? 'pilar ←' : 'pilar →'),
+  },
   // Decoración: estructuras animadas del sistema nervioso (entities/Decor.js). (x, y) es
   // el centro de su base; las que cuelgan (haz nervioso), del techo de esa casilla.
   decor: {
@@ -245,4 +257,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'spouts', 'sinks', 'mouths', 'drips', 'traps', 'winds', 'bellows', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'spouts', 'sinks', 'mouths', 'drips', 'traps', 'slabs', 'fangs', 'pillars', 'winds', 'bellows', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];

@@ -16,7 +16,7 @@ import { Hook } from '../entities/Hook.js';
 import { roomConnections } from '../data/connections.js';
 import { LinkPoint } from '../entities/Link.js';
 import { BloodPool, Artery, HeartValve, Ventricle } from '../entities/Blood.js';
-import { BoneTrap, Wind } from '../entities/Traps.js';
+import { BoneTrap, Wind, BoneSlab, BoneFang, BonePillar } from '../entities/Traps.js';
 import { Bellows } from '../entities/Bellows.js';
 import { Nodule } from '../entities/Nodule.js';
 import { YolkSac } from '../entities/YolkSac.js';
@@ -183,6 +183,9 @@ export class EntityFactory {
       ...(def.drips ?? []).map((d) => new Drip(g, d)),
       // Empalizadas de hueso y corrientes de aire (entities/Traps.js).
       ...(def.traps ?? []).map((d) => new BoneTrap(g, room, d)),
+      ...(def.slabs ?? []).map((d) => new BoneSlab(g, room, d)),
+      ...(def.fangs ?? []).map((d) => new BoneFang(g, room, d)),
+      ...(def.pillars ?? []).map((d) => new BonePillar(g, room, d)),
       ...(def.winds ?? []).map((d) => new Wind(g, room, d)),
       ...(def.bellows ?? []).map((d) => new Bellows(g, room, d)),
       ...Object.values(room.gates),
