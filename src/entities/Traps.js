@@ -321,6 +321,12 @@ export class Wind {
 //            cuya base es el tile (x, y). Bloquea el paso; tras `hits` golpes (4) se
 //            agrieta del todo y se derrumba hacia `fall` ('left'/'right'), quedando
 //            tumbado sobre la fila y como un puente. Queda así para siempre.
+//   stacks:  [{ x, y, w, max, hold, period }]  Tolva de huesos: cuelga del techo sobre las
+//            columnas x..x+w-1 (w: 2). Al golpearla (a tiros o cuerpo a cuerpo; con `period`,
+//            sola a ese ritmo) suelta un fardo de huesos que cae y se apila sobre el suelo
+//            de la fila y: cada fardo es una casilla más de altura, hasta `max` (4). Las
+//            criaturas que pille debajo se llevan el golpe; a ti te sube con la torre. A
+//            `hold` s (8) del último fardo cruje, enrojece y se desmorona entero.
 const BONE = { out: '#140c08', dark: '#6e5a42', mid: '#b8a07a', light: '#e2d0aa', hl: '#f6ead0', crack: '#3a1a10', blood: '#8a2a1c' };
 const stand = (p, x, y, w) => p.x + p.w > x + 1 && p.x < x + w - 1 && Math.abs(p.y + p.h - y) < 3;
 
@@ -588,4 +594,174 @@ export class BonePillar {
   }
 
   dispose() { this.spr.dispose(); }
+}
+
+// Tolva de huesos: suelta fardos que se apilan en una torre que te sube y luego se desmorona.
+export class BoneStack {
+  constructor(game, room, def) {
+    this.game = game;
+    this.room = room;
+    this.def = def;
+    this.W = (def.w ?? 2) * TILE;
+    this.max = def.max ?? 4;
+    this.n = 0;                                   // fardos apilados
+    this.drop = null;                             // fardo cayendo: { y, vy }
+    this.queue = 0;                               // golpes pendientes (uno cae cada vez)
+    this.holdT = 0;
+    this.crumble = -1;                            // >= 0: desmoronándose
+    this.t = 0;
+    this.flash = 0;
+    this.auto = def.period ?? 0;
+    // La tolva cuelga del primer techo sobre la columna.
+    const w = room.world;
+    let ty = def.y - 1; while (ty > 0 && !w.solid(def.x, ty)) ty--;
+    this.top = (ty + 1) * TILE;
+    this.alive = true;
+    this.x = def.x * TILE - 3; this.y = this.top; this.w = this.W + 6; this.h = 20;   // lo que se golpea
+    this.hopper = canvasSprite(game, this.w, this.h, 2);
+    this.pile = canvasSprite(game, this.W + 4, this.max * TILE + 2, 2);
+    this.bundle = canvasSprite(game, this.W, TILE, 2);
+    this.acc = 1;
+    this.dirty = true;
+    room.targets.push(this);
+  }
+
+  get cx() { return this.x + this.w / 2; }
+  get cy() { return this.y + this.h / 2; }
+  #row(k) { return this.def.y - k; }              // fila del fardo k (0 = el de abajo)
+  #cells(k, on) { for (let i = 0; i < (this.def.w ?? 2); i++) this.room.world.set(this.def.x + i, this.#row(k), on ? 'D' : '.'); }
+  get #full() { return this.n + this.queue + (this.drop ? 1 : 0) >= this.max; }
+
+  hit() {
+    const g = this.game;
+    this.flash = 0.15;
+    if (this.crumble >= 0 || this.#full) { g.audio.play('click', { x: this.cx, y: this.cy }); return true; }
+    this.queue++;
+    g.audio.play('boneCreak', { x: this.cx, y: this.cy });
+    return true;
+  }
+
+  update(dt) {
+    const g = this.game, p = g.player, d = this.def;
+    this.t += dt;
+    this.flash = Math.max(0, this.flash - dt);
+    // Sola, a su ritmo (si tiene period): va soltando hasta llenar.
+    if (this.auto && this.crumble < 0) {
+      this.autoT = (this.autoT ?? this.auto * 0.5) - dt;
+      if (this.autoT <= 0) { this.autoT = this.auto; if (!this.#full) this.queue++; }
+    }
+    // Se abre la tolva y cae un fardo.
+    if (!this.drop && this.queue > 0 && this.crumble < 0) {
+      this.queue--;
+      this.drop = { y: this.top + 10, vy: 60 };
+      g.audio.play('boneChatter', { x: this.cx, y: this.top });
+      for (let i = 0; i < 6; i++) g.particles.emit(this.cx + (Math.random() - 0.5) * this.W, this.top + 16, { vx: (Math.random() - 0.5) * 40, vy: 20 + Math.random() * 40, life: 0.5, gravity: 400, color: [0.86, 0.8, 0.66] });
+    }
+    if (this.drop) {
+      const dr = this.drop;
+      dr.vy = Math.min(560, dr.vy + 1100 * dt);
+      dr.y += dr.vy * dt;
+      const land = this.#row(this.n) * TILE;
+      const r = { x: d.x * TILE, y: dr.y, w: this.W, h: TILE };
+      for (const e of this.room.enemies) if (e.alive && !e.stackHit && overlap(e, r)) { e.stackHit = true; e.hurt(16, 'trap', false, { x: this.cx, y: dr.y + TILE }); }
+      if (dr.y >= land) {
+        // Aterriza: una casilla más de torre. Si estabas encima, te sube con ella.
+        this.drop = null;
+        this.#cells(this.n, true);
+        const top = this.#row(this.n) * TILE, cell = { x: d.x * TILE, y: top, w: this.W, h: TILE };
+        this.n++;
+        if (overlap(p, cell)) { p.y = top - p.h; p.vy = Math.min(p.vy, 0); }
+        for (const e of this.room.enemies) { e.stackHit = false; if (e.alive && overlap(e, cell)) e.y = top - e.h; }
+        this.holdT = d.hold ?? 8;
+        g.audio.play('thump', { x: this.cx, y: top });
+        g.shake = Math.max(g.shake, 1.5);
+        for (let i = 0; i < 8; i++) g.particles.emit(d.x * TILE + Math.random() * this.W, top + TILE - 2, { vx: (Math.random() - 0.5) * 90, vy: -30 - Math.random() * 50, life: 0.5, gravity: 600, color: [0.8, 0.72, 0.58] });
+        this.dirty = true;
+      }
+    } else if (this.n > 0 && this.crumble < 0 && this.queue === 0) {
+      // Aguanta un rato; antes de caer cruje y enrojece.
+      this.holdT -= dt;
+      if (this.holdT < 1.2 && !this.warned) { this.warned = true; g.audio.play('boneCreak', { x: this.cx, y: this.#row(this.n - 1) * TILE }); }
+      if (this.holdT <= 0) { this.crumble = 0; this.crumbleT = 0; this.warned = false; g.audio.play('boneCollapse', { x: this.cx, y: this.#row(this.n - 1) * TILE }); }
+    }
+    // Se desmorona de arriba abajo, capa a capa.
+    if (this.crumble >= 0) {
+      this.crumbleT -= dt;
+      if (this.crumbleT <= 0) {
+        if (this.n > 0) {
+          this.n--;
+          this.#cells(this.n, false);
+          const y = this.#row(this.n) * TILE;
+          for (let i = 0; i < 10; i++) g.particles.emit(d.x * TILE + Math.random() * this.W, y + Math.random() * TILE, { vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 80, life: 0.7, gravity: 700, color: Math.random() < 0.5 ? [0.9, 0.84, 0.7] : [0.6, 0.5, 0.38] });
+          this.crumbleT = 0.09;
+          this.dirty = true;
+        } else { this.crumble = -1; if (this.auto) this.autoT = this.auto; }
+      }
+    }
+    // Sprites: la tolva en el techo, la torre sobre el suelo y el fardo que cae.
+    const shake = (this.n > 0 && this.holdT < 1.2 && this.crumble < 0) ? Math.sin(this.t * 70) : 0;
+    this.hopper.place(this.x, this.y);
+    this.pile.place(d.x * TILE - 2 + shake, (d.y + 1) * TILE - this.max * TILE - 2);
+    this.bundle.place(d.x * TILE, this.drop ? this.drop.y : -999);
+    this.bundle.mesh.visible = this.bundle.glow.visible = !!this.drop;
+    this.#paint(dt);
+  }
+
+  // Un fardo: tres huesos largos atados con tendón, con sus cabezas abultadas.
+  #paintBundle(g, ox, oy, seed, cracked) {
+    const W = this.W;
+    for (let b = 0; b < 3; b++) {
+      const y0 = oy + 3 + b * 4, inset = (seed + b) % 2 ? 1 : 3;
+      for (let x = inset; x < W - inset; x++) {
+        const head = x < inset + 3 || x > W - inset - 4;
+        for (let y = -1; y <= (head ? 2 : 1); y++) px(g, ox + x, y0 + y - (head ? 1 : 0), y === -1 ? BONE.light : y === (head ? 2 : 1) ? BONE.dark : BONE.mid);
+      }
+      px(g, ox + inset, y0 - 2, BONE.out, W - inset * 2, 1);
+    }
+    px(g, ox + 2, oy + TILE - 1, BONE.out, W - 4, 1);
+    for (const xx of [W * 0.3, W * 0.7]) px(g, ox + Math.round(xx), oy + 2, '#5a2a1c', 2, TILE - 3);
+    if (cracked) for (let s = 0; s < 8; s++) px(g, ox + Math.round(W / 2 + Math.sin(s * 2.3 + seed) * 4), oy + 2 + s, BONE.crack);
+  }
+
+  #paint(dt) {
+    this.acc += dt;
+    if (this.acc < 1 / 20 && !this.dirty) return;
+    this.acc = 0; this.dirty = false;
+    // Tolva: embudo de hueso anillado con una boca carnosa que se dilata al soltar.
+    { const { g, gl } = this.hopper, W = this.w, H = this.h;
+      g.clearRect(0, 0, W, H); gl.clearRect(0, 0, W, H);
+      for (let y = 0; y < H; y++) {
+        const half = (W / 2) * (1 - (y / H) * 0.45);
+        for (let x = 0; x < W; x++) {
+          const q = (x - W / 2 + 0.5) / half;
+          if (Math.abs(q) > 1) continue;
+          let c = Math.abs(q) > 0.86 ? BONE.out : q < -0.45 ? BONE.hl : q < 0.1 ? BONE.light : q < 0.6 ? BONE.mid : BONE.dark;
+          if (y % 6 === 2) c = BONE.dark;
+          if (this.flash > 0 && Math.abs(q) < 0.86) c = '#fff4e0';
+          px(g, x, y, c);
+        }
+      }
+      const open = this.drop && this.drop.y < this.top + 30 ? 2 : 0;
+      px(g, W / 2 - 5 - open, H - 4, '#3a0a10', 10 + open * 2, 3);
+      px(g, W / 2 - 4 - open, H - 3, '#8a2030', 8 + open * 2, 2);
+      px(gl, W / 2 - 4, H - 3, 'rgba(255,70,50,0.45)', 8, 2);
+      this.hopper.commit(); }
+    // Torre: un fardo por casilla; al acercarse el derrumbe, grietas rojas.
+    { const { g, gl } = this.pile, Hh = this.max * TILE + 2;
+      g.clearRect(0, 0, this.W + 4, Hh); gl.clearRect(0, 0, this.W + 4, Hh);
+      const cracked = this.holdT < 1.2 && this.crumble < 0 && this.n > 0;
+      for (let k = 0; k < this.n; k++) {
+        const oy = Hh - 2 - (k + 1) * TILE;
+        this.#paintBundle(g, 2, oy, k * 7, cracked);
+        if (cracked) px(gl, 2 + this.W / 2 - 1, oy + 3, 'rgba(255,80,50,0.5)', 3, 8);
+      }
+      this.pile.commit(); }
+    // Fardo cayendo.
+    { const { g, gl } = this.bundle;
+      g.clearRect(0, 0, this.W, TILE); gl.clearRect(0, 0, this.W, TILE);
+      if (this.drop) this.#paintBundle(g, 0, 0, this.n * 7, false);
+      this.bundle.commit(); }
+  }
+
+  dispose() { this.hopper.dispose(); this.pile.dispose(); this.bundle.dispose(); }
 }

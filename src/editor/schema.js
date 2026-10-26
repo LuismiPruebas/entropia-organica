@@ -165,6 +165,10 @@ export const KINDS = {
     label: 'Pilar de hueso quebradizo (golpes: se derrumba en puente)', color: '#c8b088',
     make: (x, y) => ({ x, y, h: 4, fall: 'right' }), box: (o) => [o.x, o.y - (o.h ?? 4) + 1, 1, o.h ?? 4], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => (o.fall === 'left' ? 'pilar ←' : 'pilar →'),
   },
+  stacks: {
+    label: 'Tolva de huesos (golpéala: apila fardos que te suben)', color: '#e8d4a8',
+    make: (x, y) => ({ x, y, w: 2, max: 4, hold: 8 }), box: (o) => [o.x, o.y - (o.max ?? 4) + 1, o.w ?? 2, o.max ?? 4], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => (o.period ? `tolva ${o.period}s` : 'tolva'),
+  },
   // Decoración: estructuras animadas del sistema nervioso (entities/Decor.js). (x, y) es
   // el centro de su base; las que cuelgan (haz nervioso), del techo de esa casilla.
   decor: {
@@ -257,4 +261,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'spouts', 'sinks', 'mouths', 'drips', 'traps', 'slabs', 'fangs', 'pillars', 'winds', 'bellows', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'spouts', 'sinks', 'mouths', 'drips', 'traps', 'slabs', 'fangs', 'pillars', 'stacks', 'winds', 'bellows', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
