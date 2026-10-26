@@ -55,7 +55,11 @@ export const RUMBLE = 'death'; // futura opción: 'off' | 'death' | 'all'
 // casi al centro. Así un stick que deriva un poco en reposo no enciende y apaga la mira
 // manual una y otra vez (el personaje se daba la vuelta a tirones y el auto-apuntado
 // saltaba de un blanco a otro).
-const AIM_ON = 0.4, AIM_OFF = 0.22;
+const AIM_ON = 0.4, AIM_OFF = 0.28;
+// Recalibrado continuo: un stick quieto (casi sin variar) un rato con poca inclinación está
+// en reposo, aunque no vuelva al centro de antes (los sticks gastados se quedan algo torcidos
+// tras usarlos): esa posición pasa a ser su centro y suelta lo que tuviera pulsado.
+const REST_MAX = 0.45, REST_STILL = 0.03, REST_TIME = 1.2;
 const MOVE_ON = 0.5, MOVE_OFF = 0.3; // histéresis del stick de mover
 const STICK_MENU_ON = 0.65, STICK_MENU_OFF = 0.3; // el stick en los menús
 const STICK_REPEAT_DELAY = 420, STICK_REPEAT = 150; // ms: pausa antes de repetir y cadencia
@@ -73,7 +77,9 @@ export class Gamepad {
     });
     addEventListener('gamepaddisconnected', () => { this.#releaseAll(); this.deadAxes = null; this.rest = null; });
     // Si vuelves al teclado o al ratón, los avisos dejan de mostrar los botones del mando.
-    addEventListener('keydown', (e) => { if (e.isTrusted) this.active = false; });
+    // Y usar el teclado suelta la mira del mando y recalibra los sticks (si uno se había
+    // quedado torcido, deja de mandar).
+    addEventListener('keydown', (e) => { if (e.isTrusted) { this.active = false; this.recalSticks = true; } });
     addEventListener('mousedown', () => { this.active = false; });
     const loop = () => { this.#poll(); requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
@@ -98,6 +104,16 @@ export class Gamepad {
     // algunos mapeos no estándar el DualSense pone L2/R2 donde iría un stick, a -1).
     // Se descartan para que no apunten ni giren al personaje por su cuenta.
     this.deadAxes ??= pad.axes.map((v) => Math.abs(v) > 0.5);
+    // La cruceta (o el teclado) manda: los sticks que no estás tocando se recalibran donde
+    // estén y la mira del mando se suelta.
+    const dpad = [12, 13, 14, 15].some((i) => pad.buttons[i]?.pressed);
+    if ((dpad && !this.dpadWas) || this.recalSticks) {
+      this.recalSticks = false;
+      this.#recalibrate(pad);
+      if (this.aiming) { this.aiming = false; this.input.padAim.active = false; }
+    }
+    this.dpadWas = dpad;
+    this.#trackRest(pad);
     const axis = this.#centered(pad);
     const lx = axis(0), ly = axis(1), rx = axis(2), ry = axis(3);
     const on = (a, v) => (this.held.has(a) ? v > MOVE_OFF : v > MOVE_ON);
@@ -138,6 +154,23 @@ export class Gamepad {
 
   // Centro en reposo de cada eje (calibrado al conectar): los sticks gastados no están
   // en 0 exacto. Se restan para que la deriva no cuente como movimiento.
+  // Toma como centro la posición actual de los ejes poco inclinados.
+  #recalibrate(pad) {
+    this.rest ??= pad.axes.map(() => 0);
+    pad.axes.forEach((v, i) => { if (!this.deadAxes[i] && Math.abs(v) < REST_MAX) this.rest[i] = v; });
+  }
+
+  // Si un eje casi no varía durante REST_TIME con poca inclinación, ese es su reposo.
+  #trackRest(pad) {
+    const now = performance.now() / 1000;
+    this.still ??= pad.axes.map((v) => ({ v, t: now }));
+    pad.axes.forEach((v, i) => {
+      const s = this.still[i] ??= { v, t: now };
+      if (Math.abs(v - s.v) > REST_STILL) { s.v = v; s.t = now; return; }
+      if (now - s.t > REST_TIME && Math.abs(v) < REST_MAX && !this.deadAxes[i] && this.rest && this.rest[i] !== v) this.rest[i] = v;
+    });
+  }
+
   #centered(pad) {
     this.rest ??= pad.axes.map((v) => (Math.abs(v) < 0.3 ? v : 0));
     return (i) => {
