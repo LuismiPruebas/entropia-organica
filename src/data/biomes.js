@@ -98,9 +98,10 @@ export const BIOMES = {
     // Una fábrica de hueso: un zumbido grave y áspero de maquinaria (sierra muy filtrada),
     // un latido mecánico lento, el rumor de la nave y, encima, el ciclo de la prensa, el
     // trinquete, los escapes de presión y la muela (capa 'boneworks'). De vez en cuando
-    // suena «Osario» (core/ZoneMusic.js): industrial pesado, lento y con pulso.
+    // suena «Osario»: la versión grabada del tema (industrial pesado, lento y con pulso),
+    // con el volumen igualado al de las demás pistas de bioma.
     sound: { drone: 30.9, wave: 'sawtooth', filter: 120, q: 4, lfo: 0.07, level: 0.04, bed: { freq: 170, q: 2, level: 0.022 }, hum: { wave: 'square', freq: 61.7, level: 0.01, trem: 2.4 }, layer: 'boneworks',
-      music: { theme: 'osario', vol: 0.55, first: 20, gap: [45, 100], duck: 0.45 } },
+      music: { src: 'assets/music/osario-fondo.mp3', vol: 0.6, first: 20, gap: [45, 100], duck: 0.45 } },
     mapColor: '#c8b090',
     fragments: ['balistico', 'dermal', 'balistico'],
   },

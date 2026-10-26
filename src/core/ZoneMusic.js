@@ -2,7 +2,8 @@
 // alternan con el ambiente como las pistas del bioma (biomes.js: sound.music.theme) y
 // terminan solos (onend) para que vuelva el ambiente.
 //
-//   osario  Territorio del Hueso. Industrial pesado y distorsionado, lento pero con pulso:
+//   osario  Territorio del Hueso (el original: en el juego suena su versión grabada,
+//           assets/music/osario-fondo.mp3). Industrial pesado y distorsionado, lento pero con pulso:
 //           re frigio a 68 ppm, a medio tiempo. Un riff de hueso saturado (dos sierras y su
 //           octava baja por un saturador duro y una "caja de altavoz") con notas ahogadas
 //           a palma (golpe corto y el filtro que se cierra); yunque en el tercer tiempo,
