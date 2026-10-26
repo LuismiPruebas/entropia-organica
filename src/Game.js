@@ -821,7 +821,13 @@ export class Game {
       if (this.abyssBites === 1) this.say('Las fauces del fondo te escupen hacia arriba.', 1.5);
       return;
     }
-    if (spikes && !st.immune('spikes')) this.hurtPlayer(10, null, 'espinas');
+    // Las placas de Quitina (I y II) amortiguan las púas (spikeTaken), pero cada pinchazo
+    // seguido sin salir de ellas se clava más hondo: protegen al cruzar, no al quedarse.
+    // Solo la Dermis Nanocutánea (III) las anula.
+    if (spikes && !st.immune('spikes') && p.invuln <= 0) {
+      this.spikeHits = (this.spikeHits ?? 0) + 1;
+      this.hurtPlayer(10 * st.mod('spikeTaken') * Math.min(2, 1 + 0.25 * (this.spikeHits - 1)), null, 'espinas');
+    } else if (!spikes && p.onGround) this.spikeHits = 0;
     // Con Placas de Quitina el ácido apenas muerde, pero corroe más cuanto más rato
     // sigues dentro: se puede cruzar, no quedarse a vivir.
     // inAcid: lo marcan las cubetas e inundaciones (Hazards) en el paso anterior.
