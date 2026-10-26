@@ -263,13 +263,14 @@ export const ENEMIES = {
     noStagger: true,
     hp: 60, w: 14, h: 14,      // pequeño...
     speed: 15, chaseSpeed: 28, sight: 170, lightFear: 0.7, darkMult: 1.6, // ...y más rápido
-    armored: true, // la coraza solo cede al Tendón... o con los élitros abiertos (aturdido)
+    armored: true, // la coraza solo cede del todo al Tendón o con los élitros abiertos (aturdido);
+    armorShare: 0.25, provokeHits: 3, // si no, deja pasar 1/4 del daño; 3 aciertos seguidos y se revuelve
     goreRange: 150, goreSpeed: 175, goreTime: 0.5, goreDamage: 16,
     pinchRange: 24, pinchDamage: 14,
     dazed: 1.1, stuck: 1.8, attackCool: 1.8,
     rollSpeed: 150, rollTime: 2.2, rollDamage: 14, // hecho bola: rueda por suelos y paredes
     contactDamage: 10,
-    habits: 'Pequeño, rápido y molesto, casi todo coraza. Trepa por cualquier superficie: suelo, paredes y techo. Desde donde esté se encabrita abriendo las mandíbulas y se lanza recto hacia ti; al chocar se agarra a lo que toque, y si se clava queda atascado. Tras embestir jadea con los élitros abiertos: dispara a la carne del abdomen. Pegado a ti, cierra las mandíbulas de golpe. Otras veces se enrolla en una bola de placas y rueda muy deprisa por suelos, paredes y techos, arrollándote; hecho bola todo le rebota, pero al desenrollarse queda un instante vulnerable. El Tendón le arranca la coraza.',
+    habits: 'Pequeño, rápido y molesto, casi todo coraza. Trepa por cualquier superficie: suelo, paredes y techo. Desde donde esté se encabrita abriendo las mandíbulas y se lanza recto hacia ti; al chocar se agarra a lo que toque, y si se clava queda atascado. Tras embestir jadea con los élitros abiertos: dispara a la carne del abdomen. Pegado a ti, cierra las mandíbulas de golpe. Otras veces se enrolla en una bola de placas y rueda muy deprisa por suelos, paredes y techos, arrollándote; hecho bola todo le rebota, pero al desenrollarse queda un instante vulnerable. Fuera de la bola, la coraza amortigua casi todo pero algo entra; si le aciertas varias veces seguidas se revuelve: te muerde o se hace bola. El Tendón le arranca la coraza.',
     drop: { biomass: 14 },
     sounds: { reveal: 'stagHiss', attack: 'stagHiss', die: 'stagShatter', hurt: 'stagPing' },
     lore: 'Se cubrió con la quitina de todo lo que digería hasta que las placas fueron su piel, y se irguió para vigilar el estómago como un guardia. Las mandíbulas le crecieron como astas. Solo un tirón de tendón deja ver la carne que todavía tiene debajo.',
@@ -316,7 +317,7 @@ export const ENEMIES = {
     reformTime: 5, reformWarn: 1.4, // segundos en el suelo; los últimos, tiembla y se le enciende el cráneo
     speed: 12, chaseSpeed: 28, sight: 150,
     reach: 30, swingDamage: 14, swingDamage2: 16, // dos estocadas seguidas: pegan fuerte
-    swingTime: 0.6, swing2Time: 0.42, comboCool: 1.9,
+    swingTime: 0.5, swing2Time: 0.32, chainDelay: 0.08, comboCool: 1.9, // la 2.ª, nada más clavar la 1.ª
     lurch: 0.4, sprintSpeed: 115, sprintTime: 0.7, sprintCool: 2.8,
     contactDamage: 6,
     habits: 'Arrastra los pies apoyándose en sus brazos-estaca. A media distancia se queda quieto, le da un latigazo el cráneo y arranca en una carrera torpe. De cerca echa un brazo atrás y te lo clava, y enseguida el otro: dos estocadas que hacen mucho daño. Se rompe con poco, pero no muere: se desmorona en un montón de huesos y a los pocos segundos tiembla, se le enciende el cráneo y se recompone. Es inmortal: golpear el montón solo retrasa un poco que vuelva a levantarse.',

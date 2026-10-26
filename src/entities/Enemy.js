@@ -1446,8 +1446,8 @@ export const BEHAVIORS = {
         g.audio.play('melee', e);
         g.audio.play('boneStab', e);
       }
-      if (e.swing <= 0 && e.strike === 1) {
-        // Segunda estocada, con el otro brazo, casi sin pausa.
+      if (e.strike === 1 && e.hitDone && e.swing <= hitAt - (d.chainDelay ?? 0.08)) {
+        // Segunda estocada, con el otro brazo, nada más clavar la primera.
         e.strike = 2;
         e.dir = Math.sign(dx) || e.dir;
         e.swing = e.swingDur = d.swing2Time ?? 0.42;
@@ -2046,16 +2046,15 @@ export const BEHAVIORS = {
       e.state = 'fall'; e.vx = 0; e.vy = 0;
       return;
     }
-    // Golpeado en la coraza: no se queda quieto, se revuelve enseguida contra ti (te muerde
-    // si estás encima; si no, embiste o se hace bola y rueda hacia ti).
+    // Le has acertado varias veces seguidas: se revuelve enseguida contra ti (te muerde con
+    // las pinzas si estás encima; si no, se hace bola y rueda hacia ti).
     if (e.provoked) {
       e.provoked = false;
       if (e.state === 'walk' || e.state === 'pinch') {
         const f = fwd();
         if (f.x * dx + f.y * dy < 0) e.td = -e.td;
         g.audio.play('stagHiss', e);
-        if (dist < d.pinchRange + 6) { e.state = 'pinchWind'; e.timer = 0.22; }
-        else if (dist < d.goreRange && w.lineOfSight(e.cx, e.cy, p.cx, p.cy) && Math.random() < 0.5) { e.state = 'rear'; e.timer = 0.4; }
+        if (dist < d.pinchRange + 10) { e.state = 'pinchWind'; e.timer = 0.2; }
         else { e.state = 'curl'; e.timer = 0.25; g.audio.play('stagCurl', e); }
       }
     }
@@ -3076,10 +3075,19 @@ export class Enemy {
       return false;
     }
     // La coraza para todo menos el tendón... y la carne del ciervo aturdido (élitros abiertos).
-    if (this.armored && kind !== 'tendon' && this.state !== 'dazed') {
+    if (this.armored && kind !== 'tendon' && this.state !== 'dazed' && this.def.behavior === 'stagCrawl') {
+      // El Ciervo Acorazado: la coraza de nácar amortigua casi todo (salta en chispas), pero
+      // algo entra; si le aciertas varias veces seguidas se revuelve contra ti.
+      this.#nacreSpark(silent);
+      n *= this.def.armorShare ?? 0.25;
+      if (!silent) {
+        const t = this.game.time;
+        this.stagHits = t - (this.stagHitAt ?? -9) < 2 ? (this.stagHits ?? 0) + 1 : 1;
+        this.stagHitAt = t;
+        if (this.stagHits >= (this.def.provokeHits ?? 3)) { this.stagHits = 0; this.provoked = true; }
+      }
+    } else if (this.armored && kind !== 'tendon' && this.state !== 'dazed') {
       if (!silent) this.game.audio.play('ricochet', this);
-      // El Ciervo Acorazado: la coraza salta en chispas de nácar y se revuelve contra ti.
-      if (this.def.behavior === 'stagCrawl') { this.#nacreSpark(silent); this.provoked = true; }
       // Reacción: al notar el golpe se enrosca.
       // El ciervo se vuelve hacia quien le dispara.
       if (this.def.behavior === 'centaur' && this.state === 'walk') this.dir = Math.sign(this.game.player.cx - this.cx) || this.dir;
