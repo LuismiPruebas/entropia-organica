@@ -1,20 +1,28 @@
-// LA TESTA DEL RELICARIO: un cráneo de babuino enloquecido. Bóveda de hueso agrietada con
-// una cresta de púas, órbita hundida con un ojo que arde, un morro larguísimo de carne roja
-// con surcos azulados (de mandril) y colmillos enormes. La mandíbula se abre al morder
-// (e.jaw 0..1). Al tocar el suelo despliega cuatro patas de hueso (e.legs 0..1) y corre.
-// Dibujado mirando a la derecha (el render lo voltea según e.dir).
-import { px, limb, part, blob, jointLeg, OUTLINE } from './Rig.js';
+// LA TESTA DEL RELICARIO: un cráneo de babuino enloquecido, enorme. Bóveda de hueso
+// agrietada con una cresta de púas, órbita hundida con un ojo que arde y te sigue (e.look),
+// un morro larguísimo de carne roja con surcos azulados (de mandril) y colmillos enormes.
+// La mandíbula se abre al morder (e.jaw 0..1). Al tocar el suelo despliega cuatro patas de
+// hueso (e.legs 0..1) y corre. Dibujado mirando a la derecha (el render lo voltea según e.dir),
+// con su geometría escalada por S (más píxeles, no píxeles más gordos).
+import { px as px1, limb as limb1, part as part1, blob as blob1, jointLeg as jointLeg1, OUTLINE } from './Rig.js';
 
-const W = 60, H = 42, G0 = H - 2;
+const S = 1.7;
+const W = Math.ceil(60 * S), H = Math.ceil(42 * S), G0 = 40;   // G0: suelo, en unidades sin escalar
 const C = {
   bone: '#d8cfb0', boneL: '#f2ead0', boneD: '#a89e80', boneDD: '#6e664e',
   snout: '#b8402e', snoutL: '#e8704a', snoutD: '#6a1a14', ridge: '#4a5a9a',
   gum: '#5a0a14', fang: '#f6f0dc', eye: '#ff3b2f',
 };
+// Las herramientas de siempre, en unidades sin escalar.
+const px = (g, x, y, c, w = 1, h = 1) => px1(g, x * S, y * S, c, Math.max(1, Math.round(w * S)), Math.max(1, Math.round(h * S)));
+const limb = (g, x0, y0, x1, y1, w, c, hi) => limb1(g, x0 * S, y0 * S, x1 * S, y1 * S, Math.max(1, Math.round(w * S)), c, hi);
+const part = (g, cx, cy, rx, ry, c, rim, hi) => part1(g, cx * S, cy * S, rx * S, ry * S, c, rim, hi);
+const blob = (g, cx, cy, rx, ry, c, rim, hi) => blob1(g, cx * S, cy * S, rx * S, ry * S, c, rim, hi);
+const jointLeg = (g, hx, hy, fx, fy, l1, l2, bend, w, c, cFar, joint) => jointLeg1(g, hx * S, hy * S, fx * S, fy * S, l1 * S, l2 * S, bend, Math.max(1, Math.round(w * S)), c, cFar, joint);
 
 export const REAPER_HEAD = {
   size: () => [W, H],
-  origin: (e) => [e.cx - W / 2 + 2, e.y + e.h - G0],
+  origin: (e) => [e.cx - W / 2 + 2 * S, e.y + e.h - G0 * S],
   draw(g, gl, e, t) {
     const legs = e.legs ?? 0, jaw = e.jaw ?? 0;
     const run = Math.abs(e.vx) > 5 && legs > 0.5;
@@ -38,14 +46,11 @@ export const REAPER_HEAD = {
     const a = jaw * 0.75;
     const hx = 26, hy = cy + 4, L = 25;
     const jx = hx + Math.cos(a) * L, jy = hy + Math.sin(a) * L;
-    if (jaw > 0.05) { // encías y garganta a la vista
-      for (let k = 0; k < 1; k += 0.05) { const x = hx + (jx - hx) * k, y = hy + (jy - hy) * k; px(g, x, hy + 1, C.gum, 1, Math.max(1, y - hy)); }
-    }
+    if (jaw > 0.05) for (let k = 0; k < 1; k += 0.04) { const x = hx + (jx - hx) * k, y = hy + (jy - hy) * k; px(g, x, hy + 1, C.gum, 1, Math.max(1, y - hy)); }
     limb(g, hx, hy, jx, jy, 4, C.boneD, C.bone);
     for (let i = 0; i < 2; i++) {                                     // colmillos de abajo, hacia arriba
       const k = 0.62 + i * 0.22, x = hx + (jx - hx) * k, y = hy + (jy - hy) * k;
-      const tx = x + Math.sin(a) * 6, ty = y - Math.cos(a) * 6;
-      limb(g, x, y, tx, ty, 2, C.fang);
+      limb(g, x, y, x + Math.sin(a) * 6, y - Math.cos(a) * 6, 2, C.fang);
     }
     // ---- Bóveda del cráneo, cresta de púas y grietas.
     for (let i = 0; i < 4; i++) { const x0 = 14 + i * 5, x1 = x0 - 3 - i, y1 = cy - 16 - (i % 2) * 3; limb(g, x0, cy - 8, x1, y1, i === 1 ? 3 : 2, C.boneL); }
@@ -53,21 +58,24 @@ export const REAPER_HEAD = {
     blob(g, 21, cy - 2, 10, 7.5, C.bone);
     blob(g, 18, cy - 4, 5, 3, C.boneL);
     blob(g, 25, cy + 4, 7, 2, C.boneD);                                     // pómulo en sombra
-    for (let i = 0; i < 6; i++) px(g, 15 + i, cy - 6 + (i % 2), C.boneDD);       // grieta
+    for (let i = 0; i < 6; i++) px(g, 15 + i, cy - 6 + (i % 2), C.boneDD);  // grieta
     // ---- Morro de babuino: largo, rojo, con surcos azulados y el hocico achatado.
     const mx = 41, my = cy - 1;
     part(g, mx, my, 13, 5, C.snout, C.snoutD, C.snoutL);
     blob(g, mx - 2, my - 2, 9, 2, C.snoutL);
-    for (let j = 0; j < 3; j++) for (let x = mx - 9; x < mx + 7; x++) px(g, x, my - 3 + j * 2 + Math.round(Math.sin(x * 0.5) * 0.5), j === 1 ? C.ridge : C.snoutD);
+    for (let j = 0; j < 3; j++) for (let x = mx - 9; x < mx + 7; x += 0.5) px(g, x, my - 3 + j * 2 + Math.round(Math.sin(x * 0.5) * 0.5), j === 1 ? C.ridge : C.snoutD, 0.6, 0.6);
     part(g, mx + 13, my + 1, 2.5, 3, C.snoutD, OUTLINE);                    // hocico
     px(g, mx + 13, my + 1, OUTLINE, 2, 1);                                  // fosas
     // ---- Arcada superior y colmillos enormes (los de arriba, hacia abajo).
     limb(g, 28, cy + 3, mx + 10, my + 4, 2, C.bone);
     for (const [x, len, w] of [[mx - 1, 13, 3], [mx + 6, 9, 2]]) { limb(g, x, my + 3, x + 1, my + 3 + len, w, C.fang, '#ffffff'); px(g, x + 1, my + 3 + len, OUTLINE); }
-    // ---- Órbita hundida y ojo que arde (más, con la boca abierta).
-    blob(g, 30, cy - 4, 3.5, 3, OUTLINE);
-    px(g, 30, cy - 5, C.eye, 2, 2);
-    px(gl, 30, cy - 5, jaw > 0.5 ? '#ffd0a0' : C.eye, 2, 2);
-    limb(g, 25, cy - 8, 35, cy - 7, 2, C.boneL);                           // ceño
+    // ---- Órbita hundida y un ojo que arde y te sigue con la mirada.
+    blob(g, 30, cy - 4, 3.6, 3.1, OUTLINE);
+    const lx = Math.max(-1, Math.min(1, e.look?.x ?? 1)), ly = Math.max(-1, Math.min(1, e.look?.y ?? 0));
+    const ex = 30 + lx * 1.6, ey = cy - 4.5 + ly * 1.3;
+    blob(g, ex, ey, 1.6, 1.4, '#5a0a08');
+    px(g, ex - 0.5, ey - 0.5, C.eye, 1.2, 1.2);
+    px1(gl, (ex - 0.5) * S, (ey - 0.5) * S, jaw > 0.5 ? '#ffd0a0' : C.eye, 2, 2);
+    limb(g, 25, cy - 8, 35, cy - 7 + ly * 0.6, 2, C.boneL);                 // ceño
   },
 };

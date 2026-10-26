@@ -2137,15 +2137,15 @@ export const BEHAVIORS = {
   //           (hay que saltarla);
   //   tajo    la alza sobre la cabeza y la clava donde estás; queda clavada y se le abren
   //           las costillas: el núcleo, su único punto débil, queda al aire;
-  //   géiser  si te alejas, el suelo tiembla bajo tus pies y revientan púas de hueso.
+  //   raspado si te alejas, raspa el suelo con la guadaña y una onda corre hacia ti.
   // Furioso (por debajo de la mitad), más deprisa, y a veces encadena dos tajos.
   // La cabeza (un cráneo de babuino, behavior reaperHead) apenas se sostiene en el muñón
-  // del cuello: cada rato, o cuando le golpeas el cuerpo, se le cae y te persigue a mordiscos.
+  // del cuello: tras unos cuantos ataques (3-4) se le cae, te persigue a mordiscos y vuelve.
   // Los racimos de hueso del techo (Traps.js: BoneCluster), si le caen encima, lo dejan
   // tambaleándose con la caja abierta (e.bonk).
   // Réquiem (cada ~20 s, más a menudo furioso): un ataque en tres partes que barre la sala
   // entera — siega doble por el suelo desde las paredes, lluvia de huesos del techo por
-  // columnas y una ola de púas que sale de él hacia las paredes —; luego queda agotado y
+  // columnas y un doble tajo que lanza ondas por el suelo a los dos lados —; luego queda agotado y
   // abierto.
   bossReaper(e, dt, g) {
     const d = e.def, p = g.player, C = e.creature;
@@ -2164,16 +2164,13 @@ export const BEHAVIORS = {
     if (!e.onGround) { e.vx = 0; e.vy = Math.min(380, (e.vy ?? 0) + GRAVITY * dt); g.world.move(e, dt); }
     const [ox, oy] = C.origin(e);
     const floorY = oy + C.FY;
-    // ---- La cabeza: nace en el muñón del cuello; se le cae cada rato o al golpearle el cuerpo.
+    // ---- La cabeza: unida al muñón del cuello; tras unos cuantos ataques (3-4) se le cae.
     e.neck = { x: ox + C.CX, y: oy + 8 + Math.round(Math.sin(e.t * 1.6) * 0.75) };
-    if (!e.head && d.head) { e.head = g.spawnMinion(d.head, e.neck.x, e.neck.y - 10); e.head.boss = e; e.headT = 6; }
+    if (!e.head && d.head) { e.head = g.spawnMinion(d.head, e.neck.x, e.neck.y - 10); e.head.boss = e; e.nextDrop = 3; e.attacks = 0; }
     const head = e.head?.alive ? e.head : null;
-    e.headT = (e.headT ?? 6) - dt;
-    if (head && head.state === 'attached' && (e.headT <= 0 || (e.bodyHit && (e.headCool ?? 0) <= 0))) {
-      head.dropNow = true; e.headT = (rage ? 9 : 13) + Math.random() * 3; e.headCool = 4;
+    if (head && head.state === 'attached' && e.attacks >= e.nextDrop && e.state === 'idle') {
+      head.dropNow = true; e.attacks = 0; e.nextDrop = (rage ? 2 : 3) + Math.round(Math.random());
     }
-    e.headCool = (e.headCool ?? 0) - dt;
-    e.bodyHit = false;
     // ---- Un racimo de hueso le ha caído encima: se tambalea con la caja abierta.
     if (e.bonk) {
       e.bonk = false;
@@ -2191,7 +2188,7 @@ export const BEHAVIORS = {
       e.reqDone = Math.max(e.reqDone ?? 0, third);
       e.reqT = (d.requiemEvery ?? 22) * (rage ? 0.75 : 1);
       for (const a of [e.arms.L, e.arms.R]) { a.pose = 'raise'; a.kind = 'sweep'; a.k = 0; }
-      e.state = 'req1'; e.timer = 1.1; e.reqStep = 0;
+      e.state = 'req1'; e.timer = 1.1; e.reqStep = 0; e.attacks = (e.attacks ?? 0) + 1;
       g.audio.play('reaperBellow', e);
     }
     const dx = p.cx - e.cx;
@@ -2215,9 +2212,13 @@ export const BEHAVIORS = {
     if (e.state === 'idle') {
       if (e.timer <= 0) {
         const far = Math.abs(dx) > (d.reach ?? 180);
+        e.attacks = (e.attacks ?? 0) + 1;
         if (far) {
-          e.state = 'geyser'; e.timer = 0.8; e.gx = p.cx; e.geysers = rage ? 3 : 2;
-          g.audio.play('boneRumble', e);
+          // Lejos: alza la guadaña de tu lado y raspa el suelo; la onda corre hacia ti.
+          const a = arm(side);
+          a.pose = 'raise'; a.kind = 'sweep'; a.k = 0;
+          e.atkSide = side; e.state = 'geyser'; e.timer = 0.7; e.geysers = rage ? 2 : 1;
+          g.audio.play('reaperScythe', e);
         } else {
           const kind = Math.random() < 0.5 ? 'sweep' : 'slam';
           e.atkSide = side; e.atkKind = kind;
@@ -2275,15 +2276,18 @@ export const BEHAVIORS = {
       for (const s of [-1, 1]) { const a = arm(s); if (a.pose === 'recover') { a.k = Math.min(1, a.k + dt * 2); if (a.k >= 1) a.pose = 'idle'; } }
       if (e.timer <= 0) { for (const s of [-1, 1]) arm(s).pose = 'idle'; e.state = 'idle'; e.timer = (rage ? 0.8 : 1.4) + Math.random() * 0.6; }
     } else if (e.state === 'geyser') {
-      // El suelo tiembla donde estás (aviso) y revientan púas de hueso hacia arriba.
-      if (Math.random() < 0.7) g.particles.emit(e.gx + (Math.random() - 0.5) * 24, floorY - 1, { vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 30, life: 0.4, gravity: 300, color: [0.7, 0.62, 0.48] });
+      // Raspado: la guadaña alzada tiembla y baja de golpe contra el suelo; una onda de
+      // hueso corre por el suelo hacia ti (sáltala). Furioso, dos seguidas.
+      const a = arm(e.atkSide);
+      a.k = Math.min(1, a.k + dt * sp / 0.7);
       if (e.timer <= 0) {
-        g.shake = Math.max(g.shake, 4);
-        g.audio.play('crunch', e);
-        for (let i = -2; i <= 2; i++) g.spawnProjectile({ x: e.gx + i * 7 - 3, y: floorY - 10, w: 6, h: 12, vx: i * 25, vy: -330 - (2 - Math.abs(i)) * 70, gravity: 700, life: 1.4, damage: d.geyserDamage ?? 12, kind: 'shard', owner: 'enemy', color: '#e8dcc8' });
+        g.shake = Math.max(g.shake, 3);
+        g.audio.play('reaperSlam', e);
+        const sx = ox + C.CX + e.atkSide * 120;
+        g.spawnProjectile({ x: sx - 8, y: floorY - 14, w: 16, h: 14, vx: e.atkSide * 210, vy: 0, life: 2.6, damage: d.geyserDamage ?? 14, kind: 'wave', owner: 'enemy', color: '#e8d8b0', glow: [0.9, 0.7, 0.4] });
         e.geysers--;
-        if (e.geysers > 0) { e.timer = 0.45; e.gx = p.cx; }
-        else { e.state = 'idle'; e.timer = rage ? 0.9 : 1.5; }
+        if (e.geysers > 0) { e.timer = 0.55; a.k = 0.5; }
+        else { a.pose = 'recover'; a.k = 0; e.state = 'recover'; e.timer = 0.5; }
       }
     } else if (e.state === 'bonked' || e.state === 'spent') {
       // Tambaleándose (le ha caído un racimo) o agotado tras el Réquiem: caja abierta.
@@ -2323,27 +2327,26 @@ export const BEHAVIORS = {
         else { e.state = 'req3'; e.timer = 1.0; g.audio.play('boneRumble', e); }
       }
     } else if (e.state === 'req3') {
-      // Réquiem III · ola de púas: el suelo tiembla a su alrededor y revientan púas de él
-      // hacia las paredes, una tras otra (súbete a algo o salta en el momento justo).
-      if (Math.random() < 0.6) g.particles.emit(ox + C.CX + (Math.random() - 0.5) * 120, floorY - 1, { vx: (Math.random() - 0.5) * 30, vy: -30, life: 0.4, gravity: 300, color: [0.7, 0.62, 0.48] });
-      if (e.timer <= 0) { e.state = 'req3w'; e.timer = 0; e.reqStep = 0; }
+      // Réquiem III · doble tajo: alza las dos guadañas y las clava a la vez a los dos lados;
+      // de cada hoja salen ondas de hueso por el suelo hacia las paredes y hacia él.
+      for (const s of [-1, 1]) { const a = arm(s); if (a.pose !== 'raise') { a.pose = 'raise'; a.kind = 'slam'; a.k = 0; a.tx = 120; } a.k = Math.min(1, a.k + dt * sp / 1.0); }
+      if (e.timer <= 0) {
+        g.shake = Math.max(g.shake, 10);
+        g.audio.play('reaperSlam', e);
+        for (const s of [-1, 1]) {
+          const a = arm(s); a.pose = 'slam'; a.k = 1;
+          const tx = ox + C.CX + s * a.tx;
+          for (const dir of [-1, 1]) g.spawnProjectile({ x: tx - 8, y: floorY - 14, w: 16, h: 14, vx: dir * 200, vy: 0, life: 2.6, damage: d.waveDamage ?? 20, kind: 'wave', owner: 'enemy', color: '#e8d8b0', glow: [0.9, 0.7, 0.4] });
+          for (let i = 0; i < 16; i++) g.particles.emit(tx + (Math.random() - 0.5) * 30, floorY - 2, { vx: (Math.random() - 0.5) * 220, vy: -80 - Math.random() * 160, life: 0.8, gravity: 700, color: [0.8, 0.72, 0.55] });
+        }
+        e.state = 'req3w'; e.timer = 1.2;
+      }
     } else if (e.state === 'req3w') {
       if (e.timer <= 0) {
-        e.timer = 0.07;
-        const k = e.reqStep++, W = g.world.pixelW;
-        let any = false;
-        for (const s of [-1, 1]) {
-          const x = ox + C.CX + s * (40 + k * 22);
-          if (x < TILE || x > W - TILE) continue;
-          any = true;
-          for (const i of [-1, 1]) g.spawnProjectile({ x: x + i * 5 - 3, y: floorY - 10, w: 6, h: 12, vx: i * 20, vy: -300 - Math.random() * 60, gravity: 700, life: 1.3, damage: d.geyserDamage ?? 12, kind: 'shard', owner: 'enemy', color: '#e8dcc8' });
-        }
-        if (k % 3 === 0) g.audio.play('crunch', e);
-        if (!any) {
-          // Exhausto: la caja se le abre y el núcleo queda al aire un buen rato.
-          e.state = 'spent'; e.timer = d.spentTime ?? 3.4;
-          g.audio.play(d.sounds?.hurt ?? 'reaperCore', e);
-        }
+        // Exhausto: la caja se le abre y el núcleo queda al aire un buen rato.
+        for (const s of [-1, 1]) { const a = arm(s); a.pose = 'recover'; a.k = 0; }
+        e.state = 'spent'; e.timer = d.spentTime ?? 3.4;
+        g.audio.play(d.sounds?.hurt ?? 'reaperCore', e);
       }
     }
   },
@@ -2358,8 +2361,12 @@ export const BEHAVIORS = {
     e.state ??= 'attached';
     e.timer = (e.timer ?? 0) - dt;
     e.cool = (e.cool ?? 0) - dt;
+    e.chaseT = (e.chaseT ?? 0) - dt;                       // tiempo que le queda persiguiéndote
     e.jaw = Math.max(0, (e.jaw ?? 0) - dt * 2);
     const dx = p.cx - e.cx;
+    // Te sigue con la mirada (el ojo, en su dibujo: hacia ti en sus coordenadas).
+    const dist = Math.hypot(dx, p.cy - e.cy) || 1;
+    e.look = { x: (dx * (e.dir || 1)) / dist, y: (p.cy - e.cy) / dist };
     const legsTo = (v) => { e.legs = (e.legs ?? 0) + (v - (e.legs ?? 0)) * Math.min(1, dt * 8); };
     e.contactDamage = 0;
     if (e.knocked && e.state !== 'knocked') { e.knocked = false; e.state = 'knocked'; e.timer = d.knockedTime ?? 3; e.vx = 0; g.audio.play('boneCollapse', e); }
@@ -2386,7 +2393,7 @@ export const BEHAVIORS = {
     } else if (e.state === 'sprout') {
       // Saca las patas de hueso (crujen al desplegarse).
       legsTo(1);
-      if (e.timer <= 0) { e.state = 'chase'; e.timer = d.chaseTime ?? 7; g.audio.play('stagCurl', e); }
+      if (e.timer <= 0) { e.state = 'chase'; e.chaseT = d.chaseTime ?? 7; g.audio.play('stagCurl', e); }
     } else if (e.state === 'chase') {
       legsTo(1);
       e.dir = Math.sign(dx) || e.dir;
@@ -2395,7 +2402,7 @@ export const BEHAVIORS = {
       if (Math.abs(dx) < (d.lungeRange ?? 70) && Math.abs(p.cy - e.cy) < 60 && e.cool <= 0 && e.onGround) {
         e.state = 'windup'; e.timer = 0.32; e.vx = 0; g.audio.play('stagHiss', e);
       }
-      if (e.timer <= 0) { e.state = 'return'; }
+      if (e.chaseT <= 0) { e.state = 'return'; }
     } else if (e.state === 'windup') {
       // Se agacha y abre las fauces.
       legsTo(0.6); e.jaw = Math.min(1, e.jaw + dt * 6); e.vx = 0;
@@ -2406,8 +2413,7 @@ export const BEHAVIORS = {
         const box = { x: e.dir > 0 ? e.x + e.w - 6 : e.x - 10, y: e.y, w: 16, h: e.h };
         if (overlap(p, box)) { e.bit = true; g.hurtPlayer(d.biteDamage ?? 18, e.cx, d.name, undefined, undefined, 200); g.audio.play('stagClack', e); }
       }
-      if (e.onGround && e.timer < 0.45) { e.state = 'chase'; e.timer = Math.max(e.chaseLeft ?? 2, 1.5); e.cool = d.biteCool ?? 0.9; e.jaw = 0.5; }
-      if (e.state === 'lunge') e.chaseLeft = e.timer;
+      if (e.onGround && e.timer < 0.45) { e.state = 'chase'; e.cool = d.biteCool ?? 0.9; e.jaw = 0.5; }
     } else if (e.state === 'knocked') {
       // Tumbada, las patas temblando: no muerde; al rato se levanta y vuelve.
       e.vx *= 0.9; legsTo(0.15);
@@ -3233,10 +3239,6 @@ export class Enemy {
   hurt(n, kind, silent = false, at = null) {
     if (!this.alive) return false;
     if (this.submerged) return false; // bajo el ácido no le alcanzas
-    // El Relicario: cualquier golpe al cuerpo (aunque rebote) le sacude la cabeza del cuello;
-    // la cabeza, golpeada en su sitio, se descuelga.
-    if (!silent && this.def.behavior === 'bossReaper') this.bodyHit = true;
-    if (!silent && this.def.behavior === 'reaperHead' && this.state === 'attached') this.dropNow = true;
     // Jefes con punto débil (def.weakOnly): solo hiere el disparo que da en un punto
     // débil abierto (la cabeza que canta); el resto del cuerpo rebota.
     if (this.def.weakOnly && at) {
