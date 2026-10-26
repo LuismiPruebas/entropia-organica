@@ -833,7 +833,8 @@ export class Game {
       this.audio.play('sizzle', p);
       if (Math.random() < 0.5) this.glowParticles.emit(p.cx + (Math.random() - 0.5) * 10, p.y + p.h, { vy: -40, life: 0.4, color: [0.4, 1, 0.3] });
     } else if (acid) {
-      st.damage(Math.min(ACID_ARMORED_MAX, ACID_ARMORED + this.acidSoak * ACID_ARMORED_RAMP) * dt, 'ácido');
+      // Cada nivel de Dermis lo rebaja (acidTaken), pero ni el III lo anula: sigue mordiendo.
+      st.damage(Math.min(ACID_ARMORED_MAX, ACID_ARMORED + this.acidSoak * ACID_ARMORED_RAMP) * st.mod('acidTaken') * dt, 'ácido');
       if (this.acidSoak > 2) this.audio.play('sizzle', p);
       if (Math.random() < 0.15) this.glowParticles.emit(p.cx + (Math.random() - 0.5) * 10, p.y + p.h, { vy: -30, life: 0.3, color: [0.4, 1, 0.3] });
     }
