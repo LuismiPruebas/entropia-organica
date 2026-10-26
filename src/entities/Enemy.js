@@ -2256,8 +2256,6 @@ export const BEHAVIORS = {
         g.audio.play('reaperSlam', e);
         const tx = ox + C.CX + e.atkSide * a.tx;
         for (let i = 0; i < 24; i++) g.particles.emit(tx + (Math.random() - 0.5) * 30, floorY - 2, { vx: (Math.random() - 0.5) * 220, vy: -80 - Math.random() * 160, life: 0.8, gravity: 700, color: Math.random() < 0.5 ? [0.8, 0.72, 0.55] : [0.45, 0.38, 0.3] });
-        // Onda por el suelo a los dos lados de la hoja.
-        for (const s of [-1, 1]) shockwave(g, tx, floorY, s, '#d8c49c', [0.7, 0.6, 0.4]);
       }
     } else if (e.state === 'stuck') {
       if (e.timer <= 0) {
@@ -2284,7 +2282,7 @@ export const BEHAVIORS = {
         g.shake = Math.max(g.shake, 3);
         g.audio.play('reaperSlam', e);
         const sx = ox + C.CX + e.atkSide * 120;
-        g.spawnProjectile({ x: sx - 8, y: floorY - 14, w: 16, h: 14, vx: e.atkSide * 210, vy: 0, life: 2.6, damage: d.geyserDamage ?? 14, kind: 'wave', owner: 'enemy', color: '#e8d8b0', glow: [0.9, 0.7, 0.4] });
+        g.spawnProjectile({ x: sx - 8, y: floorY - 14, w: 16, h: 14, vx: e.atkSide * 210, vy: 0, life: 2.6, damage: d.geyserDamage ?? 14, kind: 'boneWave', owner: 'enemy' });
         e.geysers--;
         if (e.geysers > 0) { e.timer = 0.55; a.k = 0.5; }
         else { a.pose = 'recover'; a.k = 0; e.state = 'recover'; e.timer = 0.5; }
@@ -2302,7 +2300,7 @@ export const BEHAVIORS = {
         for (const s of [-1, 1]) { const a = arm(s); a.pose = 'sweep'; a.k = 0; }
         const W = g.world.pixelW, waves = rage ? 2 : 1;
         for (let k = 0; k < waves; k++) for (const [x, dir] of [[TILE * 1.2 - k * 50, 1], [W - TILE * 2.2 + k * 50, -1]]) {
-          g.spawnProjectile({ x, y: floorY - 14, w: 16, h: 14, vx: dir * 230, vy: 0, life: 3.2, damage: d.waveDamage ?? 20, kind: 'wave', owner: 'enemy', color: '#e8d8b0', glow: [0.9, 0.7, 0.4] });
+          g.spawnProjectile({ x, y: floorY - 14, w: 16, h: 14, vx: dir * 230, vy: 0, life: 3.2, damage: d.waveDamage ?? 20, kind: 'boneWave', owner: 'enemy' });
         }
         g.audio.play('reaperScythe', e); g.shake = Math.max(g.shake, 5);
         e.state = 'req1w'; e.timer = 1.7;
@@ -2336,7 +2334,7 @@ export const BEHAVIORS = {
         for (const s of [-1, 1]) {
           const a = arm(s); a.pose = 'slam'; a.k = 1;
           const tx = ox + C.CX + s * a.tx;
-          for (const dir of [-1, 1]) g.spawnProjectile({ x: tx - 8, y: floorY - 14, w: 16, h: 14, vx: dir * 200, vy: 0, life: 2.6, damage: d.waveDamage ?? 20, kind: 'wave', owner: 'enemy', color: '#e8d8b0', glow: [0.9, 0.7, 0.4] });
+          for (const dir of [-1, 1]) g.spawnProjectile({ x: tx - 8, y: floorY - 14, w: 16, h: 14, vx: dir * 200, vy: 0, life: 2.6, damage: d.waveDamage ?? 20, kind: 'boneWave', owner: 'enemy' });
           for (let i = 0; i < 16; i++) g.particles.emit(tx + (Math.random() - 0.5) * 30, floorY - 2, { vx: (Math.random() - 0.5) * 220, vy: -80 - Math.random() * 160, life: 0.8, gravity: 700, color: [0.8, 0.72, 0.55] });
         }
         e.state = 'req3w'; e.timer = 1.2;

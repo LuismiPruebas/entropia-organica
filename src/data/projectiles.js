@@ -46,6 +46,32 @@ function every(p, dt, s) {
 
 export const PROJECTILES = {
   // ------------------------------------------------------------------ enemigos
+  // El Relicario: onda de hueso que corre pegada al suelo (sáltala). Una cresta de
+  // esquirlas que asoman y se hunden, con la grieta encendida debajo; levanta polvo y
+  // astillas a su paso para que se vea venir.
+  boneWave: {
+    size: [22, 18], frames: 4, fps: 16,
+    paint(g, gl, f) {
+      const B = ['#f2ead0', '#d8cfb0', '#a89e80', '#140c08'];
+      for (let i = 0; i < 5; i++) {
+        const x = 2 + i * 4, hgt = 6 + ((i + f) % 3) * 3 + (i === 2 ? 3 : 0);
+        for (let y = 0; y < hgt; y++) {
+          const w = Math.max(1, Math.round((1 - y / hgt) * 3));
+          px(g, x - w + 1, 16 - y, B[3], w * 2 + 1, 1);
+          px(g, x - w + 2, 16 - y, y > hgt * 0.6 ? B[0] : B[1], Math.max(1, w * 2 - 1), 1);
+        }
+        px(g, x + 1, 16 - hgt + 2, B[2]);
+      }
+      px(g, 0, 16, '#ff6a2a', 22, 2);                                 // la grieta encendida
+      px(gl, 0, 14, 'rgba(255,120,40,0.85)', 22, 4);
+      px(gl, 4, 10, 'rgba(255,150,60,0.35)', 14, 4);
+    },
+    trail(game, p, dt) {
+      if (!every(p, dt, 0.03)) return;
+      game.particles.emit(p.cx + R(-8, 8), p.y + p.h - 2, { vx: -p.vx * 0.1 + R(-30, 30), vy: R(-90, -30), life: R(0.3, 0.6), gravity: 600, color: Math.random() < 0.5 ? [0.85, 0.78, 0.62] : [0.55, 0.45, 0.35] });
+      game.glowParticles.emit(p.cx, p.y + p.h - 1, { vx: R(-20, 20), vy: -10, life: 0.2, color: [1, 0.5, 0.2] });
+    },
+  },
   // Ojo de Techo (Sistema Nervioso): saliva infectada. Un glóbulo morado que tiembla,
   // con grumos de pus, y va goteando. Lento y franco: el primer patrón que aprendes.
   spit: {
