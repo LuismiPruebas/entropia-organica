@@ -20,6 +20,7 @@ import { STILT } from './Stilt.js';
 import { HIEROPHANT } from './Hierophant.js';
 import { GLUTTON } from './Glutton.js';
 import { REAPER } from './Reaper.js';
+import { REAPER_HEAD } from './ReaperHead.js';
 
 const P = (g, x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
 
@@ -266,6 +267,7 @@ export const CREATURES = {
   // CIERVO ACORAZADO: centauro escarabajo erguido (entities/StagBeetle.js).
   ciervo: STAG,
   relicario: REAPER,
+  babuino: REAPER_HEAD,
   // ESCARABAJO RINOCERONTE: cuerno de marfil y coraza frontal (entities/RhinoBeetle.js).
   rhino: RHINO,
 

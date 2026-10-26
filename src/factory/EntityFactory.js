@@ -16,7 +16,7 @@ import { Hook } from '../entities/Hook.js';
 import { roomConnections } from '../data/connections.js';
 import { LinkPoint } from '../entities/Link.js';
 import { BloodPool, Artery, HeartValve, Ventricle } from '../entities/Blood.js';
-import { BoneTrap, Wind, BoneSlab, BoneFang, BonePillar, BoneStack } from '../entities/Traps.js';
+import { BoneTrap, Wind, BoneSlab, BoneFang, BonePillar, BoneStack, BoneCluster } from '../entities/Traps.js';
 import { Bellows } from '../entities/Bellows.js';
 import { Nodule } from '../entities/Nodule.js';
 import { YolkSac } from '../entities/YolkSac.js';
@@ -187,6 +187,7 @@ export class EntityFactory {
       ...(def.fangs ?? []).map((d) => new BoneFang(g, room, d)),
       ...(def.pillars ?? []).map((d) => new BonePillar(g, room, d)),
       ...(def.stacks ?? []).map((d) => new BoneStack(g, room, d)),
+      ...(def.clusters ?? []).map((d) => new BoneCluster(g, room, d)),
       ...(def.winds ?? []).map((d) => new Wind(g, room, d)),
       ...(def.bellows ?? []).map((d) => new Bellows(g, room, d)),
       ...Object.values(room.gates),

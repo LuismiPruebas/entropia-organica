@@ -287,9 +287,12 @@ export const ENEMIES = {
     music: 'coro',
     weakOnly: true,    // solo el núcleo...
     exposedOnly: true, // ...y solo con las costillas abiertas (tras clavar la guadaña)
-    hp: 460, w: 100, h: 150,
+    hp: 560, w: 100, h: 150,   // duro: hace falta ir sobrado de recursos
     light: { color: [0.5, 0.3, 0.2], r: 230 },
-    contactDamage: 12,
+    contactDamage: 0,          // acercarse no duele: duelen sus ataques
+    head: 'cabezaRelicario',   // su cabeza de babuino, que se le cae y te persigue
+    bonkTime: 3.6,             // caja abierta al caerle encima un racimo de hueso
+    requiemEvery: 22, spentTime: 3.4, waveDamage: 20, rainDamage: 14,
     reach: 180,        // hasta dónde llegan sus guadañas desde el centro
     drift: 10,         // se desliza despacio hacia ti
     sweepDamage: 20, slamDamage: 26, geyserDamage: 12,
@@ -301,8 +304,22 @@ export const ENEMIES = {
     },
     sounds: { reveal: 'reaperBellow', attack: 'reaperBellow', hurt: 'reaperCore', die: 'reaperDie' },
     auraPeriod: 3,
-    habits: 'Asoma del suelo y apenas se mueve: se desliza despacio hacia ti. Alza una guadaña temblando y barre el suelo de fuera adentro por tu lado: sáltala. O la alza sobre la cabeza y la clava donde estás: al clavarla el suelo se resquebraja a los lados, la guadaña se queda atascada y se le abren las costillas. Su único punto débil es el núcleo que late dentro, y solo con la caja abierta. Si te alejas, el suelo tiembla bajo tus pies y revientan púas de hueso. Herido, más deprisa, y a veces clava una guadaña tras otra.',
+    habits: 'Asoma del suelo y apenas se mueve: se desliza despacio hacia ti. Alza una guadaña temblando y barre el suelo de fuera adentro por tu lado: sáltala. O la alza sobre la cabeza y la clava donde estás: al clavarla el suelo se resquebraja a los lados, la guadaña se queda atascada y se le abren las costillas. Su único punto débil es el núcleo que late dentro, y solo con la caja abierta. Si te alejas, el suelo tiembla bajo tus pies y revientan púas de hueso. Su cabeza, un cráneo de babuino, apenas se sostiene en el cuello: se le cae cada rato o al golpearle, saca patas de hueso y te persigue a mordiscos. Si le tiras encima uno de los racimos de hueso del techo se tambalea con la caja abierta. A ratos entona su Réquiem: siega el suelo desde las paredes, hace llover huesos y levanta una ola de púas; después queda agotado y abierto. Herido, más deprisa, y a veces clava una guadaña tras otra.',
     lore: 'La caja torácica de algo que fue enorme, y que el parásito no ha dejado morir. Guarda dentro un núcleo que late como un corazón ajeno, y siega todo lo que se acerca a él.',
+  },
+  // La cabeza del Relicario (la saca su cuerpo, entities/Enemy.js: reaperHead).
+  cabezaRelicario: {
+    name: 'Testa del Relicario',
+    biome: 'oseo',
+    creature: 'babuino',
+    gore: { blood: '#8a1a10', flesh: ['#d8cfb0', '#a89e80', '#b8402e', '#f6f0dc'] },
+    behavior: 'reaperHead',
+    hp: 60, w: 28, h: 22,
+    noDeath: true,             // sin vida queda aturdida y vuelve a su cuello
+    speed: 115, lungeRange: 72, biteDamage: 18, biteCool: 0.9, chaseTime: 7, knockedTime: 3,
+    sounds: { attack: 'boneShriek', hurt: 'boneCrack' },
+    habits: 'Un cráneo de babuino de morro rojizo y colmillos enormes. Cae del cuello del Relicario, saca patas de hueso y te persigue: se agacha, abre las fauces y salta a morderte. Machacada, queda tumbada un rato; luego vuelve corriendo y trepa a su cuello.',
+    lore: 'Lo que queda de la cabeza del Relicario no se resigna a ser un adorno.',
   },
   vestigio: {
     frag: 'balistico', // fragmento de ADN que suelta (data/mutations.js -> FRAGMENTS)

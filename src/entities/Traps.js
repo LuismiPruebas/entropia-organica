@@ -596,6 +596,107 @@ export class BonePillar {
   dispose() { this.spr.dispose(); }
 }
 
+// Racimo de hueso: un amasijo de huesos atados que cuelga de un tendón en el techo.
+//   clusters: [{ x, y, w, regrow }]  cuelga de la casilla (x, y) del techo, w casillas de
+//   ancho (3). Al golpearlo tiembla y cae: hiere lo que pille (también a ti) y, si le cae
+//   encima al Relicario, lo deja tambaleándose con la caja abierta. Vuelve a crecer a `regrow` s (10).
+export class BoneCluster {
+  constructor(game, room, def) {
+    this.game = game;
+    this.room = room;
+    this.def = def;
+    this.W = (def.w ?? 3) * TILE; this.Hc = 26;
+    this.top = def.y * TILE;
+    this.x = def.x * TILE; this.w = this.W; this.h = this.Hc + 8;
+    this.state = 'hang'; this.t = 0; this.dy = 0; this.vy = 0; this.grow = 1;
+    this.alive = true;
+    this.spr = canvasSprite(game, this.W + 4, this.Hc + 14, 2);
+    this.acc = 1;
+    room.targets.push(this);
+  }
+
+  get y() { return this.top + this.dy; }
+  get cx() { return this.x + this.w / 2; }
+  get cy() { return this.y + this.h / 2; }
+
+  hit() {
+    if (this.state !== 'hang') return false;
+    this.state = 'shake'; this.t = 0; this.alive = false;
+    this.game.audio.play('boneCreak', { x: this.cx, y: this.top });
+    return true;
+  }
+
+  update(dt) {
+    const g = this.game, p = g.player, w = this.room.world;
+    this.t += dt;
+    if (this.state === 'shake') {
+      if (Math.random() < 0.5) g.particles.emit(this.cx + (Math.random() - 0.5) * this.W, this.top + 4, { vx: (Math.random() - 0.5) * 20, vy: 30, life: 0.5, gravity: 300, color: [0.82, 0.74, 0.6] });
+      if (this.t >= 0.35) { this.state = 'fall'; this.t = 0; this.vy = 60; g.audio.play('boneChatter', { x: this.cx, y: this.top }); }
+    } else if (this.state === 'fall') {
+      this.vy = Math.min(600, this.vy + 1200 * dt);
+      this.dy += this.vy * dt;
+      const r = { x: this.x, y: this.y + 8, w: this.W, h: this.Hc };
+      if (p.invuln <= 0 && overlap(p, r)) g.hurtPlayer(this.def.damage ?? 20, this.cx, 'un racimo de huesos');
+      let smash = false;
+      for (const e of this.room.enemies) {
+        if (!e.alive || !overlap(e, r)) continue;
+        if (e.def.behavior === 'bossReaper') { e.bonk = true; smash = true; }
+        else if (!e.clusterHit) { e.clusterHit = true; e.hurt(30, 'trap', false, { x: this.cx, y: r.y + r.h }); }
+      }
+      if (smash || w.solidAtPx(this.cx, r.y + r.h) || r.y > w.pixelH) {
+        this.state = 'gone'; this.t = 0;
+        g.audio.play('boneCollapse', { x: this.cx, y: r.y + r.h });
+        g.shake = Math.max(g.shake, 4);
+        for (let i = 0; i < 22; i++) g.particles.emit(this.x + Math.random() * this.W, r.y + r.h - 4, { vx: (Math.random() - 0.5) * 200, vy: -60 - Math.random() * 140, life: 0.8, gravity: 700, color: Math.random() < 0.5 ? [0.9, 0.84, 0.7] : [0.6, 0.5, 0.38] });
+        for (const e of this.room.enemies) e.clusterHit = false;
+      }
+    } else if (this.state === 'gone') {
+      if (this.t >= (this.def.regrow ?? 10)) { this.state = 'grow'; this.t = 0; this.dy = 0; this.grow = 0; }
+    } else if (this.state === 'grow') {
+      this.grow = Math.min(1, this.t / 1.5);
+      if (this.grow >= 1) { this.state = 'hang'; this.alive = true; }
+    }
+    const sh = this.state === 'shake' ? Math.sin(this.t * 60) : this.state === 'hang' ? Math.sin(this.t * 1.3) * 0.5 : 0;
+    this.spr.place(this.x - 2 + sh, this.top + this.dy);
+    this.spr.mesh.visible = this.spr.glow.visible = this.state !== 'gone';
+    this.#paint(dt);
+  }
+
+  #paint(dt) {
+    this.acc += dt;
+    if (this.acc < 1 / 15) return;
+    this.acc = 0;
+    const { g, gl } = this.spr, W = this.W + 4, Hs = this.Hc + 14, k = this.grow;
+    g.clearRect(0, 0, W, Hs); gl.clearRect(0, 0, W, Hs);
+    // Tendón del que cuelga (se tensa al caer: desaparece).
+    if (this.state !== 'fall') for (let y = 0; y < 9; y++) px(g, W / 2 - 1 + Math.round(Math.sin(y * 0.8)), y, '#5a2a1c', 2, 1);
+    // Amasijo: huesos cruzados, un cráneo y vértebras, atados.
+    const oy = 8, sc = Math.max(0.2, k);
+    const bones = [[2, 6, W - 3, 12], [3, 16, W - 4, 9], [5, 20, W - 6, 22], [W / 2 - 10, 4, W / 2 + 8, 24]];
+    for (const [x0, y0, x1, y1] of bones) {
+      const n = Math.hypot(x1 - x0, y1 - y0);
+      for (let s = 0; s <= n; s++) {
+        const x = W / 2 + (x0 + (x1 - x0) * s / n - W / 2) * sc, y = oy + (y0 + (y1 - y0) * s / n) * sc;
+        px(g, x - 2, y - 2, BONE.out, 5, 5);
+      }
+      for (let s = 0; s <= n; s++) {
+        const x = W / 2 + (x0 + (x1 - x0) * s / n - W / 2) * sc, y = oy + (y0 + (y1 - y0) * s / n) * sc;
+        px(g, x - 1, y - 1, s < 3 || s > n - 3 ? BONE.light : BONE.mid, 3, 3); px(g, x - 1, y - 1, BONE.hl);
+      }
+    }
+    // Cráneo en medio, con las cuencas oscuras.
+    const cx = W / 2, cy = oy + 13 * sc, r = 6 * sc;
+    for (let y = -r - 1; y <= r + 1; y++) for (let x = -r - 1; x <= r + 1; x++) { const d = Math.hypot(x, y) / r; if (d <= 1.15) px(g, cx + x, cy + y, d > 0.95 ? BONE.out : d < 0.5 && x < 0 && y < 0 ? BONE.hl : BONE.light); }
+    px(g, cx - 3 * sc, cy - 1, BONE.out, 2, 2); px(g, cx + 1 * sc, cy - 1, BONE.out, 2, 2);
+    // Ligaduras.
+    px(g, W / 2 - 2, oy, '#5a2a1c', 4, Math.round(this.Hc * sc));
+    if (this.state === 'shake') { px(gl, W / 2 - 3, 2, 'rgba(255,90,60,0.6)', 6, 4); }
+    this.spr.commit();
+  }
+
+  dispose() { this.spr.dispose(); }
+}
+
 // Tolva de huesos: suelta fardos que se apilan en una torre que te sube y luego se desmorona.
 export class BoneStack {
   constructor(game, room, def) {

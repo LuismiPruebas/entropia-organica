@@ -2196,7 +2196,6 @@ export const LEVELS = {
       { type: 'vestigio', x: 17, y: 13 },
     ],
     traps: [
-      { x: 14, y: 13, n: 2, dir: 'up' },
       { x: 11, y: 23, n: 2, dir: 'up' },
     ],
     slabs: [
@@ -2360,9 +2359,6 @@ export const LEVELS = {
       { type: 'vestigio', x: 18, y: 17 },
       { type: 'acorazado', x: 33, y: 12 },
     ],
-    traps: [
-      { x: 33, y: 17, n: 3, dir: 'up', len: 2 },
-    ],
     fangs: [
       { x: 21, y: 6, len: 2 },
       { x: 35, y: 6, len: 2.5 },
@@ -2521,8 +2517,6 @@ export const LEVELS = {
     traps: [
       { x: 1, y: 44, n: 2, dir: 'right', len: 3, period: 2.6 },
       { x: 30, y: 38, n: 2, dir: 'left', len: 3, period: 2.6, phase: 1.3 },
-      { x: 13, y: 53, n: 6, dir: 'up' },
-      { x: 9, y: 53, n: 6, dir: 'up', len: 2, period: 3.2 },
     ],
     slabs: [
       { x: 6, y: 40, w: 7 },
@@ -2628,6 +2622,23 @@ export const LEVELS = {
     ],
     enemies: [
       { type: 'relicario', x: 30, y: 24 },
+    ],
+    slabs: [
+      { x: 4, y: 20, w: 2, delay: 1.3, regrow: 4.5 },
+      { x: 6, y: 20, w: 2, delay: 1.3, regrow: 4.5 },
+      { x: 8, y: 20, w: 2, delay: 1.3, regrow: 4.5 },
+      { x: 54, y: 20, w: 2, delay: 1.3, regrow: 4.5 },
+      { x: 56, y: 20, w: 2, delay: 1.3, regrow: 4.5 },
+      { x: 58, y: 20, w: 2, delay: 1.3, regrow: 4.5 },
+      { x: 14, y: 15, w: 2, delay: 1.3, regrow: 4.5 },
+      { x: 16, y: 15, w: 2, delay: 1.3, regrow: 4.5 },
+      { x: 46, y: 15, w: 2, delay: 1.3, regrow: 4.5 },
+      { x: 48, y: 15, w: 2, delay: 1.3, regrow: 4.5 },
+    ],
+    clusters: [
+      { x: 9, y: 4, w: 3 },
+      { x: 29, y: 4, w: 3 },
+      { x: 49, y: 4, w: 3 },
     ],
     links: [
       { id: 'p1', x: 63, y: 22, w: 1, h: 3, to: 'H3', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [61, 24] },

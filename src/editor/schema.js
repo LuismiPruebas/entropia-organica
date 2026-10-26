@@ -165,6 +165,10 @@ export const KINDS = {
     label: 'Pilar de hueso quebradizo (golpes: se derrumba en puente)', color: '#c8b088',
     make: (x, y) => ({ x, y, h: 4, fall: 'right' }), box: (o) => [o.x, o.y - (o.h ?? 4) + 1, 1, o.h ?? 4], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => (o.fall === 'left' ? 'pilar ←' : 'pilar →'),
   },
+  clusters: {
+    label: 'Racimo de hueso del techo (golpéalo: cae y aplasta)', color: '#f0dcb0',
+    make: (x, y) => ({ x, y, w: 3, regrow: 10 }), box: (o) => [o.x, o.y, o.w ?? 3, 2], move: (o, x, y) => { o.x = x; o.y = y; }, text: () => 'racimo',
+  },
   stacks: {
     label: 'Tolva de huesos (golpéala: apila fardos que te suben)', color: '#e8d4a8',
     make: (x, y) => ({ x, y, w: 2, max: 4, hold: 8 }), box: (o) => [o.x, o.y - (o.max ?? 4) + 1, o.w ?? 2, o.max ?? 4], move: (o, x, y) => { o.x = x; o.y = y; }, text: (o) => (o.period ? `tolva ${o.period}s` : 'tolva'),
@@ -261,4 +265,4 @@ export const KINDS = {
 };
 
 // Orden de las claves al escribir una sala en levels.js.
-export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'spouts', 'sinks', 'mouths', 'drips', 'traps', 'slabs', 'fangs', 'pillars', 'stacks', 'winds', 'bellows', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
+export const KEY_ORDER = ['name', 'biome', 'secret', 'ambient', 'map', 'grid', 'sacs', 'enemies', 'nodules', 'hidden', 'gates', 'pads', 'pods', 'valves', 'floats', 'movers', 'fluids', 'spouts', 'sinks', 'mouths', 'drips', 'traps', 'slabs', 'fangs', 'pillars', 'stacks', 'clusters', 'winds', 'bellows', 'faces', 'texts', 'decor', 'veil', 'blood', 'arteries', 'heartValves', 'ventricles', 'links', 'exits', 'hints', 'zones'];
