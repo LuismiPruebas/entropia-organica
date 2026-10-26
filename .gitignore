@@ -1,6 +1,9 @@
 # Referencias de diseño: se quedan solo en local
 referencias/
 
+# Bancos de pruebas (probar salas, escuchar música): solo en local
+pruebas/
+
 # Dependencias y restos del sistema
 node_modules/
 .DS_Store
