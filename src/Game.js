@@ -21,7 +21,7 @@ import { MapView } from './ui/MapView.js';
 import { START } from './data/levels.js';
 import { MUTATIONS, FRAGMENTS, LINES } from './data/mutations.js';
 import { BIOMES } from './data/biomes.js';
-import { LEVELS } from './data/levels.js';
+import { LEVELS, PHYSICAL_LINKS } from './data/levels.js';
 import { ITEMS, INFECTION } from './state/State.js';
 import { BINDINGS, keyName } from './core/Bindings.js';
 import { BIRTH } from './entities/Womb.js';
@@ -185,7 +185,7 @@ export class Game {
   }
 
   // ---------- Salas ----------
-  loadRoom(id, spawn) {
+  loadRoom(id, spawn, carry = null) {
     this.audio.stopBossMusic(0.8);
     this.hud.endDialogue();
     // Un parto a medias no sigue en otra sala (p. ej. al saltar a una sala de prueba).
@@ -203,6 +203,7 @@ export class Game {
     this.world = this.room.world;
     this.gore.reset(this.world);
     this.player.spawnAt(...spawn);
+    if (carry) this.#carryIn(carry);
     this.#unstick();
     this.#updateCamera(1, true);
     this.audio.setBiome(this.room.biome.sound);
@@ -233,7 +234,7 @@ export class Game {
     // Con varias salidas en el mismo lado, `at` indica el tramo (filas o columnas) de cada una.
     const along = Math.floor((side === 'left' || side === 'right' ? p.cy : p.cx) / TILE);
     const pass = (this.room.links ?? []).find((l) => l.def.to && (l.def.trigger ?? 'touch') === 'touch' && l.edge === side && along >= l.span[0] && along <= l.span[1]);
-    if (pass) return this.#travel(pass.def.to, pass.def.toLink, pass.def.spawn, pass.visible);
+    if (pass) return this.#travel(pass.def.to, pass.def.toLink, pass.def.spawn, pass.visible, this.#carryOut(pass, side));
     const exit = (this.room.def.exits ?? []).find((e) => e.side === side && (!e.at || (along >= e.at[0] && along <= e.at[1])));
     if (exit?.toLink) return this.#travel(exit.to, exit.toLink, exit.spawn);
     if (!exit) {
@@ -999,13 +1000,38 @@ export class Game {
   }
 
   // Viaje a un punto de conexión (o a unas coordenadas): la misma transición que una salida.
-  #travel(to, toLink, spawn, portal = false) {
+  #travel(to, toLink, spawn, portal = false, carry = null) {
     if (!LEVELS[to]) return;
     const at = (toLink && linkArrival(LEVELS[to], toLink)) ?? spawn ?? START.spawn;
     this.linkLock = toLink ?? null;
     this.mode = 'transition';
-    this.transition = { t: 0, exit: { to, spawn: at }, loaded: false };
+    this.transition = { t: 0, exit: { to, spawn: at, carry: carry && toLink ? { ...carry, to, toLink } : null }, loaded: false };
     if (portal) this.audio.play('womb', this.player); // cruzar un hueco entre salas no suena: un portal sí
+  }
+
+  // Aberturas de techo y suelo sin teletransporte (levels.js: physicalLinks): lo que te
+  // llevas al cruzar — impulso, salto de aire y en qué punto de la boca cruzaste.
+  #carryOut(link, side) {
+    if (!PHYSICAL_LINKS || (side !== 'top' && side !== 'bottom')) return null;
+    const p = this.player;
+    return { side, vx: p.vx, vy: p.vy, airJumps: p.airJumps, groundJump: p.groundJump, along: (p.cx - link.rect.x) / link.rect.w };
+  }
+
+  // ...y dónde reapareces: en la boca correspondiente de la otra sala, con ese movimiento.
+  // Subiendo, en el fondo de su pozo (lo que falte lo trepas tú, o vuelves a caer).
+  #carryIn(c) {
+    const l = (LEVELS[c.to]?.links ?? []).find((k) => k.id === c.toLink);
+    const w = this.world, p = this.player;
+    if (!l) return;
+    const lw = (l.w ?? 1) * TILE, lx = l.x * TILE;
+    const atBottom = l.y + (l.h ?? 2) >= w.h, atTop = l.y === 0;
+    if ((c.side === 'top' && !atBottom) || (c.side === 'bottom' && !atTop)) return;
+    p.x = Math.max(lx, Math.min(lx + lw - p.w, lx + c.along * lw - p.w / 2));
+    if (c.side === 'top') { p.y = w.pixelH - p.h; p.vy = Math.min(c.vy, -1); }
+    else { p.y = 0; p.vy = Math.max(c.vy, 1); }
+    p.vx = c.vx;
+    p.airJumps = c.airJumps;
+    p.groundJump = c.groundJump;
   }
 
   #updateTransition(dt) {
@@ -1013,7 +1039,7 @@ export class Game {
     tr.t += dt;
     if (!tr.loaded && tr.t >= TRANSITION / 2) {
       tr.loaded = true;
-      this.loadRoom(tr.exit.to, tr.exit.spawn);
+      this.loadRoom(tr.exit.to, tr.exit.spawn, tr.exit.carry);
     }
     this.fade = 1 - Math.abs(tr.t / (TRANSITION / 2) - 1);
     if (tr.t >= TRANSITION) {

@@ -2,7 +2,7 @@
 // Carga las salas del mapa activo (data/levels.js elige el mundo de data/worlds/), permite pintar tiles, colocar elementos, etiquetar
 // zonas, ampliar o crear salas, comprobar el alcance con la física real y guardar de
 // vuelta en el archivo del mapa (src/data/worlds/<id>.js) (solo las salas tocadas) o probar en el juego sin guardar.
-import { LEVELS, START, WORLDS, WORLD_ID, setWorld } from '../data/levels.js';
+import { LEVELS, START, WORLDS, WORLD_ID, PHYSICAL_LINKS, setWorld } from '../data/levels.js';
 import { BIOMES } from '../data/biomes.js';
 import { TileWorld } from '../core/Physics.js';
 import { paintRoom } from '../factory/TilePainter.js';
@@ -80,6 +80,8 @@ function undo(redo = false) {
 
 // ---------------------------------------------------------------- cuadrícula
 const W = () => room().grid[0].length, H = () => room().grid.length;
+// Punto en un hueco de techo o suelo de un mapa sin teletransporte (levels.js physicalLinks).
+const physicalHole = (l, r = room()) => PHYSICAL_LINKS && l.x > 0 && l.x + (l.w ?? 1) < r.grid[0].length && (l.y === 0 || l.y + (l.h ?? 2) >= r.grid.length);
 const getTile = (x, y) => (x < 0 || y < 0 || x >= W() || y >= H() ? '#' : room().grid[y][x]);
 function setTile(x, y, c) {
   if (x < 0 || y < 0 || x >= W() || y >= H()) return;
@@ -755,8 +757,14 @@ function draw() {
     g.font = 'bold 11px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(`→ ${ex.to}`, bx + bw / 2, by + bh / 2);
   }
-  // Dónde se aparece al llegar a un punto (si no es sobre el propio punto).
+  // Dónde se aparece al llegar a un punto (si no es sobre el propio punto). Por un hueco de
+  // techo o suelo, en un mapa sin teletransporte, se entra por la propia boca: nada que marcar.
   for (const l of r.links ?? []) {
+    if (physicalHole(l, r)) {
+      g.fillStyle = 'rgba(58,255,138,0.7)'; g.font = '10px monospace'; g.textAlign = 'left'; g.textBaseline = l.y === 0 ? 'top' : 'bottom';
+      g.fillText(`entra por la boca (${l.id})`, l.x * z, l.y === 0 ? ((l.h ?? 2) * z + 1) : (l.y * z - 1));
+      continue;
+    }
     const [ax, ay] = l.arrive ?? linkArrival(r, l.id) ?? [l.x, l.y + 1];
     const auto = !l.arrive;
     if (auto && ax >= l.x && ax < l.x + (l.w ?? 1) && ay >= l.y && ay < l.y + (l.h ?? 2)) continue;   // sobre el propio punto: no hace falta marca
@@ -1453,9 +1461,15 @@ function linkFields(o) {
   h += field('se activa', { v: LINK_TRIGGER[o.trigger ?? 'use'], options: Object.values(LINK_TRIGGER) }, (v) => { o.trigger = Object.keys(LINK_TRIGGER).find((k) => LINK_TRIGGER[k] === v); }, 'select');
   h += field('aspecto', { v: LINK_LOOK[o.look ?? 'portal'], options: Object.values(LINK_LOOK) }, (v) => { o.look = Object.keys(LINK_LOOK).find((k) => LINK_LOOK[k] === v); }, 'select');
   h += field('tamaño [ancho, alto] (casillas)', [o.w ?? 1, o.h ?? 2], (v) => { o.w = Math.max(1, v[0]); o.h = Math.max(1, v[1]); });
-  const auto = linkArrival({ ...room(), links: [{ ...o, arrive: undefined }] }, o.id);
-  h += `<p class="dim" style="margin:6px 0 2px">Al llegar aquí se aparece en: <b style="color:#3aff8a">${o.arrive ? `[${o.arrive}] (marcado)` : `[${auto}] (automático)`}</b></p>`;
-  h += `<div class="row"><button id="lk-arr" class="${S.pickArrive === o ? 'on' : ''}">${S.pickArrive === o ? 'Haz clic en la sala… (Esc cancela)' : 'Marcar dónde se aparece'}</button>${o.arrive ? '<button id="lk-arr-del">Volver a automático</button>' : ''}</div>`;
+  if (physicalHole(o)) {
+    // Sin teletransporte: por un hueco de techo o suelo se entra con tu propio movimiento.
+    h += `<p class="dim" style="margin:6px 0 2px">Hueco de ${o.y === 0 ? 'techo' : 'suelo'}: en este mapa <b style="color:#3aff8a">se entra por la boca</b>, con el impulso que traes (${o.y === 0 ? 'cayendo' : 'subiendo: el pozo hay que poder trepararlo con doble salto, paredes, garfios o corriente; si no, vuelves a caer'}). No hay llegada que marcar.</p>`;
+    if (o.arrive) h += '<div class="row"><button id="lk-arr-del">Quitar la llegada marcada (no se usa)</button></div>';
+  } else {
+    const auto = linkArrival({ ...room(), links: [{ ...o, arrive: undefined }] }, o.id);
+    h += `<p class="dim" style="margin:6px 0 2px">Al llegar aquí se aparece en: <b style="color:#3aff8a">${o.arrive ? `[${o.arrive}] (marcado)` : `[${auto}] (automático)`}</b></p>`;
+    h += `<div class="row"><button id="lk-arr" class="${S.pickArrive === o ? 'on' : ''}">${S.pickArrive === o ? 'Haz clic en la sala… (Esc cancela)' : 'Marcar dónde se aparece'}</button>${o.arrive ? '<button id="lk-arr-del">Volver a automático</button>' : ''}</div>`;
+  }
   // Estado de la conexión, en claro.
   const back = o.to && o.toLink && (S.rooms[o.to]?.links ?? []).find((l) => l.id === o.toLink);
   const two = back && back.to === S.id && back.toLink === o.id;

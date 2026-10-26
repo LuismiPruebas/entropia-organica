@@ -189,6 +189,7 @@ export class Player {
     this.coyote = 0;
     this.jumpBuf = 0;
     this.airJumps = 0;
+    this.groundJump = false;  // saliste del suelo sin saltar (te caes de un borde o se hunde la losa): te queda tu salto
     this.dash = 0;
     this.dashCd = 0;
     this.dashDir = 1;
@@ -561,7 +562,8 @@ export class Player {
         // Colgado, W recoge cuerda: solo Espacio te suelta, con toda la inercia del balanceo.
         if (this.jumpKey === 'Space') this.#releaseRope(true);
         else this.jumpBuf = 0;
-      } else if (this.onGround || this.coyote > 0) {
+      } else if (this.onGround || this.coyote > 0 || (this.groundJump && !this.clinging)) {
+        // En el suelo, o en el aire sin haber saltado: tu salto de siempre (no gasta el doble).
         this.#jump(JUMP_V);
         this.rope = null;
       } else if (this.clinging) {
@@ -595,6 +597,7 @@ export class Player {
     if (this.onGround) {
       this.coyote = COYOTE;
       this.airJumps = 1;
+      this.groundJump = true;
       if (!wasGround) { audio.play('land', this); this.landT = 0.14; }
       if (!this.#onHazard()) this.lastSafe = { x: this.x, y: this.y + this.h - STAND_H }; // siempre de pie
     }
@@ -846,6 +849,7 @@ export class Player {
     this.windJumpT = 0.35;
     this.jumpBuf = 0;
     this.coyote = 0;
+    this.groundJump = false;
     this.game.audio.play('jump', this);
   }
 

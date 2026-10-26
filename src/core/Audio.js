@@ -2,6 +2,7 @@
 // play(name, {x, y}) aplica paneo y atenuación según la distancia al oyente.
 
 import { startBossMusic } from './BossMusic.js';
+import { startZoneMusic } from './ZoneMusic.js';
 
 // Temas de jefe con pista grabada (los demás siguen siendo los generados de BossMusic.js).
 const BOSS_TRACKS = { ganglio: 'assets/music/alien-womb.mp3', matriarca: 'assets/music/red-de-niebla.mp3', sapo: 'assets/music/diseased-machine.mp3' };
@@ -980,15 +981,19 @@ export class AudioSys {
       this.biomeMusicTimer = setTimeout(() => {
         if (this.biomeMusicDef !== music) return;
         this.#duck(music.duck ?? 0.35, 6);
-        const track = this.#track(music.src, this.zoneBus, {
-          vol: music.vol ?? 0.6, fadeIn: music.loop && !first ? 0.2 : 6, // en bucle, sin bache al repetir
-          onend: () => {
-            if (this.biomeTrack !== track) return;
-            this.biomeTrack = null;
-            if (!music.loop) this.#duck(1, 6);
-            next(false);
-          },
-        });
+        const onend = () => {
+          if (this.biomeTrack !== track) return;
+          this.biomeTrack = null;
+          if (!music.loop) this.#duck(1, 6);
+          next(false);
+        };
+        // Tema sintetizado (music.theme, core/ZoneMusic.js) o pista grabada (music.src).
+        const track = music.theme
+          ? startZoneMusic(this, music.theme, this.zoneBus, { vol: music.vol ?? 0.6, onend })
+          : this.#track(music.src, this.zoneBus, {
+            vol: music.vol ?? 0.6, fadeIn: music.loop && !first ? 0.2 : 6, // en bucle, sin bache al repetir
+            onend,
+          });
         this.biomeTrack = track;
       }, wait * 1000);
     };

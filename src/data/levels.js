@@ -8,9 +8,13 @@
 // Para añadir un mundo: crea src/data/worlds/<id>.js (con WORLD, START y LEVELS) y
 // regístralo en WORLDS.
 
+// physicalLinks: las aberturas de techo y suelo no teletransportan. Al cruzarlas conservas
+// tu movimiento: subiendo apareces en la boca de abajo de la sala de arriba con el impulso
+// que traías (el pozo que quede lo trepas tú, o vuelves a caer); cayendo entras por la boca
+// de arriba con tu caída. Sin ello se aparece de pie en la llegada del punto (`arrive`).
 export const WORLDS = {
   original: { name: 'Mapa original', load: () => import('./worlds/original.js') },
-  mapa2: { name: 'Mapa 2', load: () => import('./worlds/mapa2.js') },
+  mapa2: { name: 'Mapa 2', load: () => import('./worlds/mapa2.js'), physicalLinks: true },
 };
 const KEY = 'linfa.world';
 
@@ -29,6 +33,7 @@ export const WORLD_ID = chosen();
 const world = await WORLDS[WORLD_ID].load();
 export const LEVELS = world.LEVELS;
 export const START = world.START;
+export const PHYSICAL_LINKS = !!WORLDS[WORLD_ID].physicalLinks;
 
 // Cambia el mundo activo (hay que recargar para que se aplique).
 export function setWorld(id) {

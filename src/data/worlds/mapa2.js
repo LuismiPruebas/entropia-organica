@@ -68,7 +68,7 @@ export const LEVELS = {
     ],
     nodules: [[12, 10], [29, 11, 'luz']],
     links: [
-      { id: 'p1', x: 43, y: 0, w: 2, h: 2, to: 'A2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [44, 4] },
+      { id: 'p1', x: 43, y: 0, w: 2, h: 2, to: 'A2', toLink: 'p2', trigger: 'touch', look: 'hidden' },
     ],
     hints: [
       { x: 3, y: 11, r: 3, text: 'Una cápsula médica abandonada, reventada desde dentro. Lo que llevaba se arrastró más arriba, hacia la médula.' },
@@ -134,7 +134,7 @@ export const LEVELS = {
     nodules: [[14, 31], [30, 20], [30, 5], [25, 39, 'luz'], [16, 16, 'luz'], [20, 24]],
     links: [
       { id: 'p1', x: 0, y: 23, w: 1, h: 2, to: 'A3', toLink: 'p1', trigger: 'touch', look: 'hidden' },
-      { id: 'p2', x: 43, y: 40, w: 2, h: 2, to: 'A', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [41, 39] },
+      { id: 'p2', x: 43, y: 40, w: 2, h: 2, to: 'A', toLink: 'p1', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 34, y: 0, w: 2, h: 2, to: 'A8', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p4', x: 0, y: 6, w: 1, h: 3, to: 'A9', toLink: 'p1', trigger: 'touch', look: 'hidden' },
     ],
@@ -623,7 +623,7 @@ export const LEVELS = {
     links: [
       { id: 'p1', x: 63, y: 20, w: 1, h: 3, to: 'P2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [60, 22] },
       { id: 'p2', x: 63, y: 5, w: 1, h: 3, to: 'P2', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [60, 7] },
-      { id: 'p3', x: 34, y: 40, w: 3, h: 2, to: 'A5', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [32, 37] },
+      { id: 'p3', x: 34, y: 40, w: 3, h: 2, to: 'A5', toLink: 'p3', trigger: 'touch', look: 'hidden' },
       { id: 'p4', x: 8, y: 0, w: 4, h: 2, to: 'P4', toLink: 'p1', trigger: 'touch', look: 'hidden' },
     ],
     lamps: [[25, 2, 13], [46, 6, 8], [57, 10, 18], [30, 16, 14], [42, 20, 16], [18, 25, 12], [32, 29, 17], [42, 32, 14], [24, 34, 16]],
@@ -656,17 +656,17 @@ export const LEVELS = {
       '##...###########################',
       '##...###########################',
     ],
-    lamps: [[12, 3, 12], [26, 4, 14]],
-    backdrop: 4,
     winds: [
       { x: 2, y: 6, w: 3, h: 8, dir: 'up', rise: 80 },
       { x: 2, y: 0, w: 3, h: 4, dir: 'up' },
     ],
     links: [
-      { id: 'p1', x: 2, y: 12, w: 3, h: 2, to: 'P6', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [3, 12] },
+      { id: 'p1', x: 2, y: 12, w: 3, h: 2, to: 'P6', toLink: 'p3', trigger: 'touch', look: 'hidden' },
       { id: 'p2', x: 2, y: 0, w: 3, h: 2, to: 'P10', toLink: 'p1', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 31, y: 5, w: 1, h: 3, to: 'P11', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [29, 7] },
     ],
+    lamps: [[12, 3, 12], [26, 4, 14]],
+    backdrop: 4,
   },
 
   P10: {
@@ -715,8 +715,8 @@ export const LEVELS = {
       { x: 5, y: 23, dir: 'up', reach: 10, period: 4.5 },
     ],
     links: [
-      { id: 'p1', x: 18, y: 26, w: 3, h: 2, to: 'P9', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [19, 26] },
-      { id: 'p2', x: 49, y: 26, w: 4, h: 2, to: 'P11', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [50, 25] },
+      { id: 'p1', x: 18, y: 26, w: 3, h: 2, to: 'P9', toLink: 'p2', trigger: 'touch', look: 'hidden' },
+      { id: 'p2', x: 49, y: 26, w: 4, h: 2, to: 'P11', toLink: 'p1', trigger: 'touch', look: 'hidden' },
     ],
     backdrop: 4,
   },
@@ -749,9 +749,9 @@ export const LEVELS = {
       { x: 10, y: 9, w: 4, h: 5, dir: 'up' },
     ],
     links: [
-      { id: 'p1', x: 1, y: 0, w: 4, h: 2, to: 'P10', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [2, 2] },
-      { id: 'p2', x: 2, y: 12, w: 4, h: 2, to: 'P12', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [3, 12] },
-      { id: 'p3', x: 10, y: 12, w: 4, h: 2, to: 'P12', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [11, 12] },
+      { id: 'p1', x: 1, y: 0, w: 4, h: 2, to: 'P10', toLink: 'p2', trigger: 'touch', look: 'hidden' },
+      { id: 'p2', x: 2, y: 12, w: 4, h: 2, to: 'P12', toLink: 'p1', trigger: 'touch', look: 'hidden' },
+      { id: 'p3', x: 10, y: 12, w: 4, h: 2, to: 'P12', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p4', x: 0, y: 5, w: 1, h: 3, to: 'P9', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [2, 7] },
       { id: 'p5', x: 31, y: 9, w: 1, h: 4, to: 'A12', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [29, 12] },
     ],
@@ -804,14 +804,14 @@ export const LEVELS = {
       '##....####....##',
       '##....####....##',
     ],
-    links: [
-      { id: 'p1', x: 2, y: 0, w: 4, h: 2, to: 'P11', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [3, 1] },
-      { id: 'p2', x: 10, y: 0, w: 4, h: 2, to: 'P11', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [11, 1] },
-      { id: 'p3', x: 2, y: 37, w: 4, h: 2, to: 'P8', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [3, 38] },
-      { id: 'p4', x: 10, y: 37, w: 4, h: 2, to: 'P8', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [11, 38] },
-    ],
     winds: [
       { x: 10, y: 0, w: 4, h: 39, dir: 'up' },
+    ],
+    links: [
+      { id: 'p1', x: 2, y: 0, w: 4, h: 2, to: 'P11', toLink: 'p2', trigger: 'touch', look: 'hidden' },
+      { id: 'p2', x: 10, y: 0, w: 4, h: 2, to: 'P11', toLink: 'p3', trigger: 'touch', look: 'hidden' },
+      { id: 'p3', x: 2, y: 37, w: 4, h: 2, to: 'P8', toLink: 'p2', trigger: 'touch', look: 'hidden' },
+      { id: 'p4', x: 10, y: 37, w: 4, h: 2, to: 'P8', toLink: 'p3', trigger: 'touch', look: 'hidden' },
     ],
   },
 
@@ -863,7 +863,6 @@ export const LEVELS = {
       '####################....########################',
       '####################....########################',
     ],
-    lamps: [[8, 1, 15], [24, 1, 14], [14, 7, 15], [11, 14, 12], [30, 14, 10], [21, 20, 15], [26, 31, 18], [15, 33, 11]],
     enemies: [
       { type: 'colonia', x: 16, y: 12 },
       { type: 'larva', x: 23, y: 9 },
@@ -896,9 +895,10 @@ export const LEVELS = {
     links: [
       { id: 'p1', x: 0, y: 9, w: 1, h: 4, to: 'P11', toLink: 'p5', trigger: 'touch', look: 'hidden', arrive: [2, 12] },
       { id: 'p2', x: 0, y: 21, w: 1, h: 3, to: 'D3', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [2, 23] },
-      { id: 'p3', x: 20, y: 41, w: 4, h: 1, to: 'D4', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [19, 39] },
+      { id: 'p3', x: 20, y: 41, w: 4, h: 1, to: 'D4', toLink: 'p1', trigger: 'touch', look: 'hidden' },
       { id: 'p4', x: 47, y: 4, w: 1, h: 3, to: 'D5', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [46, 6] },
     ],
+    lamps: [[8, 1, 15], [24, 1, 14], [14, 7, 15], [11, 14, 12], [30, 14, 10], [21, 20, 15], [26, 31, 18], [15, 33, 11]],
     backdrop: 4,
   },
 
@@ -936,7 +936,6 @@ export const LEVELS = {
       '##############################################....##############',
       '##############################################....##############',
     ],
-    lamps: [[13, 1, 14], [35, 1, 17], [4, 5, 12], [57, 5, 17], [34, 12, 14], [50, 13, 17], [9, 16, 16], [35, 20, 13], [52, 21, 10]],
     enemies: [
       { type: 'anguila', x: 6, y: 23 },
       { type: 'anguila', x: 12, y: 23 },
@@ -973,12 +972,13 @@ export const LEVELS = {
       { x: 23, y: 25, dir: 'up', pool: 1 },
     ],
     links: [
-      { id: 'p1', x: 2, y: 0, w: 4, h: 1, to: 'P8', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [3, 3] },
-      { id: 'p2', x: 46, y: 27, w: 4, h: 1, to: 'A14', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [44, 25] },
-      { id: 'p3', x: 20, y: 0, w: 4, h: 1, to: 'D2', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [21, 3] },
-      { id: 'p4', x: 52, y: 0, w: 4, h: 1, to: 'D4', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [53, 3] },
+      { id: 'p1', x: 2, y: 0, w: 4, h: 1, to: 'P8', toLink: 'p4', trigger: 'touch', look: 'hidden' },
+      { id: 'p2', x: 46, y: 27, w: 4, h: 1, to: 'A14', toLink: 'p2', trigger: 'touch', look: 'hidden' },
+      { id: 'p3', x: 20, y: 0, w: 4, h: 1, to: 'D2', toLink: 'p1', trigger: 'touch', look: 'hidden' },
+      { id: 'p4', x: 52, y: 0, w: 4, h: 1, to: 'D4', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p5', x: 63, y: 21, w: 1, h: 3, to: 'D1', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [60, 23] },
     ],
+    lamps: [[13, 1, 14], [35, 1, 17], [4, 5, 12], [57, 5, 17], [34, 12, 14], [50, 13, 17], [9, 16, 16], [35, 20, 13], [52, 21, 10]],
     backdrop: 3,
   },
 
@@ -1047,7 +1047,6 @@ export const LEVELS = {
       '##............##',
       '##....##########',
     ],
-    lamps: [[6, 4, 14]],
     winds: [
       { x: 10, y: 10, w: 4, h: 48, dir: 'up' },
       { x: 10, y: 4, w: 4, h: 6, dir: 'up', rise: 80 },
@@ -1055,10 +1054,11 @@ export const LEVELS = {
     ],
     links: [
       { id: 'p1', x: 0, y: 7, w: 1, h: 3, to: 'P6', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [1, 9] },
-      { id: 'p2', x: 2, y: 0, w: 4, h: 2, to: 'P12', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [3, 1] },
-      { id: 'p3', x: 10, y: 0, w: 4, h: 2, to: 'P12', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [11, 1] },
-      { id: 'p4', x: 2, y: 58, w: 4, h: 1, to: 'A13', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [7, 57] },
+      { id: 'p2', x: 2, y: 0, w: 4, h: 2, to: 'P12', toLink: 'p3', trigger: 'touch', look: 'hidden' },
+      { id: 'p3', x: 10, y: 0, w: 4, h: 2, to: 'P12', toLink: 'p4', trigger: 'touch', look: 'hidden' },
+      { id: 'p4', x: 2, y: 58, w: 4, h: 1, to: 'A13', toLink: 'p1', trigger: 'touch', look: 'hidden' },
     ],
+    lamps: [[6, 4, 14]],
   },
 
   A14: {
@@ -1081,7 +1081,6 @@ export const LEVELS = {
       '################################',
       '################################',
     ],
-    lamps: [[6, 6, 16], [27, 8, 14]],
     enemies: [
       { type: 'cabeza', x: 7, y: 11 },
       { type: 'colonia', x: 25, y: 11 },
@@ -1110,9 +1109,10 @@ export const LEVELS = {
     ],
     links: [
       { id: 'p1', x: 0, y: 6, w: 1, h: 4, to: 'A7', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [2, 9] },
-      { id: 'p2', x: 14, y: 0, w: 4, h: 1, to: 'A13', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [15, 3] },
+      { id: 'p2', x: 14, y: 0, w: 4, h: 1, to: 'A13', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 31, y: 9, w: 1, h: 3, to: 'D1', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [29, 11] },
     ],
+    lamps: [[6, 6, 16], [27, 8, 14]],
   },
 
   A7: {
@@ -1308,7 +1308,7 @@ export const LEVELS = {
     ],
     links: [
       { id: 'p1', x: 0, y: 4, w: 1, h: 3, to: 'P4', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [3, 6] },
-      { id: 'p2', x: 40, y: 26, w: 3, h: 2, to: 'P2', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [38, 23] },
+      { id: 'p2', x: 40, y: 26, w: 3, h: 2, to: 'P2', toLink: 'p4', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 63, y: 18, w: 1, h: 3, to: 'P6', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [59, 20] },
     ],
     lamps: [[4, 2, 13], [14, 2, 13], [34, 2, 17], [47, 2, 18], [20, 11, 16], [54, 15, 16], [16, 19, 12], [26, 19, 11]],
@@ -1387,10 +1387,10 @@ export const LEVELS = {
       { x: 29, y: 36, dir: 'up', reach: 10, period: 3.6 },
     ],
     links: [
-      { id: 'p1', x: 4, y: 40, w: 4, h: 2, to: 'A5', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [5, 39] },
+      { id: 'p1', x: 4, y: 40, w: 4, h: 2, to: 'A5', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p2', x: 0, y: 20, w: 1, h: 3, to: 'P3', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [2, 22] },
       { id: 'p3', x: 0, y: 5, w: 1, h: 3, to: 'P3', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [3, 7] },
-      { id: 'p4', x: 24, y: 0, w: 3, h: 2, to: 'P5', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [22, 8] },
+      { id: 'p4', x: 24, y: 0, w: 3, h: 2, to: 'P5', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p5', x: 24, y: 0, w: 3, h: 2, to: '', toLink: '', trigger: 'touch', look: 'hidden' },
     ],
     lamps: [[12, 2, 12], [29, 2, 15], [38, 9, 8], [3, 10, 14], [20, 11, 16], [27, 17, 14], [12, 28, 14]],
@@ -1452,7 +1452,7 @@ export const LEVELS = {
       { x: 16, y: 22, dir: 'up', reach: 10, period: 4 },
     ],
     links: [
-      { id: 'p1', x: 8, y: 26, w: 4, h: 2, to: 'P3', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [9, 25] },
+      { id: 'p1', x: 8, y: 26, w: 4, h: 2, to: 'P3', toLink: 'p4', trigger: 'touch', look: 'hidden' },
       { id: 'p2', x: 47, y: 4, w: 1, h: 3, to: 'P5', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [44, 6] },
       { id: 'p3', x: 0, y: 9, w: 1, h: 3, to: 'P7', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [4, 11] },
     ],
@@ -1542,9 +1542,9 @@ export const LEVELS = {
       { x: 44, y: 21, dir: 'up', reach: 9, period: 4 },
     ],
     links: [
-      { id: 'p1', x: 30, y: 26, w: 4, h: 2, to: 'A6', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [28, 25] },
+      { id: 'p1', x: 30, y: 26, w: 4, h: 2, to: 'A6', toLink: 'p4', trigger: 'touch', look: 'hidden' },
       { id: 'p2', x: 52, y: 0, w: 4, h: 2, to: 'P2', toLink: 'p1', trigger: 'touch', look: 'hidden' },
-      { id: 'p3', x: 18, y: 0, w: 3, h: 2, to: 'P3', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [19, 4] },
+      { id: 'p3', x: 18, y: 0, w: 3, h: 2, to: 'P3', toLink: 'p3', trigger: 'touch', look: 'hidden' },
       { id: 'p4', x: 0, y: 11, w: 1, h: 3, to: 'A15', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [2, 13] },
     ],
     lamps: [[60, 7, 14], [5, 16, 10], [49, 17, 18], [60, 17, 14], [16, 18, 18], [40, 21, 11]],
@@ -1703,7 +1703,6 @@ export const LEVELS = {
       '#.............B......S....######',
       '####....########################',
     ],
-    lamps: [[26, 1, 9], [21, 46, 15], [3, 51, 9]],
     enemies: [
       { type: 'anguila', x: 20, y: 40 },
       { type: 'anguila', x: 23, y: 30 },
@@ -1748,9 +1747,10 @@ export const LEVELS = {
       { x: 4, y: 37, dir: 'up', pool: 2 },
     ],
     links: [
-      { id: 'p1', x: 4, y: 55, w: 4, h: 1, to: 'A13', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [8, 54] },
-      { id: 'p2', x: 2, y: 0, w: 4, h: 1, to: 'D3', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [4, 3] },
+      { id: 'p1', x: 4, y: 55, w: 4, h: 1, to: 'A13', toLink: 'p3', trigger: 'touch', look: 'hidden' },
+      { id: 'p2', x: 2, y: 0, w: 4, h: 1, to: 'D3', toLink: 'p1', trigger: 'touch', look: 'hidden' },
     ],
+    lamps: [[26, 1, 9], [21, 46, 15], [3, 51, 9]],
     backdrop: 2,
   },
 
@@ -1802,7 +1802,6 @@ export const LEVELS = {
       '#...........b..#',
       '##....##########',
     ],
-    lamps: [[6, 1, 16], [2, 26, 17], [3, 35, 16]],
     enemies: [
       { type: 'larva', x: 4, y: 37 },
       { type: 'larva', x: 2, y: 33 },
@@ -1829,9 +1828,10 @@ export const LEVELS = {
       { x: 10, y: 34, dir: 'up', pool: 0 },
     ],
     links: [
-      { id: 'p1', x: 2, y: 41, w: 4, h: 1, to: 'D2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [7, 40] },
+      { id: 'p1', x: 2, y: 41, w: 4, h: 1, to: 'D2', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p2', x: 15, y: 7, w: 1, h: 3, to: 'A12', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [14, 9] },
     ],
+    lamps: [[6, 1, 16], [2, 26, 17], [3, 35, 16]],
     backdrop: 2,
   },
 
@@ -1911,7 +1911,6 @@ export const LEVELS = {
       '####....########',
       '####....########',
     ],
-    lamps: [[13, 2, 14], [4, 31, 17], [13, 35, 12], [12, 45, 14], [11, 60, 14], [2, 64, 15]],
     enemies: [
       { type: 'anguila', x: 11, y: 22 },
       { type: 'anguila', x: 2, y: 38 },
@@ -1926,10 +1925,11 @@ export const LEVELS = {
       { x: 15, y: 54, dir: 'left', always: true },
     ],
     links: [
-      { id: 'p1', x: 4, y: 0, w: 4, h: 1, to: 'A12', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [5, 3] },
-      { id: 'p2', x: 4, y: 69, w: 4, h: 1, to: 'A13', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [2, 62] },
+      { id: 'p1', x: 4, y: 0, w: 4, h: 1, to: 'A12', toLink: 'p3', trigger: 'touch', look: 'hidden' },
+      { id: 'p2', x: 4, y: 69, w: 4, h: 1, to: 'A13', toLink: 'p4', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 15, y: 47, w: 1, h: 3, to: 'D7', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [13, 49] },
     ],
+    lamps: [[13, 2, 14], [4, 31, 17], [13, 35, 12], [12, 45, 14], [11, 60, 14], [2, 64, 15]],
     backdrop: 1,
   },
 
@@ -1987,7 +1987,7 @@ export const LEVELS = {
     ],
     links: [
       { id: 'p1', x: 0, y: 4, w: 1, h: 3, to: 'A12', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [2, 6] },
-      { id: 'p2', x: 45, y: 27, w: 2, h: 1, to: 'D6', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [42, 10] },
+      { id: 'p2', x: 45, y: 27, w: 2, h: 1, to: 'D6', toLink: 'p1', trigger: 'touch', look: 'hidden' },
     ],
     lamps: [[2, 1, 14], [36, 1, 17], [36, 9, 16], [9, 17, 14], [37, 17, 13]],
     backdrop: 3,
@@ -2076,8 +2076,8 @@ export const LEVELS = {
       { x: 33, y: 34, dir: 'up', pool: 0 },
     ],
     links: [
-      { id: 'p1', x: 45, y: 0, w: 2, h: 1, to: 'D5', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [45, 9] },
-      { id: 'p2', x: 44, y: 41, w: 3, h: 1, to: 'D7', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [42, 33] },
+      { id: 'p1', x: 45, y: 0, w: 2, h: 1, to: 'D5', toLink: 'p2', trigger: 'touch', look: 'hidden' },
+      { id: 'p2', x: 44, y: 41, w: 3, h: 1, to: 'D7', toLink: 'p1', trigger: 'touch', look: 'hidden' },
     ],
     lamps: [[42, 1, 16], [3, 8, 12]],
     backdrop: 2,
@@ -2144,7 +2144,7 @@ export const LEVELS = {
       { x: 48, y: 27, dir: 'up', pool: 2 },
     ],
     links: [
-      { id: 'p1', x: 57, y: 0, w: 6, h: 1, to: 'D6', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [61, 4] },
+      { id: 'p1', x: 57, y: 0, w: 6, h: 1, to: 'D6', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p2', x: 0, y: 19, w: 1, h: 3, to: 'D4', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [3, 21] },
     ],
     lamps: [[11, 17, 16], [23, 17, 15], [38, 17, 19], [48, 17, 17], [57, 21, 10]],
@@ -2221,7 +2221,7 @@ export const LEVELS = {
     ],
     links: [
       { id: 'p1', x: 63, y: 11, w: 1, h: 3, to: 'A5', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [61, 13] },
-      { id: 'p2', x: 5, y: 27, w: 3, h: 1, to: 'A16', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [9, 13] },
+      { id: 'p2', x: 5, y: 27, w: 3, h: 1, to: 'A16', toLink: 'p1', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 0, y: 5, w: 1, h: 3, to: 'H1', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [2, 7] },
     ],
     backdrop: 2,
@@ -2312,7 +2312,7 @@ export const LEVELS = {
       { x: 28, y: 7, len: 2 },
     ],
     links: [
-      { id: 'p1', x: 5, y: 0, w: 3, h: 1, to: 'A15', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [4, 9] },
+      { id: 'p1', x: 5, y: 0, w: 3, h: 1, to: 'A15', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p2', x: 0, y: 20, w: 1, h: 3, to: 'H2', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [2, 22] },
       { id: 'p3', x: 0, y: 40, w: 1, h: 3, to: 'H4', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [2, 42] },
       { id: 'p4', x: 47, y: 49, w: 1, h: 3, to: 'A10', toLink: 'p5', trigger: 'touch', look: 'hidden', arrive: [45, 51] },
@@ -2372,7 +2372,7 @@ export const LEVELS = {
     ],
     links: [
       { id: 'p1', x: 63, y: 5, w: 1, h: 3, to: 'A15', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [61, 8] },
-      { id: 'p2', x: 8, y: 27, w: 3, h: 1, to: 'H2', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [12, 17] },
+      { id: 'p2', x: 8, y: 27, w: 3, h: 1, to: 'H2', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 0, y: 15, w: 1, h: 3, to: 'H3', toLink: 'p1', trigger: 'touch', look: 'hidden', arrive: [2, 17] },
     ],
     backdrop: 3,
@@ -2439,7 +2439,7 @@ export const LEVELS = {
     ],
     links: [
       { id: 'p1', x: 63, y: 20, w: 1, h: 3, to: 'A16', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [61, 22] },
-      { id: 'p2', x: 8, y: 0, w: 3, h: 1, to: 'H1', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [9, 6] },
+      { id: 'p2', x: 8, y: 0, w: 3, h: 1, to: 'H1', toLink: 'p2', trigger: 'touch', look: 'hidden' },
       { id: 'p3', x: 0, y: 20, w: 1, h: 3, to: 'H3', toLink: 'p2', trigger: 'touch', look: 'hidden', arrive: [2, 22] },
     ],
     backdrop: 2,
