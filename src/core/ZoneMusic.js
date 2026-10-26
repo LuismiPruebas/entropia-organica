@@ -133,7 +133,9 @@ export function startZoneMusic(audio, theme, dest, { vol = 0.6, onend, ahead = 0
     for (const o of [car, mod]) { o.start(t); o.stop(t + ring + 0.15); }
   };
 
-  // Zumbido saturado de fondo (re grave), con su filtro respirando; entra y sale por secciones.
+  // Zumbido de fondo (re grave), con su filtro respirando; entra y sale por secciones. Con
+  // su propia saturación, suave y por debajo: por el saturador del riff se volvía un muro
+  // que tapaba el pulso y las notas ahogadas.
   const drone = c.createGain();
   drone.gain.value = 0.0001;
   const dlp = c.createBiquadFilter();
@@ -142,7 +144,13 @@ export function startZoneMusic(audio, theme, dest, { vol = 0.6, onend, ahead = 0
   dlfo.frequency.value = 0.07; dlg.gain.value = 160;
   dlfo.connect(dlg).connect(dlp.frequency);
   const dos = [midi(26), midi(26) * 1.006, midi(38)].map((fr) => { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.connect(dlp); o.start(); return o; });
-  dlp.connect(drone).connect(dist);
+  const dsat = c.createWaveShaper();
+  const dcurve = new Float32Array(1024);
+  for (let i = 0; i < dcurve.length; i++) { const x = (i / (dcurve.length - 1)) * 2 - 1; dcurve[i] = Math.tanh(x * 2.5); }
+  dsat.curve = dcurve;
+  const droneOut = c.createGain();
+  droneOut.gain.value = 0.12;
+  dlp.connect(drone).connect(dsat).connect(droneOut).connect(out);
   dlfo.start();
   const droneTo = (t, v, secs) => { drone.gain.setTargetAtTime(Math.max(0.0001, v), t, secs / 3); };
 
@@ -175,7 +183,7 @@ export function startZoneMusic(audio, theme, dest, { vol = 0.6, onend, ahead = 0
     if (i === 0 && sec.i === 0) {
       // Cambio de sección: escape de vapor y el zumbido se ajusta.
       if (sec.name !== 'intro') steam(t - step * 2, 1.4, 0.05);
-      droneTo(t, { intro: 0.5, riff: 0.18, pausa: 0.45, riff2: 0.18, cierre: 0.35 }[sec.name], 3);
+      droneTo(t, { intro: 0.3, riff: 0.1, pausa: 0.22, riff2: 0.1, cierre: 0.25 }[sec.name], 3);
       if (sec.name === 'cierre') droneTo(t + step * 16 * 3, 0.0001, 4);
     }
     // ---- Riff
