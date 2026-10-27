@@ -2366,17 +2366,22 @@ export const BEHAVIORS = {
     const dist = Math.hypot(dx, p.cy - e.cy) || 1;
     e.look = { x: (dx * (e.dir || 1)) / dist, y: (p.cy - e.cy) / dist };
     const legsTo = (v) => { e.legs = (e.legs ?? 0) + (v - (e.legs ?? 0)) * Math.min(1, dt * 8); };
+    const turnTo = (v) => { e.yaw = (e.yaw ?? v) + (v - (e.yaw ?? v)) * Math.min(1, dt * 5); };   // 0 de perfil, π/2 de frente
+    // Dónde ha de estar la caja para que la nuca encaje en el cuello.
+    const seat = (n) => { const [sx, sy] = e.creature.socket(e); return { x: n.x - sx - e.w / 2, y: n.y - sy - e.h }; };
     e.contactDamage = 0;
     e.view = 'profile';
     if (e.state === 'attached') {
-      // En el cuello: se gira hacia ti (de frente si estás debajo, de tres cuartos a media
-      // distancia, de perfil si estás lejos), y a ratos grita o gruñe.
-      const n = boss.neck;
-      e.x = n.x - e.w / 2; e.y = n.y - e.h + 4; e.vx = e.vy = 0;
+      // En el cuello, apoyada por la nuca: se gira poco a poco hacia ti (de frente si estás
+      // debajo, de tres cuartos a media distancia, casi de perfil si estás lejos), y a
+      // ratos grita o gruñe.
       e.dir = Math.sign(dx) || e.dir;
-      legsTo(0);
       const ad = Math.abs(dx);
       e.view = ad < 56 ? 'front' : ad < 150 ? 'three' : 'profile';
+      turnTo(ad < 40 ? Math.PI / 2 : Math.max(0.3, (Math.PI / 2) * (1 - (ad - 40) / 170)));
+      const at = seat(boss.neck);
+      e.x = at.x; e.y = at.y; e.vx = e.vy = 0;
+      legsTo(0);
       e.moodT = (e.moodT ?? 2 + Math.random() * 2) - dt;
       if (e.moodT <= 0) {
         e.mood = Math.random() < 0.45 ? 'scream' : 'growl';
@@ -2397,6 +2402,7 @@ export const BEHAVIORS = {
       return;
     }
     e.dropNow = false;
+    turnTo(0.3);
     e.vy = Math.min(420, (e.vy ?? 0) + GRAVITY * dt);
     // Golpeada en el suelo no se aturde: se revuelve, se gira hacia ti y muerde enseguida.
     if (e.retaliate) {
@@ -2440,7 +2446,7 @@ export const BEHAVIORS = {
     } else if (e.state === 'return') {
       // Vuelve corriendo a su cuerpo y trepa de un salto hasta el cuello.
       legsTo(1);
-      const n = boss.neck, ddx = n.x - e.cx;
+      const n = boss.neck, ddx = seat(n).x + e.w / 2 - e.cx;
       e.dir = Math.sign(ddx) || e.dir;
       e.vx = e.dir * (d.speed ?? 110) * 1.2;
       if (Math.abs(ddx) < 30 && e.onGround) {
@@ -2449,9 +2455,9 @@ export const BEHAVIORS = {
         g.audio.play('stagChitter', e);
       }
     } else if (e.state === 'climb') {
-      const n = boss.neck;
-      e.vx = (n.x - e.cx) * 3;
-      if (e.vy > -40 && Math.abs(e.y + e.h - 4 - n.y) < 18) { e.state = 'attached'; e.hp = d.hp; g.audio.play('boneReform', e); return; }
+      const at = seat(boss.neck);
+      e.vx = (at.x - e.x) * 3;
+      if (e.vy > -40 && Math.abs(e.y - at.y) < 18) { e.state = 'attached'; e.hp = d.hp; g.audio.play('boneReform', e); return; }
       if (e.onGround && e.vy >= 0) e.state = 'return';
     }
     g.world.move(e, dt);
