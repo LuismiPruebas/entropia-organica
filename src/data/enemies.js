@@ -317,10 +317,12 @@ export const ENEMIES = {
     alwaysVisible: true,       // parte del jefe: nunca en sombra
     hp: 70, w: 64, h: 50,
     noDeath: true,             // no muere ni se aturde: golpeada, se revuelve
-    speed: 115, lungeRange: 110, biteDamage: 18, chompDamage: 12, biteCool: 0.9, chaseTime: 7, knockedTime: 3,
+    noStagger: true,           // ni recula con los golpes
+    speed: 115, lungeRange: 110, biteDamage: 20, chompDamage: 16, biteCool: 0.9, chaseTime: 7, knockedTime: 3,
+    maulTime: 0.8, maulDamage: 6, // si te pilla, presa: te sacude y te desgarra (3 dentelladas) y te lanza
     neckBiteWind: 0.32, neckBiteCool: 1.4, // el mordisco desde el cuello: aviso y respiro
     sounds: { attack: 'boneShriek', hurt: 'boneCrack', scream: 'reaperCore', growl: 'boneRasp' },
-    habits: 'Un cráneo de babuino de morro rojizo y colmillos enormes. Va unida al cuello del Relicario y te sigue con la mirada; si te acercas a su hocico, abre las fauces y te tira un mordisco. Tras unos cuantos ataques se le cae, saca patas de hueso y te persigue castañeteando los dientes: de cerca te encadena bocados a ras de suelo; a media distancia se agacha y salta a morderte, y si te pilla sigue mordiendo. En el cuello se gira hacia ti (de perfil, de tres cuartos o de frente), grita y gruñe. Golpearla no la aturde: se revuelve y te muerde. Al rato vuelve corriendo y trepa a su cuello.',
+    habits: 'Un cráneo de babuino de morro rojizo y colmillos enormes. Va unida al cuello del Relicario y te sigue con la mirada; si te acercas a su hocico, abre las fauces y te tira un mordisco. Tras unos cuantos ataques se le cae, saca patas de hueso y te persigue castañeteando los dientes: de cerca te encadena bocados a ras de suelo; a media distancia se agacha y salta a morderte. Si sus dientes te pillan, hace presa: te sacude, te desgarra y te lanza lejos (la Embestida te suelta). En el cuello se gira hacia ti (de perfil, de tres cuartos o de frente), grita y gruñe. Golpearla no la aturde ni la aparta: se revuelve y te muerde al instante; pegarle de frente es meterte en su boca. Al rato vuelve corriendo y trepa a su cuello.',
     lore: 'Lo que queda de la cabeza del Relicario no se resigna a ser un adorno.',
   },
   vestigio: {

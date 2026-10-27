@@ -2376,7 +2376,9 @@ export const BEHAVIORS = {
   // mordisco desde el cuello. Cuando se cae, saca unas patas de hueso y te persigue
   // castañeteando: de cerca, bocados encadenados a ras de suelo; a media distancia salta a
   // morderte. Cada mordisco abre las fauces y las cierra de golpe (chasquido, sacudida,
-  // astillas o sangre). Al final vuelve corriendo a su cuerpo, trepa y se encaja en el cuello.
+  // astillas o sangre); si te pilla, hace presa: te sacude entre los dientes, te desgarra y
+  // te lanza. No recula ni se aturde: golpeada, muerde al instante. Al final vuelve
+  // corriendo a su cuerpo, trepa y se encaja en el cuello.
   reaperHead(e, dt, g) {
     const d = e.def, p = g.player, boss = e.boss;
     if (!boss?.alive) { e.die(); return; }
@@ -2392,24 +2394,56 @@ export const BEHAVIORS = {
       const k = Math.cos(e.yaw ?? 0.3), cx = e.cx + e.dir * 44 * k, w = 46 + 20 * (1 - k);
       return { x: cx - w / 2, y: e.y - 4, w, h: e.h + 8 + 26 * (1 - k) };
     };
-    // Cierra las fauces de golpe; hiere si te pilla dentro.
+    // Dónde ha de estar la caja para que la nuca encaje en el cuello.
+    const seat = (n) => { const [sx, sy] = e.creature.socket(e); return { x: n.x - sx - e.w / 2, y: n.y - sy - e.h }; };
+    // Cierra las fauces de golpe; si te pilla dentro, hace presa: te retiene entre los dientes.
     const snap = (dmg) => {
       e.jaw = 0; e.snapT = 0.12;
-      const hit = overlap(p, biteBox());
-      if (hit) g.hurtPlayer(dmg, e.cx, d.name, undefined, undefined, 200);
+      const hit = overlap(p, biteBox()) && p.invuln <= 0 && !g.state.dead;
+      if (hit) {
+        g.hurtPlayer(dmg, e.cx, d.name, undefined, 0.2, 40);
+        if (!(g.state.timers.shield > 0)) { e.maulT = d.maulTime ?? 0.8; e.maulTick = 0.2; }
+        g.hitStop = Math.max(g.hitStop ?? 0, 0.08);                               // el golpe se siente
+      }
       g.audio.play('jawSnap', e);
-      g.shake = Math.max(g.shake, hit ? 4 : 2);
+      g.shake = Math.max(g.shake, hit ? 5 : 2);
       const bx = biteBox(), tx = bx.x + bx.w / 2, ty = e.y + e.h * 0.6;
-      for (let i = 0; i < (hit ? 14 : 6); i++) g.particles.emit(tx, ty, { vx: (Math.random() - 0.5) * 150, vy: -40 - Math.random() * 100, life: 0.45, gravity: 600, color: hit ? [0.75, 0.06, 0.06] : [0.95, 0.9, 0.78] });
+      for (let i = 0; i < (hit ? 16 : 6); i++) g.particles.emit(tx, ty, { vx: (Math.random() - 0.5) * 150, vy: -40 - Math.random() * 100, life: 0.45, gravity: 600, color: hit ? [0.75, 0.06, 0.06] : [0.95, 0.9, 0.78] });
       return hit;
     };
+    // Presa: te sacude entre los dientes, te desgarra a dentelladas y te lanza lejos. La
+    // Embestida te suelta.
+    if (e.maulT > 0) {
+      e.maulT -= dt; e.maulTick -= dt;
+      const sway = Math.sin(e.t * 26);
+      e.jaw = 0.1; e.thrashA = sway * 0.2; e.shakeX = Math.round(Math.sin(e.t * 47) * 2);
+      const bx = biteBox(), nx = bx.x + bx.w / 2 - p.w / 2 + sway * 4, ny = e.y + e.h * 0.62 + (1 - Math.cos(e.yaw ?? 0.3)) * 18 - p.h / 2;
+      if (!g.world.rectSolid(nx, ny, p.w, p.h)) { p.x = nx; p.y = ny; }
+      p.vx = p.vy = 0; p.rope = null;
+      if (e.maulTick <= 0 && e.maulT > 0.05) {
+        e.maulTick = 0.24;
+        if (!g.state.dev.god) g.state.damage(d.maulDamage ?? 6, d.name);
+        g.audio.play('jawSnap', e); g.audio.play('splat', e);
+        g.shake = Math.max(g.shake, 3);
+        g.gore.hit(p.cx, p.cy, -e.dir, { blood: '#8a0a14' }, 0.7);
+      }
+      const free = p.dash > 0 || g.state.dead;
+      if (e.maulT <= 0 || free) {
+        e.maulT = 0; e.thrashA = 0; e.shakeX = 0; e.cool = 1.1;
+        if (!free) { p.vx = e.dir * 320; p.vy = -260; p.wallLock = 0.35; g.audio.play(d.sounds?.attack ?? 'boneShriek', e); g.shake = Math.max(g.shake, 5); }
+        p.invuln = Math.max(p.invuln, 0.9);
+        if (e.state !== 'attached') { e.state = 'chase'; e.chomps = 3; }
+      }
+      if (e.state === 'attached') { const at = seat(boss.neck); e.x = at.x; e.y = at.y; }
+      else { e.vx = 0; e.vy = Math.min(420, (e.vy ?? 0) + GRAVITY * dt); g.world.move(e, dt); }
+      return;
+    }
+    e.thrashA = 0; e.shakeX = 0;
     // Te sigue con la mirada (el ojo, en su dibujo: hacia ti en sus coordenadas).
     const dist = Math.hypot(dx, p.cy - e.cy) || 1;
     e.look = { x: (dx * (e.dir || 1)) / dist, y: (p.cy - e.cy) / dist };
     const legsTo = (v) => { e.legs = (e.legs ?? 0) + (v - (e.legs ?? 0)) * Math.min(1, dt * 8); };
     const turnTo = (v) => { e.yaw = (e.yaw ?? v) + (v - (e.yaw ?? v)) * Math.min(1, dt * 5); };   // 0 de perfil, π/2 de frente
-    // Dónde ha de estar la caja para que la nuca encaje en el cuello.
-    const seat = (n) => { const [sx, sy] = e.creature.socket(e); return { x: n.x - sx - e.w / 2, y: n.y - sy - e.h }; };
     e.contactDamage = 0;
     e.view = 'profile';
     if (e.state === 'attached') {
@@ -2434,6 +2468,11 @@ export const BEHAVIORS = {
       if (e.moodLeft > 0) e.jaw = e.mood === 'scream' ? 1 : 0.3 + Math.sin(e.t * 30) * 0.08;
       else e.mood = null;
       // Te acercas a su hocico: abre las fauces (aviso) y te tira un mordisco desde el cuello.
+      // Si le pegas teniéndolo a tiro, el mordisco llega casi sin aviso.
+      if (e.retaliate) {
+        e.retaliate = false;
+        if (!(e.biteWind > 0) && overlap(p, biteBox())) { e.biteWind = 0.14; g.audio.play(d.sounds?.growl ?? 'boneRasp', e); }
+      }
       if (e.biteWind > 0) {
         e.biteWind -= dt; e.mood = null; e.moodLeft = 0;
         e.jaw = Math.min(1, e.jaw + dt * 5);
@@ -2453,12 +2492,13 @@ export const BEHAVIORS = {
     e.dropNow = false;
     turnTo(0.1);                                                                 // suelta, de perfil
     e.vy = Math.min(420, (e.vy ?? 0) + GRAVITY * dt);
-    // Golpeada en el suelo no se aturde: se revuelve, se gira hacia ti y muerde enseguida.
+    // Golpeada en el suelo no se aturde ni recula: se revuelve, se gira hacia ti y muerde al
+    // momento (sin esperar a su respiro). Pegarle de frente es meterte en su boca.
     if (e.retaliate) {
       e.retaliate = false;
-      if ((e.state === 'chase' || e.state === 'sprout' || e.state === 'return') && e.onGround) {
+      if (['chase', 'sprout', 'return', 'windup'].includes(e.state) && e.onGround) {
         e.dir = Math.sign(dx) || e.dir; e.chaseT = Math.max(e.chaseT, 2);
-        if (Math.abs(dx) < 70) { e.state = 'chomp'; e.timer = 0.14; e.chomps = 1; e.vx = 0; }
+        if (Math.abs(dx) < 80) { e.state = 'chomp'; e.timer = 0.1; e.chomps = 0; e.vx = 0; }
         else { e.state = 'windup'; e.timer = 0.16; e.vx = 0; }
         g.audio.play(d.sounds?.growl ?? 'boneRasp', e);
       }
@@ -2500,7 +2540,7 @@ export const BEHAVIORS = {
     } else if (e.state === 'windup') {
       // Se agacha y abre las fauces.
       legsTo(0.6); e.jaw = Math.min(1, e.jaw + dt * 6); e.vx = 0;
-      if (e.timer <= 0) { e.state = 'lunge'; e.vx = e.dir * 250; e.vy = -210; e.bit = false; e.timer = 0.6; g.audio.play(d.sounds?.attack ?? 'boneShriek', e); }
+      if (e.timer <= 0) { e.state = 'lunge'; e.vx = e.dir * 290; e.vy = -210; e.bit = false; e.timer = 0.6; g.audio.play(d.sounds?.attack ?? 'boneShriek', e); }
     } else if (e.state === 'lunge') {
       // Salta con las fauces abiertas y las cierra al alcanzarte (o al caer); si te ha
       // pillado, sigue mordiendo en el suelo.

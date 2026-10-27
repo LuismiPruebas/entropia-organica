@@ -224,8 +224,9 @@ export const REAPER_HEAD = {
     const look = (s) => 0.78 * cam.s + 0.62 * cam.c * s;                    // cuánto te mira la cuenca s
     const front = cam.s > 0.96;                                             // de frente: los dos lados por igual
     const B = pen(g, cam, hinge(0));
-    const Sk = pen(g, cam, hinge(-jaw * (0.3 * cam.c + 0.1 * cam.s)));    // el cráneo se echa atrás al abrir
-    const Jw = pen(g, cam, hinge(jaw * 0.55));                              // la mandíbula baja
+    const th = e.thrashA ?? 0;                                              // presa: sacude la cabeza
+    const Sk = pen(g, cam, hinge(th - jaw * (0.3 * cam.c + 0.1 * cam.s)));  // el cráneo se echa atrás al abrir
+    const Jw = pen(g, cam, hinge(th + jaw * 0.55));                         // la mandíbula baja
     const upperCanine = (s) => Sk.cone([25.6, 9.3, 4.5 * s], [0.06, 1, 0.1 * s], 10, 4, 0.14 * cam.c, s < 0 && !front ? FANG_FAR : FANG, BIG_TOOTH);
     const lowerCanine = (s) => Jw.cone([29.6, 9.9, 3.6 * s], [0.05, -1, 0.05 * s], 6, 3.4, -0.12 * cam.c, s < 0 && !front ? FANG_FAR : FANG, BIG_TOOTH);
     // ---- Patas, atlas y la melena de detrás.
