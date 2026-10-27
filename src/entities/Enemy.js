@@ -2367,15 +2367,28 @@ export const BEHAVIORS = {
     e.look = { x: (dx * (e.dir || 1)) / dist, y: (p.cy - e.cy) / dist };
     const legsTo = (v) => { e.legs = (e.legs ?? 0) + (v - (e.legs ?? 0)) * Math.min(1, dt * 8); };
     e.contactDamage = 0;
-    if (e.knocked && e.state !== 'knocked') { e.knocked = false; e.state = 'knocked'; e.timer = d.knockedTime ?? 3; e.vx = 0; g.audio.play('boneCollapse', e); }
+    e.view = 'profile';
     if (e.state === 'attached') {
-      // En el cuello: se balancea, mira hacia ti y castañetea.
+      // En el cuello: se gira hacia ti (de frente si estás debajo, de tres cuartos a media
+      // distancia, de perfil si estás lejos), y a ratos grita o gruñe.
       const n = boss.neck;
       e.x = n.x - e.w / 2; e.y = n.y - e.h + 4; e.vx = e.vy = 0;
       e.dir = Math.sign(dx) || e.dir;
       legsTo(0);
-      if (Math.random() < dt * 0.8) e.jaw = 0.6;
+      const ad = Math.abs(dx);
+      e.view = ad < 56 ? 'front' : ad < 150 ? 'three' : 'profile';
+      e.moodT = (e.moodT ?? 2 + Math.random() * 2) - dt;
+      if (e.moodT <= 0) {
+        e.mood = Math.random() < 0.45 ? 'scream' : 'growl';
+        e.moodLeft = e.mood === 'scream' ? 0.9 : 1.3;
+        e.moodT = 3 + Math.random() * 4;
+        g.audio.play(e.mood === 'scream' ? (d.sounds?.scream ?? 'boneShriek') : (d.sounds?.growl ?? 'boneRasp'), e);
+      }
+      e.moodLeft = (e.moodLeft ?? 0) - dt;
+      if (e.moodLeft > 0) e.jaw = e.mood === 'scream' ? 1 : 0.3 + Math.sin(e.t * 30) * 0.08;
+      else e.mood = null;
       if (e.dropNow) {
+        e.mood = null; e.moodLeft = 0;
         e.dropNow = false;
         e.state = 'fall'; e.vy = -170; e.vx = e.dir * 70;
         g.audio.play(d.sounds?.attack ?? 'boneShriek', e);
@@ -2385,6 +2398,14 @@ export const BEHAVIORS = {
     }
     e.dropNow = false;
     e.vy = Math.min(420, (e.vy ?? 0) + GRAVITY * dt);
+    // Golpeada en el suelo no se aturde: se revuelve, se gira hacia ti y muerde enseguida.
+    if (e.retaliate) {
+      e.retaliate = false;
+      if ((e.state === 'chase' || e.state === 'sprout' || e.state === 'return') && e.onGround) {
+        e.dir = Math.sign(dx) || e.dir; e.state = 'windup'; e.timer = 0.16; e.vx = 0; e.chaseT = Math.max(e.chaseT, 2);
+        g.audio.play(d.sounds?.growl ?? 'boneRasp', e);
+      }
+    }
     if (e.state === 'fall') {
       legsTo(0);
       if (e.onGround) { e.state = 'sprout'; e.timer = 0.45; e.vx = 0; g.audio.play('thump', e); g.shake = Math.max(g.shake, 2); }
@@ -3227,7 +3248,7 @@ export class Enemy {
     this.lit = lit;
     const was = this.revealed;
     // Los jefes no se camuflan: siempre se les ve.
-    this.revealed = lit || nearby || !!this.def.boss;
+    this.revealed = lit || nearby || !!this.def.boss || !!this.def.alwaysVisible;
     if (this.revealed && !was && !this.seenOnce) {
       this.seenOnce = true;
       this.game.audio.play(this.def.sounds?.reveal ?? 'screech', this);
@@ -3309,12 +3330,10 @@ export class Enemy {
       return true;
     }
     this.hp -= n;
-    // No muere (la cabeza del Relicario): queda tumbada, aturdida, y luego vuelve a su cuello.
-    if (this.def.noDeath && this.hp <= 0) {
-      this.hp = 0; this.knocked = true; this.flash = 0.12;
-      this.game.audio.play(this.def.sounds?.hurt ?? 'hit', this);
-      this.game.gore.hit(this.cx, this.cy, Math.sign(this.cx - this.game.player.cx) || 1, this.def.gore, 1.2);
-      return true;
+    // No muere ni se aturde (la cabeza del Relicario): encaja el golpe y se revuelve contra ti.
+    if (this.def.noDeath) {
+      if (this.hp <= 0) this.hp = 1;
+      if (!silent) this.retaliate = true;
     }
     if (this.def.reforms && this.hp <= 0) {
       // No muere: se desmorona y al rato se recompone.

@@ -314,11 +314,12 @@ export const ENEMIES = {
     creature: 'babuino',
     gore: { blood: '#8a1a10', flesh: ['#d8cfb0', '#a89e80', '#b8402e', '#f6f0dc'] },
     behavior: 'reaperHead',
+    alwaysVisible: true,       // parte del jefe: nunca en sombra
     hp: 70, w: 46, h: 36,
-    noDeath: true,             // sin vida queda aturdida y vuelve a su cuello
+    noDeath: true,             // no muere ni se aturde: golpeada, se revuelve
     speed: 115, lungeRange: 72, biteDamage: 18, biteCool: 0.9, chaseTime: 7, knockedTime: 3,
-    sounds: { attack: 'boneShriek', hurt: 'boneCrack' },
-    habits: 'Un cráneo de babuino de morro rojizo y colmillos enormes. Va unida al cuello del Relicario y te sigue con la mirada; tras unos cuantos ataques se le cae, saca patas de hueso y te persigue: se agacha, abre las fauces y salta a morderte. Machacada, queda tumbada un rato; luego vuelve corriendo y trepa a su cuello.',
+    sounds: { attack: 'boneShriek', hurt: 'boneCrack', scream: 'reaperCore', growl: 'boneRasp' },
+    habits: 'Un cráneo de babuino de morro rojizo y colmillos enormes. Va unida al cuello del Relicario y te sigue con la mirada; tras unos cuantos ataques se le cae, saca patas de hueso y te persigue: se agacha, abre las fauces y salta a morderte. En el cuello se gira hacia ti (de perfil, de tres cuartos o de frente), grita y gruñe. Golpearla no la aturde: se revuelve y te muerde. Al rato vuelve corriendo y trepa a su cuello.',
     lore: 'Lo que queda de la cabeza del Relicario no se resigna a ser un adorno.',
   },
   vestigio: {

@@ -23,12 +23,16 @@ const jointLeg = (g, hx, hy, fx, fy, l1, l2, bend, w, c, cFar, joint) => jointLe
 export const REAPER_HEAD = {
   size: () => [W, H],
   origin: (e) => [e.cx - W / 2 + 2 * S, e.y + e.h - G0 * S],
+  // Vistas (e.view): 'profile' de perfil, 'three' tres cuartos, 'front' de frente. Al gruñir
+  // (e.mood 'growl') tiembla.
   draw(g, gl, e, t) {
+    if (e.view === 'front') return drawFront(g, gl, e, t);
+    const q = e.view === 'three' ? 1 : 0;                                    // tres cuartos: morro más corto, se ve el otro ojo
     const legs = e.legs ?? 0, jaw = e.jaw ?? 0;
     const run = Math.abs(e.vx) > 5 && legs > 0.5;
     const ph = (e.t ?? t) * 16;
     const lift = Math.round(legs * 9);
-    const cy = G0 - 11 - lift + (run ? Math.round(Math.sin(ph * 2)) : 0);
+    const cy = G0 - 11 - lift + (run ? Math.round(Math.sin(ph * 2)) : 0) + (e.mood === 'growl' ? Math.round(Math.sin(t * 50) * 0.6) : 0);
     // ---- Patas de hueso: cuatro, finas y articuladas, que corren en dos tiempos.
     if (legs > 0.05) {
       [[16, -1, 0], [22, 1, Math.PI], [30, -1, Math.PI / 2], [36, 1, Math.PI * 1.5]].forEach(([hx, side, off], i) => {
@@ -60,15 +64,17 @@ export const REAPER_HEAD = {
     blob(g, 25, cy + 4, 7, 2, C.boneD);                                     // pómulo en sombra
     for (let i = 0; i < 6; i++) px(g, 15 + i, cy - 6 + (i % 2), C.boneDD);  // grieta
     // ---- Morro de babuino: largo, rojo, con surcos azulados y el hocico achatado.
-    const mx = 41, my = cy - 1;
-    part(g, mx, my, 13, 5, C.snout, C.snoutD, C.snoutL);
-    blob(g, mx - 2, my - 2, 9, 2, C.snoutL);
-    for (let j = 0; j < 3; j++) for (let x = mx - 9; x < mx + 7; x += 0.5) px(g, x, my - 3 + j * 2 + Math.round(Math.sin(x * 0.5) * 0.5), j === 1 ? C.ridge : C.snoutD, 0.6, 0.6);
-    part(g, mx + 13, my + 1, 2.5, 3, C.snoutD, OUTLINE);                    // hocico
-    px(g, mx + 13, my + 1, OUTLINE, 2, 1);                                  // fosas
+    const mx = 41 - q * 5, my = cy - 1, sr = 13 - q * 4;
+    part(g, mx, my, sr, 5, C.snout, C.snoutD, C.snoutL);
+    blob(g, mx - 2, my - 2, sr - 4, 2, C.snoutL);
+    for (let j = 0; j < 3; j++) for (let x = mx - sr + 4; x < mx + sr - 6; x += 0.5) px(g, x, my - 3 + j * 2 + Math.round(Math.sin(x * 0.5) * 0.5), j === 1 ? C.ridge : C.snoutD, 0.6, 0.6);
+    part(g, mx + sr, my + 1, 2.5, 3, C.snoutD, OUTLINE);                    // hocico
+    px(g, mx + sr, my + 1, OUTLINE, 2, 1);                                  // fosas
     // ---- Arcada superior y colmillos enormes (los de arriba, hacia abajo).
-    limb(g, 28, cy + 3, mx + 10, my + 4, 2, C.bone);
-    for (const [x, len, w] of [[mx - 1, 13, 3], [mx + 6, 9, 2]]) { limb(g, x, my + 3, x + 1, my + 3 + len, w, C.fang, '#ffffff'); px(g, x + 1, my + 3 + len, OUTLINE); }
+    limb(g, 28, cy + 3, mx + sr - 3, my + 4, 2, C.bone);
+    for (const [x, len, w] of [[mx - 1, 13, 3], [mx + 6 - q * 3, 9 + q * 3, 2 + q]]) { limb(g, x, my + 3, x + 1, my + 3 + len, w, C.fang, '#ffffff'); px(g, x + 1, my + 3 + len, OUTLINE); }
+    // De tres cuartos asoma el otro ojo, junto al arranque del morro.
+    if (q) { blob(g, 35, cy - 4, 2.4, 2.4, OUTLINE); px(g, 35 + (e.look?.x ?? 0) * 0.8, cy - 4.5, C.eye, 1, 1); px1(gl, (35 + (e.look?.x ?? 0) * 0.8) * S, (cy - 4.5) * S, C.eye, 2, 2); }
     // ---- Órbita hundida y un ojo que arde y te sigue con la mirada.
     blob(g, 30, cy - 4, 3.6, 3.1, OUTLINE);
     const lx = Math.max(-1, Math.min(1, e.look?.x ?? 1)), ly = Math.max(-1, Math.min(1, e.look?.y ?? 0));
@@ -79,3 +85,42 @@ export const REAPER_HEAD = {
     limb(g, 25, cy - 8, 35, cy - 7 + ly * 0.6, 2, C.boneL);                 // ceño
   },
 };
+
+// De frente: la bóveda con su cresta, dos órbitas con ojos que arden y te siguen, el morro
+// rojo de mandril bajando por el centro con sus surcos azules a los lados, y los colmillos
+// enormes colgando a los dos lados de la boca; al gritar, la mandíbula cae del todo.
+function drawFront(g, gl, e, t) {
+  const jaw = e.jaw ?? 0, cx = 30;
+  const cy = G0 - 13 + (e.mood === 'growl' ? Math.round(Math.sin(t * 50) * 0.6) : 0);
+  const lx = Math.max(-1, Math.min(1, e.look?.x ?? 0)), ly = Math.max(-1, Math.min(1, e.look?.y ?? 0));
+  // Muñón del cuello asomando por debajo.
+  part(g, cx, cy + 12, 3.5, 2.5, C.boneD, C.boneDD);
+  // Mandíbula inferior: cae al abrir la boca; encías y colmillos de abajo.
+  const jy = cy + 10 + jaw * 9;
+  if (jaw > 0.05) blob(g, cx, cy + 10 + jaw * 4.5, 8, 1 + jaw * 4.5, C.gum);
+  part(g, cx, jy, 9, 2.5, C.boneD, C.boneDD, C.bone);
+  for (const s of [-1, 1]) limb(g, cx + s * 5, jy - 1, cx + s * 5, jy - 6, 2, C.fang);
+  // Cresta de púas en abanico y bóveda.
+  for (let i = -2; i <= 2; i++) limb(g, cx + i * 4, cy - 9, cx + i * 7, cy - 18 + Math.abs(i) * 2, i === 0 ? 3 : 2, C.boneL);
+  part(g, cx, cy - 3, 14, 10, C.boneD, C.boneDD);
+  blob(g, cx, cy - 4, 12, 8, C.bone);
+  blob(g, cx - 5, cy - 7, 5, 2.5, C.boneL);
+  for (const s of [-1, 1]) blob(g, cx + s * 11, cy + 2, 4, 3, C.boneD);    // pómulos
+  for (let i = 0; i < 5; i++) px(g, cx + 6 + i, cy - 8 + (i % 2), C.boneDD); // grieta
+  // Órbitas y ojos (miran hacia ti).
+  for (const s of [-1, 1]) {
+    blob(g, cx + s * 6, cy - 4, 3.6, 3, OUTLINE);
+    const ex = cx + s * 6 + lx * 1.4, ey = cy - 4.4 + ly * 1.2;
+    blob(g, ex, ey, 1.5, 1.3, '#5a0a08');
+    px(g, ex - 0.5, ey - 0.5, C.eye, 1.2, 1.2);
+    px1(gl, (ex - 0.5) * S, (ey - 0.5) * S, jaw > 0.5 ? '#ffd0a0' : C.eye, 2, 2);
+  }
+  limb(g, cx - 10, cy - 8, cx + 10, cy - 8, 2, C.boneL);                     // ceño
+  // Morro de mandril: baja por el centro, rojo, con los surcos azules a los lados.
+  part(g, cx, cy + 3, 4.5, 7, C.snout, C.snoutD, C.snoutL);
+  blob(g, cx, cy, 2.5, 4, C.snoutL);
+  for (const s of [-1, 1]) for (let y = cy - 2; y < cy + 8; y += 0.5) { px(g, cx + s * 3.3, y, C.ridge, 0.6, 0.6); px(g, cx + s * 4.1, y + 0.5, C.snoutD, 0.6, 0.6); }
+  px(g, cx - 2, cy + 9, OUTLINE, 1.2, 1); px(g, cx + 1, cy + 9, OUTLINE, 1.2, 1);   // fosas
+  // Colmillos enormes de arriba, a los dos lados del morro.
+  for (const s of [-1, 1]) { limb(g, cx + s * 7, cy + 7, cx + s * 7.5, cy + 19, 3, C.fang, '#ffffff'); px(g, cx + s * 7.5, cy + 19, OUTLINE); }
+}
