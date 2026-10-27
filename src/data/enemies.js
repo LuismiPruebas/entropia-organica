@@ -284,7 +284,7 @@ export const ENEMIES = {
     voice: ['reaperBellow'],
     behavior: 'bossReaper',
     boss: true,
-    music: 'coro',
+    music: 'relicario', // «Jaula de Hueso»
     weakOnly: true,    // solo el núcleo...
     exposedOnly: true, // ...y solo con las costillas abiertas (tras clavar la guadaña)
     hp: 560, w: 100, h: 150,   // duro: hace falta ir sobrado de recursos
@@ -332,13 +332,13 @@ export const ENEMIES = {
     behavior: 'shambler',
     hp: 30, w: 16, h: 34,      // frágil: se desmorona enseguida...
     reforms: true,             // ...pero es inmortal: siempre se recompone
-    reformTime: 5, reformWarn: 1.4, // segundos en el suelo; los últimos, tiembla y se le enciende el cráneo
-    speed: 12, chaseSpeed: 28, sight: 150,
+    reformTime: 3.5, reformWarn: 1.2, // segundos en el suelo; los últimos, tiembla y se le enciende el cráneo
+    speed: 16, chaseSpeed: 44, sight: 200, huntTime: 2.5, // te recuerda un rato si te pierde de vista
     reach: 30, swingDamage: 14, swingDamage2: 16, // dos estocadas seguidas: pegan fuerte
-    swingTime: 0.5, swing2Time: 0.32, chainDelay: 0.08, comboCool: 1.9, // la 2.ª, nada más clavar la 1.ª
-    lurch: 0.4, sprintSpeed: 115, sprintTime: 0.7, sprintCool: 2.8,
+    swingTime: 0.5, swing2Time: 0.32, chainDelay: 0.08, comboCool: 1.0, // la 2.ª, nada más clavar la 1.ª
+    lurch: 0.26, sprintSpeed: 140, sprintTime: 0.9, sprintCool: 1.5, hopV: 360,
     contactDamage: 6,
-    habits: 'Arrastra los pies apoyándose en sus brazos-estaca. A media distancia se queda quieto, le da un latigazo el cráneo y arranca en una carrera torpe. De cerca echa un brazo atrás y te lo clava, y enseguida el otro: dos estocadas que hacen mucho daño. Se rompe con poco, pero no muere: se desmorona en un montón de huesos y a los pocos segundos tiembla, se le enciende el cráneo y se recompone. Es inmortal: golpear el montón solo retrasa un poco que vuelva a levantarse.',
+    habits: 'Arrastra los pies apoyándose en sus brazos-estaca, pero no te deja en paz: a media distancia le da un latigazo el cráneo y arranca en una carrera torpe que acaba en estocada; de cerca echa un brazo atrás y te lo clava, y enseguida el otro. Si te subes a una repisa baja, salta a por ti; si estás debajo, se deja caer; si te escondes, sigue hacia donde te vio; si le pegas sin tumbarlo, se revuelve al momento. Se rompe con poco, pero no muere: se desmorona en un montón de huesos y a los pocos segundos tiembla, se le enciende el cráneo y se levanta con más ganas. Golpear el montón solo retrasa que se recomponga.',
     drop: { biomass: 10 },
     sounds: { reveal: 'boneShriek', die: 'boneCollapse', hurt: 'boneCrack' },
     lore: 'Lo que el estómago no terminó de digerir. Todavía camina erguido a ratos, todavía tiene un ojo que brilla como el tuyo. Una pierna le creció más larga que la otra mientras esperaba a que alguien viniera a buscarlo.',

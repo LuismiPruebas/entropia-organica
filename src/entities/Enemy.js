@@ -1415,14 +1415,21 @@ export const BEHAVIORS = {
   },
 
   // Vestigio: un esqueleto encorvado que se apoya en sus brazos-estaca. Arrastra los pies;
-  // a media distancia da un latigazo con la cabeza y arranca en una carrera torpe. Cuerpo
-  // a cuerpo, dos estocadas seguidas (un brazo y luego el otro). Al caer no muere: se
-  // desmorona en un montón de huesos y al rato se recompone (salvo que destroces el montón).
+  // a media distancia da un latigazo con la cabeza y arranca en una carrera torpe que acaba
+  // en estocada. Cuerpo a cuerpo, dos estocadas seguidas (un brazo y luego el otro). Es
+  // insistente: si te pierde de vista sigue hacia donde te vio, se descuelga de los bordes
+  // si estás debajo, salta a las repisas bajas y, si le pegas sin tumbarlo, se revuelve. Al
+  // caer no muere: se desmorona en un montón de huesos y al rato se recompone, con ganas.
   shambler(e, dt, g) {
-    const d = e.def, s = senses(e, g, 48);
+    const d = e.def, s = senses(e, g, 80);
     const dx = s.dx;
     e.cool = (e.cool ?? 0) - dt;
     e.sprintCool = (e.sprintCool ?? 1) - dt;
+    e.hopCool = (e.hopCool ?? 0) - dt;
+    if (s.sees) { e.lastSeen = s.p.cx; e.huntT = d.huntTime ?? 2.5; } else e.huntT = (e.huntT ?? 0) - dt;
+    const hunting = s.sees || e.huntT > 0;
+    if (e.state !== 'pile' && e.hp < (e.lastHp ?? e.hp)) { e.cool = Math.min(e.cool, 0.12); e.sprintCool = 0; }
+    e.lastHp = e.hp;
     // Montón de huesos: quieto; los últimos segundos tiembla, el cráneo se enciende y se
     // recompone.
     if (e.state === 'pile') {
@@ -1436,7 +1443,7 @@ export const BEHAVIORS = {
         e.hp = d.hp;
         e.y -= d.h - e.h; e.h = d.h;                                   // de pie otra vez
         e.flash = 0.15;
-        e.swing = 0; e.lurch = 0; e.sprint = 0; e.cool = 0.8;
+        e.swing = 0; e.lurch = 0; e.sprint = 0; e.cool = 0.25; e.sprintCool = 0;
         g.audio.play('boneReform', e);
         for (let i = 0; i < 10; i++) g.particles.emit(e.cx + (Math.random() - 0.5) * 16, e.y + e.h - 4, { vx: (Math.random() - 0.5) * 80, vy: -40 - Math.random() * 60, life: 0.5, gravity: 500, color: [0.85, 0.8, 0.65] });
       }
@@ -1474,29 +1481,44 @@ export const BEHAVIORS = {
     } else if (e.sprint > 0) {
       e.sprint -= dt;
       e.vx = e.dir * d.sprintSpeed;
-      if (Math.abs(dx) < d.reach + 6) e.sprint = 0;
+      if (Math.abs(dx) < d.reach + 6) { e.sprint = 0; e.cool = Math.min(e.cool, 0); }   // llega y clava
       if (e.sprint <= 0) e.sprintCool = d.sprintCool;
-    } else if (s.sees && Math.abs(dx) < d.reach + 8 && e.cool <= 0) {
+    } else if (e.hopping) {
+      // Salto torpe hacia tu repisa: no corrige en el aire.
+      if (e.onGround && e.vy >= 0) e.hopping = false;
+    } else if (s.sees && Math.abs(dx) < d.reach + 8 && Math.abs(s.dy) < 40 && e.cool <= 0) {
       e.dir = Math.sign(dx) || e.dir;
       e.strike = 1;
       e.swing = e.swingDur = d.swingTime ?? 0.6;
       e.hitDone = false;
       g.audio.play('boneShriek', e);
-    } else if (s.sees && Math.abs(dx) > 50 && Math.abs(dx) < 140 && e.sprintCool <= 0 && e.onGround) {
+    } else if (s.sees && e.onGround && e.hopCool <= 0 && Math.abs(dx) < 72 && s.p.y + s.p.h < e.y + e.h - 20 && s.p.y + s.p.h > e.y + e.h - 68) {
+      // Estás en una repisa baja cerca: salta a por ti.
+      e.dir = Math.sign(dx) || e.dir;
+      e.vy = -(d.hopV ?? 360); e.vx = e.dir * 75; e.onGround = false;
+      e.hopping = true; e.hopCool = 1.4;
+      g.audio.play('boneShriek', e);
+    } else if (s.sees && Math.abs(dx) > 40 && Math.abs(dx) < 180 && Math.abs(s.dy) < 40 && e.sprintCool <= 0 && e.onGround) {
       e.dir = Math.sign(dx) || e.dir;
       e.lurch = d.lurch;
     } else {
+      // Te persigue (o va hacia donde te vio) con su paso a trompicones; en un borde se
+      // para, salvo que estés debajo: entonces se deja caer.
       if (s.sees) e.dir = Math.sign(dx) || e.dir;
-      let speed = (s.sees ? d.chaseSpeed : d.speed) * (0.35 + 0.65 * Math.max(0, Math.sin(e.t * 5.5)));
+      else if (hunting) e.dir = Math.sign(e.lastSeen - e.cx) || e.dir;
+      let speed = (hunting ? d.chaseSpeed : d.speed) * (hunting ? 0.55 + 0.45 * Math.max(0, Math.sin(e.t * 5.5)) : 0.35 + 0.65 * Math.max(0, Math.sin(e.t * 5.5)));
       speed = speedMods(e, g, speed);
       const footX = e.dir > 0 ? e.x + e.w + 1 : e.x - 1;
-      if (ledgeAhead(g, e, footX) && e.onGround) { if (s.sees) speed = 0; else e.dir *= -1; }
+      if (ledgeAhead(g, e, footX) && e.onGround) {
+        if (!hunting) e.dir *= -1;
+        else if (!(s.p.y + s.p.h > e.y + e.h + 8 && Math.abs(dx) < 120)) speed = 0;
+      }
       e.vx = e.dir * speed;
     }
     // En carrera no se detiene ante el borde: es torpe.
     e.vy = Math.min(380, e.vy + GRAVITY * dt);
     g.world.move(e, dt);
-    if (e.hitWall && !(e.swing > 0)) { e.dir = -e.hitWall; e.sprint = 0; }
+    if (e.hitWall && !(e.swing > 0)) { e.dir = -e.hitWall; if (e.sprint > 0) e.sprintCool = d.sprintCool; e.sprint = 0; }
     e.sprinting = e.sprint > 0;
   },
 
