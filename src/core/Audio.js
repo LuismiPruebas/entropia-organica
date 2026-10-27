@@ -5,7 +5,7 @@ import { startBossMusic } from './BossMusic.js';
 import { startZoneMusic } from './ZoneMusic.js';
 
 // Temas de jefe con pista grabada (los demás siguen siendo los generados de BossMusic.js).
-const BOSS_TRACKS = { ganglio: 'assets/music/alien-womb.mp3', matriarca: 'assets/music/red-de-niebla.mp3', sapo: 'assets/music/diseased-machine.mp3' };
+const BOSS_TRACKS = { ganglio: 'assets/music/alien-womb.mp3', matriarca: 'assets/music/red-de-niebla.mp3', sapo: 'assets/music/diseased-machine.mp3', relicario: 'assets/music/jaula-de-hueso.mp3' };
 import { VOICES, VOICE_GAIN } from './Voices.js';
 
 // Variación de tono por llamada: ninguna criatura suena dos veces igual.
