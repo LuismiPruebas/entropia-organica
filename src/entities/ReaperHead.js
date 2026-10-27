@@ -6,12 +6,13 @@
 // con su geometría escalada por S (más píxeles, no píxeles más gordos).
 import { px as px1, limb as limb1, part as part1, blob as blob1, jointLeg as jointLeg1, OUTLINE } from './Rig.js';
 
-const S = 1.7;
+const S = 2.4;
 const W = Math.ceil(60 * S), H = Math.ceil(42 * S), G0 = 40;   // G0: suelo, en unidades sin escalar
 const C = {
   bone: '#d8cfb0', boneL: '#f2ead0', boneD: '#a89e80', boneDD: '#6e664e',
   snout: '#b8402e', snoutL: '#e8704a', snoutD: '#6a1a14', ridge: '#4a5a9a',
   gum: '#5a0a14', fang: '#f6f0dc', eye: '#ff3b2f',
+  mane: '#b8a078', maneL: '#d8c49a', maneD: '#7a6448',
 };
 // Las herramientas de siempre, en unidades sin escalar.
 const px = (g, x, y, c, w = 1, h = 1) => px1(g, x * S, y * S, c, Math.max(1, Math.round(w * S)), Math.max(1, Math.round(h * S)));
@@ -57,7 +58,7 @@ export const REAPER_HEAD = {
       limb(g, x, y, x + Math.sin(a) * 6, y - Math.cos(a) * 6, 2, C.fang);
     }
     // ---- Bóveda del cráneo, cresta de púas y grietas.
-    for (let i = 0; i < 4; i++) { const x0 = 14 + i * 5, x1 = x0 - 3 - i, y1 = cy - 16 - (i % 2) * 3; limb(g, x0, cy - 8, x1, y1, i === 1 ? 3 : 2, C.boneL); }
+    mane(g, 21, cy - 1, -3.0, -0.35, 9.5);
     part(g, 22, cy - 1, 12, 9.5, C.boneD, C.boneDD);
     blob(g, 21, cy - 2, 10, 7.5, C.bone);
     blob(g, 18, cy - 4, 5, 3, C.boneL);
@@ -86,7 +87,17 @@ export const REAPER_HEAD = {
   },
 };
 
-// De frente: la bóveda con su cresta, dos órbitas con ojos que arden y te siguen, el morro
+// Melena erizada (como la del babuino) alrededor de la bóveda: mechones cortos y tiesos que salen
+// en abanico entre los ángulos a0 y a1, desde el radio r.
+function mane(g, cx, cy, a0, a1, r) {
+  for (let i = 0; i <= 26; i++) {
+    const a = a0 + (a1 - a0) * i / 26, len = 4 + ((i * 7) % 5) + (i % 3 === 0 ? 2 : 0);
+    const j = Math.sin(i * 2.7) * 0.12;
+    limb(g, cx + Math.cos(a) * (r - 2), cy + Math.sin(a) * (r - 2), cx + Math.cos(a + j) * (r + len), cy + Math.sin(a + j) * (r + len), 1, i % 3 ? C.mane : C.maneL, i % 2 ? C.maneD : undefined);
+  }
+}
+
+// De frente: la bóveda con su melena, dos órbitas con ojos que arden y te siguen, el morro
 // rojo de mandril bajando por el centro con sus surcos azules a los lados, y los colmillos
 // enormes colgando a los dos lados de la boca; al gritar, la mandíbula cae del todo.
 function drawFront(g, gl, e, t) {
@@ -101,7 +112,7 @@ function drawFront(g, gl, e, t) {
   part(g, cx, jy, 9, 2.5, C.boneD, C.boneDD, C.bone);
   for (const s of [-1, 1]) limb(g, cx + s * 5, jy - 1, cx + s * 5, jy - 6, 2, C.fang);
   // Cresta de púas en abanico y bóveda.
-  for (let i = -2; i <= 2; i++) limb(g, cx + i * 4, cy - 9, cx + i * 7, cy - 18 + Math.abs(i) * 2, i === 0 ? 3 : 2, C.boneL);
+  mane(g, cx, cy - 3, -3.25, -0.05, 11.5);
   part(g, cx, cy - 3, 14, 10, C.boneD, C.boneDD);
   blob(g, cx, cy - 4, 12, 8, C.bone);
   blob(g, cx - 5, cy - 7, 5, 2.5, C.boneL);

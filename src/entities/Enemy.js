@@ -2165,7 +2165,7 @@ export const BEHAVIORS = {
     const [ox, oy] = C.origin(e);
     const floorY = oy + C.FY;
     // ---- La cabeza: unida al muñón del cuello; tras unos cuantos ataques (3-4) se le cae.
-    e.neck = { x: ox + C.CX, y: oy + 8 + Math.round(Math.sin(e.t * 1.6) * 0.75) };
+    e.neck = { x: ox + C.CX, y: oy + (C.NECK ?? 8) + Math.round(Math.sin(e.t * 1.6) * 0.75) };
     if (!e.head && d.head) { e.head = g.spawnMinion(d.head, e.neck.x, e.neck.y - 10); e.head.boss = e; e.nextDrop = 3; e.attacks = 0; }
     const head = e.head?.alive ? e.head : null;
     if (head && head.state === 'attached' && e.attacks >= e.nextDrop && e.state === 'idle') {

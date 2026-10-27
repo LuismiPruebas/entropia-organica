@@ -1,7 +1,7 @@
-// EL RELICARIO (jefe del bioma Hueso): un torso colosal que asoma del suelo entre
-// escombros de hueso. Una caja torácica de seis pares de costillas encierra un núcleo que
-// late; el lomo, erizado de púas; por cuello, el muñón hueco de la columna. Sus brazos,
-// columnas de vértebras, acaban en dos guadañas enormes. Ocupa casi toda la pantalla.
+// EL RELICARIO (jefe del bioma Hueso): el esqueleto colosal de un babuino, de pie y
+// agazapado sobre sus piernas flexionadas, con su cola curvada. La caja torácica encierra
+// un núcleo que late; los brazos empuñan dos guadañas de mango de hueso. Su cabeza de
+// babuino (entities/ReaperHead.js) es aparte: se sostiene sobre el cuello y a ratos se cae.
 // Se dibuja en un búfer de píxeles propio (rápido aunque sea enorme) con sombreado de
 // cinco tonos de hueso, contorno y brillo.
 // Lo anima el comportamiento `bossReaper` (entities/Enemy.js), que deja en la criatura:
@@ -109,7 +109,7 @@ function elbow(ax, ay, bx, by, l1, l2, bend) {
 
 // Poses de un brazo (para el lado derecho; el izquierdo es su espejo). Devuelve la muñeca,
 // la dirección de salida de la hoja y su curvatura.
-const SH = [62, 76];   // hombro, desplazado del centro
+const SH = [30, 52];   // hombro, desplazado del centro
 function pose(arm, t, side, idleHigh) {
   const k = arm?.k ?? 0, p = arm?.pose ?? 'idle';
   const sway = Math.sin(t * 1.3 + (side > 0 ? 0 : 1.7));
@@ -138,40 +138,47 @@ function pose(arm, t, side, idleHigh) {
   return idle;
 }
 
-// Detrás de todo: el abanico de púas del lomo, la columna y el muñón hueco del cuello.
-function drawBack(bodyY) {
-  const backSpikes = [[-46, -12, -70, -64, 9], [-24, -22, -34, -86, 10], [-6, -26, 2, -96, 11], [14, -24, 38, -88, 10], [34, -16, 66, -70, 9], [-60, 2, -96, -34, 7], [52, 4, 92, -30, 7]];
-  for (const [x0, y0, x1, y1, w0] of backSpikes) spike(CX + x0, 74 + y0 + bodyY, CX + x1, 74 + y1 + bodyY, w0);
-  for (let y = 30 + bodyY; y < FY + 4; y += 9) {
-    const big = y > 150 ? 1.3 : 1;
-    knob(CX, y, 7 * big, 4.2, {});
-    for (const s of [-1, 1]) spike(CX + s * 6 * big, y, CX + s * 13 * big, y + 3, 3);
+// ---- Cuerpo (lo que no se anima se pinta una vez por altura de respiración).
+const HIP = [16, FY - 74], KNEE = [46, FY - 44], ANK = [36, FY - 10];
+const NECK = 26;                                  // donde se apoya la cabeza (y del lienzo)
+const CORE_Y = 86;                                // centro del núcleo
+
+// Pierna flexionada de babuino (s: lado), con su pie largo de dedos huesudos.
+function leg(s, bodyY, dark) {
+  const hx = CX + s * HIP[0], hy = HIP[1] + bodyY, kx = CX + s * KNEE[0], ky = KNEE[1] + bodyY * 0.5, ax = CX + s * ANK[0], ay = ANK[1];
+  band([[hx, hy], [kx, ky]], (u) => 11 - u * 3, { cracks: 7, dark });
+  knob(kx, ky, 6.5, 5.5, {});
+  band([[kx, ky], [ax, ay]], (u) => 8 - u * 2.5, { cracks: 9, dark });
+  knob(ax, ay, 4.5, 4, {});
+  for (let j = 0; j < 4; j++) {                                // dedos largos, hacia fuera
+    const tx = ax + s * (10 + j * 3), ty = FY - (j % 2);
+    band([[ax + s * 2, ay + 2], [ax + s * (6 + j * 2), FY - 3], [tx, ty]], (u) => 3 - u * 1.4, { dark });
   }
-  knob(CX, 24 + bodyY, 9, 7, { hole: 3 });
-  knob(CX, 13 + bodyY, 7, 5, { hole: 3 });
 }
 
-// Delante de la caja: los escombros de hueso de los que asoma y las hombreras con púas.
+// Detrás de la caja: cola, piernas, pelvis, columna lumbar, omóplatos y vértebras del cuello.
+function drawBack(bodyY) {
+  // Cola: sale de la pelvis por detrás, se arquea y cae curvándose.
+  const tail = arc(CX + 14, FY - 76 + bodyY, -0.2, 0.034, 95, 1.15);
+  band(tail, (u) => 6 - u * 4.2, { dark: true });
+  for (let i = 8; i < tail.length - 4; i += 7) { const [x, y] = tail[i]; P(x, y, B.dd); P(x + 1, y, B.dd); }
+  leg(-1, bodyY, true); leg(1, bodyY, false);
+  // Pelvis: dos alas ilíacas con su hueco y el sacro.
+  for (const s of [-1, 1]) knob(CX + s * 11, FY - 80 + bodyY, 11, 9, { hole: 3 });
+  knob(CX, FY - 74 + bodyY, 7, 6, {});
+  // Columna lumbar, de la pelvis a la caja.
+  for (let y = FY - 86 + bodyY; y > 104 + bodyY; y -= 7) knob(CX, y, 6, 3.6, {});
+  // Omóplatos tras los hombros.
+  for (const s of [-1, 1]) knob(CX + s * 24, 64 + bodyY, 9, 13, {});
+  // Vértebras del cuello, hasta la cabeza.
+  for (let y = 50 + bodyY; y >= NECK + bodyY; y -= 6) knob(CX, y, 5 - (50 - y) / 30, 3.2, {});
+}
+
+// Delante de la caja: clavículas y hombros.
 function drawFront(bodyY) {
-  for (let i = 0; i < 16; i++) {
-    const x0 = CX - 96 + i * 12 + Math.sin(i * 2.3) * 4, ang = -Math.PI / 2 + Math.sin(i * 1.7) * 0.9;
-    const L = 14 + ((i * 7) % 13) + (Math.abs(i - 7.5) < 3 ? 8 : 0);
-    spike(x0, FY + 2, x0 + Math.cos(ang) * L, FY + 2 + Math.sin(ang) * L, 6);
-  }
-  for (let x = CX - 116; x < CX + 116; x++) {
-    const h = 5 + Math.abs(Math.sin(x * 0.17)) * 5 + Math.abs(Math.sin(x * 0.53 + 1)) * 3 + (1 - Math.abs(x - CX) / 116) * 8;
-    for (let y = 0; y < h; y++) {
-      const lump = Math.sin(x * 0.9 + y * 1.3) + Math.sin(x * 0.31 - y * 0.7);
-      P(x, FY + 3 - y, y > h - 1.5 ? B.out : TONES[Math.max(0, Math.min(4, Math.round(1.6 + lump * 0.9 + (y / h) * 1.2)))]);
-    }
-  }
   for (const s of [-1, 1]) {
-    const hx = CX + s * 66, hy = 66 + bodyY;
-    knob(hx, hy, 26, 19, {});
-    for (let j = 0; j < 3; j++) { const sx = hx + s * (j * 9 - 6), sy = hy - 12 + j * 2; spike(sx, sy, sx + s * (8 + j * 6), sy - 22 + j * 4, 7); }
-    // Crestas de la placa y una grieta.
-    for (let j = 0; j < 3; j++) { const ry = hy - 8 + j * 8; for (let x = -20 + j * 3; x <= 20 - j * 3; x++) { const yy = ry + (x * x) / 60; P(hx + x, yy, B.dd); P(hx + x, yy - 1, B.hl); } }
-    for (let j = 0; j < 5; j++) P(hx + s * (4 - j), hy + 12 + (j % 2), B.crack);
+    band([[CX + s * 3, 56 + bodyY], [CX + s * 16, 52 + bodyY], [CX + s * SH[0], SH[1] + bodyY]], (u) => 4.5 - u, {});
+    knob(CX + s * SH[0], SH[1] + bodyY, 7, 6.5, {});
   }
 }
 
@@ -179,20 +186,19 @@ export const REAPER = {
   size: () => [W, H],
   origin: (e) => [e.cx - CX, e.y + e.h - FY],
   noFlip: true,
-  FY, CX,
+  FY, CX, NECK,
   draw(g, gl, e, t) {
     begin(g);
     const open = e.open ?? 0, beat = e.beat ?? 0;
-    const rage = e.hp < e.def.hp / 2;
     const breathe = Math.sin(t * 1.6) * 1.5;
     const bodyY = Math.round(breathe * 0.5);
     const back = cached('b' + bodyY, () => drawBack(bodyY)), front = cached('f' + bodyY, () => drawFront(bodyY));
     buf.set(back); gbuf.fill(0);
 
     // ---- Núcleo: late dentro de la caja; venas hacia las costillas.
-    const cy = 112 + bodyY, r = 20 + beat * 3 + open * 2;
+    const cy = CORE_Y + bodyY, r = 15 + beat * 2.5 + open * 2;
     for (let i = 0; i < 10; i++) {
-      const a = i / 10 * Math.PI * 2 + 0.3, L = r + 12 + (i % 3) * 5;
+      const a = i / 10 * Math.PI * 2 + 0.3, L = r + 9 + (i % 3) * 4;
       for (let s = 0; s < L; s += 0.7) P(CX + Math.cos(a + Math.sin(s * 0.2) * 0.15) * s, cy + Math.sin(a) * s * 0.9, s < r ? CORE.d : CORE.vein);
     }
     for (let y = -r - 1; y <= r + 1; y++) for (let x = -r - 1; x <= r + 1; x++) {
@@ -200,80 +206,73 @@ export const REAPER = {
       if (d > 1.06) continue;
       const lit = 1 - d + (-x - y) / r * 0.15 + Math.sin(x * 0.7 + y * 0.5 + t * 6) * 0.06;
       P(CX + x, cy + y, d > 0.95 ? CORE.out : lit > 0.75 ? CORE.hl : lit > 0.5 ? CORE.l : lit > 0.22 ? CORE.m : CORE.d);
-      // Brillo propio: tenue cerrado (se intuye entre las costillas), intenso abierto.
       const gi = (0.35 + open * 0.65) * (0.7 + beat * 0.3);
       if (d < 0.9) Q(CX + x, cy + y, lit * gi > 0.6 ? GLOW.hl : lit * gi > 0.38 ? GLOW.l : lit * gi > 0.18 ? GLOW.m : GLOW.d);
     }
-    // Halo del núcleo (brillo que se escapa entre las costillas).
-    for (let y = -r - 12; y <= r + 12; y++) for (let x = -r - 12; x <= r + 12; x++) {
+    for (let y = -r - 9; y <= r + 9; y++) for (let x = -r - 9; x <= r + 9; x++) {
       const d = Math.hypot(x, y);
-      if (d > r && d < r + 12 && ((x * 7 + y * 13) & 3) === 0) Q(CX + x, cy + y, open > 0.4 ? GLOW.m : GLOW.d);
+      if (d > r && d < r + 9 && ((x * 7 + y * 13) & 3) === 0) Q(CX + x, cy + y, open > 0.4 ? GLOW.m : GLOW.d);
     }
 
-    // ---- Costillas: seis pares vistos de frente. Salen del esternón hacia fuera, suben un
-    // poco y bajan al rodear el costado (las de atrás asoman más oscuras por encima). Abiertas,
-    // se separan del centro y se alzan en abanico: el esternón se parte en dos.
-    const RIB = [50, 62, 70, 72, 66, 54];
+    // ---- Costillas: seis pares; abiertas, se separan del centro y se alzan en abanico.
+    const RIB = [34, 42, 48, 49, 45, 37];
     for (let i = 0; i < 6; i++) {
-      const ys = 72 + i * 14 + bodyY + breathe * (i / 6);
+      const ys = 60 + i * 10 + bodyY + breathe * (i / 6);
       for (const s of [-1, 1]) {
-        // Mitad de atrás (desde la columna), fina y oscura: da fondo a la caja.
-        const back = arc(CX + s * 7, ys - 8, s > 0 ? -0.15 : Math.PI + 0.15, s * 0.034, Math.round(RIB[i] * 0.9), 1);
-        band(back, (u) => 4 - u * 1.5, { dark: true });
+        const bk = arc(CX + s * 5, ys - 6, s > 0 ? -0.15 : Math.PI + 0.15, s * 0.05, Math.round(RIB[i] * 0.9), 1);
+        band(bk, (u) => 3 - u * 1.2, { dark: true });
       }
       for (const s of [-1, 1]) {
-        const x0 = CX + s * (10 + open * 30), y0 = ys - open * (6 + i * 1.5);
+        const x0 = CX + s * (7 + open * 22), y0 = ys - open * (5 + i * 1.2);
         const a0 = (s > 0 ? -0.32 - open * 0.55 : Math.PI + 0.32 + open * 0.55);
-        const pts = arc(x0, y0, a0, s * (0.03 - open * 0.004), Math.round(RIB[i] * 1.25 + open * 10), 1);
-        band(pts, (u) => 7.5 - u * 3 - Math.max(0, 0.15 - u) * 6, { cracks: i % 2 ? 7 : 0, dark: i > 3 });
+        const pts = arc(x0, y0, a0, s * (0.045 - open * 0.006), Math.round(RIB[i] * 1.2 + open * 8), 1);
+        band(pts, (u) => 5.5 - u * 2.2 - Math.max(0, 0.15 - u) * 4, { cracks: i % 2 ? 7 : 0, dark: i > 3 });
       }
     }
-    // Esternón: placas segmentadas; abierto, dos mitades que se separan.
+    // Esternón: placas; abierto, dos mitades que se separan.
     for (const s of open > 0.05 ? [-1, 1] : [0]) {
-      const ox = s * open * 32;
-      for (let j = 0; j < 6; j++) knob(CX + ox, 74 + j * 14 + bodyY, s ? 5 : 6, 5.6, {});
+      const ox = s * open * 24;
+      for (let j = 0; j < 6; j++) knob(CX + ox, 61 + j * 10 + bodyY, s ? 3.5 : 4.5, 4.2, {});
     }
 
     for (let i = 0; i < front.length; i++) if (front[i]) buf[i] = front[i];
 
-    // ---- Brazos y guadañas.
+    // ---- Brazos y guadañas: la mano empuña el mango; la hoja sale de su extremo.
     const blades = [];
     for (const s of [-1, 1]) {
       const arm = e.arms?.[s < 0 ? 'L' : 'R'];
       const q = pose(arm, t, s, s < 0);
-      const mx = (x) => CX + s * x;                                // espejo
+      const mx = (x) => CX + s * x;
       const ax = mx(SH[0]), ay = SH[1] + bodyY;
-      const wx = mx(q.wx), wy = q.wy + (q.wy < FY - 100 ? bodyY : 0);
-      const [ex, ey] = elbow(ax, ay, wx, wy, 64, 60, -s);
-      // Brazo: columna de vértebras (bloques con apófisis) del hombro al codo y a la muñeca.
-      for (const [x0, y0, x1, y1, w0, w1] of [[ax, ay, ex, ey, 15, 12], [ex, ey, wx, wy, 12, 9]]) {
-        const L = Math.hypot(x1 - x0, y1 - y0), ang = Math.atan2(y1 - y0, x1 - x0);
-        const nx = -Math.sin(ang), ny = Math.cos(ang);
-        // Púas en el lado de fuera (antes, que queden detrás).
-        for (let j = 1; j < 5; j++) { const u = j / 5, x = x0 + (x1 - x0) * u, y = y0 + (y1 - y0) * u; spike(x - nx * s * w0 * 0.4, y - ny * s * w0 * 0.4, x - nx * s * (w0 * 0.4 + 9) + Math.cos(ang) * 3, y - ny * s * (w0 * 0.4 + 9) - 3, 4); }
-        band([[x0, y0], [x1, y1]], (u) => w0 + (w1 - w0) * u, { cracks: 9 });
-        // Anillos de vértebra: surcos oscuros cruzados, con un borde de luz.
-        for (let d = 8; d < L - 4; d += 9) {
-          const x = x0 + Math.cos(ang) * d, y = y0 + Math.sin(ang) * d, w = (w0 + (w1 - w0) * d / L) / 2;
-          for (let o = -w + 1; o <= w - 1; o += 0.5) { P(x + nx * o, y + ny * o, B.dd); P(x + nx * o + Math.cos(ang), y + ny * o + Math.sin(ang), B.l); }
-        }
-      }
-      knob(ex, ey, 9, 8, {});                                        // codo
-      knob(wx, wy, 7, 6, {});                                        // muñeca
-      // Guadaña: arco de hoja que se ensancha y se afila; filo claro por dentro.
+      const wx = mx(q.wx), wy = q.wy + (q.wy < FY - 100 ? bodyY : 0);   // extremo del mango (arranque de la hoja)
+      // La mano, a algo más de la mitad del camino del hombro al extremo; el mango sobresale por detrás.
+      const hx = ax + (wx - ax) * 0.42, hy = ay + (wy - ay) * 0.42 + 14;
+      const dx = wx - hx, dy = wy - hy, L = Math.hypot(dx, dy) || 1;
+      const ux = dx / L, uy = dy / L;
+      const [ex, ey] = elbow(ax, ay, hx, hy, 34, 32, s);
+      // Brazo: húmero, codo, radio y cúbito.
+      band([[ax, ay], [ex, ey]], (u) => 8 - u * 1.5, { cracks: 9 });
+      knob(ex, ey, 5.5, 5, {});
+      band([[ex, ey], [hx, hy]], (u) => 6 - u * 1.2, { cracks: 11 });
+      band([[ex + 2, ey + 1], [hx + 2, hy + 1]], () => 2.2, { dark: true });
+      // Mango de hueso: de un poco por detrás de la mano al arranque de la hoja.
+      band([[hx - ux * 14, hy - uy * 14], [wx, wy]], (u) => 6 - u * 1.5, { cracks: 13 });
+      knob(hx - ux * 14, hy - uy * 14, 3.5, 3.5, {});
+      // Mano: nudillos agarrando el mango.
+      knob(hx, hy, 6, 5, {});
+      for (let j = -1; j <= 1; j++) knob(hx + uy * 4 * s + ux * j * 3, hy - ux * 4 * s + uy * j * 3, 2.2, 2, {});
+      // Hoja: arco que se ensancha y se afila; filo claro por dentro.
       const a = s > 0 ? q.a : Math.PI - q.a, c = q.c * s;
       const pts = arc(wx, wy, a, c, 92, 1.15);
       band(pts, (u) => 2 + 13 * Math.sin(Math.min(1, u * 2.4) * Math.PI / 2) * (1 - u) ** 0.55, { edge: s > 0 ? 1 : -1, cracks: 23 });
-      // Acanaladura a lo largo de la hoja y la punta.
       for (let j = 10; j < pts.length - 12; j++) if (j % 2) P(pts[j][0], pts[j][1], B.d);
+      knob(wx, wy, 5, 5, {});                                       // virola de la hoja
       const tip = pts[pts.length - 1];
       P(tip[0], tip[1], B.hl);
       if (arm?.pose === 'raise' && Math.sin(t * 20) > 0) { Q(tip[0], tip[1], GLOW.hl); Q(tip[0] + 1, tip[1], GLOW.l); }
       blades.push({ side: s, pts });
     }
-    // (para el comportamiento: dónde están las hojas, en coordenadas del lienzo)
     e.bladePts = blades;
-    // Punto débil y marcador: el núcleo, débil solo con las costillas abiertas.
     e.spotsLocal = [{ x: CX, y: cy, r: r + 2, weak: open > 0.5 }];
 
     g.putImageData(img, 0, 0);

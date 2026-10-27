@@ -304,7 +304,7 @@ export const ENEMIES = {
     },
     sounds: { reveal: 'reaperBellow', attack: 'reaperBellow', hurt: 'reaperCore', die: 'reaperDie' },
     auraPeriod: 3,
-    habits: 'Asoma del suelo y apenas se mueve: se desliza despacio hacia ti. Alza una guadaña temblando y barre el suelo de fuera adentro por tu lado: sáltala. O la alza sobre la cabeza y la clava donde estás: al clavarla el suelo se resquebraja a los lados, la guadaña se queda atascada y se le abren las costillas. Su único punto débil es el núcleo que late dentro, y solo con la caja abierta. Si te alejas, raspa el suelo con la guadaña y una onda de hueso corre hacia ti. Su cabeza, un cráneo de babuino enorme que te sigue con la mirada, va unida al cuello, pero tras unos cuantos ataques se le cae, saca patas de hueso y te persigue a mordiscos un rato; luego vuelve sola a su sitio. Si le tiras encima uno de los racimos de hueso del techo se tambalea con la caja abierta. A ratos entona su Réquiem: siega el suelo desde las paredes, hace llover huesos y clava las dos guadañas a la vez lanzando ondas por el suelo; después queda agotado y abierto. Herido, más deprisa, y a veces clava una guadaña tras otra.',
+    habits: 'El esqueleto colosal de un babuino, agazapado sobre sus piernas, que empuña dos guadañas de mango de hueso. Apenas se mueve: avanza despacio hacia ti. Alza una guadaña temblando y barre el suelo de fuera adentro por tu lado: sáltala. O la alza sobre la cabeza y la clava donde estás: al clavarla el suelo se resquebraja a los lados, la guadaña se queda atascada y se le abren las costillas. Su único punto débil es el núcleo que late dentro, y solo con la caja abierta. Si te alejas, raspa el suelo con la guadaña y una onda de hueso corre hacia ti. Su cabeza, un cráneo de babuino enorme que te sigue con la mirada, va unida al cuello, pero tras unos cuantos ataques se le cae, saca patas de hueso y te persigue a mordiscos un rato; luego vuelve sola a su sitio. Si le tiras encima uno de los racimos de hueso del techo se tambalea con la caja abierta. A ratos entona su Réquiem: siega el suelo desde las paredes, hace llover huesos y clava las dos guadañas a la vez lanzando ondas por el suelo; después queda agotado y abierto. Herido, más deprisa, y a veces clava una guadaña tras otra.',
     lore: 'La caja torácica de algo que fue enorme, y que el parásito no ha dejado morir. Guarda dentro un núcleo que late como un corazón ajeno, y siega todo lo que se acerca a él.',
   },
   // La cabeza del Relicario (la saca su cuerpo, entities/Enemy.js: reaperHead).
@@ -315,7 +315,7 @@ export const ENEMIES = {
     gore: { blood: '#8a1a10', flesh: ['#d8cfb0', '#a89e80', '#b8402e', '#f6f0dc'] },
     behavior: 'reaperHead',
     alwaysVisible: true,       // parte del jefe: nunca en sombra
-    hp: 70, w: 46, h: 36,
+    hp: 70, w: 64, h: 50,
     noDeath: true,             // no muere ni se aturde: golpeada, se revuelve
     speed: 115, lungeRange: 72, biteDamage: 18, biteCool: 0.9, chaseTime: 7, knockedTime: 3,
     sounds: { attack: 'boneShriek', hurt: 'boneCrack', scream: 'reaperCore', growl: 'boneRasp' },
