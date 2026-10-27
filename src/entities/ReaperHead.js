@@ -4,8 +4,10 @@
 // detrás, y un hocico larguísimo y alto, estrecho arriba y ancho abajo, con la cresta
 // maxilar, restos de piel rojiza en el dorso y la nariz en la punta. Muelas, incisivos y
 // colmillos cónicos y curvos hacia atrás que nacen de la eminencia canina; la mandíbula en
-// U, honda, articula bajo la sien: al abrir (e.jaw 0..1) baja, el cráneo se echa atrás y
-// se ve la garganta. La melena cae como un manto hacia la nuca.
+// U, honda, articula bajo la sien: al abrir (e.jaw 0..1) baja y el cráneo se echa atrás;
+// de cara se ve la garganta, de perfil se ve a través de los dientes. Al cerrarla de golpe
+// (e.snapT, el mordisco) da un respingo y chispea entre los colmillos. La melena cae como
+// un manto hacia la nuca.
 //
 // Es un modelo 3D sencillo (piezas convexas en unidades; X hacia el hocico, Y abajo, Z
 // hacia el lado cercano) que se proyecta girado e.yaw (0 de perfil, π/2 de frente; sin
@@ -92,14 +94,15 @@ function hull(pts) {
 }
 
 // ---- Cámara: giro yaw alrededor del eje vertical y una pizca de vista desde arriba (lo
-// cercano baja), centrada en la bóveda (ox, oy).
-const PITCH = 0.22, CP = Math.cos(PITCH), SP = Math.sin(PITCH);
+// cercano baja; cuanto más de frente, más: de perfil estricto, nada), centrada en la
+// bóveda (ox, oy).
+const PITCH = 0.22;
 const YAW = { profile: 0.3, three: 0.95, front: Math.PI / 2 };
 const yawOf = (e) => e.yaw ?? YAW[e.view] ?? YAW.profile;
 const originX = (phi) => 20 + 10 * Math.sin(phi);
 const cyOf = (e, t) => G0 - 17 - Math.round((e.legs ?? 0) * 6) + (e.mood === 'growl' ? Math.round(Math.sin(t * 50) * 0.6) : 0);
 function camera(phi, ox, oy) {
-  const c = Math.cos(phi), s = Math.sin(phi);
+  const c = Math.cos(phi), s = Math.sin(phi), CP = Math.cos(PITCH * s), SP = Math.sin(PITCH * s);
   const d = ([X, Y, Z]) => [X * c - Z * s, Y * CP + (X * s + Z * c) * SP];
   return { c, s, d, p: (q) => { const [x, y] = d(q); return [ox + x, oy + y]; } };
 }
@@ -214,7 +217,8 @@ export const REAPER_HEAD = {
   draw(g, gl, e, t) {
     const phi = yawOf(e), legs = e.legs ?? 0, jaw = e.jaw ?? 0;
     const run = Math.abs(e.vx) > 5 && legs > 0.5, ph = (e.t ?? t) * 16;
-    const cy = cyOf(e, t) + (run ? Math.round(Math.sin(ph * 2)) : 0);
+    const snap = Math.max(0, e.snapT ?? 0) / 0.12;                          // 1 → 0 tras cerrar las fauces de golpe
+    const cy = cyOf(e, t) + (run ? Math.round(Math.sin(ph * 2)) : 0) + Math.round(snap);
     const cam = camera(phi, originX(phi), cy - 4.5);
     const vis = (s) => s * cam.c * 0.9 + cam.s * 0.4;                      // cuánto se ve el costado s (1 el cercano)
     const look = (s) => 0.78 * cam.s + 0.62 * cam.c * s;                    // cuánto te mira la cuenca s
@@ -228,18 +232,22 @@ export const REAPER_HEAD = {
     if (legs > 0.05) boneLegs(g, B, legs, run, ph);
     { const [x, y] = B.at([-8, 8.4, 0]); part1(g, x * S, y * S, 2.6 * S, 1.7 * S, C.boneD, C.boneDD, C.bone); }
     mane(g, Sk, cam, t, false);
-    // ---- Boca: garganta y hebras de carne, la mandíbula en U (lejos primero) y sus dientes.
-    if (jaw > 0.05) {
+    // ---- Boca: de cara se ve la garganta; casi de perfil es un cráneo sin mejillas y entre
+    // los dientes se ve a través (el lado lejano queda justo detrás del cercano y no se
+    // pinta). La mandíbula en U, lejos primero, con sus dientes.
+    const farSide = vis(-1) > -0.5;
+    if (jaw > 0.05 && cam.s > 0.5) {
       poly(g, hull([...THROAT_UP.map(Sk.at), ...THROAT_LO.map(Jw.at)]), [C.gum, C.throat, C.throat], { light: 0.12, dark: 0.5, outline: false });
       if (jaw > 0.4) { const [x, y] = Jw.at([22, 9.4, 0]); oval(gl, x, y, 5, 1.5 + jaw, '#3a0804'); }
-      for (const X of [17, 24]) for (const s of [-1, 1]) line(g, [Sk.at([X, 9.1, 4.6 * s]), Jw.at([X - 0.6, 9.9, 5 * s])], C.fleshD, 2);
     }
-    for (const s of [-1, 1]) {
+    const jawHalf = (s) => {
       Jw.solid(mir(RAMUS, s), BONE, { light: 0.25, dark: 0.35 });
       Jw.solid(mir(BODY, s), BONE, { light: 0.25, dark: 0.35 });
       for (let X = 11.5; X <= 26; X += 2) Jw.cone([X, 9.9, s * (5.8 - (X - 11.5) * 0.1)], [0, -1, 0], 1.4, 1.7, 0, FANG);
-      if (s < 0) { lowerCanine(-1); if (!front) upperCanine(-1); Jw.solid(CHIN, BONE, { light: 0.25, dark: 0.35 }); }
-    }
+    };
+    if (farSide) { jawHalf(-1); lowerCanine(-1); if (!front) upperCanine(-1); }
+    Jw.solid(CHIN, BONE, { light: 0.25, dark: 0.35 });
+    jawHalf(1);
     // ---- Cráneo: cara y pómulos (el lejano; de frente, los dos) tras la bóveda, la bóveda
     // con su cresta y una grieta, la melena de encima y la fosa temporal sobre el pómulo.
     Sk.solid(FACE, BONE, { light: 0.2, dark: 0.3 });
@@ -274,12 +282,19 @@ export const REAPER_HEAD = {
     Sk.solid(BROW, BONE, { light: 0.45, dark: 0.2 });
     if (!front) Sk.solid(ZYG, BONE, { light: 0.4, dark: 0.4 });
     // ---- Dientes del maxilar y los grandes colmillos (el de abajo, delante del de arriba).
-    for (const s of [-1, 1]) for (let X = 11.5; X <= 23.5; X += 2) Sk.cone([X, 9.1, s * (5 - (X - 11.5) * 0.03)], [0, 1, 0], 1.4, 1.7, 0, FANG);
-    for (const q of both(INCISORS)) Sk.cone(q, [0.25, 1, 0], 2, 1.4, 0, FANG);
-    for (const q of both(LOW_INCISORS)) Jw.cone(q, [0.35, -1, 0], 1.8, 1.3, 0, FANG);
+    for (const s of farSide ? [-1, 1] : [1]) for (let X = 11.5; X <= 23.5; X += 2) Sk.cone([X, 9.1, s * (5 - (X - 11.5) * 0.03)], [0, 1, 0], 1.4, 1.7, 0, FANG);
+    for (const q of farSide ? both(INCISORS) : INCISORS) Sk.cone(q, [0.25, 1, 0], 2, 1.4, 0, FANG);
+    for (const q of farSide ? both(LOW_INCISORS) : LOW_INCISORS) Jw.cone(q, [0.35, -1, 0], 1.8, 1.3, 0, FANG);
     if (front) upperCanine(-1);
     upperCanine(1);
     lowerCanine(1);
+    // El chasquido: al cerrarse de golpe, un destello entre los colmillos.
+    if (snap > 0) for (const s of front ? [-1, 1] : [1]) {
+      const [x, y] = Sk.at([27.6, 9.6, 4.2 * s]);
+      oval(gl, x, y, 2.6 * snap, 1.2 * snap, '#fff2d8');
+      line(gl, [[x - 3.5 * snap, y], [x + 3.5 * snap, y]], '#fff2d8');
+      line(gl, [[x, y - 2.5 * snap], [x, y + 2.5 * snap]], '#fff2d8');
+    }
     // ---- Patillas de melena que enmarcan la cara.
     for (const s of front ? [-1, 1] : [1]) CHEEK_TUFTS.forEach((q, i) => {
       const dir = [-0.6, 1, 0.5 * s], dx = cam.d(dir)[0], droop = 0.2 + Math.sin(t * 2.1 + i * 1.3) * 0.04;

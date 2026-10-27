@@ -501,6 +501,13 @@ const SOUNDS = {
     a.noise(o, { dur: 0.5, vol: 0.22, type: 'bandpass', f0: 2600, f1: 4200, q: 2 });
     for (let i = 0; i < 5; i++) a.tone(o, { type: 'square', f0: 3800, f1: 3400, dur: 0.02, vol: 0.06, delay: 0.05 + i * 0.05 });
   },
+  // Mandíbula de hueso que se cierra de golpe: el choque seco de los dientes y un golpe sordo.
+  jawSnap: (a, o) => {
+    a.knock(o, { f: rnd(1100, 1300), q: 14, dur: 0.07, vol: 0.6 });
+    a.knock(o, { f: rnd(520, 640), q: 10, dur: 0.1, vol: 0.5, delay: 0.008 });
+    a.noise(o, { dur: 0.12, vol: 0.3, type: 'bandpass', f0: 2600, f1: 900, q: 1.5 });
+    a.tone(o, { type: 'sine', f0: 110, f1: 55, dur: 0.14, vol: 0.25 });
+  },
   stagClack: (a, o) => {
     a.knock(o, { f: 1700, q: 22, dur: 0.06, vol: 0.5 });
     a.knock(o, { f: 950, q: 18, dur: 0.08, vol: 0.4, delay: 0.015 });

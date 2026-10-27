@@ -317,9 +317,10 @@ export const ENEMIES = {
     alwaysVisible: true,       // parte del jefe: nunca en sombra
     hp: 70, w: 64, h: 50,
     noDeath: true,             // no muere ni se aturde: golpeada, se revuelve
-    speed: 115, lungeRange: 72, biteDamage: 18, biteCool: 0.9, chaseTime: 7, knockedTime: 3,
+    speed: 115, lungeRange: 110, biteDamage: 18, chompDamage: 12, biteCool: 0.9, chaseTime: 7, knockedTime: 3,
+    neckBiteWind: 0.32, neckBiteCool: 1.4, // el mordisco desde el cuello: aviso y respiro
     sounds: { attack: 'boneShriek', hurt: 'boneCrack', scream: 'reaperCore', growl: 'boneRasp' },
-    habits: 'Un cráneo de babuino de morro rojizo y colmillos enormes. Va unida al cuello del Relicario y te sigue con la mirada; tras unos cuantos ataques se le cae, saca patas de hueso y te persigue: se agacha, abre las fauces y salta a morderte. En el cuello se gira hacia ti (de perfil, de tres cuartos o de frente), grita y gruñe. Golpearla no la aturde: se revuelve y te muerde. Al rato vuelve corriendo y trepa a su cuello.',
+    habits: 'Un cráneo de babuino de morro rojizo y colmillos enormes. Va unida al cuello del Relicario y te sigue con la mirada; si te acercas a su hocico, abre las fauces y te tira un mordisco. Tras unos cuantos ataques se le cae, saca patas de hueso y te persigue castañeteando los dientes: de cerca te encadena bocados a ras de suelo; a media distancia se agacha y salta a morderte, y si te pilla sigue mordiendo. En el cuello se gira hacia ti (de perfil, de tres cuartos o de frente), grita y gruñe. Golpearla no la aturde: se revuelve y te muerde. Al rato vuelve corriendo y trepa a su cuello.',
     lore: 'Lo que queda de la cabeza del Relicario no se resigna a ser un adorno.',
   },
   vestigio: {

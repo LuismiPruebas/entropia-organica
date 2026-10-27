@@ -2372,9 +2372,11 @@ export const BEHAVIORS = {
   },
 
   // La cabeza del Relicario: un cráneo de babuino de morro rojizo y colmillos enormes,
-  // sostenido a duras penas por el muñón del cuello. Cuando se cae, saca unas patas de
-  // hueso, te persigue y salta a morderte; aturdida (sin vida) queda tumbada un rato; al
-  // final vuelve corriendo a su cuerpo, trepa de un salto y se encaja en el cuello.
+  // sostenido a duras penas por el muñón del cuello. Si te acercas a su hocico te tira un
+  // mordisco desde el cuello. Cuando se cae, saca unas patas de hueso y te persigue
+  // castañeteando: de cerca, bocados encadenados a ras de suelo; a media distancia salta a
+  // morderte. Cada mordisco abre las fauces y las cierra de golpe (chasquido, sacudida,
+  // astillas o sangre). Al final vuelve corriendo a su cuerpo, trepa y se encaja en el cuello.
   reaperHead(e, dt, g) {
     const d = e.def, p = g.player, boss = e.boss;
     if (!boss?.alive) { e.die(); return; }
@@ -2383,7 +2385,24 @@ export const BEHAVIORS = {
     e.cool = (e.cool ?? 0) - dt;
     e.chaseT = (e.chaseT ?? 0) - dt;                       // tiempo que le queda persiguiéndote
     e.jaw = Math.max(0, (e.jaw ?? 0) - dt * 2);
+    e.snapT = Math.max(0, (e.snapT ?? 0) - dt);
     const dx = p.cx - e.cx;
+    // Entre los dientes: delante del cráneo según hacia dónde mira (de frente, debajo).
+    const biteBox = () => {
+      const k = Math.cos(e.yaw ?? 0.3), cx = e.cx + e.dir * 44 * k, w = 46 + 20 * (1 - k);
+      return { x: cx - w / 2, y: e.y - 4, w, h: e.h + 8 + 26 * (1 - k) };
+    };
+    // Cierra las fauces de golpe; hiere si te pilla dentro.
+    const snap = (dmg) => {
+      e.jaw = 0; e.snapT = 0.12;
+      const hit = overlap(p, biteBox());
+      if (hit) g.hurtPlayer(dmg, e.cx, d.name, undefined, undefined, 200);
+      g.audio.play('jawSnap', e);
+      g.shake = Math.max(g.shake, hit ? 4 : 2);
+      const bx = biteBox(), tx = bx.x + bx.w / 2, ty = e.y + e.h * 0.6;
+      for (let i = 0; i < (hit ? 14 : 6); i++) g.particles.emit(tx, ty, { vx: (Math.random() - 0.5) * 150, vy: -40 - Math.random() * 100, life: 0.45, gravity: 600, color: hit ? [0.75, 0.06, 0.06] : [0.95, 0.9, 0.78] });
+      return hit;
+    };
     // Te sigue con la mirada (el ojo, en su dibujo: hacia ti en sus coordenadas).
     const dist = Math.hypot(dx, p.cy - e.cy) || 1;
     e.look = { x: (dx * (e.dir || 1)) / dist, y: (p.cy - e.cy) / dist };
@@ -2414,8 +2433,16 @@ export const BEHAVIORS = {
       e.moodLeft = (e.moodLeft ?? 0) - dt;
       if (e.moodLeft > 0) e.jaw = e.mood === 'scream' ? 1 : 0.3 + Math.sin(e.t * 30) * 0.08;
       else e.mood = null;
+      // Te acercas a su hocico: abre las fauces (aviso) y te tira un mordisco desde el cuello.
+      if (e.biteWind > 0) {
+        e.biteWind -= dt; e.mood = null; e.moodLeft = 0;
+        e.jaw = Math.min(1, e.jaw + dt * 5);
+        if (e.biteWind <= 0) { snap(d.biteDamage ?? 18); e.cool = d.neckBiteCool ?? 1.4; }
+      } else if (e.cool <= 0 && overlap(p, biteBox())) {
+        e.biteWind = d.neckBiteWind ?? 0.32; g.audio.play('stagHiss', e);
+      }
       if (e.dropNow) {
-        e.mood = null; e.moodLeft = 0;
+        e.mood = null; e.moodLeft = 0; e.biteWind = 0;
         e.dropNow = false;
         e.state = 'fall'; e.vy = -170; e.vx = e.dir * 70;
         g.audio.play(d.sounds?.attack ?? 'boneShriek', e);
@@ -2424,13 +2451,15 @@ export const BEHAVIORS = {
       return;
     }
     e.dropNow = false;
-    turnTo(0.3);
+    turnTo(0.1);                                                                 // suelta, de perfil
     e.vy = Math.min(420, (e.vy ?? 0) + GRAVITY * dt);
     // Golpeada en el suelo no se aturde: se revuelve, se gira hacia ti y muerde enseguida.
     if (e.retaliate) {
       e.retaliate = false;
       if ((e.state === 'chase' || e.state === 'sprout' || e.state === 'return') && e.onGround) {
-        e.dir = Math.sign(dx) || e.dir; e.state = 'windup'; e.timer = 0.16; e.vx = 0; e.chaseT = Math.max(e.chaseT, 2);
+        e.dir = Math.sign(dx) || e.dir; e.chaseT = Math.max(e.chaseT, 2);
+        if (Math.abs(dx) < 70) { e.state = 'chomp'; e.timer = 0.14; e.chomps = 1; e.vx = 0; }
+        else { e.state = 'windup'; e.timer = 0.16; e.vx = 0; }
         g.audio.play(d.sounds?.growl ?? 'boneRasp', e);
       }
     }
@@ -2446,21 +2475,44 @@ export const BEHAVIORS = {
       e.dir = Math.sign(dx) || e.dir;
       e.vx = e.dir * (d.speed ?? 110);
       if (e.hitWall && e.onGround) e.vy = -240;                                  // salta lo que le corta el paso
-      if (Math.abs(dx) < (d.lungeRange ?? 70) && Math.abs(p.cy - e.cy) < 60 && e.cool <= 0 && e.onGround) {
+      // Corre castañeteando los dientes.
+      const chat = Math.sin(e.t * 13);
+      e.jaw = Math.max(e.jaw, 0.1 + 0.16 * Math.max(0, chat));
+      if (chat < 0 && (e.chatPrev ?? 0) >= 0) g.audio.play('clack', e);
+      e.chatPrev = chat;
+      const ady = Math.abs(p.cy - e.cy), ahead = dx * e.dir;
+      if (e.cool <= 0 && e.onGround && ady < 44 && ahead > 0 && ahead < 62) {
+        e.state = 'chomp'; e.timer = 0.2; e.chomps = 0; e.vx = 0; g.audio.play('stagHiss', e);
+      } else if (e.cool <= 0 && e.onGround && ady < 60 && Math.abs(dx) < (d.lungeRange ?? 110)) {
         e.state = 'windup'; e.timer = 0.32; e.vx = 0; g.audio.play('stagHiss', e);
       }
       if (e.chaseT <= 0) { e.state = 'return'; }
+    } else if (e.state === 'chomp') {
+      // Bocado a ras de suelo: abre las fauces y las cierra de golpe dando un paso; si sigues
+      // a tiro, otro, y otro (hasta tres).
+      legsTo(0.75); e.vx *= Math.pow(0.02, dt);
+      if (e.timer > 0) e.jaw = Math.min(1, e.jaw + dt * 9);
+      else {
+        snap(d.chompDamage ?? 12); e.vx = e.dir * 90; e.chomps++;
+        if (e.chomps < 3 && Math.abs(dx) < 80 && Math.abs(p.cy - e.cy) < 44) { e.dir = Math.sign(dx) || e.dir; e.timer = 0.17; }
+        else { e.state = 'chase'; e.cool = d.biteCool ?? 0.9; }
+      }
     } else if (e.state === 'windup') {
       // Se agacha y abre las fauces.
       legsTo(0.6); e.jaw = Math.min(1, e.jaw + dt * 6); e.vx = 0;
       if (e.timer <= 0) { e.state = 'lunge'; e.vx = e.dir * 250; e.vy = -210; e.bit = false; e.timer = 0.6; g.audio.play(d.sounds?.attack ?? 'boneShriek', e); }
     } else if (e.state === 'lunge') {
-      e.jaw = 1; legsTo(0.3);
+      // Salta con las fauces abiertas y las cierra al alcanzarte (o al caer); si te ha
+      // pillado, sigue mordiendo en el suelo.
+      legsTo(0.3);
       if (!e.bit) {
-        const box = { x: e.dir > 0 ? e.x + e.w - 6 : e.x - 10, y: e.y, w: 16, h: e.h };
-        if (overlap(p, box)) { e.bit = true; g.hurtPlayer(d.biteDamage ?? 18, e.cx, d.name, undefined, undefined, 200); g.audio.play('stagClack', e); }
+        e.jaw = 1;
+        if (overlap(p, biteBox()) || e.timer < 0.25 || (e.onGround && e.timer < 0.45)) { e.bit = true; e.bitHit = snap(d.biteDamage ?? 18); }
       }
-      if (e.onGround && e.timer < 0.45) { e.state = 'chase'; e.cool = d.biteCool ?? 0.9; e.jaw = 0.5; }
+      if (e.onGround && e.timer < 0.45) {
+        if (e.bitHit && Math.abs(dx) < 80) { e.state = 'chomp'; e.timer = 0.17; e.chomps = 1; e.dir = Math.sign(dx) || e.dir; }
+        else { e.state = 'chase'; e.cool = d.biteCool ?? 0.9; }
+      }
     } else if (e.state === 'knocked') {
       // Tumbada, las patas temblando: no muerde; al rato se levanta y vuelve.
       e.vx *= 0.9; legsTo(0.15);
