@@ -2194,6 +2194,8 @@ export const LEVELS = {
     enemies: [
       { type: 'acorazado', x: 3, y: 7 },
       { type: 'vestigio', x: 17, y: 13 },
+      { type: 'cabeza', x: 61, y: 8 },
+      { type: 'cabeza', x: 29, y: 4 },
     ],
     traps: [
       { x: 11, y: 23, n: 2, dir: 'up' },
@@ -2218,9 +2220,6 @@ export const LEVELS = {
       { x: 28, y: 8, len: 2.5 },
       { x: 34, y: 8, len: 2 },
       { x: 40, y: 8, len: 2.5 },
-    ],
-    clusters: [
-      { x: 18, y: 8, w: 3, regrow: 10 },
     ],
     links: [
       { id: 'p1', x: 63, y: 11, w: 1, h: 3, to: 'A5', toLink: 'p4', trigger: 'touch', look: 'hidden', arrive: [61, 13] },
@@ -2296,6 +2295,11 @@ export const LEVELS = {
       { type: 'acorazado', x: 30, y: 15 },
       { type: 'acorazado', x: 12, y: 42 },
       { type: 'vestigio', x: 24, y: 21 },
+      { type: 'cabeza', x: 26, y: 33 },
+      { type: 'cabeza', x: 35, y: 36 },
+      { type: 'cabeza', x: 15, y: 12 },
+      { type: 'cabeza', x: 7, y: 53 },
+      { type: 'cabeza', x: 33, y: 48 },
     ],
     traps: [
       { x: 1, y: 16, n: 2, dir: 'right', len: 3 },
@@ -2310,9 +2314,6 @@ export const LEVELS = {
     fangs: [
       { x: 16, y: 7, len: 2 },
       { x: 28, y: 7, len: 2 },
-      { x: 24, y: 17, len: 2 },
-      { x: 36, y: 7, len: 2.5 },
-      { x: 15, y: 26, len: 2 },
     ],
     links: [
       { id: 'p1', x: 5, y: 0, w: 3, h: 1, to: 'A15', toLink: 'p2', trigger: 'touch', look: 'hidden' },
@@ -2418,7 +2419,8 @@ export const LEVELS = {
     ],
     enemies: [
       { type: 'acorazado', x: 29, y: 16 },
-      { type: 'vestigio', x: 54, y: 22 },
+      { type: 'vestigio', x: 58, y: 22 },
+      { type: 'cabeza', x: 21, y: 8 },
     ],
     slabs: [
       { x: 13, y: 23, w: 3 },
@@ -2437,7 +2439,6 @@ export const LEVELS = {
       { x: 25, y: 3, len: 2 },
       { x: 38, y: 3, len: 2 },
       { x: 46, y: 3, len: 2.5 },
-      { x: 31, y: 18, len: 2 },
     ],
     pillars: [
       { x: 28, y: 22, h: 5, fall: 'right', hits: 3 },
@@ -2518,6 +2519,10 @@ export const LEVELS = {
     enemies: [
       { type: 'acorazado', x: 17, y: 24 },
       { type: 'acorazado', x: 17, y: 42 },
+      { type: 'rinoceronte', x: 3, y: 53 },
+      { type: 'vestigio', x: 9, y: 33 },
+      { type: 'vestigio', x: 17, y: 18 },
+      { type: 'acorazado', x: 11, y: 11 },
     ],
     traps: [
       { x: 1, y: 44, n: 2, dir: 'right', len: 3, period: 2.6 },
@@ -2526,10 +2531,6 @@ export const LEVELS = {
     slabs: [
       { x: 6, y: 40, w: 7 },
       { x: 16, y: 31, w: 7 },
-    ],
-    fangs: [
-      { x: 19, y: 26, len: 2 },
-      { x: 9, y: 35, len: 2 },
     ],
     links: [
       { id: 'p1', x: 31, y: 15, w: 1, h: 3, to: 'H1', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [29, 17] },
@@ -2580,6 +2581,7 @@ export const LEVELS = {
       { type: 'acorazado', x: 33, y: 21 },
       { type: 'acorazado', x: 49, y: 18 },
       { type: 'rinoceronte', x: 14, y: 24 },
+      { type: 'acorazado', x: 28, y: 9 },
     ],
     fangs: [
       { x: 24, y: 4, len: 2 },
@@ -2588,10 +2590,6 @@ export const LEVELS = {
     pillars: [
       { x: 21, y: 24, h: 7, fall: 'right' },
       { x: 42, y: 24, h: 7, fall: 'left' },
-    ],
-    clusters: [
-      { x: 5, y: 4, w: 3, regrow: 10 },
-      { x: 48, y: 20, w: 3, regrow: 10 },
     ],
     links: [
       { id: 'p1', x: 63, y: 12, w: 1, h: 3, to: 'A16', toLink: 'p3', trigger: 'touch', look: 'hidden', arrive: [61, 14] },
@@ -2635,6 +2633,10 @@ export const LEVELS = {
     ],
     enemies: [
       { type: 'relicario', x: 30, y: 24 },
+      { type: 'cabeza', x: 16, y: 14 },
+      { type: 'cabeza', x: 48, y: 14 },
+      { type: 'cabeza', x: 55, y: 19 },
+      { type: 'cabeza', x: 7, y: 19 },
     ],
     slabs: [
       { x: 4, y: 20, w: 2, delay: 1.3, regrow: 4.5 },
