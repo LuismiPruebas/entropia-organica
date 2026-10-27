@@ -82,6 +82,7 @@ addEventListener('keydown', (e) => {
 const q = new URLSearchParams(location.search);
 if (game && (q.has('play') || q.has('room'))) {
   phase = 'play';
+  game.state.skipTutorials();   // probando una sala: el tutorial es para el inicio de una partida
   game.start();
   for (const id of q.get('mut')?.split(',') ?? []) {
     game.state.dna.add(id);

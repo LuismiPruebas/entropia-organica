@@ -99,11 +99,20 @@ export const SUPPRESS_CUT = 35;
 export const SUPPRESS_TIME = 60; // segundos
 const HUNGER_FLOOR = 10;          // el hambre de las mutaciones no baja tu biomasa de aquí
 const REJECTION_ESCALATION = 0.15; // cada mutación instalada encarece un 15% el rechazo de la siguiente
+// Pistas que se dan una sola vez por partida (las del minitutorial del HUD van en hudSeen).
+const HINTS = ['seenEelDry', 'seenEmptyCannon', 'seenGlimmer', 'seenMelee', 'seenNodule', 'seenPad', 'seenPhoto', 'seenPhotoLocked', 'seenPods', 'seenRejectionWarn', 'seenRetch', 'seenScare'];
 
 export class GameState {
   constructor() {
     this.listeners = {};
     this.reset();
+  }
+
+  // Pruebas (desde el editor o con los atajos de desarrollo): sin minitutorial ni pistas de
+  // primera vez; esas son para el principio de una partida de verdad.
+  skipTutorials() {
+    this.tutorialsOff = true;
+    for (const k of HINTS) this[k] = true;
   }
 
   reset() {

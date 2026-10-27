@@ -179,9 +179,10 @@ export class Game {
     this.state.checkpoint = { room: START.room, spawn: START.spawn };
     this.loadRoom(START.room, START.spawn);
     this.mode = 'play';
-    // Si se empieza junto a un útero, se nace de él.
-    if (this.#startBirth(START.spawn)) this.birth.say = 'Naces de la carne. Solo ves lo que ilumina tu ojo.';
-    else this.say('Despiertas en la carne. Solo ves lo que ilumina tu ojo.', 4);
+    // Si se empieza junto a un útero, se nace de él (en las pruebas, sin la frase de inicio).
+    const intro = !this.state.tutorialsOff;
+    if (this.#startBirth(START.spawn)) { if (intro) this.birth.say = 'Naces de la carne. Solo ves lo que ilumina tu ojo.'; }
+    else if (intro) this.say('Despiertas en la carne. Solo ves lo que ilumina tu ojo.', 4);
   }
 
   // ---------- Salas ----------

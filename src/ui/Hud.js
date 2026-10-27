@@ -209,7 +209,7 @@ export class Hud {
     for (const k in this.flashT) this.flashT[k] = Math.max(0, this.flashT[k] - dt);
     st.hudSeen ??= new Set();
     this.tutQueue ??= [];
-    if (this.prevSnap) for (const tu of HUD_TUTOR) if (!st.hudSeen.has(tu.id) && tu.test(this.prevSnap, snap)) { st.hudSeen.add(tu.id); this.tutQueue.push(tu); }
+    if (this.prevSnap && !st.tutorialsOff) for (const tu of HUD_TUTOR) if (!st.hudSeen.has(tu.id) && tu.test(this.prevSnap, snap)) { st.hudSeen.add(tu.id); this.tutQueue.push(tu); }
     this.prevSnap = snap;
     if (this.tut) this.tut.age += dt;
     if (!this.tut && this.tutQueue.length && !this.dlg) {
