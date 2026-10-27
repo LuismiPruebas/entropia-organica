@@ -68,7 +68,10 @@ export class EntityFactory {
     const biome = BIOMES[def.biome] ?? BIOMES.nervioso;
     // Sala de jefe: iluminada (el combate se ve entero); def.ambient manda si la sala lo fija.
     const bossRoom = (def.enemies ?? []).some((e) => ENEMIES[e.type]?.boss);
-    const ambient = def.ambient ?? (bossRoom ? biome.ambient.map((v) => Math.min(0.75, v * 2.6)) : biome.ambient);
+    // (con el tono del bioma, subido hasta que su canal más fuerte llegue a 1: en los biomas
+    // muy oscuros, multiplicar se quedaba corto)
+    const lit = 1 / Math.max(0.05, ...biome.ambient);
+    const ambient = def.ambient ?? (bossRoom ? biome.ambient.map((v) => Math.min(1, Math.max(v * 2.6, v * lit))) : biome.ambient);
     const room = { id, def, world, biome, ambient, enemies: [], pickups: [], anchors: [], nodes: [], photo: [], meshes: [], tier: roomTier(id) };
     const hidden = new Set((def.hidden ?? []).map(([x, y]) => `${x},${y}`));
     const photoSeen = new Set();
